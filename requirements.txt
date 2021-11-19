@@ -1,0 +1,4 @@
+gitpython
+click
+pandas
+ipython

@@ -1,0 +1,106 @@
+REGISTER = "register"
+UNREGISTER = "unregister"
+PROMOTE = "promote"
+DEMOTE = "demote"
+
+
+def name(action, model, version=None, status=None, repo=None):
+    if action == REGISTER:
+        return f"model-{model}-{REGISTER}-{version}"
+    if action == UNREGISTER:
+        return f"model-{model}-{UNREGISTER}-{version}"
+
+    basename = f"model-{model}-{PROMOTE}-{status}"
+    existing_names = [c.name for c in repo.tags if c.name.startswith(basename)]
+    if existing_names:
+        last_number = 1 + max(int(n[len(basename) + 1 :]) for n in existing_names)
+    else:
+        last_number = 1
+    if action == PROMOTE:
+        return f"{basename}-{last_number}"
+    if action == DEMOTE:
+        return f"model-{model}-{DEMOTE}-{status}-{last_number}"
+    raise ValueError(f"Unknown action: {action}")
+
+
+def parse(name, raise_on_fail=True):
+    if UNREGISTER in name:
+        model, version = name.split(f"-{UNREGISTER}-")
+        model = model[len("model-") :]
+        return dict(action=UNREGISTER, model=model, version=version)
+    if REGISTER in name:
+        model, version = name.split(f"-{REGISTER}-")
+        model = model[len("model-") :]
+        return dict(action=REGISTER, model=model, version=version)
+    if PROMOTE in name:
+        model, status = name.split(f"-{PROMOTE}-")
+        model = model[len("model-") :]
+        status, number = status.split("-")
+        return dict(action=PROMOTE, model=model, status=status, number=number)
+    if DEMOTE in name:
+        model, status = name.split(f"-{DEMOTE}-")
+        model = model[len("model-") :]
+        status, number = status.split("-")
+        return dict(action=DEMOTE, model=model, status=status, number=number)
+    if raise_on_fail:
+        raise ValueError(f"Unknown tag name: {name}")
+    else:
+        return dict()
+
+
+def find(action=None, model=None, version=None, status=None, repo=None, sort="by_time", tags=None):
+    if tags is None:
+        tags = [t for t in repo.tags if parse(t.name, raise_on_fail=False)]
+    if action:
+        tags = [t for t in tags if parse(t.name)["action"] == action]
+    if model:
+        tags = [t for t in tags if parse(t.name).get("model") == model]
+    if version:
+        tags = [t for t in tags if parse(t.name).get("version") == version]
+    if status:
+        tags = [t for t in tags if parse(t.name).get("status") == status]
+    if sort == "by_time":
+        tags = sorted(tags, key=lambda t: t.tag.tagged_date)
+    return tags
+
+
+def find_registered(model, repo):
+    """Return all registered versions for model"""
+    register_tags = find(action=REGISTER, model=model, repo=repo)
+    unregister_tags = find(action=UNREGISTER, model=model, repo=repo)
+    return [
+        r
+        for r in register_tags
+        if not any(
+            r.commit.hexsha == u.commit.hexsha
+            and parse(r.name)["model"] == parse(u.name)["model"]
+            and parse(r.name)["version"] == parse(u.name)["version"]
+            for u in unregister_tags
+        )
+    ]
+
+
+def find_latest(model, repo):
+    """Return latest registered version for model"""
+    return find_registered(model, repo)[-1]
+
+
+def find_promoted(model, status, repo):
+    """Return all promoted versions for model"""
+    promote_tags = find(action=PROMOTE, model=model, status=status, repo=repo)
+    demote_tags = find(action=DEMOTE, model=model, status=status, repo=repo)
+    # what we do if someone promotes and demotes one model+commit several times?
+    return [
+        p
+        for p in promote_tags
+        if not any(
+            p.commit.hexsha == d.commit.hexsha
+            and parse(p.name)["model"] == parse(d.name)["model"]
+            and parse(p.name)["status"] == parse(d.name)["status"]
+            for d in demote_tags
+        )
+    ]
+
+def find_current_promoted(model, status, repo):
+    """Return latest promoted version for model"""
+    return find_promoted(model, status, repo)[-1]
