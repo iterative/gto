@@ -1,2 +1,2 @@
 #!/bin/sh
-alias gitops="python main.py"
+alias gitops="ipython main.py"

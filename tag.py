@@ -1,3 +1,6 @@
+import git
+
+
 REGISTER = "register"
 UNREGISTER = "unregister"
 PROMOTE = "promote"
@@ -24,6 +27,8 @@ def name(action, model, version=None, label=None, repo=None):
 
 
 def parse(name, raise_on_fail=True):
+    if isinstance(name, git.Tag):
+        name = name.name
     if UNREGISTER in name:
         model, version = name.split(f"-{UNREGISTER}-")
         model = model[len("model-") :]
@@ -104,3 +109,17 @@ def find_promoted(model, label, repo):
 def find_current_promoted(model, label, repo):
     """Return latest promoted version for model"""
     return find_promoted(model, label, repo)[-1]
+
+
+def find_version(model, label, repo):
+    """Return version of model with specific label active"""
+    tags = find(action=PROMOTE, model=model, label=label, repo=repo)
+    version_sha = tags[-1].commit.hexsha
+
+    # if this commit has been tagged several times (model-v1, model-v2)
+    # you may have several tags with different versions
+    # so when you PROMOTE model, you won't know which version you've promoted
+    # v1 or v2
+    tags = find(action=REGISTER, model=model, repo=repo)
+    tags = [t for t in tags if t.commit.hexsha == version_sha]
+    return parse(tags[-1].name)["version"]
