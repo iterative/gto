@@ -5,6 +5,10 @@ gitops() {
 
 echo "Clean workspace"
 set -exu
+if [[ $(git --no-pager diff) ]]; then
+    echo "Workspace is dirty, please commit or stash changes before running this script"
+    exit 1
+fi
 git tag -d $(git tag --list)
 git checkout -b demo
 rm -rf models
@@ -59,7 +63,7 @@ gitops show
 # gitops demote models/random-forest.pkl v1
 
 # gitops destroy models/random-forest.pkl --version v1
-# gitops destroy models/random-forest.pkl --status production
+# gitops destroy models/random-forest.pkl --label production
 
 # gitops unregister models/random-forest.pkl v1 --destroy
 # gitops demote models/random-forest.pkl v1 --destroy

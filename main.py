@@ -10,9 +10,8 @@ import tag
 
 @click.group()
 def cli():
-    """Early prototype for registering/status assignment for tags-based approach"""
+    """Early prototype for registering/label assignment for tags-based approach"""
     pass
-
 
 @cli.command()
 @click.argument("model")
@@ -45,19 +44,19 @@ def unregister(model, version):
 @cli.command()
 @click.argument("model")
 @click.argument("version")
-@click.argument("status")
-def promote(model, version, status):
-    """Assign status to specific model version"""
+@click.argument("label")
+def promote(model, version, label):
+    """Assign label to specific model version"""
     version_hexsha = repo.tags[
         tag.name(tag.REGISTER, model, version=version)
     ].commit.hexsha
-    name = tag.name(tag.PROMOTE, model, status=status, repo=repo)
+    name = tag.name(tag.PROMOTE, model, label=label, repo=repo)
     repo.create_tag(
         name,
         ref=version_hexsha,
-        message=f"Promoting model {model} version {version} to status {status}",
+        message=f"Promoting model {model} version {version} to label {label}",
     )
-    click.echo(f"Promoted model {model} version {version} to status {status}")
+    click.echo(f"Promoted model {model} version {version} to label {label}")
 
 
 @cli.command()
@@ -69,10 +68,10 @@ def latest(model):
 
 @cli.command()
 @click.argument("model")
-@click.argument("status")
-def which(model, status):
-    """Return version of model with specific status active"""
-    tags = tag.find(action=tag.PROMOTE, model=model, status=status, repo=repo)
+@click.argument("label")
+def which(model, label):
+    """Return version of model with specific label active"""
+    tags = tag.find(action=tag.PROMOTE, model=model, label=label, repo=repo)
     version_sha = tags[-1].commit.hexsha
 
     # if this commit has been tagged several times (model-v1, model-v2)
@@ -86,16 +85,16 @@ def which(model, status):
 
 @cli.command()
 @click.argument("model")
-@click.argument("status")
-def demote(model, status):
-    """De-promote model from given status"""
-    promoted_tag = tag.find(action=tag.PROMOTE, model=model, status=status, repo=repo)[-1]
+@click.argument("label")
+def demote(model, label):
+    """De-promote model from given label"""
+    promoted_tag = tag.find(action=tag.PROMOTE, model=model, label=label, repo=repo)[-1]
     repo.create_tag(
-        tag.name(tag.DEMOTE, model, status=status, repo=repo),
+        tag.name(tag.DEMOTE, model, label=label, repo=repo),
         rev=promoted_tag.commit.hexsha,
-        message=f"Demoting model {model} from status {status}",
+        message=f"Demoting model {model} from label {label}",
     )
-    click.echo(f"Demoted model {model} from status {status}")
+    click.echo(f"Demoted model {model} from label {label}")
 
 
 
@@ -103,13 +102,13 @@ def demote(model, status):
 def show():
     """Show current registry state"""
     versions = []
-    statuses = []
+    labeles = []
     tags_info = []
     for t in tag.find(repo=repo):
         tag_parsed = tag.parse(t.name)
         tag_parsed["tag_name"] = t.name  # better use hexsha
         if tag_parsed["action"] in (tag.PROMOTE, tag.DEMOTE):
-            statuses.append(tag_parsed)
+            labeles.append(tag_parsed)
         else:
             versions.append(tag_parsed)
         tags_info.append(
@@ -122,11 +121,11 @@ def show():
             )
         )
     versions = pd.DataFrame(versions)
-    statuses = pd.DataFrame(statuses)
+    labeles = pd.DataFrame(labeles)
     tags_info = pd.DataFrame(tags_info)
-    statuses_info = (
+    labeles_info = (
         (
-            statuses
+            labeles
             .drop(columns=["action"])
             .merge(
                 tags_info[["tag_name", "commit_hexsha"]], how="left", on="tag_name"
@@ -147,15 +146,15 @@ def show():
         .merge(tags_info, how="left", on=["tag_name"])
         .sort_values(["datetime"], ascending=False)
     )
-    statuses_info = statuses_info[
-        ["model", "version", "status"]
-        + [c for c in statuses_info.columns if c not in ["model", "version", "status"]]
+    labeles_info = labeles_info[
+        ["model", "version", "label"]
+        + [c for c in labeles_info.columns if c not in ["model", "version", "label"]]
     ]
 
-    display("\n=== Current statuses (MLflow dashboard) ===")
-    latest_statuses = (
-        statuses_info.sort_values("datetime", ascending=False)
-        .groupby(["model", "status"])
+    display("\n=== Current labeles (MLflow dashboard) ===")
+    latest_labeles = (
+        labeles_info.sort_values("datetime", ascending=False)
+        .groupby(["model", "label"])
         .first()[["version"]]
         .unstack()
     )
@@ -167,11 +166,11 @@ def show():
     )
     display(
         latest_versions.merge(
-            latest_statuses, how="left", left_index=True, right_index=True
+            latest_labeles, how="left", left_index=True, right_index=True
         )
     )
-    display("\n=== Status assigning audit trail ===")
-    display(statuses_info)
+    display("\n=== label assigning audit trail ===")
+    display(labeles_info)
     display("\n=== Model registration audit trail ===")
     display(
         versions.merge(tags_info, how="left", on=["tag_name"]).sort_values(
