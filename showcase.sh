@@ -10,6 +10,7 @@ if [[ $(git --no-pager diff) ]]; then
     exit 1
 fi
 git tag -d $(git tag --list)
+git branch -D demo
 git checkout -b demo
 rm -rf models
 
