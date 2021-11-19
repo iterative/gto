@@ -167,7 +167,6 @@ class Registry:
 
     def promote(self, model, version, label):
         """Assign label to specific model version"""
-        Registry().promote(model, version, label)
         version_hexsha = self.repo.tags[
             name(REGISTER, model, version=version)
         ].commit.hexsha
