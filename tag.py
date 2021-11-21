@@ -1,6 +1,5 @@
 import git
 
-
 REGISTER = "register"
 UNREGISTER = "unregister"
 PROMOTE = "promote"
@@ -53,7 +52,15 @@ def parse(name, raise_on_fail=True):
         return dict()
 
 
-def find(action=None, model=None, version=None, label=None, repo=None, sort="by_time", tags=None):
+def find(
+    action=None,
+    model=None,
+    version=None,
+    label=None,
+    repo=None,
+    sort="by_time",
+    tags=None,
+):
     if tags is None:
         tags = [t for t in repo.tags if parse(t.name, raise_on_fail=False)]
     if action:
@@ -105,6 +112,7 @@ def find_promoted(model, label, repo):
             for d in demote_tags
         )
     ]
+
 
 def find_current_promoted(model, label, repo):
     """Return latest promoted version for model"""

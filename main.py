@@ -55,7 +55,11 @@ def latest(model):
 @click.argument("label")
 def which(model, label):
     """Return version of model with specific label active"""
-    click.echo(Registry().which(model, label))
+    version = Registry().which(model, label, raise_if_not_found=False)
+    if version:
+        click.echo(version)
+    else:
+        click.echo(f"No version of model '{model}' with label '{label}' active")
 
 
 @cli.command()
@@ -71,16 +75,14 @@ def demote(model, label):
 def show():
     """Show current registry state"""
     from registry import Registry
+
     reg = Registry(repo=repo)
     models_state = {
         m.name: dict(
             [
                 ("version", m.latest_version),
-            ] + [
-                (("version", l), m.latest_labels[l].version)
-                for l in m.unique_labels
             ]
-
+            + [(("version", l), m.latest_labels[l].version) for l in m.unique_labels]
         )
         for m in reg.models
     }
@@ -101,7 +103,11 @@ def show():
         for l in m.labels
     ]
     print("\n=== Label assignment audit trail ===")
-    display(pd.DataFrame(label_assignment_audit_trail).sort_values("creation_date", ascending=False))
+    display(
+        pd.DataFrame(label_assignment_audit_trail).sort_values(
+            "creation_date", ascending=False
+        )
+    )
 
     model_registration_audit_trail = [
         {
@@ -116,12 +122,16 @@ def show():
         for v in m.versions
     ]
     print("\n=== Model registration audit trail ===")
-    display(pd.DataFrame(model_registration_audit_trail).sort_values("creation_date", ascending=False))
+    display(
+        pd.DataFrame(model_registration_audit_trail).sort_values(
+            "creation_date", ascending=False
+        )
+    )
 
 
 if __name__ == "__main__":
     warnings.filterwarnings("ignore")
-    pd.set_option('display.max_colwidth', 100)
+    pd.set_option("display.max_colwidth", 100)
 
     repo = git.Repo(".")
     cli()

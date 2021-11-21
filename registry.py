@@ -3,14 +3,18 @@ from typing import List, Optional
 import git
 import pandas as pd
 
-from tag import parse, find, REGISTER, UNREGISTER, PROMOTE, DEMOTE, name
+from tag import DEMOTE, PROMOTE, REGISTER, UNREGISTER, find, name, parse
 
 
 class Label:
     model: str
     version: str
     name: str
-    def __init__(self, model, version, label, creation_date, author, commit_hexsha, tag_name) -> None:
+    unregistered_date: Optional[pd.Timestamp] = None
+
+    def __init__(
+        self, model, version, label, creation_date, author, commit_hexsha, tag_name
+    ) -> None:
         self.model = model
         self.version = version
         self.name = label
@@ -26,8 +30,8 @@ class Label:
     def from_tag(cls, tag: git.Tag) -> None:
         mtag = ModelTag(tag)
         version_candidates = [
-            t 
-            for t in find(action=REGISTER, model=mtag.model, repo=tag.repo) 
+            t
+            for t in find(action=REGISTER, model=mtag.model, repo=tag.repo)
             if t.commit.hexsha == tag.commit.hexsha
         ]
         if len(version_candidates) != 1:
@@ -42,7 +46,7 @@ class Label:
         return cls(
             mtag.model,
             version,
-            mtag.label, 
+            mtag.label,
             pd.Timestamp(tag.tag.tagged_date * 10 ** 9),
             tag.tag.tagger.name,
             tag.commit.hexsha[:7],
@@ -54,8 +58,11 @@ class Version:
     model: str
     name: str
     creation_date: str
+    unregistered_date: Optional[pd.Timestamp] = None
 
-    def __init__(self, model, version, creation_date, author, commit_hexsha, tag_name) -> None:
+    def __init__(
+        self, model, version, creation_date, author, commit_hexsha, tag_name
+    ) -> None:
         self.model = model
         self.name = version
         self.creation_date = creation_date
@@ -83,11 +90,25 @@ class Model:
     name: str
     versions: List[Version]
     labels: List[Label]
+
     def __init__(self, name, versions, labels) -> None:
         self.name = name
-        self.versions = versions
+        self._versions = versions
         self.labels = labels
-        
+
+    def index_tag(self, tag: git.Tag) -> None:
+        mtag = ModelTag(tag)
+        if mtag.action == REGISTER:
+            self.versions.append(Version.from_tag(tag))
+        if mtag.action == UNREGISTER:
+            self.find_version(mtag.version).unregistered_date = mtag.creation_date
+        if mtag.action == PROMOTE:
+            self.labels.append(Label.from_tag(tag))
+        if mtag.action == DEMOTE:
+            if mtag.label not in self.latest_labels:
+                raise ValueError(f"Active label '{mtag.label}' not found")
+            self.latest_labels[mtag.label].unregistered_date = mtag.creation_date
+
     @property
     def unique_labels(self):
         return {l.name for l in self.labels}
@@ -104,10 +125,21 @@ class Model:
     @property
     def latest_labels(self) -> List[Label]:
         return {
-            l: sorted(filter(lambda x: x.name == l, self.labels), key=lambda x: x.creation_date)[-1]
+            l: sorted(
+                filter(lambda x: x.name == l, self.labels),
+                key=lambda x: x.creation_date,
+            )[-1]
             for l in self.unique_labels
         }
 
+    @property
+    def versions(self):
+        return self._versions
+
+    def find_version(self, version: str) -> Optional[Version]:
+        versions = [v for v in self.versions if v.name == version]
+        assert len(versions) != 1, f"{len(versions)} versions found"
+        return versions[0]
 
 
 class ModelTag:
@@ -115,20 +147,24 @@ class ModelTag:
     version: Optional[str]
     label: Optional[str]
     tag: git.Tag
+
     def __init__(self, tag) -> None:
         parsed = parse(tag.name)
+        self.action = parsed["action"]
         self.model = parsed["model"]
         self.version = parsed.get("version")
         self.label = parsed.get("label")
+        self.creation_date = pd.Timestamp(tag.tag.tagged_date * 10 ** 9)
         self.tag = tag
 
 
 class Registry:
     repo: git.Repo
     models: List[Model]
+
     def __init__(self, repo: git.Repo = git.Repo(".")):
         self.repo = repo
-    
+
     @property
     def models(self):
         tags = [ModelTag(t) for t in find(repo=self.repo)]
@@ -136,15 +172,21 @@ class Registry:
         for t in tags:
             if t.model not in models:
                 models[t.model] = Model(t.model, [], [])
-            if t.version is not None:
-                models[t.model].versions += [Version.from_tag(t.tag)]
-            if t.label is not None:
-                models[t.model].labels += [Label.from_tag(t.tag)]
+            models[t.model].index_tag(t.tag)
         return [models[k] for k in models]
+
+    def find_model(self, model):
+        models = [m for m in self.models if m.name == model]
+        assert len(models) == 1, f"Found {len(models)} models with name {model}"
+        return models[0]
 
     @property
     def labels(self):
-        tags = [parse(t.name)["label"] for t in find(repo=self.repo) if "label" in parse(t.name)]
+        tags = [
+            parse(t.name)["label"]
+            for t in find(repo=self.repo)
+            if "label" in parse(t.name)
+        ]
         return sorted(set(tags))
 
     def register(self, model, version):
@@ -158,12 +200,18 @@ class Registry:
         """Unregister model version"""
         tags = find(action=REGISTER, model=model, version=version, repo=self.repo)
         if len(tags) != 1:
-            raise ValueError(f"Found {len(tags)} tags for model {model} version {version}")
+            raise ValueError(
+                f"Found {len(tags)} tags for model {model} version {version}"
+            )
         self.repo.create_tag(
             name(UNREGISTER, model, version=version, repo=self.repo),
             ref=tags[0].commit.hexsha,
             message=f"Unregistering model {model} version {version}",
         )
+
+    # def unregister(self, model, version):
+    #     """Unregister model version"""
+    #     self.find_model(model)
 
     def promote(self, model, version, label):
         """Assign label to specific model version"""
@@ -176,25 +224,22 @@ class Registry:
             message=f"Promoting model {model} version {version} to label {label}",
         )
 
-    def which(self, model, label):
-        """Return version of model with specific label active"""
-        tags = find(action=PROMOTE, model=model, label=label, repo=self.repo)
-        version_sha = tags[-1].commit.hexsha
-
-        # if this commit has been tagged several times (model-v1, model-v2)
-        # you may have several tags with different versions
-        # so when you PROMOTE model, you won't know which version you've promoted
-        # v1 or v2
-        tags = find(action=REGISTER, model=model, repo=self.repo)
-        tags = [t for t in tags if t.commit.hexsha == version_sha]
-        return parse(tags[-1].name)["version"]
-
     def demote(self, model, label):
         """De-promote model from given label"""
         # TODO: check if label wasn't demoted already
-        promoted_tag = find(action=PROMOTE, model=model, label=label, repo=self.repo)[-1]
+        promoted_tag = find(action=PROMOTE, model=model, label=label, repo=self.repo)[
+            -1
+        ]
         self.repo.create_tag(
             name(DEMOTE, model, label=label, repo=self.repo),
             rev=promoted_tag.commit.hexsha,
             message=f"Demoting model {model} from label {label}",
         )
+
+    def which(self, model, label, raise_if_not_found=True):
+        """Return version of model with specific label active"""
+        latest_labels = self.find_model(model).latest_labels
+        if label in latest_labels:
+            return latest_labels[label].version
+        if raise_if_not_found:
+            raise ValueError(f"Label {label} not found for model {model}")
