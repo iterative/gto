@@ -120,26 +120,45 @@ class Model:
 
     @property
     def latest_version(self) -> str:
-        return self.versions[-1].name
+        return sorted(
+            filter(lambda x: x.unregistered_date is None, self.versions),
+            key=lambda x: x.creation_date,
+        )[-1].name
 
     @property
     def latest_labels(self) -> List[Label]:
-        return {
-            l: sorted(
-                filter(lambda x: x.name == l, self.labels),
+        labels = {}
+        for l in self.unique_labels:
+            found = sorted(
+                filter(
+                    lambda x: x.name == l
+                    and x.unregistered_date is None
+                    and self.find_version(x.version) is not None,
+                    self.labels,
+                ),
                 key=lambda x: x.creation_date,
-            )[-1]
-            for l in self.unique_labels
-        }
+            )
+            labels[l] = found[-1] if found else None
+        return labels
 
     @property
     def versions(self):
         return self._versions
 
-    def find_version(self, version: str) -> Optional[Version]:
-        versions = [v for v in self.versions if v.name == version]
-        assert len(versions) != 1, f"{len(versions)} versions found"
-        return versions[0]
+    def find_version(
+        self, version: str, raise_if_not_found=False, skip_unregistered=True
+    ) -> Optional[Version]:
+        versions = [
+            v
+            for v in self.versions
+            if v.name == version
+            and (v.unregistered_date is None if skip_unregistered else True)
+        ]
+        assert len(versions) <= 1, f"{len(versions)} versions found"
+        if raise_if_not_found:
+            return versions[0]
+
+        return versions[0] if versions else None
 
 
 class ModelTag:
@@ -167,6 +186,8 @@ class Registry:
 
     @property
     def models(self):
+        # tags are sorted and then indexed by timestamp
+        # this is important to check that history is not broken
         tags = [ModelTag(t) for t in find(repo=self.repo)]
         models = {}
         for t in tags:
@@ -232,7 +253,7 @@ class Registry:
         ]
         self.repo.create_tag(
             name(DEMOTE, model, label=label, repo=self.repo),
-            rev=promoted_tag.commit.hexsha,
+            ref=promoted_tag.commit.hexsha,
             message=f"Demoting model {model} from label {label}",
         )
 

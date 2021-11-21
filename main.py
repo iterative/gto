@@ -2,6 +2,7 @@ import warnings
 
 import click
 import git
+import numpy as np
 import pandas as pd
 from IPython.display import display
 
@@ -82,7 +83,15 @@ def show():
             [
                 ("version", m.latest_version),
             ]
-            + [(("version", l), m.latest_labels[l].version) for l in m.unique_labels]
+            + [
+                (
+                    ("version", l),
+                    m.latest_labels[l].version
+                    if m.latest_labels[l] is not None
+                    else np.nan,
+                )
+                for l in m.unique_labels
+            ]
         )
         for m in reg.models
     }
@@ -98,6 +107,7 @@ def show():
             "author": l.author,
             "commit_hexsha": l.commit_hexsha,
             "tag_name": l.tag_name,
+            "unregistered_date": l.unregistered_date,
         }
         for m in reg.models
         for l in m.labels
@@ -117,6 +127,7 @@ def show():
             "author": v.author,
             "commit_hexsha": v.commit_hexsha,
             "tag_name": v.tag_name,
+            "unregistered_date": v.unregistered_date,
         }
         for m in reg.models
         for v in m.versions
