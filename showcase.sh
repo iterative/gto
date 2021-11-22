@@ -48,23 +48,13 @@ gitops promote models/random-forest.pkl v1 production
 gitops show
 
 
-# model-models/random-forest.pkl-register-v1
-# model-models/random-forest.pkl-unregister-v1
+cat << EOF
+Now you have your models registered and promoted.
+Try to unregister and demote them and see what happens by running "gitops show"
+For example:
+gitops unregister models/random-forest.pkl v1
+gitops demote models/random-forest.pkl v2
 
-# model-models/random-forest.pkl-promote-production-1
-# model-models/random-forest.pkl-demote-production-2
-# model-models/random-forest.pkl-promote-production-3
-
-# model-models/random-forest.pkl-promote-production-1
-# model-models/random-forest.pkl-demote-production-1
-# model-models/random-forest.pkl-promote-production-2
-
-
-# gitops unregister models/random-forest.pkl v1
-# gitops demote models/random-forest.pkl v1
-
-# gitops destroy models/random-forest.pkl --version v1
-# gitops destroy models/random-forest.pkl --label production
-
-# gitops unregister models/random-forest.pkl v1 --destroy
-# gitops demote models/random-forest.pkl v1 --destroy
+Right now you can't delete tags to unregister/demote models.
+Only create new tags which will do that.
+EOF
