@@ -1,8 +1,4 @@
 #!/bin/sh
-gitops() {
-    python main.py "$@"
-}
-
 echo "Clean workspace"
 set -exu
 if [[ $(git --no-pager diff) ]]; then
