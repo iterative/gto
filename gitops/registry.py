@@ -49,7 +49,7 @@ class Label:
             mtag.label,
             mtag.creation_date,
             tag.tag.tagger.name,
-            tag.commit.hexsha[:7],
+            tag.commit.hexsha,
             tag.name,
         )
 
@@ -81,7 +81,7 @@ class Version:
             mtag.version,
             mtag.creation_date,
             tag.tag.tagger.name,
-            tag.commit.hexsha[:7],
+            tag.commit.hexsha,
             tag.name,
         )
 
@@ -146,12 +146,17 @@ class Model:
         return self._versions
 
     def find_version(
-        self, version: str, raise_if_not_found=False, skip_unregistered=True
+        self,
+        name: str = None,
+        commit_hexsha: str = None,
+        raise_if_not_found=False,
+        skip_unregistered=True,
     ) -> Optional[Version]:
         versions = [
             v
             for v in self.versions
-            if v.name == version
+            if (v.name == name if name else True)
+            and (v.commit_hexsha == commit_hexsha if commit_hexsha else True)
             and (v.unregistered_date is None if skip_unregistered else True)
         ]
         if raise_if_not_found:
@@ -232,6 +237,13 @@ class Registry:
             raise ValueError(
                 f"Version '{version}' already was registered.\n"
                 "Even if it was unregistered, you must use another name to avoid confusion."
+            )
+        found_version = self.find_model(model, allow_new=True).find_version(
+            None, self.repo.active_branch.commit.hexsha, skip_unregistered=True
+        )
+        if found_version is not None:
+            raise ValueError(
+                f"The model {model} was already registered in this commit with version '{found_version.name}'\n"
             )
         self.repo.create_tag(
             name(REGISTER, model, version=version, repo=self.repo),
