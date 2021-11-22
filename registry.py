@@ -47,7 +47,7 @@ class Label:
             mtag.model,
             version,
             mtag.label,
-            pd.Timestamp(tag.tag.tagged_date * 10 ** 9),
+            mtag.creation_date,
             tag.tag.tagger.name,
             tag.commit.hexsha[:7],
             tag.name,
@@ -79,7 +79,7 @@ class Version:
         return cls(
             mtag.model,
             mtag.version,
-            pd.Timestamp(tag.tag.tagged_date * 10 ** 9),
+            mtag.creation_date,
             tag.tag.tagger.name,
             tag.commit.hexsha[:7],
             tag.name,
@@ -154,10 +154,21 @@ class Model:
             if v.name == version
             and (v.unregistered_date is None if skip_unregistered else True)
         ]
-        assert len(versions) <= 1, f"{len(versions)} versions found"
         if raise_if_not_found:
+            assert len(versions) == 1, (
+                f"{len(versions)} versions of model {self.name} found"
+                + ", skipping unregistered"
+                if skip_unregistered
+                else ""
+            )
             return versions[0]
 
+        assert len(versions) <= 1, (
+            f"{len(versions)} versions of model {self.name} found"
+            + ", skipping unregistered"
+            if skip_unregistered
+            else ""
+        )
         return versions[0] if versions else None
 
 
@@ -212,6 +223,14 @@ class Registry:
 
     def register(self, model, version):
         """Register model version"""
+        found_version = self.find_model(model).find_version(
+            version, skip_unregistered=False
+        )
+        if found_version is not None:
+            raise ValueError(
+                f"Version '{version}' already was registered.\n"
+                "Even if it was unregistered, you must use another name to avoid confusion."
+            )
         self.repo.create_tag(
             name(REGISTER, model, version=version, repo=self.repo),
             message=f"Registering model {model} version {version}",
@@ -236,6 +255,8 @@ class Registry:
 
     def promote(self, model, version, label):
         """Assign label to specific model version"""
+        # check that version exists
+        self.find_model(model).find_version(version, raise_if_not_found=True)
         version_hexsha = self.repo.tags[
             name(REGISTER, model, version=version)
         ].commit.hexsha
@@ -248,6 +269,9 @@ class Registry:
     def demote(self, model, label):
         """De-promote model from given label"""
         # TODO: check if label wasn't demoted already
+        assert (
+            self.find_model(model).latest_labels.get(label) is not None
+        ), f"No active label '{label}' was found for model '{model}'"
         promoted_tag = find(action=PROMOTE, model=model, label=label, repo=self.repo)[
             -1
         ]
