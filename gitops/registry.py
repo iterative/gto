@@ -3,7 +3,7 @@ from typing import List, Optional
 import git
 import pandas as pd
 
-from tag import DEMOTE, PROMOTE, REGISTER, UNREGISTER, find, name, parse
+from .tag import DEMOTE, PROMOTE, REGISTER, UNREGISTER, find, name, parse
 
 
 class Label:

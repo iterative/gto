@@ -15,8 +15,7 @@ source venv/bin/activate
 Install python libraries
 
 ```bash
-pip install --upgrade pip setuptools wheel
-pip install -r requirements.txt
+pip install --upgrade pip setuptools wheel .
 ```
 
 **3. Run**
@@ -28,7 +27,6 @@ bash showcase.sh
 This will create `demo` branch and tags. Please don't push them back to this repo :)
 To continue experimenting, call
 ```bash
-source ./setup.sh
 gitops --help
 ```
 to see functionality and read through demo example.

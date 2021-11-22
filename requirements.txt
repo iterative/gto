@@ -1,4 +1,0 @@
-gitpython
-click
-pandas
-ipython

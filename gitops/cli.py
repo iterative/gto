@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 from IPython.display import display
 
-from registry import Registry
+from .registry import Registry
 
 
 @click.group()
@@ -75,9 +75,8 @@ def demote(model, label):
 @cli.command()
 def show():
     """Show current registry state"""
-    from registry import Registry
 
-    reg = Registry(repo=repo)
+    reg = Registry()
     models_state = {
         m.name: dict(
             [
@@ -144,5 +143,4 @@ if __name__ == "__main__":
     warnings.filterwarnings("ignore")
     pd.set_option("display.max_colwidth", 100)
 
-    repo = git.Repo(".")
     cli()
