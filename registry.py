@@ -207,8 +207,10 @@ class Registry:
             models[t.model].index_tag(t.tag)
         return [models[k] for k in models]
 
-    def find_model(self, model):
+    def find_model(self, model, allow_new=False):
         models = [m for m in self.models if m.name == model]
+        if allow_new and not models:
+            return Model(model, [], [])
         assert len(models) == 1, f"Found {len(models)} models with name {model}"
         return models[0]
 
@@ -223,7 +225,7 @@ class Registry:
 
     def register(self, model, version):
         """Register model version"""
-        found_version = self.find_model(model).find_version(
+        found_version = self.find_model(model, allow_new=True).find_version(
             version, skip_unregistered=False
         )
         if found_version is not None:
