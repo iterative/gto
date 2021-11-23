@@ -1,12 +1,12 @@
 #!/bin/sh
 echo "Clean workspace"
-set -exu
 if [[ $(git --no-pager diff) ]]; then
     echo "Workspace is dirty, please commit or stash changes before running this script"
     exit 1
 fi
 git tag -d $(git tag --list)
 git branch -D demo
+set -exu
 git checkout -b demo
 rm -rf models
 

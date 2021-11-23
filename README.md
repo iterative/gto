@@ -1,6 +1,6 @@
 # Early prototype for tags-based approach
 
-**1. Fork / Clone this repository**
+**1. Clone this repository**
 
 ```bash
 git clone git@github.com:iterative/gitops-object-registry.git
