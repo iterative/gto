@@ -40,10 +40,7 @@ class Label:
         if len(version_candidates) != 1:
             # TODO: resolve this
             raise ValueError(
-                f"Found {len(version_candidates)} tags for model {mtag.model} version {mtag.version}\n"
-                "   How to know which version was registered by this tag if there are multiple versions?\n"
-                "   Take the latest version which existed before registration?\n"
-                "   Still can be confusing"
+                f"Found {len(version_candidates)} tags for model '{mtag.model}' label '{mtag.label}'"
             )
         version = ModelTag(version_candidates[0]).version
         return cls(
@@ -307,6 +304,7 @@ class Registry:
             ref=version_hexsha,
             message=f"Promoting model {model} version {version} to label {label}",
         )
+        return {"version": version}
 
     def demote(self, model, label):
         """De-promote model from given label"""

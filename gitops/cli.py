@@ -45,8 +45,8 @@ def unregister(model, version):
 )
 def promote(model, version, label, name_version):
     """Assign label to specific model version"""
-    Registry().promote(model, version, label, name_version)
-    click.echo(f"Promoted model {model} version {version} to label {label}")
+    result = Registry().promote(model, version, label, name_version)
+    click.echo(f"Promoted model {model} version {result['version']} to label {label}")
 
 
 @cli.command()
