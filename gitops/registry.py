@@ -5,8 +5,8 @@ import git
 import pandas as pd
 from git import exc
 
-from .exceptions import ModelNotFound
-from .tag import DEMOTE, PROMOTE, REGISTER, UNREGISTER, find, name, parse
+from .exceptions import ModelNotFound, VersionAlreadyRegistered, VersionExistsForCommit
+from .tag import DEMOTE, PROMOTE, REGISTER, UNREGISTER, create_tag, find, name, parse
 
 
 class Label:
@@ -229,25 +229,22 @@ class Registry:
         ]
         return sorted(set(tags))
 
-    def register(self, model, version):
+    def register(self, model, version, ref=None):
         """Register model version"""
         found_version = self.find_model(model, allow_new=True).find_version(
             version, skip_unregistered=False
         )
         if found_version is not None:
-            raise ValueError(
-                f"Version '{version}' already was registered.\n"
-                "Even if it was unregistered, you must use another name to avoid confusion."
-            )
+            raise VersionAlreadyRegistered(version)
         found_version = self.find_model(model, allow_new=True).find_version(
-            None, self.repo.active_branch.commit.hexsha, skip_unregistered=True
+            None, ref or self.repo.active_branch.commit.hexsha, skip_unregistered=True
         )
         if found_version is not None:
-            raise ValueError(
-                f"The model {model} was already registered in this commit with version '{found_version.name}'\n"
-            )
-        self.repo.create_tag(
+            raise VersionExistsForCommit(model, found_version.name)
+        create_tag(
+            self.repo,
             name(REGISTER, model, version=version, repo=self.repo),
+            ref=ref,
             message=f"Registering model {model} version {version}",
         )
 
@@ -258,7 +255,8 @@ class Registry:
             raise ValueError(
                 f"Found {len(tags)} tags for model {model} version {version}"
             )
-        self.repo.create_tag(
+        create_tag(
+            self.repo,
             name(UNREGISTER, model, version=version, repo=self.repo),
             ref=tags[0].commit.hexsha,
             message=f"Unregistering model {model} version {version}",
@@ -291,7 +289,7 @@ class Registry:
                     raise BaseException(
                         f"Can't automatically bump '{version}'. Can only do that for versions like 'v4' for now."
                     )
-            self.register(model, version)
+            self.register(model, version, ref=version_hexsha)
             click.echo(
                 f"Registered new version '{version}' of model '{model}' at commit '{version_hexsha}'"
             )
@@ -299,7 +297,8 @@ class Registry:
             version_hexsha = self.repo.tags[
                 name(REGISTER, model, version=version)
             ].commit.hexsha
-        self.repo.create_tag(
+        create_tag(
+            self.repo,
             name(PROMOTE, model, label=label, repo=self.repo),
             ref=version_hexsha,
             message=f"Promoting model {model} version {version} to label {label}",
@@ -315,7 +314,8 @@ class Registry:
         promoted_tag = find(action=PROMOTE, model=model, label=label, repo=self.repo)[
             -1
         ]
-        self.repo.create_tag(
+        create_tag(
+            self.repo,
             name(DEMOTE, model, label=label, repo=self.repo),
             ref=promoted_tag.commit.hexsha,
             message=f"Demoting model {model} from label {label}",

@@ -134,3 +134,15 @@ def find_version(model, label, repo):
     tags = find(action=REGISTER, model=model, repo=repo)
     tags = [t for t in tags if t.commit.hexsha == version_sha]
     return parse(tags[-1].name)["version"]
+
+
+def create_tag(repo, name, ref, message):
+    assert any(
+        c.hexsha == ref for c in repo.iter_commits()
+    ), "Can't find provided hexsha in repo history"
+
+    repo.create_tag(
+        name,
+        ref=ref,
+        message=message,
+    )
