@@ -35,3 +35,11 @@ class VersionExistsForCommit(BaseException):
     def __init__(self, model, version) -> None:
         self.message = self._message.format(model=model, version=version)
         super().__init__(self.message)
+
+
+class VersionIsOld(BaseException):
+    _message = "Version '{suggested}' is younger than the latest {latest}"
+
+    def __init__(self, latest, suggested) -> None:
+        self.message = self._message.format(latest=latest, suggested=suggested)
+        super().__init__(self.message)

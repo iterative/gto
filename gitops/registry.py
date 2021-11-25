@@ -3,10 +3,15 @@ from typing import List, Optional
 import click
 import git
 import pandas as pd
-from git import exc
 
-from .exceptions import ModelNotFound, VersionAlreadyRegistered, VersionExistsForCommit
+from .exceptions import (
+    ModelNotFound,
+    VersionAlreadyRegistered,
+    VersionExistsForCommit,
+    VersionIsOld,
+)
 from .tag import DEMOTE, PROMOTE, REGISTER, UNREGISTER, create_tag, find, name, parse
+from .versions import NumberedVersion
 
 
 class Label:
@@ -231,16 +236,20 @@ class Registry:
 
     def register(self, model, version, ref=None):
         """Register model version"""
-        found_version = self.find_model(model, allow_new=True).find_version(
-            version, skip_unregistered=False
-        )
+        found_model = self.find_model(model, allow_new=True)
+        found_version = found_model.find_version(version, skip_unregistered=False)
         if found_version is not None:
             raise VersionAlreadyRegistered(version)
-        found_version = self.find_model(model, allow_new=True).find_version(
+        found_version = found_model.find_version(
             None, ref or self.repo.active_branch.commit.hexsha, skip_unregistered=True
         )
         if found_version is not None:
             raise VersionExistsForCommit(model, found_version.name)
+        if (
+            found_model.versions
+            and NumberedVersion(version) > found_model.latest_version
+        ):
+            raise VersionIsOld(latest=found_model.latest_version, suggested=version)
         create_tag(
             self.repo,
             name(REGISTER, model, version=version, repo=self.repo),
