@@ -247,7 +247,7 @@ class Registry:
             raise VersionExistsForCommit(model, found_version.name)
         if (
             found_model.versions
-            and NumberedVersion(version) > found_model.latest_version
+            and NumberedVersion(version) < found_model.latest_version
         ):
             raise VersionIsOld(latest=found_model.latest_version, suggested=version)
         create_tag(
