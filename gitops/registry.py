@@ -236,13 +236,13 @@ class Registry:
 
     def register(self, model, version, ref=None):
         """Register model version"""
+        if ref is None:
+            ref = self.repo.active_branch.commit.hexsha
         found_model = self.find_model(model, allow_new=True)
         found_version = found_model.find_version(version, skip_unregistered=False)
         if found_version is not None:
             raise VersionAlreadyRegistered(version)
-        found_version = found_model.find_version(
-            None, ref or self.repo.active_branch.commit.hexsha, skip_unregistered=True
-        )
+        found_version = found_model.find_version(None, ref, skip_unregistered=True)
         if found_version is not None:
             raise VersionExistsForCommit(model, found_version.name)
         if (
