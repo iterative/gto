@@ -1,8 +1,11 @@
 from typing import List, Optional
 
+import click
 import git
 import pandas as pd
+from git import exc
 
+from .exceptions import ModelNotFound
 from .tag import DEMOTE, PROMOTE, REGISTER, UNREGISTER, find, name, parse
 
 
@@ -216,7 +219,8 @@ class Registry:
         models = [m for m in self.models if m.name == model]
         if allow_new and not models:
             return Model(model, [], [])
-        assert len(models) == 1, f"Found {len(models)} models with name {model}"
+        if not models:
+            raise ModelNotFound(model)
         return models[0]
 
     @property
@@ -267,13 +271,37 @@ class Registry:
     #     """Unregister model version"""
     #     self.find_model(model)
 
-    def promote(self, model, version, label):
+    def promote(self, model, version, label, name_version=None):
         """Assign label to specific model version"""
-        # check that version exists
-        self.find_model(model).find_version(version, raise_if_not_found=True)
-        version_hexsha = self.repo.tags[
-            name(REGISTER, model, version=version)
-        ].commit.hexsha
+        try:
+            found_version = self.find_model(
+                model, allow_new=name_version is not None
+            ).find_version(version)
+        except ModelNotFound:
+            raise BaseException(
+                "To promote model which wasn't registered before, you need to supply name_version"
+            )
+        if found_version is None:
+            version_hexsha = version[:]
+            if name_version:
+                version = name_version
+            else:
+                last_version = self.find_model(model).latest_version
+                try:
+                    assert last_version.startswith("v")
+                    version = f"v{int(last_version[1:]) + 1}"
+                except:
+                    raise BaseException(
+                        f"Can't automatically bump '{version}'. Can only do that for versions like 'v4' for now."
+                    )
+            self.register(model, version)
+            click.echo(
+                f"Registered new version '{version}' of model '{model}' at commit '{version_hexsha}'"
+            )
+        else:
+            version_hexsha = self.repo.tags[
+                name(REGISTER, model, version=version)
+            ].commit.hexsha
         self.repo.create_tag(
             name(PROMOTE, model, label=label, repo=self.repo),
             ref=version_hexsha,

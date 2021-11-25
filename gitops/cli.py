@@ -37,9 +37,15 @@ def unregister(model, version):
 @click.argument("model")
 @click.argument("version")
 @click.argument("label")
-def promote(model, version, label):
+@click.option(
+    "--name-version",
+    default=None,
+    help="If you specify hexsha instead of version, then model will be registered first with this name.\n"
+    "If you won't provide name, we'll try to bump it automatically.",
+)
+def promote(model, version, label, name_version):
     """Assign label to specific model version"""
-    Registry().promote(model, version, label)
+    Registry().promote(model, version, label, name_version)
     click.echo(f"Promoted model {model} version {version} to label {label}")
 
 
