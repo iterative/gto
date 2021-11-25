@@ -26,23 +26,26 @@ def name(action, model, version=None, label=None, repo=None):
 
 
 def parse(name, raise_on_fail=True):
+    def add_dashes(x):
+        return f"-{x}-"
+
     if isinstance(name, git.Tag):
         name = name.name
-    if UNREGISTER in name:
-        model, version = name.split(f"-{UNREGISTER}-")
+    if add_dashes(UNREGISTER) in name:
+        model, version = name.split(add_dashes(UNREGISTER))
         model = model[len("model-") :]
         return dict(action=UNREGISTER, model=model, version=version)
-    if REGISTER in name:
-        model, version = name.split(f"-{REGISTER}-")
+    if add_dashes(REGISTER) in name:
+        model, version = name.split(add_dashes(REGISTER))
         model = model[len("model-") :]
         return dict(action=REGISTER, model=model, version=version)
-    if PROMOTE in name:
-        model, label = name.split(f"-{PROMOTE}-")
+    if add_dashes(PROMOTE) in name:
+        model, label = name.split(add_dashes(PROMOTE))
         model = model[len("model-") :]
         label, number = label.split("-")
         return dict(action=PROMOTE, model=model, label=label, number=number)
-    if DEMOTE in name:
-        model, label = name.split(f"-{DEMOTE}-")
+    if add_dashes(DEMOTE) in name:
+        model, label = name.split(add_dashes(DEMOTE))
         model = model[len("model-") :]
         label, number = label.split("-")
         return dict(action=DEMOTE, model=model, label=label, number=number)
