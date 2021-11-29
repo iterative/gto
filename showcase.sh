@@ -15,6 +15,7 @@ versions: NumberedVersion  # or SemVer - but it's not supported yet
 environments:  # prototype will ensure you can only promote to these environments
 - production
 - staging
+# rules: here we need to store rules to create tag names, e.g. model-{model}-{action}-{version/label}-{number}
 EOF
 
 echo "Create new models"
@@ -27,7 +28,6 @@ git commit -am "Create models"
 echo "Register new model"
 gitops register models/random-forest.pkl v1
 gitops register models/neural-network.pkl v1
-# gitops register models/random-forest.pkl $COMMIT_HASH v1
 
 echo "Update the model"
 sleep 1
