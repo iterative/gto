@@ -46,7 +46,7 @@ gitops promote models/random-forest.pkl staging --commit `git rev-parse HEAD`
 sleep 1
 gitops promote models/random-forest.pkl production --commit `git rev-parse HEAD`
 sleep 1
-gitops promote models/random-forest.pkl v1 production
+gitops promote models/random-forest.pkl production --version v1
 
 gitops show
 
