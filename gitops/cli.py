@@ -35,17 +35,27 @@ def unregister(model, version):
 
 @cli.command()
 @click.argument("model")
-@click.argument("version")
 @click.argument("label")
 @click.option(
-    "--name-version",
+    "--version",
     default=None,
-    help="If you specify hexsha instead of version, then model will be registered first with this name.\n"
-    "If you won't provide name, we'll try to bump it automatically.",
+    help="If you provide --promote-commit, this will be used to name new version",
 )
-def promote(model, version, label, name_version):
+@click.option(
+    "--promote-commit",
+    default=None,
+)
+def promote(model, label, version, promote_commit):
     """Assign label to specific model version"""
-    result = Registry().promote(model, version, label, name_version)
+    if promote_commit is not None:
+        name_version = version
+        promote_version = None
+    else:
+        name_version = None
+        promote_version = version
+    result = Registry().promote(
+        model, label, promote_version, promote_commit, name_version
+    )
     click.echo(f"Promoted model {model} version {result['version']} to label {label}")
 
 

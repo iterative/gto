@@ -278,46 +278,46 @@ class Registry:
     #     """Unregister model version"""
     #     self.find_model(model)
 
-    def promote(self, model, version, label, name_version=None):
+    def promote(
+        self, model, label, promote_version=None, promote_commit=None, name_version=None
+    ):
         """Assign label to specific model version"""
         if label not in self.config.ENVIRONMENTS:
             raise UnknownEnvironment(label)
+        if promote_version is None and promote_commit is None:
+            raise ValueError("Either version or commit must be specified")
+        if promote_version is not None and promote_commit is not None:
+            raise ValueError("Only one of version or commit must be specified")
         try:
-            found_version = self.find_model(
-                model, allow_new=name_version is not None
-            ).find_version(version)
+            found_model = self.find_model(model)
         except ModelNotFound:
             raise BaseException(
-                "To promote model which wasn't registered before, you need to supply name_version"
+                "To promote a model automatically you need to manually register it once."
             )
-        if found_version is None:
-            version_hexsha = version[:]
-            if name_version:
-                version = name_version
-            else:
-                last_version = self.find_model(model).latest_version
-                try:
-                    assert last_version.startswith("v")
-                    version = f"v{int(last_version[1:]) + 1}"
-                except:
-                    raise BaseException(
-                        f"Can't automatically bump '{version}'. Can only do that for versions like 'v4' for now."
-                    )
-            self.register(model, version, ref=version_hexsha)
-            click.echo(
-                f"Registered new version '{version}' of model '{model}' at commit '{version_hexsha}'"
-            )
-        else:
-            version_hexsha = self.repo.tags[
-                name(REGISTER, model, version=version)
+        if promote_version is not None:
+            found_version = found_model.find_version(promote_version)
+            if found_version is None:
+                raise BaseException("Version is not found")
+            promote_commit = self.repo.tags[
+                name(REGISTER, model, version=promote_version)
             ].commit.hexsha
+        else:
+            found_version = found_model.find_version(None, promote_commit)
+            if found_version is None:
+                if name_version is None:
+                    last_version = self.find_model(model).latest_version
+                    promote_version = NumberedVersion(last_version).bump().version
+                self.register(model, name_version, ref=promote_commit)
+                click.echo(
+                    f"Registered new version '{promote_version}' of model '{model}' at commit '{promote_commit}'"
+                )
         create_tag(
             self.repo,
             name(PROMOTE, model, label=label, repo=self.repo),
-            ref=version_hexsha,
-            message=f"Promoting model {model} version {version} to label {label}",
+            ref=promote_commit,
+            message=f"Promoting model {model} version {promote_version} to label {label}",
         )
-        return {"version": version}
+        return {"version": promote_version}
 
     def demote(self, model, label):
         """De-promote model from given label"""

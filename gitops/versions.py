@@ -20,6 +20,9 @@ class AbstractVersion:
     def __lt__(self, other):
         raise NotImplementedError
 
+    def bump(self):
+        raise NotImplementedError
+
 
 @total_ordering
 class NumberedVersion(AbstractVersion):
@@ -45,6 +48,9 @@ class NumberedVersion(AbstractVersion):
             other, NumberedVersion
         ), "You can compare only versions of the same system."
         return self.to_number() < other.to_number()
+
+    def bump(self):
+        return NumberedVersion(f"v{self.to_number() + 1}")
 
 
 class SemVer(AbstractVersion):

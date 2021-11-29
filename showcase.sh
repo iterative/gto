@@ -38,13 +38,13 @@ echo "Register models"
 gitops register models/random-forest.pkl v2
 
 echo "Promote models"
-gitops promote models/neural-network.pkl v1 staging
+gitops promote models/neural-network.pkl staging --version v1
 sleep 1
-gitops promote models/random-forest.pkl v1 production
+gitops promote models/random-forest.pkl production --version v1
 sleep 1
-gitops promote models/random-forest.pkl v2 staging
+gitops promote models/random-forest.pkl staging --commit `git rev-parse HEAD`
 sleep 1
-gitops promote models/random-forest.pkl v2 production
+gitops promote models/random-forest.pkl production --commit `git rev-parse HEAD`
 sleep 1
 gitops promote models/random-forest.pkl v1 production
 
@@ -61,6 +61,3 @@ gitops demote models/random-forest.pkl v2
 Right now you can't delete tags to unregister/demote models.
 Only create new tags which will do that.
 EOF
-
-gitops promote models/random-forest.pkl v1 production
-gitops promote models/random-forest.pkl 123dabe5 production --name-version 1.0.1
