@@ -8,7 +8,7 @@ git tag -d $(git tag --list)
 git branch -D demo
 set -exu
 git checkout -b demo
-rm -rf models
+rm -rf models gitops_config.yaml
 
 cat << EOF > gitops_config.yaml
 versions: NumberedVersion  # or SemVer - but it's not supported yet
