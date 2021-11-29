@@ -10,6 +10,13 @@ set -exu
 git checkout -b demo
 rm -rf models
 
+cat << EOF > gitops_config.yaml
+versions: NumberedVersion  # or SemVer - but it's not supported yet
+environments:  # prototype will ensure you can only promote to these environments
+- production
+- staging
+EOF
+
 echo "Create new models"
 mkdir models
 echo "1st version" > models/random-forest.pkl
@@ -54,3 +61,6 @@ gitops demote models/random-forest.pkl v2
 Right now you can't delete tags to unregister/demote models.
 Only create new tags which will do that.
 EOF
+
+gitops promote models/random-forest.pkl v1 production
+gitops promote models/random-forest.pkl 123dabe5 production --name-version 1.0.1

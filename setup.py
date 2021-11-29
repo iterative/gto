@@ -9,6 +9,8 @@ install_requires = [
     "pandas",
     "ipython",
     "numpy",
+    "pydantic",
+    "pyyaml",
 ]
 
 

@@ -4,8 +4,10 @@ import click
 import git
 import pandas as pd
 
+from .config import CONFIG
 from .exceptions import (
     ModelNotFound,
+    UnknownEnvironment,
     VersionAlreadyRegistered,
     VersionExistsForCommit,
     VersionIsOld,
@@ -201,6 +203,7 @@ class ModelTag:
 class Registry:
     repo: git.Repo
     models: List[Model]
+    config = CONFIG
 
     def __init__(self, repo: git.Repo = git.Repo(".")):
         self.repo = repo
@@ -277,6 +280,8 @@ class Registry:
 
     def promote(self, model, version, label, name_version=None):
         """Assign label to specific model version"""
+        if label not in self.config.ENVIRONMENTS:
+            raise UnknownEnvironment(label)
         try:
             found_version = self.find_model(
                 model, allow_new=name_version is not None

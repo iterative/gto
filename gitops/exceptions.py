@@ -1,4 +1,4 @@
-from sys import version
+from .config import CONFIG
 
 
 class BaseException(Exception):
@@ -42,4 +42,12 @@ class VersionIsOld(BaseException):
 
     def __init__(self, latest, suggested) -> None:
         self.message = self._message.format(latest=latest, suggested=suggested)
+        super().__init__(self.message)
+
+
+class UnknownEnvironment(BaseException):
+    _message = f"Environment '{{env}}' is not present in your config file. Allowed envs are: {CONFIG.ENVIRONMENTS}."
+
+    def __init__(self, env) -> None:
+        self.message = self._message.format(env=env)
         super().__init__(self.message)
