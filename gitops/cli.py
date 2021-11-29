@@ -39,23 +39,21 @@ def unregister(model, version):
 @click.option(
     "--version",
     default=None,
-    help="If you provide --promote-commit, this will be used to name new version",
+    help="If you provide --commit, this will be used to name new version",
 )
 @click.option(
-    "--promote-commit",
+    "--commit",
     default=None,
 )
-def promote(model, label, version, promote_commit):
+def promote(model, label, version, commit):
     """Assign label to specific model version"""
-    if promote_commit is not None:
+    if commit is not None:
         name_version = version
         promote_version = None
     else:
         name_version = None
         promote_version = version
-    result = Registry().promote(
-        model, label, promote_version, promote_commit, name_version
-    )
+    result = Registry().promote(model, label, promote_version, commit, name_version)
     click.echo(f"Promoted model {model} version {result['version']} to label {label}")
 
 
