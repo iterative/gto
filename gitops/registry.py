@@ -200,13 +200,6 @@ class ModelTag:
         self.tag = tag
 
 
-def init_registry(repo: git.Repo = git.Repo("."), base=CONFIG.BASE):
-    if base != "tag":
-        raise ValueError("Other implementations except of tag-based aren't supported")
-    base_map = {"tag": TagsBasedRegistry}
-    return base_map[base]
-
-
 class BaseRegistry:
     repo: git.Repo
     models: List[Model]

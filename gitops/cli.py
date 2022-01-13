@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 from IPython.display import display
 
-from .registry import Registry
+from . import init_registry
 
 
 @click.group()
@@ -20,7 +20,7 @@ def cli():
 @click.argument("version")
 def register(model, version):
     """Register new model version"""
-    Registry().register(model, version)
+    init_registry().register(model, version)
     click.echo(f"Registered model {model} version {version}")
 
 
@@ -29,7 +29,7 @@ def register(model, version):
 @click.argument("version")
 def unregister(model, version):
     """Unregister model version"""
-    Registry().unregister(model, version)
+    init_registry().unregister(model, version)
     click.echo(f"Unregistered model {model} version {version}")
 
 
@@ -53,7 +53,7 @@ def promote(model, label, version, commit):
     else:
         name_version = None
         promote_version = version
-    result = Registry().promote(model, label, promote_version, commit, name_version)
+    result = init_registry().promote(model, label, promote_version, commit, name_version)
     click.echo(f"Promoted model {model} version {result['version']} to label {label}")
 
 
@@ -61,7 +61,7 @@ def promote(model, label, version, commit):
 @click.argument("model")
 def latest(model):
     """Return latest version for model"""
-    model = [m for m in Registry().models if m.name == model][0]
+    model = [m for m in init_registry().models if m.name == model][0]
     click.echo(model.latest_version)
 
 
@@ -70,7 +70,7 @@ def latest(model):
 @click.argument("label")
 def which(model, label):
     """Return version of model with specific label active"""
-    version = Registry().which(model, label, raise_if_not_found=False)
+    version = init_registry().which(model, label, raise_if_not_found=False)
     if version:
         click.echo(version)
     else:
@@ -82,7 +82,7 @@ def which(model, label):
 @click.argument("label")
 def demote(model, label):
     """De-promote model from given label"""
-    Registry().demote(model, label)
+    init_registry().demote(model, label)
     click.echo(f"Demoted model {model} from label {label}")
 
 
@@ -90,7 +90,7 @@ def demote(model, label):
 def show():
     """Show current registry state"""
 
-    reg = Registry()
+    reg = init_registry()
     models_state = {
         m.name: dict(
             [
