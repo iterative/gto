@@ -154,7 +154,7 @@ def create_tag(repo, name, ref, message):
     )
 
 
-class TagsBasedVersion(BaseVersion):
+class TagBasedVersion(BaseVersion):
 
     @classmethod
     def from_tag(cls, tag):
@@ -169,7 +169,7 @@ class TagsBasedVersion(BaseVersion):
         )
 
 
-class TagsBasedLabel(BaseLabel):
+class TagBasedLabel(BaseLabel):
 
     @classmethod
     def from_tag(cls, tag: git.Tag) -> None:
@@ -196,7 +196,6 @@ class TagsBasedLabel(BaseLabel):
         )
 
 
-
 class ModelTag:
     model: str
     version: Optional[str]
@@ -213,16 +212,16 @@ class ModelTag:
         self.tag = tag
 
 
-class TagsBasedModel:
+class TagBasedModel(BaseModel):
 
     def index_tag(self, tag: git.Tag) -> None:
         mtag = ModelTag(tag)
         if mtag.action == REGISTER:
-            self.versions.append(TagsBasedVersion.from_tag(tag))
+            self.versions.append(TagBasedVersion.from_tag(tag))
         if mtag.action == UNREGISTER:
             self.find_version(mtag.version).unregistered_date = mtag.creation_date
         if mtag.action == PROMOTE:
-            self.labels.append(TagsBasedLabel.from_tag(tag))
+            self.labels.append(TagBasedLabel.from_tag(tag))
         if mtag.action == DEMOTE:
             if mtag.label not in self.latest_labels:
                 raise ValueError(f"Active label '{mtag.label}' not found")
@@ -231,7 +230,7 @@ class TagsBasedModel:
 
 class TagBasedRegistry(BaseRegistry):
 
-    _Model = TagsBasedModel
+    _Model = TagBasedModel
 
     @property
     def models(self):
@@ -241,7 +240,7 @@ class TagBasedRegistry(BaseRegistry):
         models = {}
         for t in tags:
             if t.model not in models:
-                models[t.model] = TagsBasedModel(t.model, [], [])
+                models[t.model] = TagBasedModel(t.model, [], [])
             models[t.model].index_tag(t.tag)
         return [models[k] for k in models]
 
