@@ -1,7 +1,7 @@
 import git
 
 from .config import CONFIG
-from .registry import TagsBasedRegistry
+from .tag import TagsBasedRegistry
 
 
 def init_registry(repo: git.Repo = git.Repo("."), base=CONFIG.BASE):

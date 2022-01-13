@@ -1,4 +1,10 @@
+from typing import Optional
+
 import git
+import pandas as pd
+
+from .base import BaseLabel, BaseVersion, BaseModel, BaseRegistry
+
 
 REGISTER = "register"
 UNREGISTER = "unregister"
@@ -146,3 +152,149 @@ def create_tag(repo, name, ref, message):
         ref=ref,
         message=message,
     )
+
+
+class TagsBasedVersion(BaseVersion):
+
+    @classmethod
+    def from_tag(cls, tag):
+        mtag = ModelTag(tag)
+        return cls(
+            mtag.model,
+            mtag.version,
+            mtag.creation_date,
+            tag.tag.tagger.name,
+            tag.commit.hexsha,
+            tag.name,
+        )
+
+
+class TagsBasedLabel(BaseLabel):
+
+    @classmethod
+    def from_tag(cls, tag: git.Tag) -> None:
+        mtag = ModelTag(tag)
+        version_candidates = [
+            t
+            for t in find(action=REGISTER, model=mtag.model, repo=tag.repo)
+            if t.commit.hexsha == tag.commit.hexsha
+        ]
+        if len(version_candidates) != 1:
+            # TODO: resolve this
+            raise ValueError(
+                f"Found {len(version_candidates)} tags for model '{mtag.model}' label '{mtag.label}'"
+            )
+        version = ModelTag(version_candidates[0]).version
+        return cls(
+            mtag.model,
+            version,
+            mtag.label,
+            mtag.creation_date,
+            tag.tag.tagger.name,
+            tag.commit.hexsha,
+            tag.name,
+        )
+
+
+
+class ModelTag:
+    model: str
+    version: Optional[str]
+    label: Optional[str]
+    tag: git.Tag
+
+    def __init__(self, tag) -> None:
+        parsed = parse(tag.name)
+        self.action = parsed["action"]
+        self.model = parsed["model"]
+        self.version = parsed.get("version")
+        self.label = parsed.get("label")
+        self.creation_date = pd.Timestamp(tag.tag.tagged_date * 10 ** 9)
+        self.tag = tag
+
+
+class TagsBasedModel:
+
+    def index_tag(self, tag: git.Tag) -> None:
+        mtag = ModelTag(tag)
+        if mtag.action == REGISTER:
+            self.versions.append(TagsBasedVersion.from_tag(tag))
+        if mtag.action == UNREGISTER:
+            self.find_version(mtag.version).unregistered_date = mtag.creation_date
+        if mtag.action == PROMOTE:
+            self.labels.append(TagsBasedLabel.from_tag(tag))
+        if mtag.action == DEMOTE:
+            if mtag.label not in self.latest_labels:
+                raise ValueError(f"Active label '{mtag.label}' not found")
+            self.latest_labels[mtag.label].unregistered_date = mtag.creation_date
+
+
+class TagBasedRegistry(BaseRegistry):
+
+    _Model = TagsBasedModel
+
+    @property
+    def models(self):
+        # tags are sorted and then indexed by timestamp
+        # this is important to check that history is not broken
+        tags = [ModelTag(t) for t in find(repo=self.repo)]
+        models = {}
+        for t in tags:
+            if t.model not in models:
+                models[t.model] = TagsBasedModel(t.model, [], [])
+            models[t.model].index_tag(t.tag)
+        return [models[k] for k in models]
+
+    @property
+    def _labels(self):
+        return [
+            parse(t.name)["label"]
+            for t in find(repo=self.repo)
+            if "label" in parse(t.name)
+        ]
+
+    def _register(self, model, version, ref, message):
+        create_tag(
+            self.repo,
+            name(REGISTER, model, version=version, repo=self.repo),
+            ref=ref,
+            message=message,
+        )
+
+    def unregister(self, model, version):
+        """Unregister model version"""
+        tags = find(action=REGISTER, model=model, version=version, repo=self.repo)
+        if len(tags) != 1:
+            raise ValueError(
+                f"Found {len(tags)} git tags for model {model} version {version}"
+            )
+        create_tag(
+            self.repo,
+            name(UNREGISTER, model, version=version, repo=self.repo),
+            ref=tags[0].commit.hexsha,
+            message=f"Unregistering model {model} version {version}",
+        )
+
+    def find_commit(self, model, version):
+        return self.repo.tags[
+                name(REGISTER, model, version=version)
+        ].commit.hexsha
+
+    def _promote(self, model, label, ref, message):
+        create_tag(
+            self.repo,
+            name(PROMOTE, model, label=label, repo=self.repo),
+            ref=ref,
+            message=message,
+        )
+
+    def _demote(self, model, label, message):
+        promoted_tag = find(action=PROMOTE, model=model, label=label, repo=self.repo)[
+            -1
+        ]
+        create_tag(
+            self.repo,
+            name(DEMOTE, model, label=label, repo=self.repo),
+            ref=promoted_tag.commit.hexsha,
+            message=message,
+        )
