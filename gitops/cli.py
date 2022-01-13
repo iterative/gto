@@ -1,7 +1,6 @@
 import warnings
 
 import click
-import git
 import numpy as np
 import pandas as pd
 from IPython.display import display
@@ -53,7 +52,9 @@ def promote(model, label, version, commit):
     else:
         name_version = None
         promote_version = version
-    result = init_registry().promote(model, label, promote_version, commit, name_version)
+    result = init_registry().promote(
+        model, label, promote_version, commit, name_version
+    )
     click.echo(f"Promoted model {model} version {result['version']} to label {label}")
 
 

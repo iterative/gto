@@ -3,8 +3,7 @@ from typing import Optional
 import git
 import pandas as pd
 
-from .base import BaseLabel, BaseVersion, BaseModel, BaseRegistry
-
+from .base import BaseLabel, BaseModel, BaseRegistry, BaseVersion
 
 REGISTER = "register"
 UNREGISTER = "unregister"
@@ -155,7 +154,6 @@ def create_tag(repo, name, ref, message):
 
 
 class TagBasedVersion(BaseVersion):
-
     @classmethod
     def from_tag(cls, tag):
         mtag = ModelTag(tag)
@@ -170,7 +168,6 @@ class TagBasedVersion(BaseVersion):
 
 
 class TagBasedLabel(BaseLabel):
-
     @classmethod
     def from_tag(cls, tag: git.Tag) -> None:
         mtag = ModelTag(tag)
@@ -213,7 +210,6 @@ class ModelTag:
 
 
 class TagBasedModel(BaseModel):
-
     def index_tag(self, tag: git.Tag) -> None:
         mtag = ModelTag(tag)
         if mtag.action == REGISTER:
@@ -275,9 +271,7 @@ class TagBasedRegistry(BaseRegistry):
         )
 
     def find_commit(self, model, version):
-        return self.repo.tags[
-                name(REGISTER, model, version=version)
-        ].commit.hexsha
+        return self.repo.tags[name(REGISTER, model, version=version)].commit.hexsha
 
     def _promote(self, model, label, ref, message):
         create_tag(
