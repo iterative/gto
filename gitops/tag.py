@@ -48,12 +48,12 @@ def parse(name, raise_on_fail=True):
         model, label = name.split(add_dashes(PROMOTE))
         model = model[len("model-") :]
         label, number = label.split("-")
-        return dict(action=PROMOTE, model=model, label=label, number=number)
+        return dict(action=PROMOTE, model=model, label=label, number=int(number))
     if add_dashes(DEMOTE) in name:
         model, label = name.split(add_dashes(DEMOTE))
         model = model[len("model-") :]
         label, number = label.split("-")
-        return dict(action=DEMOTE, model=model, label=label, number=number)
+        return dict(action=DEMOTE, model=model, label=label, number=int(number))
     if raise_on_fail:
         raise ValueError(f"Unknown tag name: {name}")
     else:
