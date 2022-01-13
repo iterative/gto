@@ -200,7 +200,14 @@ class ModelTag:
         self.tag = tag
 
 
-class Registry:
+def init_registry(repo: git.Repo = git.Repo("."), base=CONFIG.BASE):
+    if base != "tag":
+        raise ValueError("Other implementations except of tag-based aren't supported")
+    base_map = {"tag": TagsBasedRegistry}
+    return base_map[base]
+
+
+class BaseRegistry:
     repo: git.Repo
     models: List[Model]
     config = CONFIG
@@ -208,34 +215,24 @@ class Registry:
     def __init__(self, repo: git.Repo = git.Repo(".")):
         self.repo = repo
 
-    @property
-    def models(self):
-        # tags are sorted and then indexed by timestamp
-        # this is important to check that history is not broken
-        tags = [ModelTag(t) for t in find(repo=self.repo)]
-        models = {}
-        for t in tags:
-            if t.model not in models:
-                models[t.model] = Model(t.model, [], [])
-            models[t.model].index_tag(t.tag)
-        return [models[k] for k in models]
-
     def find_model(self, model, allow_new=False):
         models = [m for m in self.models if m.name == model]
         if allow_new and not models:
-            return Model(model, [], [])
+            return self._Model(model, [], [])
         if not models:
             raise ModelNotFound(model)
         return models[0]
 
     @property
+    def _labels(self):
+        raise NotImplementedError
+
+    @property
     def labels(self):
-        tags = [
-            parse(t.name)["label"]
-            for t in find(repo=self.repo)
-            if "label" in parse(t.name)
-        ]
-        return sorted(set(tags))
+        return sorted(set(self._labels))
+
+    def _register(self, model, version, ref, message):
+        raise NotImplementedError
 
     def register(self, model, version, ref=None):
         """Register model version"""
@@ -253,30 +250,16 @@ class Registry:
             and NumberedVersion(version) < found_model.latest_version
         ):
             raise VersionIsOld(latest=found_model.latest_version, suggested=version)
-        create_tag(
-            self.repo,
-            name(REGISTER, model, version=version, repo=self.repo),
-            ref=ref,
-            message=f"Registering model {model} version {version}",
-        )
+        self._register(model, version, ref, message=f"Registering model {model} version {version}")
 
     def unregister(self, model, version):
-        """Unregister model version"""
-        tags = find(action=REGISTER, model=model, version=version, repo=self.repo)
-        if len(tags) != 1:
-            raise ValueError(
-                f"Found {len(tags)} tags for model {model} version {version}"
-            )
-        create_tag(
-            self.repo,
-            name(UNREGISTER, model, version=version, repo=self.repo),
-            ref=tags[0].commit.hexsha,
-            message=f"Unregistering model {model} version {version}",
-        )
+        raise NotImplementedError
 
-    # def unregister(self, model, version):
-    #     """Unregister model version"""
-    #     self.find_model(model)
+    def find_commit(self, model, version):
+        raise NotImplementedError
+
+    def _promote(model, label, ref, message):
+        raise NotImplementedError
 
     def promote(
         self, model, label, promote_version=None, promote_commit=None, name_version=None
@@ -298,9 +281,7 @@ class Registry:
             found_version = found_model.find_version(promote_version)
             if found_version is None:
                 raise BaseException("Version is not found")
-            promote_commit = self.repo.tags[
-                name(REGISTER, model, version=promote_version)
-            ].commit.hexsha
+            promote_commit = self.find_commit(model, promote_version)
         else:
             found_version = found_model.find_version(None, promote_commit)
             if found_version is None:
@@ -311,11 +292,11 @@ class Registry:
                 click.echo(
                     f"Registered new version '{promote_version}' of model '{model}' at commit '{promote_commit}'"
                 )
-        create_tag(
-            self.repo,
-            name(PROMOTE, model, label=label, repo=self.repo),
+        self._promote(
+            model,
+            label,
             ref=promote_commit,
-            message=f"Promoting model {model} version {promote_version} to label {label}",
+            message=f"Promoting model {model} version {promote_version} to label {label}"
         )
         return {"version": promote_version}
 
@@ -325,15 +306,7 @@ class Registry:
         assert (
             self.find_model(model).latest_labels.get(label) is not None
         ), f"No active label '{label}' was found for model '{model}'"
-        promoted_tag = find(action=PROMOTE, model=model, label=label, repo=self.repo)[
-            -1
-        ]
-        create_tag(
-            self.repo,
-            name(DEMOTE, model, label=label, repo=self.repo),
-            ref=promoted_tag.commit.hexsha,
-            message=f"Demoting model {model} from label {label}",
-        )
+        self._demote(model, label, message=f"Demoting model {model} from label {label}")
 
     def which(self, model, label, raise_if_not_found=True):
         """Return version of model with specific label active"""
@@ -342,3 +315,74 @@ class Registry:
             return latest_labels[label].version
         if raise_if_not_found:
             raise ValueError(f"Label {label} not found for model {model}")
+
+
+class TagsBasedRegistry(BaseRegistry):
+
+    _Model = Model
+
+    @property
+    def models(self):
+        # tags are sorted and then indexed by timestamp
+        # this is important to check that history is not broken
+        tags = [ModelTag(t) for t in find(repo=self.repo)]
+        models = {}
+        for t in tags:
+            if t.model not in models:
+                models[t.model] = Model(t.model, [], [])
+            models[t.model].index_tag(t.tag)
+        return [models[k] for k in models]
+
+    @property
+    def _labels(self):
+        return [
+            parse(t.name)["label"]
+            for t in find(repo=self.repo)
+            if "label" in parse(t.name)
+        ]
+
+    def _register(self, model, version, ref, message):
+        create_tag(
+            self.repo,
+            name(REGISTER, model, version=version, repo=self.repo),
+            ref=ref,
+            message=message,
+        )
+
+    def unregister(self, model, version):
+        """Unregister model version"""
+        tags = find(action=REGISTER, model=model, version=version, repo=self.repo)
+        if len(tags) != 1:
+            raise ValueError(
+                f"Found {len(tags)} git tags for model {model} version {version}"
+            )
+        create_tag(
+            self.repo,
+            name(UNREGISTER, model, version=version, repo=self.repo),
+            ref=tags[0].commit.hexsha,
+            message=f"Unregistering model {model} version {version}",
+        )
+
+    def find_commit(self, model, version):
+        return self.repo.tags[
+                name(REGISTER, model, version=version)
+        ].commit.hexsha
+
+    def _promote(self, model, label, ref, message):
+        create_tag(
+            self.repo,
+            name(PROMOTE, model, label=label, repo=self.repo),
+            ref=ref,
+            message=message,
+        )
+
+    def _demote(self, model, label, message):
+        promoted_tag = find(action=PROMOTE, model=model, label=label, repo=self.repo)[
+            -1
+        ]
+        create_tag(
+            self.repo,
+            name(DEMOTE, model, label=label, repo=self.repo),
+            ref=promoted_tag.commit.hexsha,
+            message=message,
+        )

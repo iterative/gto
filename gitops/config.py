@@ -24,6 +24,7 @@ def config_settings_source(settings: BaseSettings) -> Dict[str, Any]:
 class RegistryConfig(BaseSettings):
     VERSIONS: str = "NumberedVersion"
     ENVIRONMENTS: List = ["production", "staging"]
+    BASE: str = "tag"
 
     class Config:
         env_prefix = "gitops_"
