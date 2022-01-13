@@ -46,3 +46,11 @@ class RegistryConfig(BaseSettings):
 
 
 CONFIG = RegistryConfig()
+if CONFIG.VERSIONS == "NumberedVersion":
+    from .versions import NumberedVersion
+
+    CONFIG.VERSIONING = NumberedVersion
+elif CONFIG.VERSIONS == "SemVer":
+    from .versions import SemVer
+
+    CONFIG.VERSIONING = SemVer

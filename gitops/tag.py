@@ -226,7 +226,7 @@ class TagBasedModel(BaseModel):
 
 class TagBasedRegistry(BaseRegistry):
 
-    _Model = TagBasedModel
+    Model = TagBasedModel
 
     @property
     def models(self):
