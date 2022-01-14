@@ -72,7 +72,7 @@ class BaseObject:
     def __repr__(self) -> str:
         versions = ", ".join(f"'{v.name}'" for v in self.versions)
         labels = ", ".join(f"'{l}'" for l in self.unique_labels)
-        return f"Model(versions=[{versions}], labels=[{labels}])"
+        return f"Object(versions=[{versions}], labels=[{labels}])"
 
     @property
     def latest_version(self) -> str:
@@ -144,7 +144,7 @@ class BaseRegistry:
     def find_object(self, path, allow_new=False):
         objects = [m for m in self.objects if m.name == path]
         if allow_new and not objects:
-            return self.Model(path, [], [])
+            return self.Object(path, [], [])
         if not objects:
             raise ObjectNotFound(path)
         return objects[0]
