@@ -7,6 +7,11 @@ from IPython.display import display
 
 from . import init_registry
 
+arg_category = click.argument("category")
+arg_path = click.argument("path")
+arg_version = click.argument("version")
+arg_label = click.argument("label")
+
 
 @click.group()
 def cli():
@@ -15,76 +20,77 @@ def cli():
 
 
 @cli.command()
-@click.argument("model")
-@click.argument("version")
-def register(model, version):
-    """Register new model version"""
-    init_registry().register(model, version)
-    click.echo(f"Registered model {model} version {version}")
+@arg_category
+@arg_path
+@arg_version
+def register(category, path, version):
+    """Register new object version"""
+    init_registry().register(path, version)
+    click.echo(f"Registered {category} {path} version {version}")
 
 
 @cli.command()
-@click.argument("model")
-@click.argument("version")
-def unregister(model, version):
-    """Unregister model version"""
-    init_registry().unregister(model, version)
-    click.echo(f"Unregistered model {model} version {version}")
+@arg_category
+@arg_path
+@arg_version
+def unregister(category, path, version):
+    """Unregister object version"""
+    init_registry().unregister(path, version)
+    click.echo(f"Unregistered {category} {path} version {version}")
 
 
 @cli.command()
-@click.argument("model")
-@click.argument("label")
+@arg_category
+@arg_path
+@arg_label
 @click.option(
     "--version",
     default=None,
     help="If you provide --commit, this will be used to name new version",
 )
-@click.option(
-    "--commit",
-    default=None,
-)
-def promote(model, label, version, commit):
-    """Assign label to specific model version"""
+@click.option("--commit", default=None)
+def promote(category, path, label, version, commit):
+    """Assign label to specific object version"""
     if commit is not None:
         name_version = version
         promote_version = None
     else:
         name_version = None
         promote_version = version
-    result = init_registry().promote(
-        model, label, promote_version, commit, name_version
-    )
-    click.echo(f"Promoted model {model} version {result['version']} to label {label}")
+    result = init_registry().promote(path, label, promote_version, commit, name_version)
+    click.echo(f"Promoted object {path} version {result['version']} to label {label}")
 
 
 @cli.command()
-@click.argument("model")
-def latest(model):
-    """Return latest version for model"""
-    model = [m for m in init_registry().models if m.name == model][0]
-    click.echo(model.latest_version)
+@arg_category
+@arg_path
+def latest(category, path):
+    """Return latest version for object"""
+    obj = [m for m in init_registry().models if m.name == path][0]
+    click.echo(obj.latest_version)
 
 
 @cli.command()
-@click.argument("model")
-@click.argument("label")
-def which(model, label):
-    """Return version of model with specific label active"""
-    version = init_registry().which(model, label, raise_if_not_found=False)
+@arg_category
+@arg_path
+@arg_label
+def which(category, path, label):
+    """Return version of object with specific label active"""
+    version = init_registry().which(path, label, raise_if_not_found=False)
     if version:
         click.echo(version)
     else:
-        click.echo(f"No version of model '{model}' with label '{label}' active")
+        click.echo(f"No version of object '{path}' with label '{label}' active")
 
 
 @cli.command()
-@click.argument("model")
-@click.argument("label")
-def demote(model, label):
-    """De-promote model from given label"""
-    init_registry().demote(model, label)
-    click.echo(f"Demoted model {model} from label {label}")
+@arg_category
+@arg_path
+@arg_label
+def demote(category, path, label):
+    """De-promote object from given label"""
+    init_registry().demote(path, label)
+    click.echo(f"Demoted object {path} from label {label}")
 
 
 @cli.command()
