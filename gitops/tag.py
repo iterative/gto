@@ -290,7 +290,7 @@ class TagBasedRegistry(BaseRegistry):
             if tag.object not in objects:
                 objects[tag.object] = TagBasedObject(tag.category, tag.object, [], [])
             objects[tag.object].index_tag(tag.tag)
-        return objects.items()
+        return objects.values()
 
     @property
     def _labels(self):
