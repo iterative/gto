@@ -1,3 +1,4 @@
+from re import S
 from typing import List, Optional
 
 import click
@@ -21,8 +22,17 @@ class BaseLabel:
     unregistered_date: Optional[pd.Timestamp] = None
 
     def __init__(
-        self, object, version, label, creation_date, author, commit_hexsha, tag_name
+        self,
+        category,
+        object,
+        version,
+        label,
+        creation_date,
+        author,
+        commit_hexsha,
+        tag_name,
     ) -> None:
+        self.category = category
         self.object = object
         self.version = version
         self.name = label
@@ -42,8 +52,9 @@ class BaseVersion:
     unregistered_date: Optional[pd.Timestamp] = None
 
     def __init__(
-        self, object, version, creation_date, author, commit_hexsha, tag_name
+        self, category, object, version, creation_date, author, commit_hexsha, tag_name
     ) -> None:
+        self.category = category
         self.object = object
         self.name = version
         self.creation_date = creation_date
