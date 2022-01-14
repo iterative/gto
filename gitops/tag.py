@@ -1,4 +1,5 @@
 from typing import Optional
+from unicodedata import category
 
 import git
 import pandas as pd
@@ -18,13 +19,13 @@ LABEL = "label"
 NUMBER = "number"
 
 
-def name(action, object, version=None, label=None, repo=None):
+def name(action, category, object, version=None, label=None, repo=None):
     if action == REGISTER:
-        return f"model-{object}-{REGISTER}-{version}"
+        return f"{category}-{object}-{REGISTER}-{version}"
     if action == UNREGISTER:
-        return f"model-{object}-{UNREGISTER}-{version}"
+        return f"{category}-{object}-{UNREGISTER}-{version}"
 
-    basename = f"model-{object}-{PROMOTE}-{label}"
+    basename = f"{category}-{object}-{PROMOTE}-{label}"
     existing_names = [c.name for c in repo.tags if c.name.startswith(basename)]
     if existing_names:
         last_number = 1 + max(int(n[len(basename) + 1 :]) for n in existing_names)
@@ -33,7 +34,7 @@ def name(action, object, version=None, label=None, repo=None):
     if action == PROMOTE:
         return f"{basename}-{last_number}"
     if action == DEMOTE:
-        return f"model-{object}-{DEMOTE}-{label}-{last_number}"
+        return f"{category}-{object}-{DEMOTE}-{label}-{last_number}"
     raise ValueError(f"Unknown action: {action}")
 
 
@@ -41,26 +42,48 @@ def parse(name, raise_on_fail=True):
     def add_dashes(x):
         return f"-{x}-"
 
+    def deduce_category(object):
+        i = object.index("-")
+        category, object = object[:i], object[i + 1 :]
+        return category, object
+
     if isinstance(name, git.Tag):
         name = name.name
     if add_dashes(UNREGISTER) in name:
         object, version = name.split(add_dashes(UNREGISTER))
-        object = object[len("model-") :]
-        return {ACTION: UNREGISTER, OBJECT: object, VERSION: version}
+        category, object = deduce_category(object)
+        return {
+            CATEGORY: category,
+            ACTION: UNREGISTER,
+            OBJECT: object,
+            VERSION: version,
+        }
     if add_dashes(REGISTER) in name:
         object, version = name.split(add_dashes(REGISTER))
-        object = object[len("model-") :]
-        return {ACTION: REGISTER, OBJECT: object, VERSION: version}
+        category, object = deduce_category(object)
+        return {CATEGORY: category, ACTION: REGISTER, OBJECT: object, VERSION: version}
     if add_dashes(PROMOTE) in name:
         object, label = name.split(add_dashes(PROMOTE))
-        object = object[len("model-") :]
+        category, object = deduce_category(object)
         label, number = label.split("-")
-        return {ACTION: PROMOTE, OBJECT: object, LABEL: label, NUMBER: int(number)}
+        return {
+            CATEGORY: category,
+            ACTION: PROMOTE,
+            OBJECT: object,
+            LABEL: label,
+            NUMBER: int(number),
+        }
     if add_dashes(DEMOTE) in name:
         object, label = name.split(add_dashes(DEMOTE))
-        object = object[len("model-") :]
+        category, object = deduce_category(object)
         label, number = label.split("-")
-        return {ACTION: DEMOTE, OBJECT: object, LABEL: label, NUMBER: int(number)}
+        return {
+            CATEGORY: category,
+            ACTION: DEMOTE,
+            OBJECT: object,
+            LABEL: label,
+            NUMBER: int(number),
+        }
     if raise_on_fail:
         raise ValueError(f"Unknown tag name: {name}")
     else:
@@ -69,6 +92,7 @@ def parse(name, raise_on_fail=True):
 
 def find(
     action=None,
+    category=None,
     object=None,
     version=None,
     label=None,
@@ -78,6 +102,8 @@ def find(
 ):
     if tags is None:
         tags = [t for t in repo.tags if parse(t.name, raise_on_fail=False)]
+    if category:
+        tags = [t for t in tags if parse(t.name)[CATEGORY] == category]
     if action:
         tags = [t for t in tags if parse(t.name)[ACTION] == action]
     if object:
@@ -93,15 +119,18 @@ def find(
     return tags
 
 
-def find_registered(object, repo):
+def find_registered(category, object, repo):
     """Return all registered versions for object"""
-    register_tags = find(action=REGISTER, object=object, repo=repo)
-    unregister_tags = find(action=UNREGISTER, object=object, repo=repo)
+    register_tags = find(category=category, action=REGISTER, object=object, repo=repo)
+    unregister_tags = find(
+        category=category, action=UNREGISTER, object=object, repo=repo
+    )
     return [
         r
         for r in register_tags
         if not any(
             r.commit.hexsha == u.commit.hexsha
+            and parse(r.name)[CATEGORY] == parse(u.name)[CATEGORY]
             and parse(r.name)[OBJECT] == parse(u.name)[OBJECT]
             and parse(r.name)[VERSION] == parse(u.name)[VERSION]
             for u in unregister_tags
@@ -109,21 +138,26 @@ def find_registered(object, repo):
     ]
 
 
-def find_latest(object, repo):
-    """Return latest registered version for model"""
-    return find_registered(object, repo)[-1]
+def find_latest(category, object, repo):
+    """Return latest registered version for object"""
+    return find_registered(category, object, repo)[-1]
 
 
 def find_promoted(object, label, repo):
     """Return all promoted versions for object"""
-    promote_tags = find(action=PROMOTE, object=object, label=label, repo=repo)
-    demote_tags = find(action=DEMOTE, object=object, label=label, repo=repo)
+    promote_tags = find(
+        category=category, action=PROMOTE, object=object, label=label, repo=repo
+    )
+    demote_tags = find(
+        category=category, action=DEMOTE, object=object, label=label, repo=repo
+    )
     # what we do if someone promotes and demotes one object+commit several times?
     return [
         p
         for p in promote_tags
         if not any(
             p.commit.hexsha == d.commit.hexsha
+            and parse(p.name)[CATEGORY] == parse(d.name)[CATEGORY]
             and parse(p.name)[OBJECT] == parse(d.name)[OBJECT]
             and parse(p.name)[LABEL] == parse(d.name)[LABEL]
             for d in demote_tags
@@ -131,21 +165,23 @@ def find_promoted(object, label, repo):
     ]
 
 
-def find_current_promoted(object, label, repo):
+def find_current_promoted(category, object, label, repo):
     """Return latest promoted version for object"""
-    return find_promoted(object, label, repo)[-1]
+    return find_promoted(category, object, label, repo)[-1]
 
 
-def find_version(object, label, repo):
+def find_version(category, object, label, repo):
     """Return version of object with specific label active"""
-    tags = find(action=PROMOTE, object=object, label=label, repo=repo)
+    tags = find(
+        category=category, action=PROMOTE, object=object, label=label, repo=repo
+    )
     version_sha = tags[-1].commit.hexsha
 
     # if this commit has been tagged several times (object-v1, object-v2)
     # you may have several tags with different versions
     # so when you PROMOTE object, you won't know which version you've promoted
     # v1 or v2
-    tags = find(action=REGISTER, object=object, repo=repo)
+    tags = find(category=category, action=REGISTER, object=object, repo=repo)
     tags = [t for t in tags if t.commit.hexsha == version_sha]
     return parse(tags[-1].name)["version"]
 
@@ -167,6 +203,7 @@ class TagBasedVersion(BaseVersion):
     def from_tag(cls, tag):
         mtag = ObjectTag(tag)
         return cls(
+            mtag.category,
             mtag.object,
             mtag.version,
             mtag.creation_date,
@@ -182,16 +219,22 @@ class TagBasedLabel(BaseLabel):
         mtag = ObjectTag(tag)
         version_candidates = [
             t
-            for t in find(action=REGISTER, object=mtag.object, repo=tag.repo)
+            for t in find(
+                category=mtag.category,
+                action=REGISTER,
+                object=mtag.object,
+                repo=tag.repo,
+            )
             if t.commit.hexsha == tag.commit.hexsha
         ]
         if len(version_candidates) != 1:
             # TODO: resolve this
             raise ValueError(
-                f"Found {len(version_candidates)} tags for object '{mtag.object}' label '{mtag.label}'"
+                f"Found {len(version_candidates)} tags for {mtag.category} '{mtag.object}' label '{mtag.label}'"
             )
         version = ObjectTag(version_candidates[0]).version
         return cls(
+            mtag.category,
             mtag.object,
             version,
             mtag.label,
@@ -211,6 +254,7 @@ class ObjectTag:
     def __init__(self, tag) -> None:
         parsed = parse(tag.name)
         self.action = parsed[ACTION]
+        self.category = parsed[CATEGORY]
         self.object = parsed[OBJECT]
         self.version = parsed.get(VERSION)
         self.label = parsed.get(LABEL)
@@ -255,46 +299,58 @@ class TagBasedRegistry(BaseRegistry):
             parse(t.name)[LABEL] for t in find(repo=self.repo) if LABEL in parse(t.name)
         ]
 
-    def _register(self, object, version, ref, message):
+    def _register(self, category, object, version, ref, message):
         create_tag(
             self.repo,
-            name(REGISTER, object, version=version, repo=self.repo),
+            name(REGISTER, category, object, version=version, repo=self.repo),
             ref=ref,
             message=message,
         )
 
-    def unregister(self, object, version):
+    def unregister(self, category, object, version):
         """Unregister object version"""
-        tags = find(action=REGISTER, object=object, version=version, repo=self.repo)
+        tags = find(
+            action=REGISTER,
+            category=category,
+            object=object,
+            version=version,
+            repo=self.repo,
+        )
         if len(tags) != 1:
             raise ValueError(
-                f"Found {len(tags)} git tags for object {object} version {version}"
+                f"Found {len(tags)} git tags for {category} {object} version {version}"
             )
         create_tag(
             self.repo,
-            name(UNREGISTER, object, version=version, repo=self.repo),
+            name(UNREGISTER, category, object, version=version, repo=self.repo),
             ref=tags[0].commit.hexsha,
-            message=f"Unregistering object {object} version {version}",
+            message=f"Unregistering {category} {object} version {version}",
         )
 
-    def find_commit(self, object, version):
-        return self.repo.tags[name(REGISTER, object, version=version)].commit.hexsha
+    def find_commit(self, category, object, version):
+        return self.repo.tags[
+            name(REGISTER, category, object, version=version)
+        ].commit.hexsha
 
-    def _promote(self, object, label, ref, message):
+    def _promote(self, category, object, label, ref, message):
         create_tag(
             self.repo,
-            name(PROMOTE, object, label=label, repo=self.repo),
+            name(PROMOTE, category, object, label=label, repo=self.repo),
             ref=ref,
             message=message,
         )
 
-    def _demote(self, object, label, message):
-        promoted_tag = find(action=PROMOTE, object=object, label=label, repo=self.repo)[
-            -1
-        ]
+    def _demote(self, category, object, label, message):
+        promoted_tag = find(
+            action=PROMOTE,
+            category=category,
+            object=object,
+            label=label,
+            repo=self.repo,
+        )[-1]
         create_tag(
             self.repo,
-            name(DEMOTE, object, label=label, repo=self.repo),
+            name(DEMOTE, category, object, label=label, repo=self.repo),
             ref=promoted_tag.commit.hexsha,
             message=message,
         )
