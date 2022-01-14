@@ -198,6 +198,23 @@ def create_tag(repo, name, ref, message):
     )
 
 
+class ObjectTag:
+    object: str
+    version: Optional[str]
+    label: Optional[str]
+    tag: git.Tag
+
+    def __init__(self, tag) -> None:
+        parsed = parse(tag.name)
+        self.action = parsed[ACTION]
+        self.category = parsed[CATEGORY]
+        self.object = parsed[OBJECT]
+        self.version = parsed.get(VERSION)
+        self.label = parsed.get(LABEL)
+        self.creation_date = pd.Timestamp(tag.tag.tagged_date * 10 ** 9)
+        self.tag = tag
+
+
 class TagBasedVersion(BaseVersion):
     @classmethod
     def from_tag(cls, tag):
@@ -245,23 +262,6 @@ class TagBasedLabel(BaseLabel):
         )
 
 
-class ObjectTag:
-    object: str
-    version: Optional[str]
-    label: Optional[str]
-    tag: git.Tag
-
-    def __init__(self, tag) -> None:
-        parsed = parse(tag.name)
-        self.action = parsed[ACTION]
-        self.category = parsed[CATEGORY]
-        self.object = parsed[OBJECT]
-        self.version = parsed.get(VERSION)
-        self.label = parsed.get(LABEL)
-        self.creation_date = pd.Timestamp(tag.tag.tagged_date * 10 ** 9)
-        self.tag = tag
-
-
 class TagBasedObject(BaseObject):
     def index_tag(self, tag: git.Tag) -> None:
         mtag = ObjectTag(tag)
@@ -288,8 +288,9 @@ class TagBasedRegistry(BaseRegistry):
         tags = [ObjectTag(t) for t in find(repo=self.repo)]
         objects = {}
         for t in tags:
+            # add category to this check?
             if t.object not in objects:
-                objects[t.object] = TagBasedObject(t.object, [], [])
+                objects[t.object] = TagBasedObject(t.category, t.object, [], [])
             objects[t.object].index_tag(t.tag)
         return [objects[k] for k in objects]
 

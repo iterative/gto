@@ -71,7 +71,8 @@ class BaseObject:
     versions: List[BaseVersion]
     labels: List[BaseLabel]
 
-    def __init__(self, name, versions, labels) -> None:
+    def __init__(self, category, name, versions, labels) -> None:
+        self.category = category
         self.name = name
         self._versions = versions
         self.labels = labels
