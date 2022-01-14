@@ -16,7 +16,6 @@ arg_label = click.argument("label")
 @click.group()
 def cli():
     """Early prototype for registering/label assignment for tags-based approach"""
-    pass
 
 
 @cli.command()

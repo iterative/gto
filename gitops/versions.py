@@ -11,7 +11,7 @@ class AbstractVersion:
         self.version = version
 
     @classmethod
-    def is_valid(cls) -> bool:
+    def is_valid(cls, version) -> bool:
         raise NotImplementedError
 
     def __eq__(self, other):
@@ -27,7 +27,7 @@ class AbstractVersion:
 @total_ordering
 class NumberedVersion(AbstractVersion):
     @classmethod
-    def is_valid(self, version):
+    def is_valid(cls, version):
         return version.startswith("v") and version[1:].isdigit()
 
     def to_number(self):
@@ -53,5 +53,5 @@ class NumberedVersion(AbstractVersion):
         return NumberedVersion(f"v{self.to_number() + 1}")
 
 
-class SemVer(AbstractVersion):
+class SemVer(AbstractVersion):  # pylint: disable=abstract-method
     pass

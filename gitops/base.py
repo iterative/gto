@@ -1,4 +1,3 @@
-from re import S
 from typing import List, Optional
 
 import click
@@ -15,10 +14,7 @@ from .exceptions import (
 )
 
 
-class BaseLabel:
-    object: str
-    version: str
-    name: str
+class BaseLabel:  # pylint: disable=too-many-instance-attributes
     unregistered_date: Optional[pd.Timestamp] = None
 
     def __init__(
@@ -96,17 +92,17 @@ class BaseObject:
     @property
     def latest_labels(self) -> List[BaseLabel]:
         labels = {}
-        for l in self.unique_labels:
+        for label in self.unique_labels:
             found = sorted(
                 filter(
-                    lambda x: x.name == l
+                    lambda x: x.name == label  # pylint: disable=cell-var-from-loop
                     and x.unregistered_date is None
                     and self.find_version(x.version) is not None,
                     self.labels,
                 ),
                 key=lambda x: x.creation_date,
             )
-            labels[l] = found[-1] if found else None
+            labels[label] = found[-1] if found else None
         return labels
 
     @property
@@ -149,6 +145,7 @@ class BaseRegistry:
     repo: git.Repo
     objects: List[BaseObject]
     config = CONFIG
+    Object: BaseObject
 
     def __init__(self, repo: git.Repo = git.Repo(".")):
         self.repo = repo
@@ -225,10 +222,10 @@ class BaseRegistry:
             raise ValueError("Only one of version or commit must be specified")
         try:
             found_object = self.find_object(category, object)
-        except ObjectNotFound:
+        except ObjectNotFound as exc:
             raise BaseException(
                 "To promote a object automatically you need to manually register it once."
-            )
+            ) from exc
         if promote_version is not None:
             found_version = found_object.find_version(promote_version)
             if found_version is None:
@@ -255,13 +252,16 @@ class BaseRegistry:
         )
         return {"version": promote_version}
 
+    def _demote(self, category, object, label, message):
+        raise NotImplementedError
+
     def demote(self, category, object, label):
         """De-promote object from given label"""
         # TODO: check if label wasn't demoted already
         assert (
             self.find_object(category, object).latest_labels.get(label) is not None
         ), f"No active label '{label}' was found for {category} '{object}'"
-        self._demote(
+        return self._demote(
             category,
             object,
             label,
@@ -275,3 +275,4 @@ class BaseRegistry:
             return latest_labels[label].version
         if raise_if_not_found:
             raise ValueError(f"Label {label} not found for {category} {object}")
+        return None
