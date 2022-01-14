@@ -1,7 +1,7 @@
 from .config import CONFIG
 
 
-class BaseException(Exception):
+class BaseException(Exception):  # pylint: disable=redefined-builtin
     """Base class for all prototype exceptions."""
 
     def __init__(self, msg, *args):

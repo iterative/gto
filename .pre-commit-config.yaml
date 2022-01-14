@@ -26,3 +26,10 @@ repos:
     hooks:
       - id: isort
         args: ["--profile", "black"]
+  - repo: local
+    hooks:
+      - id: pylint
+        name: pylint
+        entry: pylint
+        language: system
+        types: [ python ]

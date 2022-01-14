@@ -16,6 +16,5 @@ def test_number_version_is_not_valid(version):
 def test_numbered_version_comparison():
     assert NumberedVersion("v1") < NumberedVersion("v2")
     assert NumberedVersion("v1") == NumberedVersion("v1")
-    assert not NumberedVersion("v1") > NumberedVersion("v2")
     assert NumberedVersion("v1") < "v2"
     assert NumberedVersion("v1") == "v1"
