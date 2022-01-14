@@ -230,7 +230,7 @@ class TagBasedVersion(BaseVersion):
 
 class TagBasedLabel(BaseLabel):
     @classmethod
-    def from_tag(cls, tag: git.Tag) -> None:
+    def from_tag(cls, tag: git.Tag) -> "TagBasedLabel":
         mtag = ObjectTag(tag)
         version_candidates = [
             t
@@ -266,18 +266,18 @@ class TagBasedObject(BaseObject):
         if mtag.action == REGISTER:
             self.versions.append(TagBasedVersion.from_tag(tag))
         if mtag.action == UNREGISTER:
-            self.find_version(mtag.version).unregistered_date = mtag.creation_date
+            self.find_version(mtag.version).unregistered_date = mtag.creation_date  # type: ignore
         if mtag.action == PROMOTE:
             self.labels.append(TagBasedLabel.from_tag(tag))
         if mtag.action == DEMOTE:
             if mtag.label not in self.latest_labels:
                 raise ValueError(f"Active label '{mtag.label}' not found")
-            self.latest_labels[mtag.label].unregistered_date = mtag.creation_date
+            self.latest_labels[mtag.label].unregistered_date = mtag.creation_date  # type: ignore
 
 
 class TagBasedRegistry(BaseRegistry):
 
-    Object = TagBasedObject
+    Object = TagBasedObject  # type: ignore
 
     @property
     def objects(self):

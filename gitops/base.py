@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 import click
 import git
@@ -63,10 +63,6 @@ class BaseVersion:
 
 
 class BaseObject:
-    name: str
-    versions: List[BaseVersion]
-    labels: List[BaseLabel]
-
     def __init__(self, category, name, versions, labels) -> None:
         self.category = category
         self.name = name
@@ -90,7 +86,7 @@ class BaseObject:
         )[-1].name
 
     @property
-    def latest_labels(self) -> List[BaseLabel]:
+    def latest_labels(self) -> Dict[str, Optional[BaseLabel]]:
         labels = {}
         for label in self.unique_labels:
             found = sorted(
