@@ -1,0 +1,11 @@
+ACTION = "action"
+CATEGORY = "category"
+OBJECT = "object"
+VERSION = "version"
+LABEL = "label"
+NUMBER = "number"
+
+REGISTER = "register"
+UNREGISTER = "unregister"
+PROMOTE = "promote"
+DEMOTE = "demote"

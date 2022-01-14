@@ -4,18 +4,18 @@ import git
 import pandas as pd
 
 from .base import BaseLabel, BaseObject, BaseRegistry, BaseVersion
-
-REGISTER = "register"
-UNREGISTER = "unregister"
-PROMOTE = "promote"
-DEMOTE = "demote"
-
-ACTION = "action"
-CATEGORY = "category"
-OBJECT = "object"
-VERSION = "version"
-LABEL = "label"
-NUMBER = "number"
+from .constants import (
+    ACTION,
+    CATEGORY,
+    DEMOTE,
+    LABEL,
+    NUMBER,
+    OBJECT,
+    PROMOTE,
+    REGISTER,
+    UNREGISTER,
+    VERSION,
+)
 
 
 def name_tag(action, category, object, version=None, label=None, repo=None):
