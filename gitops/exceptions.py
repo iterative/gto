@@ -10,7 +10,7 @@ class BaseException(Exception):
         super().__init__(msg, *args)
 
 
-class ModelNotFound(BaseException):
+class ObjectNotFound(BaseException):
     _message = "Requested model '{model}' wasn't found in registry"
 
     def __init__(self, model) -> None:
