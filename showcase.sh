@@ -26,8 +26,8 @@ git add models
 git commit -am "Create models"
 
 echo "Register new model"
-gitops register models/random-forest.pkl v1
-gitops register models/neural-network.pkl v1
+gitops register model models/random-forest.pkl v1
+gitops register model models/neural-network.pkl v1
 
 echo "Update the model"
 sleep 1
@@ -35,18 +35,18 @@ echo "2nd version" > models/random-forest.pkl
 git commit -am "Update model"
 
 echo "Register models"
-gitops register models/random-forest.pkl v2
+gitops register model models/random-forest.pkl v2
 
 echo "Promote models"
-gitops promote models/neural-network.pkl staging --version v1
+gitops promote model models/neural-network.pkl staging --version v1
 sleep 1
-gitops promote models/random-forest.pkl production --version v1
+gitops promote model models/random-forest.pkl production --version v1
 sleep 1
-gitops promote models/random-forest.pkl staging --commit `git rev-parse HEAD`
+gitops promote model models/random-forest.pkl staging --commit `git rev-parse HEAD`
 sleep 1
-gitops promote models/random-forest.pkl production --commit `git rev-parse HEAD`
+gitops promote model models/random-forest.pkl production --commit `git rev-parse HEAD`
 sleep 1
-gitops promote models/random-forest.pkl production --version v1
+gitops promote model models/random-forest.pkl production --version v1
 
 gitops show
 

@@ -6,7 +6,7 @@ import pandas as pd
 
 from .config import CONFIG
 from .exceptions import (
-    ModelNotFound,
+    ObjectNotFound,
     UnknownEnvironment,
     VersionAlreadyRegistered,
     VersionExistsForCommit,
@@ -55,7 +55,7 @@ class BaseVersion:
         return f"Version('{self.model}', '{self.name}')"
 
 
-class BaseModel:
+class BaseObject:
     name: str
     versions: List[BaseVersion]
     labels: List[BaseLabel]
@@ -135,19 +135,19 @@ class BaseModel:
 
 class BaseRegistry:
     repo: git.Repo
-    models: List[BaseModel]
+    objects: List[BaseObject]
     config = CONFIG
 
     def __init__(self, repo: git.Repo = git.Repo(".")):
         self.repo = repo
 
-    def find_model(self, model, allow_new=False):
-        models = [m for m in self.models if m.name == model]
-        if allow_new and not models:
-            return self.Model(model, [], [])
-        if not models:
-            raise ModelNotFound(model)
-        return models[0]
+    def find_object(self, path, allow_new=False):
+        objects = [m for m in self.objects if m.name == path]
+        if allow_new and not objects:
+            return self.Model(path, [], [])
+        if not objects:
+            raise ObjectNotFound(path)
+        return objects[0]
 
     @property
     def _labels(self):
@@ -157,42 +157,50 @@ class BaseRegistry:
     def labels(self):
         return sorted(set(self._labels))
 
-    def _register(self, model, version, ref, message):
+    def _register(self, object, version, ref, message):
         raise NotImplementedError
 
-    def register(self, model, version, ref=None):
+    def register(self, object, version, ref=None):
         """Register model version"""
         if ref is None:
             ref = self.repo.active_branch.commit.hexsha
-        found_model = self.find_model(model, allow_new=True)
-        found_version = found_model.find_version(version, skip_unregistered=False)
+        found_object = self.find_object(object, allow_new=True)
+        found_version = found_object.find_version(version, skip_unregistered=False)
         if found_version is not None:
             raise VersionAlreadyRegistered(version)
-        found_version = found_model.find_version(None, ref, skip_unregistered=True)
+        found_version = found_object.find_version(None, ref, skip_unregistered=True)
         if found_version is not None:
-            raise VersionExistsForCommit(model, found_version.name)
+            raise VersionExistsForCommit(object, found_version.name)
         if (
-            found_model.versions
-            and self.config.__versions__(version) < found_model.latest_version
+            found_object.versions
+            and self.config.__versions__(version) < found_object.latest_version
         ):
-            raise VersionIsOld(latest=found_model.latest_version, suggested=version)
+            raise VersionIsOld(latest=found_object.latest_version, suggested=version)
         self._register(
-            model, version, ref, message=f"Registering model {model} version {version}"
+            object,
+            version,
+            ref,
+            message=f"Registering object {object} version {version}",
         )
 
-    def unregister(self, model, version):
+    def unregister(self, object, version):
         raise NotImplementedError
 
-    def find_commit(self, model, version):
+    def find_commit(self, object, version):
         raise NotImplementedError
 
-    def _promote(model, label, ref, message):
+    def _promote(object, label, ref, message):
         raise NotImplementedError
 
     def promote(
-        self, model, label, promote_version=None, promote_commit=None, name_version=None
+        self,
+        object,
+        label,
+        promote_version=None,
+        promote_commit=None,
+        name_version=None,
     ):
-        """Assign label to specific model version"""
+        """Assign label to specific object version"""
         if label not in self.config.ENVIRONMENTS:
             raise UnknownEnvironment(label)
         if promote_version is None and promote_commit is None:
@@ -200,48 +208,50 @@ class BaseRegistry:
         if promote_version is not None and promote_commit is not None:
             raise ValueError("Only one of version or commit must be specified")
         try:
-            found_model = self.find_model(model)
-        except ModelNotFound:
+            found_object = self.find_object(object)
+        except ObjectNotFound:
             raise BaseException(
-                "To promote a model automatically you need to manually register it once."
+                "To promote a object automatically you need to manually register it once."
             )
         if promote_version is not None:
-            found_version = found_model.find_version(promote_version)
+            found_version = found_object.find_version(promote_version)
             if found_version is None:
                 raise BaseException("Version is not found")
-            promote_commit = self.find_commit(model, promote_version)
+            promote_commit = self.find_commit(object, promote_version)
         else:
-            found_version = found_model.find_version(None, promote_commit)
+            found_version = found_object.find_version(None, promote_commit)
             if found_version is None:
                 if name_version is None:
-                    last_version = self.find_model(model).latest_version
+                    last_version = self.find_object(object).latest_version
                     promote_version = (
                         self.config.__versions__(last_version).bump().version
                     )
-                self.register(model, name_version, ref=promote_commit)
+                self.register(object, name_version, ref=promote_commit)
                 click.echo(
-                    f"Registered new version '{promote_version}' of model '{model}' at commit '{promote_commit}'"
+                    f"Registered new version '{promote_version}' of object '{object}' at commit '{promote_commit}'"
                 )
         self._promote(
-            model,
+            object,
             label,
             ref=promote_commit,
-            message=f"Promoting model {model} version {promote_version} to label {label}",
+            message=f"Promoting object {object} version {promote_version} to label {label}",
         )
         return {"version": promote_version}
 
-    def demote(self, model, label):
-        """De-promote model from given label"""
+    def demote(self, object, label):
+        """De-promote object from given label"""
         # TODO: check if label wasn't demoted already
         assert (
-            self.find_model(model).latest_labels.get(label) is not None
-        ), f"No active label '{label}' was found for model '{model}'"
-        self._demote(model, label, message=f"Demoting model {model} from label {label}")
+            self.find_object(object).latest_labels.get(label) is not None
+        ), f"No active label '{label}' was found for object '{object}'"
+        self._demote(
+            object, label, message=f"Demoting object {object} from label {label}"
+        )
 
-    def which(self, model, label, raise_if_not_found=True):
-        """Return version of model with specific label active"""
-        latest_labels = self.find_model(model).latest_labels
+    def which(self, object, label, raise_if_not_found=True):
+        """Return version of object with specific label active"""
+        latest_labels = self.find_object(object).latest_labels
         if label in latest_labels:
             return latest_labels[label].version
         if raise_if_not_found:
-            raise ValueError(f"Label {label} not found for model {model}")
+            raise ValueError(f"Label {label} not found for object {object}")
