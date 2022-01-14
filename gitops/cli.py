@@ -66,7 +66,7 @@ def promote(category, path, label, version, commit):
 @arg_path
 def latest(category, path):
     """Return latest version for object"""
-    obj = [m for m in init_registry().models if m.name == path][0]
+    obj = [m for m in init_registry().objects if m.name == path][0]
     click.echo(obj.latest_version)
 
 
@@ -113,7 +113,7 @@ def show():
                 for l in m.unique_labels
             ]
         )
-        for m in reg.models
+        for m in reg.objects
     }
     print("\n=== Current labels (MLflow dashboard) ===")
     display(pd.DataFrame.from_records(models_state).T)
@@ -129,7 +129,7 @@ def show():
             "tag_name": l.tag_name,
             "unregistered_date": l.unregistered_date,
         }
-        for m in reg.models
+        for m in reg.objects
         for l in m.labels
     ]
     print("\n=== Label assignment audit trail ===")
@@ -149,7 +149,7 @@ def show():
             "tag_name": v.tag_name,
             "unregistered_date": v.unregistered_date,
         }
-        for m in reg.models
+        for m in reg.objects
         for v in m.versions
     ]
     print("\n=== Model registration audit trail ===")
