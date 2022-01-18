@@ -34,7 +34,7 @@ class BaseVersion(BaseModel):
     category: str
     object: str
     name: str
-    creation_date: str
+    creation_date: pd.Timestamp
     author: str
     commit_hexsha: str
     tag_name: str
