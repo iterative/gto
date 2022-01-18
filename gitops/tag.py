@@ -220,7 +220,7 @@ class TagBasedVersion(BaseVersion):
         return cls(
             category=mtag.category,
             object=mtag.object,
-            version=mtag.version,
+            name=mtag.version,
             creation_date=mtag.creation_date,
             author=tag.tag.tagger.name,
             commit_hexsha=tag.commit.hexsha,
