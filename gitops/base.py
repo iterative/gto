@@ -128,7 +128,7 @@ class BaseRegistry:
             m for m in self.objects if m.name == object and m.category == category
         ]
         if allow_new and not objects:
-            return self.Object(category, object, [], [])
+            return self.Object(category=category, name=object, versions=[], labels=[])
         if not objects:
             raise ObjectNotFound(object)
         return objects[0]
