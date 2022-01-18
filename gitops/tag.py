@@ -288,7 +288,9 @@ class TagBasedRegistry(BaseRegistry):
         for tag in tags:
             # add category to this check?
             if tag.object not in objects:
-                objects[tag.object] = TagBasedObject(tag.category, tag.object, [], [])
+                objects[tag.object] = TagBasedObject(
+                    category=tag.category, name=tag.object, versions=[], labels=[]
+                )
             objects[tag.object].index_tag(tag.tag)
         return objects.values()
 
