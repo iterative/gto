@@ -248,15 +248,15 @@ class TagBasedLabel(BaseLabel):
                 f"Found {len(version_candidates)} tags for {mtag.category} '{mtag.object}' label '{mtag.label}'"
             )
         version = ObjectTag(version_candidates[0]).version
-        return cls(  # type: ignore
-            mtag.category,
-            mtag.object,
-            version,
-            mtag.label,
-            mtag.creation_date,
-            tag.tag.tagger.name,
-            tag.commit.hexsha,
-            tag.name,
+        return cls(
+            category=mtag.category,
+            object=mtag.object,
+            version=version,
+            name=mtag.label,
+            creation_date=mtag.creation_date,
+            author=tag.tag.tagger.name,
+            commit_hexsha=tag.commit.hexsha,
+            tag_name=tag.name,
         )
 
 

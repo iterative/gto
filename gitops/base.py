@@ -16,7 +16,6 @@ from .exceptions import (
 
 
 class BaseLabel(BaseModel):  # pylint: disable=too-many-instance-attributes
-    # unregistered_date: Optional[pd.Timestamp] = None
     category: str
     object: str
     version: str
@@ -25,6 +24,7 @@ class BaseLabel(BaseModel):  # pylint: disable=too-many-instance-attributes
     author: str
     commit_hexsha: str
     tag_name: str
+    unregistered_date: Optional[pd.Timestamp] = None
 
     def __repr__(self) -> str:
         return f"Label('{self.object}', '{self.version}', '{self.name}')"
