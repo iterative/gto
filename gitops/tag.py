@@ -248,7 +248,7 @@ class TagBasedLabel(BaseLabel):
                 f"Found {len(version_candidates)} tags for {mtag.category} '{mtag.object}' label '{mtag.label}'"
             )
         version = ObjectTag(version_candidates[0]).version
-        return cls(
+        return cls(  # type: ignore
             mtag.category,
             mtag.object,
             version,

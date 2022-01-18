@@ -3,6 +3,7 @@ from typing import Dict, List, Optional
 import click
 import git
 import pandas as pd
+from pydantic import BaseModel
 
 from .config import CONFIG
 from .exceptions import (
@@ -14,28 +15,16 @@ from .exceptions import (
 )
 
 
-class BaseLabel:  # pylint: disable=too-many-instance-attributes
-    unregistered_date: Optional[pd.Timestamp] = None
-
-    def __init__(
-        self,
-        category,
-        object,
-        version,
-        label,
-        creation_date,
-        author,
-        commit_hexsha,
-        tag_name,
-    ) -> None:
-        self.category = category
-        self.object = object
-        self.version = version
-        self.name = label
-        self.creation_date = creation_date
-        self.author = author
-        self.commit_hexsha = commit_hexsha
-        self.tag_name = tag_name
+class BaseLabel(BaseModel):  # pylint: disable=too-many-instance-attributes
+    # unregistered_date: Optional[pd.Timestamp] = None
+    category: str
+    object: str
+    version: str
+    name: str
+    creation_date: pd.Timestamp
+    author: str
+    commit_hexsha: str
+    tag_name: str
 
     def __repr__(self) -> str:
         return f"Label('{self.object}', '{self.version}', '{self.name}')"
