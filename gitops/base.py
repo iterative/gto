@@ -44,12 +44,11 @@ class BaseVersion(BaseModel):
         return f"Version('{self.object}', '{self.name}')"
 
 
-class BaseObject:
-    def __init__(self, category, name, versions, labels) -> None:
-        self.category = category
-        self.name = name
-        self._versions = versions
-        self.labels = labels
+class BaseObject(BaseModel):
+    category: str
+    name: str
+    versions: List[BaseVersion]
+    labels: List[BaseLabel]
 
     @property
     def unique_labels(self):
@@ -82,10 +81,6 @@ class BaseObject:
             )
             labels[label] = found[-1] if found else None
         return labels
-
-    @property
-    def versions(self):
-        return self._versions
 
     def find_version(
         self,
