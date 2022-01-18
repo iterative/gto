@@ -30,22 +30,15 @@ class BaseLabel(BaseModel):  # pylint: disable=too-many-instance-attributes
         return f"Label('{self.object}', '{self.version}', '{self.name}')"
 
 
-class BaseVersion:
+class BaseVersion(BaseModel):
+    category: str
     object: str
     name: str
     creation_date: str
+    author: str
+    commit_hexsha: str
+    tag_name: str
     unregistered_date: Optional[pd.Timestamp] = None
-
-    def __init__(
-        self, category, object, version, creation_date, author, commit_hexsha, tag_name
-    ) -> None:
-        self.category = category
-        self.object = object
-        self.name = version
-        self.creation_date = creation_date
-        self.author = author
-        self.commit_hexsha = commit_hexsha
-        self.tag_name = tag_name
 
     def __repr__(self) -> str:
         return f"Version('{self.object}', '{self.name}')"

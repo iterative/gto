@@ -218,13 +218,13 @@ class TagBasedVersion(BaseVersion):
     def from_tag(cls, tag):
         mtag = ObjectTag(tag)
         return cls(
-            mtag.category,
-            mtag.object,
-            mtag.version,
-            mtag.creation_date,
-            tag.tag.tagger.name,
-            tag.commit.hexsha,
-            tag.name,
+            category=mtag.category,
+            object=mtag.object,
+            version=mtag.version,
+            creation_date=mtag.creation_date,
+            author=tag.tag.tagger.name,
+            commit_hexsha=tag.commit.hexsha,
+            tag_name=tag.name,
         )
 
 
