@@ -177,7 +177,7 @@ class BaseRegistry(BaseModel):
             raise VersionExistsForCommit(object, found_version.name)
         if (
             found_object.versions
-            and self.__config__.versions_class(version) < found_object.latest_version
+            and self.__config__.versions(version) < found_object.latest_version
         ):
             raise VersionIsOld(latest=found_object.latest_version, suggested=version)
         self._register(
@@ -230,7 +230,7 @@ class BaseRegistry(BaseModel):
                 if name_version is None:
                     last_version = self.find_object(category, object).latest_version
                     promote_version = (
-                        self.__config__.versions_class(last_version).bump().version
+                        self.__config__.versions(last_version).bump().version
                     )
                 self.register(category, object, name_version, ref=promote_commit)
                 click.echo(
