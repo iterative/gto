@@ -3,7 +3,8 @@ from typing import Dict, List, Optional
 import click
 import git
 import pandas as pd
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+from pydantic.main import ModelMetaclass
 
 from .config import CONFIG
 from .exceptions import (
@@ -29,6 +30,10 @@ class BaseLabel(BaseModel):  # pylint: disable=too-many-instance-attributes
     def __repr__(self) -> str:
         return f"Label('{self.object}', '{self.version}', '{self.name}')"
 
+    @property
+    def is_registered(self):
+        return self.unregistered_date is None
+
 
 class BaseVersion(BaseModel):
     category: str
@@ -42,6 +47,10 @@ class BaseVersion(BaseModel):
 
     def __repr__(self) -> str:
         return f"Version('{self.object}', '{self.name}')"
+
+    @property
+    def is_registered(self):
+        return self.unregistered_date is None
 
 
 class BaseObject(BaseModel):
@@ -62,7 +71,7 @@ class BaseObject(BaseModel):
     @property
     def latest_version(self) -> str:
         return sorted(
-            filter(lambda x: x.unregistered_date is None, self.versions),
+            (v for v in self.versions if v.is_registered),
             key=lambda x: x.creation_date,
         )[-1].name
 
@@ -71,11 +80,12 @@ class BaseObject(BaseModel):
         labels = {}
         for label in self.unique_labels:
             found = sorted(
-                filter(
-                    lambda x: x.name == label  # pylint: disable=cell-var-from-loop
-                    and x.unregistered_date is None
-                    and self.find_version(x.version) is not None,
-                    self.labels,
+                (
+                    l
+                    for l in self.labels
+                    if l.name == label
+                    and l.is_registered
+                    and self.find_version(l.version) is not None
                 ),
                 key=lambda x: x.creation_date,
             )
@@ -114,14 +124,24 @@ class BaseObject(BaseModel):
         return versions[0] if versions else None
 
 
-class BaseRegistry:
-    repo: git.Repo
-    objects: List[BaseObject]
-    config = CONFIG
-    Object: BaseObject
+class BaseRegistry(BaseModel):
+    repo: git.Repo = Field(default_factory=lambda: git.Repo("."))
+    # objects: List[BaseObject]
+    Object: ModelMetaclass = BaseObject
 
-    def __init__(self, repo: git.Repo = git.Repo(".")):
-        self.repo = repo
+    class Config:
+        arbitrary_types_allowed = True
+        environments = CONFIG.ENVIRONMENTS
+        versions = CONFIG.versions_class
+
+    @property
+    def objects(self):
+        raise NotImplementedError
+
+    # def __init__(self, repo=None):
+    #     if repo is None:
+    #         repo = git.Repo()
+    #     return super().__init__(repo=repo)
 
     def find_object(self, category, object, allow_new=False):
         objects = [
@@ -157,7 +177,7 @@ class BaseRegistry:
             raise VersionExistsForCommit(object, found_version.name)
         if (
             found_object.versions
-            and self.config.__versions__(version) < found_object.latest_version
+            and self.__config__.versions_class(version) < found_object.latest_version
         ):
             raise VersionIsOld(latest=found_object.latest_version, suggested=version)
         self._register(
@@ -187,7 +207,7 @@ class BaseRegistry:
         name_version=None,
     ):
         """Assign label to specific object version"""
-        if label not in self.config.ENVIRONMENTS:
+        if label not in self.__config__.environments:
             raise UnknownEnvironment(label)
         if promote_version is None and promote_commit is None:
             raise ValueError("Either version or commit must be specified")
@@ -210,7 +230,7 @@ class BaseRegistry:
                 if name_version is None:
                     last_version = self.find_object(category, object).latest_version
                     promote_version = (
-                        self.config.__versions__(last_version).bump().version
+                        self.__config__.versions_class(last_version).bump().version
                     )
                 self.register(category, object, name_version, ref=promote_commit)
                 click.echo(

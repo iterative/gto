@@ -47,7 +47,7 @@ class RegistryConfig(BaseSettings):
             )
 
     @property
-    def __versions__(self):
+    def versions_class(self):
         versions = {"NumberedVersion": NumberedVersion, "SemVer": SemVer}
         if self.VERSIONS not in versions:
             raise ValueError(f"Unknown versioning system {self.VERSIONS}")
