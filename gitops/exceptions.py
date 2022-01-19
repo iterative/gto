@@ -1,6 +1,3 @@
-from .config import CONFIG
-
-
 class GitopsException(Exception):
     """Base class for all prototype exceptions."""
 
@@ -46,10 +43,13 @@ class VersionIsOld(GitopsException):
 
 
 class UnknownEnvironment(GitopsException):
-    _message = f"Environment '{{env}}' is not present in your config file. Allowed envs are: {CONFIG.ENVIRONMENTS}."
+    _message = "Environment '{env}' is not present in your config file. Allowed envs are: {envs}."
 
     def __init__(self, env) -> None:
-        self.message = self._message.format(env=env)
+        # to avoid circular import
+        from .config import CONFIG  # pylint: disable=import-outside-toplevel
+
+        self.message = self._message.format(env=env, envs=CONFIG.ENVIRONMENTS)
         super().__init__(self.message)
 
 
