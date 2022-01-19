@@ -1,13 +1,14 @@
 from functools import total_ordering
 
+from gitops.exceptions import IncomparableVersions, InvalidVersion
+
 
 class AbstractVersion:
     version: str
 
     def __init__(self, version) -> None:
-        assert self.__class__.is_valid(
-            version
-        ), f"Supplied version doesn't look like {self.__class__} version"
+        if not self.__class__.is_valid(version):
+            raise InvalidVersion(version=version, cls=self.__class__)
         self.version = version
 
     @classmethod
@@ -36,17 +37,15 @@ class NumberedVersion(AbstractVersion):
     def __eq__(self, other):
         if isinstance(other, str):
             other = NumberedVersion(other)
-        assert isinstance(
-            other, NumberedVersion
-        ), "You can compare only versions of the same system."
+        if not isinstance(other, NumberedVersion):
+            raise IncomparableVersions()
         return self.version == other.version
 
     def __lt__(self, other):
         if isinstance(other, str):
             other = NumberedVersion(other)
-        assert isinstance(
-            other, NumberedVersion
-        ), "You can compare only versions of the same system."
+        if not isinstance(other, NumberedVersion):
+            raise IncomparableVersions()
         return self.to_number() < other.to_number()
 
     def bump(self):

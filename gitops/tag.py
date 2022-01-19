@@ -3,6 +3,8 @@ from typing import Optional
 import git
 import pandas as pd
 
+from gitops.exceptions import RefNotFound
+
 from .base import BaseLabel, BaseObject, BaseRegistry, BaseVersion
 from .constants import (
     ACTION,
@@ -185,9 +187,8 @@ def find_version(category, object, label, repo):
 
 
 def create_tag(repo, name, ref, message):
-    assert any(
-        c.hexsha == ref for c in repo.iter_commits()
-    ), "Can't find provided hexsha in repo history"
+    if all(c.hexsha != ref for c in repo.iter_commits()):
+        raise RefNotFound(ref=ref)
 
     repo.create_tag(
         name,

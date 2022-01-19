@@ -8,6 +8,8 @@ from pydantic.main import ModelMetaclass
 
 from .config import CONFIG
 from .exceptions import (
+    GitopsException,
+    NoActiveLabel,
     ObjectNotFound,
     UnknownEnvironment,
     VersionAlreadyRegistered,
@@ -107,20 +109,22 @@ class BaseObject(BaseModel):
             and (v.unregistered_date is None if skip_unregistered else True)
         ]
         if raise_if_not_found:
-            assert len(versions) == 1, (
+            if len(versions) != 1:
+                raise GitopsException(
+                    f"{len(versions)} versions of object {self.name} found"
+                    + ", skipping unregistered"
+                    if skip_unregistered
+                    else ""
+                )
+            return versions[0]
+
+        if len(versions) > 1:
+            raise GitopsException(
                 f"{len(versions)} versions of object {self.name} found"
                 + ", skipping unregistered"
                 if skip_unregistered
                 else ""
             )
-            return versions[0]
-
-        assert len(versions) <= 1, (
-            f"{len(versions)} versions of object {self.name} found"
-            + ", skipping unregistered"
-            if skip_unregistered
-            else ""
-        )
         return versions[0] if versions else None
 
 
@@ -137,11 +141,6 @@ class BaseRegistry(BaseModel):
     @property
     def objects(self):
         raise NotImplementedError
-
-    # def __init__(self, repo=None):
-    #     if repo is None:
-    #         repo = git.Repo()
-    #     return super().__init__(repo=repo)
 
     def find_object(self, category, object, allow_new=False):
         objects = [
@@ -251,9 +250,8 @@ class BaseRegistry(BaseModel):
     def demote(self, category, object, label):
         """De-promote object from given label"""
         # TODO: check if label wasn't demoted already
-        assert (
-            self.find_object(category, object).latest_labels.get(label) is not None
-        ), f"No active label '{label}' was found for {category} '{object}'"
+        if self.find_object(category, object).latest_labels.get(label) is None:
+            raise NoActiveLabel(label=label, category=category, object=object)
         return self._demote(
             category,
             object,
