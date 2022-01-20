@@ -33,13 +33,14 @@ def name_tag(
     raise UnknownAction(action=action.value)
 
 
-def parse_name(name: Union[str, git.Tag], raise_on_fail: bool = True):
-    def add_dashes(string):
-        return f"-{string}-"
+def add_dashes(string: str):
+    return f"-{string}-"
 
-    def deduce_category(object):
-        i = object.index("-")
-        category, object = object[:i], object[i + 1 :]
+
+def parse_name(name: Union[str, git.Tag], raise_on_fail: bool = True):
+    def deduce_category(string: str):
+        i = string.index("-")
+        category, object = string[:i], string[i + 1 :]
         return category, object
 
     if isinstance(name, git.Tag):
@@ -284,6 +285,9 @@ class TagBasedRegistry(BaseRegistry):
 
     @property
     def _labels(self):
+        # TODO - search within self, not repo. Move to BaseRegistry
+        # But how self will be updated when needed?
+        # Can we avoid parsing repo from scratch before every operation?
         return [
             parse_name(t.name)[LABEL]
             for t in find(repo=self.repo)
@@ -302,6 +306,7 @@ class TagBasedRegistry(BaseRegistry):
 
     def unregister(self, category, object, version):
         """Unregister object version"""
+        # TODO: search in self, move to base
         tags = find(
             action=Action.REGISTER,
             category=category,
@@ -336,6 +341,7 @@ class TagBasedRegistry(BaseRegistry):
         )
 
     def _demote(self, category, object, label, message):
+        # TODO: search in self, move to base
         promoted_tag = find(
             action=Action.PROMOTE,
             category=category,
