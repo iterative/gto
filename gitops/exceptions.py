@@ -84,3 +84,11 @@ class IncomparableVersions(GitopsException):
 
     def __init__(self) -> None:
         super().__init__(self.message)
+
+
+class UnknownAction(GitopsException):
+    message = "Unknown action '{action}' was requested."
+
+    def __init__(self, action) -> None:
+        self.message = self.message.format(action=action)
+        super().__init__(self.message)
