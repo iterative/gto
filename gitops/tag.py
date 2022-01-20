@@ -51,7 +51,7 @@ def parse_name(name: Union[str, git.Tag], raise_on_fail: bool = True):
             category, object = deduce_category(object)
             return {
                 CATEGORY: category,
-                ACTION: action.value,
+                ACTION: action,
                 OBJECT: object,
                 VERSION: version,
             }
@@ -63,7 +63,7 @@ def parse_name(name: Union[str, git.Tag], raise_on_fail: bool = True):
             label, number = label.split("-")
             return {
                 CATEGORY: category,
-                ACTION: action.value,
+                ACTION: action,
                 OBJECT: object,
                 LABEL: label,
                 NUMBER: int(number),
@@ -144,7 +144,7 @@ def find_promoted(category: str, object: str, label: str, repo: str):
         for p in promote_tags
         if not any(
             p.commit.hexsha == d.commit.hexsha
-            and parse_name(p.name)[CATEGORY] == parse_name(d.name)[CATEGORY]
+            and parse_name(p.name)[CATEGORY] == d.name[CATEGORY]
             and parse_name(p.name)[OBJECT] == parse_name(d.name)[OBJECT]
             and parse_name(p.name)[LABEL] == parse_name(d.name)[LABEL]
             for d in demote_tags
