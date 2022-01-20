@@ -6,6 +6,7 @@ import pandas as pd
 from IPython.display import display
 
 from . import init_registry
+from .exceptions import ObjectNotFound
 
 arg_category = click.argument("category")
 arg_object = click.argument("object")
@@ -76,12 +77,14 @@ def promote(
 @arg_object
 def latest(repo: str, category: str, object: str):
     """Return latest version for object"""
-    obj = [
+    objects_found = [
         m
         for m in init_registry(repo=repo).objects
         if m.name == object and m.category == category
-    ][0]
-    click.echo(obj.latest_version)
+    ]
+    if not objects_found:
+        raise ObjectNotFound(category=category, object=object)
+    click.echo(objects_found[0].latest_version)
 
 
 @cli.command()

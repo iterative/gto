@@ -8,10 +8,10 @@ class GitopsException(Exception):
 
 
 class ObjectNotFound(GitopsException):
-    _message = "Requested model '{model}' wasn't found in registry"
+    _message = "Requested {category} '{object}' wasn't found in registry"
 
-    def __init__(self, model) -> None:
-        self.message = self._message.format(model=model)
+    def __init__(self, category, object) -> None:
+        self.message = self._message.format(category=category, object=object)
         super().__init__(self.message)
 
 
