@@ -7,7 +7,7 @@ class AbstractVersion:
     version: str
 
     def __init__(self, version) -> None:
-        if not self.__class__.is_valid(version):
+        if not self.is_valid(version):
             raise InvalidVersion(version=version, cls=self.__class__)
         self.version = version
 

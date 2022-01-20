@@ -7,6 +7,7 @@ from pydantic import BaseSettings
 from .versions import NumberedVersion, SemVer
 
 CONFIG_FILE = Path(__file__).parent.parent / "gitops_config.yaml"
+VERSIONS_MAPPING = {"NumberedVersion": NumberedVersion, "SemVer": SemVer}
 
 
 def config_settings_source(settings: BaseSettings) -> Dict[str, Any]:
@@ -48,10 +49,9 @@ class RegistryConfig(BaseSettings):
 
     @property
     def versions_class(self):
-        versions = {"NumberedVersion": NumberedVersion, "SemVer": SemVer}
-        if self.VERSIONS not in versions:
+        if self.VERSIONS not in VERSIONS_MAPPING:
             raise ValueError(f"Unknown versioning system {self.VERSIONS}")
-        return versions[self.VERSIONS]
+        return VERSIONS_MAPPING[self.VERSIONS]
 
 
 CONFIG = RegistryConfig()
