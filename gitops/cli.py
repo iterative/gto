@@ -11,6 +11,7 @@ arg_category = click.argument("category")
 arg_object = click.argument("object")
 arg_version = click.argument("version")
 arg_label = click.argument("label")
+option_repo = click.option("-r", "--repo", default=".", help="Repository to use")
 
 
 @click.group()
@@ -19,26 +20,29 @@ def cli():
 
 
 @cli.command()
+@option_repo
 @arg_category
 @arg_object
 @arg_version
-def register(category, object, version):
+def register(repo: str, category: str, object: str, version: str):
     """Register new object version"""
-    init_registry().register(category, object, version)
+    init_registry(repo=repo).register(category, object, version)
     click.echo(f"Registered {category} {object} version {version}")
 
 
 @cli.command()
+@option_repo
 @arg_category
 @arg_object
 @arg_version
-def unregister(category, object, version):
+def unregister(repo: str, category: str, object: str, version: str):
     """Unregister object version"""
-    init_registry().unregister(category, object, version)
+    init_registry(repo=repo).unregister(category, object, version)
     click.echo(f"Unregistered {category} {object} version {version}")
 
 
 @cli.command()
+@option_repo
 @arg_category
 @arg_object
 @arg_label
@@ -48,7 +52,9 @@ def unregister(category, object, version):
     help="If you provide --commit, this will be used to name new version",
 )
 @click.option("--commit", default=None)
-def promote(category, object, label, version, commit):
+def promote(
+    repo: str, category: str, object: str, label: str, version: str, commit: str
+):
     """Assign label to specific object version"""
     if commit is not None:
         name_version = version
@@ -56,7 +62,7 @@ def promote(category, object, label, version, commit):
     else:
         name_version = None
         promote_version = version
-    result = init_registry().promote(
+    result = init_registry(repo=repo).promote(
         category, object, label, promote_version, commit, name_version
     )
     click.echo(
@@ -65,25 +71,29 @@ def promote(category, object, label, version, commit):
 
 
 @cli.command()
+@option_repo
 @arg_category
 @arg_object
-def latest(category, object):
+def latest(repo: str, category: str, object: str):
     """Return latest version for object"""
     obj = [
         m
-        for m in init_registry().objects
+        for m in init_registry(repo=repo).objects
         if m.name == object and m.category == category
     ][0]
     click.echo(obj.latest_version)
 
 
 @cli.command()
+@option_repo
 @arg_category
 @arg_object
 @arg_label
-def which(category, object, label):
+def which(repo: str, category: str, object: str, label: str):
     """Return version of object with specific label active"""
-    version = init_registry().which(category, object, label, raise_if_not_found=False)
+    version = init_registry(repo=repo).which(
+        category, object, label, raise_if_not_found=False
+    )
     if version:
         click.echo(version)
     else:
@@ -91,24 +101,26 @@ def which(category, object, label):
 
 
 @cli.command()
+@option_repo
 @arg_category
 @arg_object
 @arg_label
-def demote(category, object, label):
+def demote(repo: str, category: str, object: str, label: str):
     """De-promote object from given label"""
-    init_registry().demote(category, object, label)
+    init_registry(repo=repo).demote(category, object, label)
     click.echo(f"Demoted {category} {object} from label {label}")
 
 
 @cli.command()
-def show():
+@option_repo
+def show(repo: str):
     """Show current registry state"""
 
-    reg = init_registry()
+    reg = init_registry(repo=repo)
     models_state = {
         m.name: dict(
             [
-                ("version", m.latest_version),
+                (("version", "latest"), m.latest_version),
             ]
             + [
                 (
