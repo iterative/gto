@@ -92,3 +92,11 @@ class UnknownAction(GitopsException):
     def __init__(self, action) -> None:
         self.message = self.message.format(action=action)
         super().__init__(self.message)
+
+
+class MissingArg(GitopsException):
+    message = "'{arg}' is required."
+
+    def __init__(self, arg) -> None:
+        self.message = self.message.format(arg=arg)
+        super().__init__(self.message)

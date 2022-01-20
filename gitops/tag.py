@@ -3,7 +3,7 @@ from typing import Iterable, Optional, Union
 import git
 import pandas as pd
 
-from gitops.exceptions import GitopsException, RefNotFound, UnknownAction
+from gitops.exceptions import MissingArg, RefNotFound, UnknownAction
 
 from .base import BaseLabel, BaseObject, BaseRegistry, BaseVersion
 from .constants import ACTION, CATEGORY, LABEL, NUMBER, OBJECT, VERSION, Action
@@ -21,8 +21,10 @@ def name_tag(
         return f"{category}-{object}-{action.value}-{version}"
 
     if action in (Action.PROMOTE, Action.DEMOTE):
+        if repo is None:
+            raise MissingArg(arg="repo")
         basename = f"{category}-{object}-{Action.PROMOTE.value}-{label}"
-        existing_names = [c.name for c in repo.tags if c.name.startswith(basename)]  # type: ignore
+        existing_names = [c.name for c in repo.tags if c.name.startswith(basename)]
         if existing_names:
             last_number = 1 + max(int(n[len(basename) + 1 :]) for n in existing_names)
         else:
@@ -83,7 +85,7 @@ def find(
 ):
     if tags is None:
         if repo is None:
-            raise GitopsException("Repo is required")
+            raise MissingArg(arg="repo")
         tags = [t for t in repo.tags if parse_name(t.name, raise_on_fail=False)]
     if category:
         tags = [t for t in tags if parse_name(t.name)[CATEGORY] == category]
