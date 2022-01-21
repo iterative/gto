@@ -1,17 +1,18 @@
 from functools import total_ordering
 
+from gitops.exceptions import IncomparableVersions, InvalidVersion
+
 
 class AbstractVersion:
     version: str
 
     def __init__(self, version) -> None:
-        assert self.__class__.is_valid(
-            version
-        ), f"Supplied version doesn't look like {self.__class__} version"
+        if not self.is_valid(version):
+            raise InvalidVersion(version=version, cls=self.__class__)
         self.version = version
 
     @classmethod
-    def is_valid(cls) -> bool:
+    def is_valid(cls, version) -> bool:
         raise NotImplementedError
 
     def __eq__(self, other):
@@ -27,7 +28,7 @@ class AbstractVersion:
 @total_ordering
 class NumberedVersion(AbstractVersion):
     @classmethod
-    def is_valid(self, version):
+    def is_valid(cls, version):
         return version.startswith("v") and version[1:].isdigit()
 
     def to_number(self):
@@ -36,22 +37,20 @@ class NumberedVersion(AbstractVersion):
     def __eq__(self, other):
         if isinstance(other, str):
             other = NumberedVersion(other)
-        assert isinstance(
-            other, NumberedVersion
-        ), "You can compare only versions of the same system."
+        if not isinstance(other, NumberedVersion):
+            raise IncomparableVersions()
         return self.version == other.version
 
     def __lt__(self, other):
         if isinstance(other, str):
             other = NumberedVersion(other)
-        assert isinstance(
-            other, NumberedVersion
-        ), "You can compare only versions of the same system."
+        if not isinstance(other, NumberedVersion):
+            raise IncomparableVersions()
         return self.to_number() < other.to_number()
 
     def bump(self):
         return NumberedVersion(f"v{self.to_number() + 1}")
 
 
-class SemVer(AbstractVersion):
+class SemVer(AbstractVersion):  # pylint: disable=abstract-method
     pass

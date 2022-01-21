@@ -1,100 +1,129 @@
 import warnings
 
 import click
-import git
 import numpy as np
 import pandas as pd
 from IPython.display import display
 
-from .registry import Registry
+from . import init_registry
+from .exceptions import ObjectNotFound
+
+arg_category = click.argument("category")
+arg_object = click.argument("object")
+arg_version = click.argument("version")
+arg_label = click.argument("label")
+option_repo = click.option("-r", "--repo", default=".", help="Repository to use")
 
 
 @click.group()
 def cli():
     """Early prototype for registering/label assignment for tags-based approach"""
-    pass
 
 
 @cli.command()
-@click.argument("model")
-@click.argument("version")
-def register(model, version):
-    """Register new model version"""
-    Registry().register(model, version)
-    click.echo(f"Registered model {model} version {version}")
+@option_repo
+@arg_category
+@arg_object
+@arg_version
+def register(repo: str, category: str, object: str, version: str):
+    """Register new object version"""
+    init_registry(repo=repo).register(category, object, version)
+    click.echo(f"Registered {category} {object} version {version}")
 
 
 @cli.command()
-@click.argument("model")
-@click.argument("version")
-def unregister(model, version):
-    """Unregister model version"""
-    Registry().unregister(model, version)
-    click.echo(f"Unregistered model {model} version {version}")
+@option_repo
+@arg_category
+@arg_object
+@arg_version
+def unregister(repo: str, category: str, object: str, version: str):
+    """Unregister object version"""
+    init_registry(repo=repo).unregister(category, object, version)
+    click.echo(f"Unregistered {category} {object} version {version}")
 
 
 @cli.command()
-@click.argument("model")
-@click.argument("label")
+@option_repo
+@arg_category
+@arg_object
+@arg_label
 @click.option(
     "--version",
     default=None,
     help="If you provide --commit, this will be used to name new version",
 )
-@click.option(
-    "--commit",
-    default=None,
-)
-def promote(model, label, version, commit):
-    """Assign label to specific model version"""
+@click.option("--commit", default=None)
+def promote(
+    repo: str, category: str, object: str, label: str, version: str, commit: str
+):
+    """Assign label to specific object version"""
     if commit is not None:
         name_version = version
         promote_version = None
     else:
         name_version = None
         promote_version = version
-    result = Registry().promote(model, label, promote_version, commit, name_version)
-    click.echo(f"Promoted model {model} version {result['version']} to label {label}")
+    result = init_registry(repo=repo).promote(
+        category, object, label, promote_version, commit, name_version
+    )
+    click.echo(
+        f"Promoted {category} {object} version {result['version']} to label {label}"
+    )
 
 
 @cli.command()
-@click.argument("model")
-def latest(model):
-    """Return latest version for model"""
-    model = [m for m in Registry().models if m.name == model][0]
-    click.echo(model.latest_version)
+@option_repo
+@arg_category
+@arg_object
+def latest(repo: str, category: str, object: str):
+    """Return latest version for object"""
+    objects_found = [
+        m
+        for m in init_registry(repo=repo).objects
+        if m.name == object and m.category == category
+    ]
+    if not objects_found:
+        raise ObjectNotFound(category=category, object=object)
+    click.echo(objects_found[0].latest_version)
 
 
 @cli.command()
-@click.argument("model")
-@click.argument("label")
-def which(model, label):
-    """Return version of model with specific label active"""
-    version = Registry().which(model, label, raise_if_not_found=False)
+@option_repo
+@arg_category
+@arg_object
+@arg_label
+def which(repo: str, category: str, object: str, label: str):
+    """Return version of object with specific label active"""
+    version = init_registry(repo=repo).which(
+        category, object, label, raise_if_not_found=False
+    )
     if version:
         click.echo(version)
     else:
-        click.echo(f"No version of model '{model}' with label '{label}' active")
+        click.echo(f"No version of {category} '{object}' with label '{label}' active")
 
 
 @cli.command()
-@click.argument("model")
-@click.argument("label")
-def demote(model, label):
-    """De-promote model from given label"""
-    Registry().demote(model, label)
-    click.echo(f"Demoted model {model} from label {label}")
+@option_repo
+@arg_category
+@arg_object
+@arg_label
+def demote(repo: str, category: str, object: str, label: str):
+    """De-promote object from given label"""
+    init_registry(repo=repo).demote(category, object, label)
+    click.echo(f"Demoted {category} {object} from label {label}")
 
 
 @cli.command()
-def show():
+@option_repo
+def show(repo: str):
     """Show current registry state"""
 
-    reg = Registry()
+    reg = init_registry(repo=repo)
     models_state = {
         m.name: dict(
             [
-                ("version", m.latest_version),
+                (("version", "latest"), m.latest_version),
             ]
             + [
                 (
@@ -106,7 +135,7 @@ def show():
                 for l in m.unique_labels
             ]
         )
-        for m in reg.models
+        for m in reg.objects
     }
     print("\n=== Current labels (MLflow dashboard) ===")
     display(pd.DataFrame.from_records(models_state).T)
@@ -122,7 +151,7 @@ def show():
             "tag_name": l.tag_name,
             "unregistered_date": l.unregistered_date,
         }
-        for m in reg.models
+        for m in reg.objects
         for l in m.labels
     ]
     print("\n=== Label assignment audit trail ===")
@@ -142,7 +171,7 @@ def show():
             "tag_name": v.tag_name,
             "unregistered_date": v.unregistered_date,
         }
-        for m in reg.models
+        for m in reg.objects
         for v in m.versions
     ]
     print("\n=== Model registration audit trail ===")

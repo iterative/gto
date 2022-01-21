@@ -7,10 +7,23 @@ install_requires = [
     "gitpython",
     "click",
     "pandas",
-    "ipython",
     "numpy",
     "pydantic",
     "pyyaml",
+]
+
+
+tests = [
+    "pytest",
+    "pytest-cov",
+    "pytest-lazy-fixture==0.6.3",
+    "pytest-mock",
+    "pylint",
+    # we use this to suppress pytest-related false positives in our tests.
+    "pylint-pytest",
+    # we use this to suppress some messages in tests, eg: foo/bar naming,
+    # and, protected method calls in our tests
+    "pylint-plugin-utils",
 ]
 
 
@@ -24,6 +37,7 @@ setup_args = dict(  # noqa: C408
     download_url="https://github.com/iterative/gitops-object-registry",
     license="Apache License 2.0",
     install_requires=install_requires,
+    extras_require={"tests": tests},
     keywords="git gitops mlops object registry developer-tools collaboration",
     python_requires=">=3.6",
     classifiers=[

@@ -4,7 +4,10 @@ from typing import Any, Dict, List
 import yaml
 from pydantic import BaseSettings
 
+from .versions import NumberedVersion, SemVer
+
 CONFIG_FILE = Path(__file__).parent.parent / "gitops_config.yaml"
+VERSIONS_MAPPING = {"NumberedVersion": NumberedVersion, "SemVer": SemVer}
 
 
 def config_settings_source(settings: BaseSettings) -> Dict[str, Any]:
@@ -24,6 +27,7 @@ def config_settings_source(settings: BaseSettings) -> Dict[str, Any]:
 class RegistryConfig(BaseSettings):
     VERSIONS: str = "NumberedVersion"
     ENVIRONMENTS: List = ["production", "staging"]
+    BASE: str = "tag"
 
     class Config:
         env_prefix = "gitops_"
@@ -42,6 +46,12 @@ class RegistryConfig(BaseSettings):
                 config_settings_source,
                 file_secret_settings,
             )
+
+    @property
+    def versions_class(self):
+        if self.VERSIONS not in VERSIONS_MAPPING:
+            raise ValueError(f"Unknown versioning system {self.VERSIONS}")
+        return VERSIONS_MAPPING[self.VERSIONS]
 
 
 CONFIG = RegistryConfig()
