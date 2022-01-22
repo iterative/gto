@@ -204,62 +204,58 @@ def create_tag(repo, name, ref, message):
     )
 
 
-class TagBasedVersion(BaseVersion):
-    @classmethod
-    def from_tag(cls, tag):
-        mtag = parse_tag(tag)
-        return cls(
-            category=mtag.category,
-            object=mtag.object,
-            name=mtag.version,
-            creation_date=mtag.creation_date,
-            author=tag.tag.tagger.name,
-            commit_hexsha=tag.commit.hexsha,
-            tag_name=tag.name,
-        )
+def version_from_tag(tag: git.Tag) -> BaseVersion:
+    mtag = parse_tag(tag)
+    return BaseVersion(
+        category=mtag.category,
+        object=mtag.object,
+        name=mtag.version,
+        creation_date=mtag.creation_date,
+        author=tag.tag.tagger.name,
+        commit_hexsha=tag.commit.hexsha,
+        tag_name=tag.name,
+    )
 
 
-class TagBasedLabel(BaseLabel):
-    @classmethod
-    def from_tag(cls, tag: git.Tag) -> "TagBasedLabel":
-        mtag = parse_tag(tag)
-        version_candidates = [
-            t
-            for t in find(
-                category=mtag.category,
-                action=Action.REGISTER,
-                object=mtag.object,
-                repo=tag.repo,
-            )
-            if t.commit.hexsha == tag.commit.hexsha
-        ]
-        if len(version_candidates) != 1:
-            # TODO: resolve this
-            raise ValueError(
-                f"Found {len(version_candidates)} tags for {mtag.category} '{mtag.object}' label '{mtag.label}'"
-            )
-        version = parse_tag(version_candidates[0]).version
-        return cls(
+def label_from_tag(tag: git.Tag) -> BaseLabel:
+    mtag = parse_tag(tag)
+    version_candidates = [
+        t
+        for t in find(
             category=mtag.category,
+            action=Action.REGISTER,
             object=mtag.object,
-            version=version,
-            name=mtag.label,
-            creation_date=mtag.creation_date,
-            author=tag.tag.tagger.name,
-            commit_hexsha=tag.commit.hexsha,
-            tag_name=tag.name,
+            repo=tag.repo,
         )
+        if t.commit.hexsha == tag.commit.hexsha
+    ]
+    if len(version_candidates) != 1:
+        # TODO: resolve this
+        raise ValueError(
+            f"Found {len(version_candidates)} tags for {mtag.category} '{mtag.object}' label '{mtag.label}'"
+        )
+    version = parse_tag(version_candidates[0]).version
+    return BaseLabel(
+        category=mtag.category,
+        object=mtag.object,
+        version=version,
+        name=mtag.label,
+        creation_date=mtag.creation_date,
+        author=tag.tag.tagger.name,
+        commit_hexsha=tag.commit.hexsha,
+        tag_name=tag.name,
+    )
 
 
 class TagBasedObject(BaseObject):
     def index_tag(self, tag: git.Tag) -> None:
         mtag = parse_tag(tag)
         if mtag.action == Action.REGISTER:
-            self.versions.append(TagBasedVersion.from_tag(tag))
+            self.versions.append(version_from_tag(tag))
         if mtag.action == Action.UNREGISTER:
             self.find_version(mtag.version).unregistered_date = mtag.creation_date  # type: ignore
         if mtag.action == Action.PROMOTE:
-            self.labels.append(TagBasedLabel.from_tag(tag))
+            self.labels.append(label_from_tag(tag))
         if mtag.action == Action.DEMOTE:
             if mtag.label not in self.latest_labels:
                 raise ValueError(f"Active label '{mtag.label}' not found")
