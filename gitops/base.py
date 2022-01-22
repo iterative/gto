@@ -172,6 +172,10 @@ class BaseRegistry(BaseModel):
         default_factory=lambda: BaseRegistryState(objects=[])
     )
 
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.update_state()
+
     class Config:
         arbitrary_types_allowed = True
         environments = CONFIG.ENVIRONMENTS
