@@ -4,7 +4,6 @@ import click
 import git
 import pandas as pd
 from pydantic import BaseModel, Field
-from pydantic.main import ModelMetaclass
 
 from .config import CONFIG
 from .exceptions import (
@@ -128,46 +127,65 @@ class BaseObject(BaseModel):
         return versions[0] if versions else None
 
 
-class BaseRegistry(BaseModel):
-    repo: git.Repo = Field(default_factory=lambda: git.Repo("."))
-    # objects: List[BaseObject]
-    Object: ModelMetaclass = BaseObject
+class BaseRegistryState(BaseModel):
+    objects: List[BaseObject]
 
     class Config:
         arbitrary_types_allowed = True
-        environments = CONFIG.ENVIRONMENTS
-        versions = CONFIG.versions_class
-
-    @property
-    def objects(self):
-        raise NotImplementedError
 
     def find_object(self, category, object, allow_new=False):
         objects = [
             m for m in self.objects if m.name == object and m.category == category
         ]
         if allow_new and not objects:
-            return self.Object(category=category, name=object, versions=[], labels=[])
+            return BaseObject(category=category, name=object, versions=[], labels=[])
         if not objects:
-            raise ObjectNotFound(object)
+            raise ObjectNotFound(category, object)
         return objects[0]
 
     @property
-    def _labels(self):
-        raise NotImplementedError
+    def unique_labels(self):
+        return sorted({l for o in self.objects for l in o.unique_labels})
 
-    @property
-    def labels(self):
-        return sorted(set(self._labels))
+    def find_commit(self, category, object, version):
+        return (
+            self.find_object(category, object)
+            .find_version(
+                name=version, raise_if_not_found=True, skip_unregistered=False
+            )
+            .commit.hexsha
+        )
 
-    def _register(self, category, object, version, ref, message):
+    def which(self, category, object, label, raise_if_not_found=True):
+        """Return version of object with specific label active"""
+        latest_labels = self.find_object(category, object).latest_labels
+        if label in latest_labels:
+            return latest_labels[label].version
+        if raise_if_not_found:
+            raise ValueError(f"Label {label} not found for {category} {object}")
+        return None
+
+
+class BaseRegistry(BaseModel):
+    repo: git.Repo = Field(default_factory=lambda: git.Repo("."))
+    state: BaseRegistryState = Field(
+        default_factory=lambda: BaseRegistryState(objects=[])
+    )
+
+    class Config:
+        arbitrary_types_allowed = True
+        environments = CONFIG.ENVIRONMENTS
+        versions = CONFIG.versions_class
+
+    def update_state(self):
         raise NotImplementedError
 
     def register(self, category, object, version, ref=None):
         """Register object version"""
+        self.update_state()
         if ref is None:
             ref = self.repo.active_branch.commit.hexsha
-        found_object = self.find_object(category, object, allow_new=True)
+        found_object = self.state.find_object(category, object, allow_new=True)
         found_version = found_object.find_version(version, skip_unregistered=False)
         if found_version is not None:
             raise VersionAlreadyRegistered(version)
@@ -187,13 +205,14 @@ class BaseRegistry(BaseModel):
             message=f"Registering object {object} version {version}",
         )
 
+    def _register(self, category, object, version, ref, message):
+        raise NotImplementedError
+
     def unregister(self, category, object, version):
-        raise NotImplementedError
+        self.update_state()
+        return self._unregister(category, object, version)
 
-    def find_commit(self, category, object, version):
-        raise NotImplementedError
-
-    def _promote(self, category, object, label, ref, message):
+    def _unregister(self, category, object, version):
         raise NotImplementedError
 
     def promote(
@@ -212,8 +231,9 @@ class BaseRegistry(BaseModel):
             raise ValueError("Either version or commit must be specified")
         if promote_version is not None and promote_commit is not None:
             raise ValueError("Only one of version or commit must be specified")
+        self.update_state()
         try:
-            found_object = self.find_object(category, object)
+            found_object = self.state.find_object(category, object)
         except ObjectNotFound as exc:
             raise BaseException(
                 "To promote a object automatically you need to manually register it once."
@@ -227,7 +247,9 @@ class BaseRegistry(BaseModel):
             found_version = found_object.find_version(None, promote_commit)
             if found_version is None:
                 if name_version is None:
-                    last_version = self.find_object(category, object).latest_version
+                    last_version = self.state.find_object(
+                        category, object
+                    ).latest_version
                     promote_version = (
                         self.__config__.versions(last_version).bump().version
                     )
@@ -244,13 +266,14 @@ class BaseRegistry(BaseModel):
         )
         return {"version": promote_version}
 
-    def _demote(self, category, object, label, message):
+    def _promote(self, category, object, label, ref, message):
         raise NotImplementedError
 
     def demote(self, category, object, label):
         """De-promote object from given label"""
         # TODO: check if label wasn't demoted already
-        if self.find_object(category, object).latest_labels.get(label) is None:
+        self.update_state()
+        if self.state.find_object(category, object).latest_labels.get(label) is None:
             raise NoActiveLabel(label=label, category=category, object=object)
         return self._demote(
             category,
@@ -259,11 +282,19 @@ class BaseRegistry(BaseModel):
             message=f"Demoting {category} {object} from label {label}",
         )
 
+    def _demote(self, category, object, label, message):
+        raise NotImplementedError
+
+    def find_commit(self, category, object, version):
+        self.update_state()
+        return self.state.find_commit(category, object, version)
+
     def which(self, category, object, label, raise_if_not_found=True):
         """Return version of object with specific label active"""
-        latest_labels = self.find_object(category, object).latest_labels
-        if label in latest_labels:
-            return latest_labels[label].version
-        if raise_if_not_found:
-            raise ValueError(f"Label {label} not found for {category} {object}")
-        return None
+        self.update_state()
+        return self.state.which(category, object, label, raise_if_not_found)
+
+    def latest(self, category: str, object: str):
+        """Return latest version for object"""
+        self.update_state()
+        return self.state.find_object(category, object).latest_version

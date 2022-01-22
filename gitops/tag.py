@@ -267,11 +267,7 @@ class TagBasedObject(BaseObject):
 
 
 class TagBasedRegistry(BaseRegistry):
-
-    Object = TagBasedObject  # type: ignore
-
-    @property
-    def objects(self):
+    def update_state(self):
         # tags are sorted and then indexed by timestamp
         # this is important to check that history is not broken
         tags = [parse_tag(t) for t in find(repo=self.repo)]
@@ -283,18 +279,7 @@ class TagBasedRegistry(BaseRegistry):
                     category=tag.category, name=tag.object, versions=[], labels=[]
                 )
             objects[tag.object].index_tag(tag.tag)
-        return objects.values()
-
-    @property
-    def _labels(self):
-        # TODO - search within self, not repo. Move to BaseRegistry
-        # But how self will be updated when needed?
-        # Can we avoid parsing repo from scratch before every operation?
-        return [
-            parse_name(t.name)[LABEL]
-            for t in find(repo=self.repo)
-            if LABEL in parse_name(t.name)
-        ]
+        self.state = list(objects.values())
 
     def _register(self, category, object, version, ref, message):
         create_tag(
@@ -306,7 +291,7 @@ class TagBasedRegistry(BaseRegistry):
             message=message,
         )
 
-    def unregister(self, category, object, version):
+    def _unregister(self, category, object, version):
         """Unregister object version"""
         # TODO: search in self, move to base
         tags = find(
@@ -328,11 +313,6 @@ class TagBasedRegistry(BaseRegistry):
             ref=tags[0].commit.hexsha,
             message=f"Unregistering {category} {object} version {version}",
         )
-
-    def find_commit(self, category, object, version):
-        return self.repo.tags[
-            name_tag(Action.REGISTER, category, object, version=version)
-        ].commit.hexsha
 
     def _promote(self, category, object, label, ref, message):
         create_tag(
