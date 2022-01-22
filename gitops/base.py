@@ -153,7 +153,7 @@ class BaseRegistryState(BaseModel):
             .find_version(
                 name=version, raise_if_not_found=True, skip_unregistered=False
             )
-            .commit.hexsha
+            .commit_hexsha
         )
 
     def which(self, category, object, label, raise_if_not_found=True):
