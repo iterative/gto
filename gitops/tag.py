@@ -279,7 +279,7 @@ class TagBasedRegistry(BaseRegistry):
                     category=tag.category, name=tag.object, versions=[], labels=[]
                 )
             objects[tag.object].index_tag(tag.tag)
-        self.state = BaseRegistryState(objects=objects.values())
+        self.state = BaseRegistryState(objects=list(objects.values()))
 
     def _register(self, category, object, version, ref, message):
         create_tag(
