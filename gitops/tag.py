@@ -1,7 +1,8 @@
-from typing import Iterable, Optional, Union
+from typing import Iterable, Optional
 
 import git
 import pandas as pd
+from pydantic import BaseModel
 
 from gitops.exceptions import MissingArg, RefNotFound, UnknownAction
 
@@ -37,14 +38,11 @@ def add_dashes(string: str):
     return f"-{string}-"
 
 
-def parse_name(name: Union[str, git.Tag], raise_on_fail: bool = True):
+def parse_name(name: str, raise_on_fail: bool = True):
     def deduce_category(string: str):
         i = string.index("-")
         category, object = string[:i], string[i + 1 :]
         return category, object
-
-    if isinstance(name, git.Tag):
-        name = name.name
 
     for action in (Action.REGISTER, Action.UNREGISTER):
         if add_dashes(action.value) in name:
@@ -72,6 +70,27 @@ def parse_name(name: Union[str, git.Tag], raise_on_fail: bool = True):
     if raise_on_fail:
         raise ValueError(f"Unknown tag name: {name}")
     return {}
+
+
+class ObjectTag(BaseModel):
+    action: Action
+    category: str
+    object: str
+    version: Optional[str]
+    label: Optional[str]
+    creation_date: pd.Timestamp
+    tag: git.Tag
+
+    class Config:
+        arbitrary_types_allowed = True
+
+
+def parse_tag(tag: git.Tag):
+    return ObjectTag(
+        tag=tag,
+        creation_date=pd.Timestamp(tag.tag.tagged_date * 10 ** 9),
+        **parse_name(tag.name),
+    )
 
 
 def find(
@@ -185,27 +204,10 @@ def create_tag(repo, name, ref, message):
     )
 
 
-class ObjectTag:
-    object: str
-    version: Optional[str]
-    label: Optional[str]
-    tag: git.Tag
-
-    def __init__(self, tag) -> None:
-        parsed = parse_name(tag.name)
-        self.action = Action(parsed[ACTION])
-        self.category = parsed[CATEGORY]
-        self.object = parsed[OBJECT]
-        self.version = parsed.get(VERSION)
-        self.label = parsed.get(LABEL)
-        self.creation_date = pd.Timestamp(tag.tag.tagged_date * 10 ** 9)
-        self.tag = tag
-
-
 class TagBasedVersion(BaseVersion):
     @classmethod
     def from_tag(cls, tag):
-        mtag = ObjectTag(tag)
+        mtag = parse_tag(tag)
         return cls(
             category=mtag.category,
             object=mtag.object,
@@ -220,7 +222,7 @@ class TagBasedVersion(BaseVersion):
 class TagBasedLabel(BaseLabel):
     @classmethod
     def from_tag(cls, tag: git.Tag) -> "TagBasedLabel":
-        mtag = ObjectTag(tag)
+        mtag = parse_tag(tag)
         version_candidates = [
             t
             for t in find(
@@ -236,7 +238,7 @@ class TagBasedLabel(BaseLabel):
             raise ValueError(
                 f"Found {len(version_candidates)} tags for {mtag.category} '{mtag.object}' label '{mtag.label}'"
             )
-        version = ObjectTag(version_candidates[0]).version
+        version = parse_tag(version_candidates[0]).version
         return cls(
             category=mtag.category,
             object=mtag.object,
@@ -251,7 +253,7 @@ class TagBasedLabel(BaseLabel):
 
 class TagBasedObject(BaseObject):
     def index_tag(self, tag: git.Tag) -> None:
-        mtag = ObjectTag(tag)
+        mtag = parse_tag(tag)
         if mtag.action == Action.REGISTER:
             self.versions.append(TagBasedVersion.from_tag(tag))
         if mtag.action == Action.UNREGISTER:
@@ -272,7 +274,7 @@ class TagBasedRegistry(BaseRegistry):
     def objects(self):
         # tags are sorted and then indexed by timestamp
         # this is important to check that history is not broken
-        tags = [ObjectTag(t) for t in find(repo=self.repo)]
+        tags = [parse_tag(t) for t in find(repo=self.repo)]
         objects = {}
         for tag in tags:
             # add category to this check?
