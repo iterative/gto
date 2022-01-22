@@ -127,7 +127,7 @@ def show(repo: str):
                 for l in o.unique_labels
             ]
         )
-        for o in reg.state.objects  # pylint: disable=no-member
+        for o in reg.state.objects
     }
     print("\n=== Current labels (MLflow dashboard) ===")
     display(pd.DataFrame.from_records(models_state).T)
@@ -144,7 +144,7 @@ def show(repo: str):
             "tag_name": l.tag_name,
             "unregistered_date": l.unregistered_date,
         }
-        for o in reg.state.objects  # pylint: disable=no-member
+        for o in reg.state.objects
         for l in o.labels
     ]
     print("\n=== Label assignment audit trail ===")
@@ -164,7 +164,7 @@ def show(repo: str):
             "tag_name": v.tag_name,
             "unregistered_date": v.unregistered_date,
         }
-        for o in reg.state.objects  # pylint: disable=no-member
+        for o in reg.state.objects
         for v in o.versions
     ]
     print("\n=== Model registration audit trail ===")

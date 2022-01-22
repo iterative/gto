@@ -6,7 +6,7 @@ from pydantic import BaseModel
 
 from gitops.exceptions import MissingArg, RefNotFound, UnknownAction
 
-from .base import BaseLabel, BaseObject, BaseRegistry, BaseVersion
+from .base import BaseLabel, BaseObject, BaseRegistry, BaseRegistryState, BaseVersion
 from .constants import ACTION, CATEGORY, LABEL, NUMBER, OBJECT, VERSION, Action
 
 
@@ -279,7 +279,7 @@ class TagBasedRegistry(BaseRegistry):
                     category=tag.category, name=tag.object, versions=[], labels=[]
                 )
             objects[tag.object].index_tag(tag.tag)
-        self.state = list(objects.values())
+        self.state = BaseRegistryState(objects.values())
 
     def _register(self, category, object, version, ref, message):
         create_tag(
