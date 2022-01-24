@@ -1,7 +1,7 @@
+from datetime import datetime
 from typing import Iterable, Optional
 
 import git
-import pandas as pd
 from pydantic import BaseModel
 
 from gitops.exceptions import MissingArg, RefNotFound, UnknownAction
@@ -78,7 +78,7 @@ class ObjectTag(BaseModel):
     object: str
     version: Optional[str]
     label: Optional[str]
-    creation_date: pd.Timestamp
+    creation_date: datetime
     tag: git.Tag
 
     class Config:
@@ -88,7 +88,7 @@ class ObjectTag(BaseModel):
 def parse_tag(tag: git.Tag):
     return ObjectTag(
         tag=tag,
-        creation_date=pd.Timestamp(tag.tag.tagged_date * 10 ** 9),
+        creation_date=datetime.fromtimestamp(tag.tag.tagged_date),
         **parse_name(tag.name),
     )
 
@@ -213,7 +213,6 @@ def version_from_tag(tag: git.Tag) -> BaseVersion:
         creation_date=mtag.creation_date,
         author=tag.tag.tagger.name,
         commit_hexsha=tag.commit.hexsha,
-        tag_name=tag.name,
     )
 
 
@@ -243,7 +242,6 @@ def label_from_tag(tag: git.Tag) -> BaseLabel:
         creation_date=mtag.creation_date,
         author=tag.tag.tagger.name,
         commit_hexsha=tag.commit.hexsha,
-        tag_name=tag.name,
     )
 
 

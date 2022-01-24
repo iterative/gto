@@ -1,8 +1,8 @@
+from datetime import datetime
 from typing import Dict, List, Optional
 
 import click
 import git
-import pandas as pd
 from pydantic import BaseModel, Field
 
 from .config import CONFIG
@@ -22,11 +22,10 @@ class BaseLabel(BaseModel):  # pylint: disable=too-many-instance-attributes
     object: str
     version: str
     name: str
-    creation_date: pd.Timestamp
+    creation_date: datetime
     author: str
     commit_hexsha: str
-    tag_name: str
-    unregistered_date: Optional[pd.Timestamp] = None
+    unregistered_date: Optional[datetime] = None
 
     def __repr__(self) -> str:
         return f"Label('{self.object}', '{self.version}', '{self.name}')"
@@ -40,11 +39,10 @@ class BaseVersion(BaseModel):
     category: str
     object: str
     name: str
-    creation_date: pd.Timestamp
+    creation_date: datetime
     author: str
     commit_hexsha: str
-    tag_name: str
-    unregistered_date: Optional[pd.Timestamp] = None
+    unregistered_date: Optional[datetime] = None
 
     def __repr__(self) -> str:
         return f"Version('{self.object}', '{self.name}')"
