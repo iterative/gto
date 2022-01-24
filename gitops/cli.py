@@ -141,7 +141,6 @@ def show(repo: str):
             "creation_date": l.creation_date,
             "author": l.author,
             "commit_hexsha": l.commit_hexsha,
-            "tag_name": l.tag_name,
             "unregistered_date": l.unregistered_date,
         }
         for o in reg.state.objects
@@ -161,7 +160,6 @@ def show(repo: str):
             "creation_date": v.creation_date,
             "author": v.author,
             "commit_hexsha": v.commit_hexsha,
-            "tag_name": v.tag_name,
             "unregistered_date": v.unregistered_date,
         }
         for o in reg.state.objects
