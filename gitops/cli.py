@@ -6,7 +6,6 @@ import pandas as pd
 from IPython.display import display
 
 from . import init_registry
-from .exceptions import ObjectNotFound
 
 arg_category = click.argument("category")
 arg_object = click.argument("object")
@@ -77,14 +76,7 @@ def promote(
 @arg_object
 def latest(repo: str, category: str, object: str):
     """Return latest version for object"""
-    objects_found = [
-        m
-        for m in init_registry(repo=repo).objects
-        if m.name == object and m.category == category
-    ]
-    if not objects_found:
-        raise ObjectNotFound(category=category, object=object)
-    click.echo(objects_found[0].latest_version)
+    click.echo(init_registry(repo=repo).latest(category, object))
 
 
 @cli.command()
@@ -121,38 +113,38 @@ def show(repo: str):
 
     reg = init_registry(repo=repo)
     models_state = {
-        m.name: dict(
+        o.name: dict(
             [
-                (("version", "latest"), m.latest_version),
+                (("version", "latest"), o.latest_version),
             ]
             + [
                 (
                     ("version", l),
-                    m.latest_labels[l].version
-                    if m.latest_labels[l] is not None
+                    o.latest_labels[l].version
+                    if o.latest_labels[l] is not None
                     else np.nan,
                 )
-                for l in m.unique_labels
+                for l in o.unique_labels
             ]
         )
-        for m in reg.objects
+        for o in reg.state.objects
     }
     print("\n=== Current labels (MLflow dashboard) ===")
     display(pd.DataFrame.from_records(models_state).T)
 
     label_assignment_audit_trail = [
         {
-            "model": m.name,
+            "category": o.category,
+            "object": o.name,
             "label": l.name,
             "version": l.version,
             "creation_date": l.creation_date,
             "author": l.author,
             "commit_hexsha": l.commit_hexsha,
-            "tag_name": l.tag_name,
             "unregistered_date": l.unregistered_date,
         }
-        for m in reg.objects
-        for l in m.labels
+        for o in reg.state.objects
+        for l in o.labels
     ]
     print("\n=== Label assignment audit trail ===")
     display(
@@ -163,16 +155,15 @@ def show(repo: str):
 
     model_registration_audit_trail = [
         {
-            "model": m.name,
+            "model": o.name,
             "version": v.name,
             "creation_date": v.creation_date,
             "author": v.author,
             "commit_hexsha": v.commit_hexsha,
-            "tag_name": v.tag_name,
             "unregistered_date": v.unregistered_date,
         }
-        for m in reg.objects
-        for v in m.versions
+        for o in reg.state.objects
+        for v in o.versions
     ]
     print("\n=== Model registration audit trail ===")
     display(
