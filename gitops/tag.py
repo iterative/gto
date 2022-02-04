@@ -203,7 +203,9 @@ class TagManager(BaseManager):
                 state.objects[(tag.category, tag.object)] = BaseObject(
                     category=tag.category, name=tag.object, versions=[], labels=[]
                 )
-            state.objects[tag.object] = index_tag(state.objects[tag.object], tag.tag)
+            state.objects[(tag.category, tag.object)] = index_tag(
+                state.objects[(tag.category, tag.object)], tag.tag
+            )
         return state
 
 
