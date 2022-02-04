@@ -209,8 +209,10 @@ class BaseRegistry(BaseModel):
         versions = CONFIG.versions_class
 
     def update_state(self):
-        self.state = self.version_manager.update_state(self.state)
-        self.state = self.env_manager.update_state(self.state)
+        state = BaseRegistryState(objects=[])
+        state = self.version_manager.update_state(state)
+        state = self.env_manager.update_state(state)
+        self.state = state
 
     def register(self, category, object, version, ref=None):
         """Register object version"""

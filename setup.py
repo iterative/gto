@@ -10,6 +10,7 @@ install_requires = [
     "numpy",
     "pydantic",
     "pyyaml",
+    "ruamel.yaml",
 ]
 
 

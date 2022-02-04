@@ -4,8 +4,10 @@ import click
 import numpy as np
 import pandas as pd
 from IPython.display import display
+from ruamel import yaml
 
 from . import init_registry
+from .utils import serialize
 
 arg_category = click.argument("category")
 arg_object = click.argument("object")
@@ -184,6 +186,13 @@ def show(repo: str):
             "creation_date", ascending=False
         )
     )
+
+
+@cli.command()
+@option_repo
+def print_state(repo: str):
+    reg = init_registry(repo=repo)
+    click.echo(yaml.dump(serialize(reg.state.dict())))
 
 
 if __name__ == "__main__":
