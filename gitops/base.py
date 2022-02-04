@@ -197,7 +197,8 @@ class BaseRegistry(BaseModel):
         versions = CONFIG.versions_class
 
     def update_state(self):
-        raise NotImplementedError
+        self.state = self.version_manager.update_state(self.state)
+        self.state = self.env_manager.update_state(self.state)
 
     def register(self, category, object, version, ref=None):
         """Register object version"""
