@@ -49,7 +49,7 @@ class UnknownEnvironment(GitopsException):
         # to avoid circular import
         from .config import CONFIG  # pylint: disable=import-outside-toplevel
 
-        self.message = self._message.format(env=env, envs=CONFIG.ENVIRONMENTS)
+        self.message = self._message.format(env=env, envs=CONFIG.ENVIRONMENT_WHITELIST)
         super().__init__(self.message)
 
 

@@ -107,6 +107,19 @@ def demote(repo: str, category: str, object: str, label: str):
 
 
 @cli.command()
+@click.argument("name")
+@click.option("--key", default=None, help="Which key to return")
+def parse_tag(name: str, key: str):
+    from .tag import parse_name  # pylint: disable=import-outside-toplevel
+
+    parsed = parse_name(name)
+    if key:
+        parsed = parsed[key]
+    click.echo(parsed)
+    return parsed
+
+
+@cli.command()
 @option_repo
 def show(repo: str):
     """Show current registry state"""

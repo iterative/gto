@@ -176,7 +176,7 @@ class BaseRegistry(BaseModel):
 
     class Config:
         arbitrary_types_allowed = True
-        environments = CONFIG.ENVIRONMENTS
+        environments = CONFIG.ENVIRONMENT_WHITELIST
         versions = CONFIG.versions_class
 
     def update_state(self):

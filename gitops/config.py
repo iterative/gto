@@ -25,9 +25,10 @@ def config_settings_source(settings: BaseSettings) -> Dict[str, Any]:
 
 
 class RegistryConfig(BaseSettings):
-    VERSIONS: str = "NumberedVersion"
-    ENVIRONMENTS: List = ["production", "staging"]
-    BASE: str = "tag"
+    VERSION_UNIT: str = "tag"
+    VERSION_CONVENTION: str = "NumberedVersion"
+    ENVIRONMENT_UNIT: str = "tag"
+    ENVIRONMENT_WHITELIST: List = ["production", "staging"]
 
     class Config:
         env_prefix = "gitops_"
@@ -49,9 +50,9 @@ class RegistryConfig(BaseSettings):
 
     @property
     def versions_class(self):
-        if self.VERSIONS not in VERSIONS_MAPPING:
-            raise ValueError(f"Unknown versioning system {self.VERSIONS}")
-        return VERSIONS_MAPPING[self.VERSIONS]
+        if self.VERSION_CONVENTION not in VERSIONS_MAPPING:
+            raise ValueError(f"Unknown versioning system {self.VERSION_CONVENTION}")
+        return VERSIONS_MAPPING[self.VERSION_CONVENTION]
 
 
 CONFIG = RegistryConfig()
