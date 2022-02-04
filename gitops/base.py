@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Dict, FrozenSet, List, Optional
+from typing import Dict, FrozenSet, List, Optional, Tuple
 
 import click
 import git
@@ -128,24 +128,22 @@ class BaseObject(BaseModel):
 
 
 class BaseRegistryState(BaseModel):
-    objects: List[BaseObject]
+    objects: Dict[Tuple[str, str], BaseObject]
 
     class Config:
         arbitrary_types_allowed = True
 
     def find_object(self, category, object, allow_new=False):
-        objects = [
-            m for m in self.objects if m.name == object and m.category == category
-        ]
-        if allow_new and not objects:
+        obj = self.objects.get((category, object))
+        if not obj and allow_new:
             return BaseObject(category=category, name=object, versions=[], labels=[])
-        if not objects:
+        if not obj:
             raise ObjectNotFound(category, object)
-        return objects[0]
+        return obj
 
     @property
     def unique_labels(self):
-        return sorted({l for o in self.objects for l in o.unique_labels})
+        return sorted({l for o in self.objects.values() for l in o.unique_labels})
 
     def find_commit(self, category, object, version):
         return (
@@ -177,6 +175,20 @@ class BaseManager(BaseModel):
         self, state: BaseRegistryState
     ) -> BaseRegistryState:  # pylint: disable=no-self-use
         raise NotImplementedError
+
+    # better to uncomment this for typing, but it breaks the pylint
+
+    # def register(self, category, object, version, ref, message):
+    #     raise NotImplementedError
+
+    # def unregister(self, category, object, version):
+    #     raise NotImplementedError
+
+    # def promote(self, category, object, label, ref, message):
+    #     raise NotImplementedError
+
+    # def demote(self, category, object, label, message):
+    #     raise NotImplementedError
 
 
 class BaseRegistry(BaseModel):
@@ -217,7 +229,7 @@ class BaseRegistry(BaseModel):
             and self.__config__.versions(version) < found_object.latest_version
         ):
             raise VersionIsOld(latest=found_object.latest_version, suggested=version)
-        self._register(
+        self.version_manager.register(
             category,
             object,
             version,
@@ -225,15 +237,9 @@ class BaseRegistry(BaseModel):
             message=f"Registering object {object} version {version}",
         )
 
-    def _register(self, category, object, version, ref, message):
-        raise NotImplementedError
-
     def unregister(self, category, object, version):
         self.update_state()
-        return self._unregister(category, object, version)
-
-    def _unregister(self, category, object, version):
-        raise NotImplementedError
+        return self.version_manager.unregister(category, object, version)
 
     def promote(
         self,
@@ -277,7 +283,7 @@ class BaseRegistry(BaseModel):
                 click.echo(
                     f"Registered new version '{promote_version}' of {category} '{object}' at commit '{promote_commit}'"
                 )
-        self._promote(
+        self.env_manager.promote(
             category,
             object,
             label,
@@ -286,24 +292,18 @@ class BaseRegistry(BaseModel):
         )
         return {"version": promote_version}
 
-    def _promote(self, category, object, label, ref, message):
-        raise NotImplementedError
-
     def demote(self, category, object, label):
         """De-promote object from given label"""
         # TODO: check if label wasn't demoted already
         self.update_state()
         if self.state.find_object(category, object).latest_labels.get(label) is None:
             raise NoActiveLabel(label=label, category=category, object=object)
-        return self._demote(
+        return self.env_manager.demote(
             category,
             object,
             label,
             message=f"Demoting {category} {object} from label {label}",
         )
-
-    def _demote(self, category, object, label, message):
-        raise NotImplementedError
 
     def find_commit(self, category, object, version):
         self.update_state()

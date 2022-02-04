@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import FrozenSet, Iterable, List, Optional, Union
+from typing import FrozenSet, Iterable, Optional, Union
 
 import git
 from pydantic import BaseModel
@@ -94,7 +94,7 @@ def parse_tag(tag: git.Tag):
 
 
 def find(
-    action: Union[Action, List[Action]] = None,
+    action: Union[Action, FrozenSet[Action]] = None,
     category: Optional[str] = None,
     object: Optional[str] = None,
     version: Optional[str] = None,
@@ -104,7 +104,7 @@ def find(
     tags: Optional[Iterable[git.Tag]] = None,
 ):
     if isinstance(action, Action):
-        action = [action]
+        action = frozenset([action])
     if tags is None:
         if repo is None:
             raise MissingArg(arg="repo")
@@ -194,25 +194,23 @@ def index_tag(obj: BaseObject, tag: git.Tag) -> BaseObject:
 
 
 class TagManager(BaseManager):
-    def update_state(self, state):
+    def update_state(self, state: BaseRegistryState) -> BaseRegistryState:
         # tags are sorted and then indexed by timestamp
         # this is important to check that history is not broken
         tags = [parse_tag(t) for t in find(repo=self.repo, action=self.actions)]
-        objects = state.objects
         for tag in tags:
-            # add category to this check?
-            if tag.object not in objects:
-                objects[tag.object] = BaseObject(
+            if (tag.category, tag.object) not in state.objects:
+                state.objects[(tag.category, tag.object)] = BaseObject(
                     category=tag.category, name=tag.object, versions=[], labels=[]
                 )
-            objects[tag.object] = index_tag(objects[tag.object], tag.tag)
-        return BaseRegistryState(objects=list(objects.values()))
+            state.objects[tag.object] = index_tag(state.objects[tag.object], tag.tag)
+        return state
 
 
 class TagVersionManager(TagManager):
     actions: FrozenSet[Action] = frozenset((Action.REGISTER, Action.UNREGISTER))
 
-    def _register(self, category, object, version, ref, message):
+    def register(self, category, object, version, ref, message):
         create_tag(
             self.repo,
             name_tag(
@@ -222,7 +220,7 @@ class TagVersionManager(TagManager):
             message=message,
         )
 
-    def _unregister(self, category, object, version):
+    def unregister(self, category, object, version):
         """Unregister object version"""
         # TODO: search in self, move to base
         tags = find(
@@ -249,7 +247,7 @@ class TagVersionManager(TagManager):
 class TagEnvManager(TagManager):
     actions: FrozenSet[Action] = frozenset((Action.PROMOTE, Action.DEMOTE))
 
-    def _promote(self, category, object, label, ref, message):
+    def promote(self, category, object, label, ref, message):
         create_tag(
             self.repo,
             name_tag(Action.PROMOTE, category, object, label=label, repo=self.repo),
@@ -257,7 +255,7 @@ class TagEnvManager(TagManager):
             message=message,
         )
 
-    def _demote(self, category, object, label, message):
+    def demote(self, category, object, label, message):
         # TODO: search in self, move to base
         promoted_tag = find(
             action=Action.PROMOTE,
