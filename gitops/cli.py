@@ -142,7 +142,7 @@ def show(repo: str):
                 for l in o.unique_labels
             ]
         )
-        for o in reg.state.objects
+        for o in reg.state.objects.values()
     }
     print("\n=== Current labels (MLflow dashboard) ===")
     display(pd.DataFrame.from_records(models_state).T)
@@ -158,7 +158,7 @@ def show(repo: str):
             "commit_hexsha": l.commit_hexsha,
             "unregistered_date": l.unregistered_date,
         }
-        for o in reg.state.objects
+        for o in reg.state.objects.values()
         for l in o.labels
     ]
     print("\n=== Label assignment audit trail ===")
@@ -177,7 +177,7 @@ def show(repo: str):
             "commit_hexsha": v.commit_hexsha,
             "unregistered_date": v.unregistered_date,
         }
-        for o in reg.state.objects
+        for o in reg.state.objects.values()
         for v in o.versions
     ]
     print("\n=== Model registration audit trail ===")
