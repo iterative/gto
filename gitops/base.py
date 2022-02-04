@@ -1,9 +1,11 @@
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Dict, FrozenSet, List, Optional
 
 import click
 import git
 from pydantic import BaseModel, Field
+
+from gitops.constants import Action
 
 from .config import CONFIG
 from .exceptions import (
@@ -164,8 +166,20 @@ class BaseRegistryState(BaseModel):
         return None
 
 
+class BaseManager(BaseModel):
+    repo: git.Repo
+    actions: FrozenSet[Action]
+
+    def update_state(
+        self, state: BaseRegistryState
+    ) -> BaseRegistryState:  # pylint: disable=no-self-use
+        raise NotImplementedError
+
+
 class BaseRegistry(BaseModel):
-    repo: git.Repo = Field(default_factory=lambda: git.Repo("."))
+    repo: git.Repo
+    version_manager: BaseManager
+    env_manager: BaseManager
     state: BaseRegistryState = Field(
         default_factory=lambda: BaseRegistryState(objects=[])
     )
@@ -176,7 +190,7 @@ class BaseRegistry(BaseModel):
 
     class Config:
         arbitrary_types_allowed = True
-        environments = CONFIG.ENVIRONMENT_WHITELIST
+        environments = CONFIG.ENV_WHITELIST
         versions = CONFIG.versions_class
 
     def update_state(self):

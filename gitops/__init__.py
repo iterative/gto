@@ -1,13 +1,22 @@
 import git
 
+from gitops.base import BaseRegistry
+from gitops.branch import BranchEnvManager
+
 from .config import CONFIG
-from .tag import TagBasedRegistry
+from .tag import TagEnvManager, TagVersionManager
 
-BASE_MAPPING = {"tag": TagBasedRegistry}
+VERSION_MAPPING = {"tag": TagVersionManager}
+ENV_MAPPING = {"tag": TagEnvManager, "branch": BranchEnvManager}
 
 
-def init_registry(repo=".", base=CONFIG.VERSION_UNIT):
+def init_registry(repo=".", config=CONFIG):
     repo = git.Repo(repo)
-    if base not in BASE_MAPPING:
+
+    if config.VERSION_BASE not in VERSION_MAPPING or config.ENV_BASE not in ENV_MAPPING:
         raise ValueError("Other implementations except of tag-based aren't supported")
-    return BASE_MAPPING[base](repo=repo)
+    return BaseRegistry(
+        repo=repo,
+        version_manager=VERSION_MAPPING[config.VERSION_BASE](repo=repo),
+        env_manager=ENV_MAPPING[config.ENV_BASE](repo=repo),
+    )
