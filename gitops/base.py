@@ -170,6 +170,9 @@ class BaseManager(BaseModel):
     repo: git.Repo
     actions: FrozenSet[Action]
 
+    class Config:
+        arbitrary_types_allowed = True
+
     def update_state(
         self, state: BaseRegistryState
     ) -> BaseRegistryState:  # pylint: disable=no-self-use
