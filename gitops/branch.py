@@ -26,16 +26,26 @@ class BranchEnvManager(BaseManager):
 
     def update_state(self, state):
         if CONFIG.VERSION_REQUIRED_FOR_ENV:
-            # we assume that the model was promoted when it was registered
+            # we assume that the model is promoted the same moment it is registered
             for obj in state.objects:
                 for version in state.objects[obj].versions:
+                    # TODO: For each branch that has this commit in history
+                    # we assume the model was promoted to corresponding env
+                    # we should see are there any options to do this differently
                     for branch in find_branches(self.repo, version.commit_hexsha):
+                        # figure out env from branch name
+                        if CONFIG.ENV_BRANCH_MAPPING:
+                            name = CONFIG.ENV_BRANCH_MAPPING.get(branch.name)
+                        else:
+                            name = branch.name
+                        if name is None:
+                            continue
                         state.objects[obj].labels.append(
                             BaseLabel(
                                 category=version.category,
                                 object=version.object,
                                 version=version.name,
-                                name=branch.name,  # IN WHICH BRANCH IT WAS PROMOTED?
+                                name=branch.name,
                                 creation_date=version.creation_date,
                                 author=version.author,
                                 commit_hexsha=version.commit_hexsha,
