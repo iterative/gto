@@ -1,10 +1,24 @@
-from typing import FrozenSet
+from typing import FrozenSet, List
 
-from .base import BaseManager, BaseRegistryState
+import git
 
-# need to pass this when you initialize BranchEnvManager
-from .config import CONFIG
+from .base import BaseLabel, BaseManager, BaseRegistryState
+from .config import CONFIG  # need to pass this when you initialize BranchEnvManager
 from .constants import Action
+
+
+def traverse_commit(commit: git.Commit, desired: git.Commit):
+    if commit == desired:
+        return True
+    return any(traverse_commit(c, desired) for c in commit.parents)
+
+
+def find_branches(repo: git.Repo, desired: str) -> List[git.Head]:
+    return [
+        branch
+        for branch in repo.heads
+        if traverse_commit(branch.commit, repo.commit(desired))
+    ]
 
 
 class BranchEnvManager(BaseManager):
@@ -13,7 +27,22 @@ class BranchEnvManager(BaseManager):
     def update_state(self, state):
         if CONFIG.VERSION_REQUIRED_FOR_ENV:
             # we assume that the model was promoted when it was registered
-            pass
+            for obj in state.objects:
+                for version in state.objects[obj].versions:
+                    for branch in find_branches(self.repo, version.commit_hexsha):
+                        state.objects[obj].labels.append(
+                            BaseLabel(
+                                category=version.category,
+                                object=version.object,
+                                version=version.name,
+                                name=branch.name,  # IN WHICH BRANCH IT WAS PROMOTED?
+                                creation_date=version.creation_date,
+                                author=version.author,
+                                commit_hexsha=version.commit_hexsha,
+                                unregistered_date=version.unregistered_date,
+                            )
+                        )
+            return state
         else:
             # we assume each commit in a branch is a promotion to branch env
             pass

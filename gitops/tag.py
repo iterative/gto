@@ -199,13 +199,12 @@ class TagManager(BaseManager):
         # this is important to check that history is not broken
         tags = [parse_tag(t) for t in find(repo=self.repo, action=self.actions)]
         for tag in tags:
-            if (tag.category, tag.object) not in state.objects:
-                state.objects[(tag.category, tag.object)] = BaseObject(
+            ind = (tag.category, tag.object)
+            if ind not in state.objects:
+                state.objects[ind] = BaseObject(
                     category=tag.category, name=tag.object, versions=[], labels=[]
                 )
-            state.objects[(tag.category, tag.object)] = index_tag(
-                state.objects[(tag.category, tag.object)], tag.tag
-            )
+            state.objects[ind] = index_tag(state.objects[ind], tag.tag)
         return state
 
 
