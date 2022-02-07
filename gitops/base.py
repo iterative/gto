@@ -253,7 +253,7 @@ class BaseRegistry(BaseModel):
         name_version=None,
     ):
         """Assign label to specific object version"""
-        if label not in self.__config__.environments:
+        if self.__config__.environments and label not in self.__config__.environments:
             raise UnknownEnvironment(label)
         if promote_version is None and promote_commit is None:
             raise ValueError("Either version or commit must be specified")

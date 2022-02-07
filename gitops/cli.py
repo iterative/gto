@@ -144,7 +144,7 @@ def show(repo: str):
         )
         for o in reg.state.objects.values()
     }
-    print("\n=== Current labels (MLflow dashboard) ===")
+    click.echo("\n=== Current labels (MLflow dashboard) ===")
     display(pd.DataFrame.from_records(models_state).T)
 
     label_assignment_audit_trail = [
@@ -161,7 +161,7 @@ def show(repo: str):
         for o in reg.state.objects.values()
         for l in o.labels
     ]
-    print("\n=== Label assignment audit trail ===")
+    click.echo("\n=== Label assignment audit trail ===")
     display(
         pd.DataFrame(label_assignment_audit_trail).sort_values(
             "creation_date", ascending=False
@@ -180,7 +180,7 @@ def show(repo: str):
         for o in reg.state.objects.values()
         for v in o.versions
     ]
-    print("\n=== Model registration audit trail ===")
+    click.echo("\n=== Model registration audit trail ===")
     display(
         pd.DataFrame(model_registration_audit_trail).sort_values(
             "creation_date", ascending=False

@@ -10,13 +10,9 @@ set -exu
 git checkout -b demo
 rm -rf models gitops_config.yaml
 
-# cat << EOF > gitops_config.yaml
-# versions: NumberedVersion  # or SemVer - but it's not supported yet
-# environments:  # prototype will ensure you can only promote to these environments
-# - production
-# - staging
-# # rules: here we need to store rules to create tag names, e.g. model-{model}-{action}-{version/label}-{number}
-# EOF
+cat << EOF > gitops_config.yaml
+ENV_BASE: branch
+EOF
 
 echo "Create new models"
 mkdir models
