@@ -11,10 +11,10 @@ git checkout -b demo
 rm -rf models gitops_config.yaml
 
 cat << EOF > gitops_config.yaml
-ENV_BASE: branch
-ENV_BRANCH_MAPPING:
-  master: production
-  demo: demo
+ENV_BASE: tag
+# ENV_BRANCH_MAPPING:
+#   master: production
+#   demo: demo
 EOF
 
 echo "Create new models"
