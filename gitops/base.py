@@ -204,8 +204,6 @@ class BaseRegistry(BaseModel):
 
     class Config:
         arbitrary_types_allowed = True
-        environments = CONFIG.ENV_WHITELIST
-        versions = CONFIG.versions_class
 
     def update_state(self):
         state = BaseRegistryState(objects=[])
@@ -227,7 +225,7 @@ class BaseRegistry(BaseModel):
             raise VersionExistsForCommit(object, found_version.name)
         if (
             found_object.versions
-            and self.__config__.versions(version) < found_object.latest_version
+            and CONFIG.versions_class(version) < found_object.latest_version
         ):
             raise VersionIsOld(latest=found_object.latest_version, suggested=version)
         self.version_manager.register(
@@ -252,7 +250,7 @@ class BaseRegistry(BaseModel):
         name_version=None,
     ):
         """Assign label to specific object version"""
-        self.__config__.assert_env(label)
+        CONFIG.assert_env(label)
         if promote_version is None and promote_commit is None:
             raise ValueError("Either version or commit must be specified")
         if promote_version is not None and promote_commit is not None:
@@ -276,9 +274,7 @@ class BaseRegistry(BaseModel):
                     last_version = self.state.find_object(
                         category, object
                     ).latest_version
-                    promote_version = (
-                        self.__config__.versions(last_version).bump().version
-                    )
+                    promote_version = CONFIG.versions_class(last_version).bump().version
                 self.register(category, object, name_version, ref=promote_commit)
                 click.echo(
                     f"Registered new version '{promote_version}' of {category} '{object}' at commit '{promote_commit}'"
