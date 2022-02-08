@@ -13,24 +13,20 @@ class Object(BaseModel):
     category: str
 
 
-class Index(BaseModel):
-    objects: List[Object]
-
-
-class RepoIndex(BaseModel):
-    commits: Dict[str, Index]
+Index = List[Object]
+RepoIndex = Dict[git.Commit, Index]
 
 
 def traverse_commit(
     commit: git.Commit,
-) -> Generator[Tuple[git.Commit, Dict], None, None]:
+) -> Generator[Tuple[git.Commit, Index], None, None]:
     if CONFIG.INDEX in commit.tree:
         yield commit, load((commit.tree / CONFIG.INDEX).data_stream.read())
     for parent in commit.parents:
         yield from traverse_commit(parent)
 
 
-def read_index(repo: git.Repo) -> Dict[git.Commit, Dict]:
+def read_index(repo: git.Repo) -> RepoIndex:
     return {
         commit: index
         for branch in repo.heads

@@ -11,7 +11,6 @@ git checkout -b demo
 rm -rf models gitops_config.yaml
 
 cat << EOF > index.yaml
-objects:
 - category: model
   name: model-1
   path: models/model-1
