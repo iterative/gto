@@ -1,5 +1,6 @@
-from typing import List
+from typing import Dict, Generator, List, Tuple
 
+import git
 from pydantic import BaseModel
 from ruamel.yaml import load
 
@@ -16,17 +17,22 @@ class Index(BaseModel):
     objects: List[Object]
 
 
-class CommitIndex(BaseModel):
-    hexsha: str
-    index: Index
-
-
 class RepoIndex(BaseModel):
-    commits: List[CommitIndex]
+    commits: Dict[str, Index]
 
 
-def read_index():
+def traverse_commit(
+    commit: git.Commit,
+) -> Generator[Tuple[git.Commit, Dict], None, None]:
+    if CONFIG.INDEX in commit.tree:
+        yield commit, load((commit.tree / CONFIG.INDEX).data_stream.read())
+    for parent in commit.parents:
+        yield from traverse_commit(parent)
 
-    with open(CONFIG.INDEX, encoding="utf8") as index_file:
-        index = load(index_file)
-    return index
+
+def read_index(repo: git.Repo) -> Dict[git.Commit, Dict]:
+    return {
+        commit: index
+        for branch in repo.heads
+        for commit, index in traverse_commit(branch.commit)
+    }
