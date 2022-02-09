@@ -54,7 +54,8 @@ class BranchEnvManager(BaseManager):
             # we assume each commit in a branch is a promotion to branch env
             # removing those commits in which the object was not indexed
             for (cat, obj), commits in index.object_centric_representation().items():
-                for commit in commits:
+                for cmt in commits:
+                    commit = self.repo.commit(cmt)
                     state.objects[(cat, obj)].labels.append(
                         BaseLabel(
                             category=cat,

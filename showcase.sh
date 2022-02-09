@@ -36,27 +36,27 @@ git add index.yaml models
 git commit -am "Create models"
 
 echo "Register new model"
-gitops register model models/random-forest.pkl v1
-gitops register model models/neural-network.pkl v1
+gitops register model rf v1
+gitops register model nn v1
 
 echo "Update the model"
 sleep 1
-echo "2nd version" > models/random-forest.pkl
+echo "2nd version" > rf
 git commit -am "Update model"
 
 echo "Register models"
-gitops register model models/random-forest.pkl v2
+gitops register model rf v2
 
 echo "Promote models"
-gitops promote model models/neural-network.pkl staging --version v1
+gitops promote model nn staging --version v1
 sleep 1
-gitops promote model models/random-forest.pkl production --version v1
+gitops promote model rf production --version v1
 sleep 1
-gitops promote model models/random-forest.pkl staging --commit `git rev-parse HEAD`
+gitops promote model rf staging --commit `git rev-parse HEAD`
 sleep 1
-gitops promote model models/random-forest.pkl production --commit `git rev-parse HEAD`
+gitops promote model rf production --commit `git rev-parse HEAD`
 sleep 1
-gitops promote model models/random-forest.pkl production --version v1
+gitops promote model rf production --version v1
 
 gitops show
 
@@ -65,8 +65,8 @@ cat << EOF
 Now you have your models registered and promoted.
 Try to unregister and demote them and see what happens by running "gitops show"
 For example:
-gitops unregister models/random-forest.pkl v1
-gitops demote models/random-forest.pkl v2
+gitops unregister rf v1
+gitops demote rf v2
 
 Right now you can't delete tags to unregister/demote models.
 Only create new tags which will do that.
