@@ -41,7 +41,7 @@ gitops register model nn v1
 
 echo "Update the model"
 sleep 1
-echo "2nd version" > rf
+echo "2nd version" > models/random-forest.pkl
 git commit -am "Update model"
 
 echo "Register models"
