@@ -3,6 +3,8 @@ from typing import FrozenSet, List
 
 import git
 
+from gitops.index import RepoIndexState
+
 from .base import BaseLabel, BaseManager, BaseObject, BaseRegistryState
 from .config import CONFIG  # need to pass this when you initialize BranchEnvManager
 from .constants import Action
@@ -45,14 +47,31 @@ def find_branches(repo: git.Repo, desired: str) -> List[git.Head]:
 class BranchEnvManager(BaseManager):
     actions: FrozenSet[Action] = frozenset((Action.PROMOTE, Action.DEMOTE))
 
-    def update_state(self, state):
+    def update_state(
+        self, state: BaseRegistryState, index: RepoIndexState
+    ) -> BaseRegistryState:
         if not CONFIG.VERSION_REQUIRED_FOR_ENV:
             # we assume each commit in a branch is a promotion to branch env
             # removing those commits in which the object was not indexed
-            raise NotImplementedError
+            for (cat, obj), commits in index.object_centric_representation().items():
+                for commit in commits:
+                    state.objects[(cat, obj)].labels.append(
+                        BaseLabel(
+                            category=cat,
+                            object=obj,
+                            version=commit.hexsha,
+                            name="ALL BRANCHES THROUGH WHICH I CAN DISCOVER THIS COMMIT",
+                            creation_date=commit.committed_date,
+                            author=commit.author,
+                            commit_hexsha=commit.hexsha,
+                            unregistered_date=None,
+                        )
+                    )
+            return state
+            # raise NotImplementedError
         # we assume that the model is promoted the same moment it is registered
-        for obj in state.objects:
-            for version in state.objects[obj].versions:
+        for cat, obj in state.objects:
+            for version in state.objects[(cat, obj)].versions:
                 # TODO: For each branch that has this commit in history
                 # we assume the model was promoted to corresponding env
                 # we should see are there any options to do this differently
@@ -64,7 +83,7 @@ class BranchEnvManager(BaseManager):
                         name = branch.name
                     if name is None:
                         continue
-                    state.objects[obj].labels.append(
+                    state.objects[(cat, obj)].labels.append(
                         BaseLabel(
                             category=version.category,
                             object=version.object,

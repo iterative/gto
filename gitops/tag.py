@@ -5,6 +5,7 @@ import git
 from pydantic import BaseModel
 
 from gitops.exceptions import MissingArg, RefNotFound, UnknownAction
+from gitops.index import RepoIndexState
 
 from .base import BaseLabel, BaseManager, BaseObject, BaseRegistryState, BaseVersion
 from .constants import ACTION, CATEGORY, LABEL, NUMBER, OBJECT, VERSION, Action
@@ -194,7 +195,9 @@ def index_tag(obj: BaseObject, tag: git.Tag) -> BaseObject:
 
 
 class TagManager(BaseManager):
-    def update_state(self, state: BaseRegistryState) -> BaseRegistryState:
+    def update_state(
+        self, state: BaseRegistryState, index: RepoIndexState
+    ) -> BaseRegistryState:
         # tags are sorted and then indexed by timestamp
         # this is important to check that history is not broken
         tags = [parse_tag(t) for t in find(repo=self.repo, action=self.actions)]

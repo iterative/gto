@@ -10,15 +10,6 @@ set -exu
 git checkout -b demo
 rm -rf models gitops_config.yaml
 
-cat << EOF > index.yaml
-- category: model
-  name: model-1
-  path: models/model-1
-- category: dataset
-  name: dataset-1
-  path: datasets/dataset-1
-EOF
-
 cat << EOF > gitops_config.yaml
 ENV_BASE: tag
 # ENV_BRANCH_MAPPING:
@@ -30,6 +21,17 @@ echo "Create new models"
 mkdir models
 echo "1st version" > models/random-forest.pkl
 echo "1st version" > models/neural-network.pkl
+cat << EOF > index.yaml
+- category: model
+  name: rf
+  path: models/random-forest.pkl
+- category: model
+  name: nn
+  path: models/neural-network.pkl
+- category: dataset
+  name: features
+  path: datasets/features.csv
+EOF
 git add index.yaml models
 git commit -am "Create models"
 

@@ -72,11 +72,11 @@ class RegistryConfig(BaseSettings):
                 file_secret_settings,
             )
 
-    @validator("VERSION_REQUIRED_FOR_ENV", always=True)
-    def validate_version_required_for_env(cls, value):
-        if not value:
-            raise NotImplementedError
-        return value
+    # @validator("VERSION_REQUIRED_FOR_ENV", always=True)
+    # def validate_version_required_for_env(cls, value):
+    #     if not value:
+    #         raise NotImplementedError
+    #     return value
 
     @validator("ENV_BASE", always=True)
     def validate_env_base(cls, value):

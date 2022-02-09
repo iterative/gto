@@ -6,6 +6,7 @@ import git
 from pydantic import BaseModel, Field
 
 from gitops.constants import Action
+from gitops.index import RepoIndexState, read_index
 
 from .config import CONFIG
 from .exceptions import (
@@ -171,7 +172,7 @@ class BaseManager(BaseModel):
         arbitrary_types_allowed = True
 
     def update_state(
-        self, state: BaseRegistryState
+        self, state: BaseRegistryState, index: RepoIndexState
     ) -> BaseRegistryState:  # pylint: disable=no-self-use
         raise NotImplementedError
 
@@ -205,10 +206,14 @@ class BaseRegistry(BaseModel):
     class Config:
         arbitrary_types_allowed = True
 
+    @property
+    def index(self) -> RepoIndexState:
+        return read_index(self.repo)
+
     def update_state(self):
         state = BaseRegistryState(objects=[])
-        state = self.version_manager.update_state(state)
-        state = self.env_manager.update_state(state)
+        state = self.version_manager.update_state(state, self.index)
+        state = self.env_manager.update_state(state, self.index)
         self.state = state
 
     def register(self, category, object, version, ref=None):
@@ -216,6 +221,9 @@ class BaseRegistry(BaseModel):
         self.update_state()
         if ref is None:
             ref = self.repo.active_branch.commit.hexsha
+        # TODO: add the same check for other actions, to promote and etc
+        # also we need to check integrity of the index+state
+        self.index.assert_existence(category, object, ref)
         found_object = self.state.find_object(category, object, allow_new=True)
         found_version = found_object.find_version(version, skip_unregistered=False)
         if found_version is not None:

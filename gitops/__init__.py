@@ -10,11 +10,12 @@ from .tag import TagEnvManager, TagVersionManager
 VERSION_MAPPING = {TAG: TagVersionManager}
 ENV_MAPPING = {TAG: TagEnvManager, BRANCH: BranchEnvManager}
 
+print(CONFIG)
+
 
 def init_registry(repo=".", config=CONFIG):
     repo = git.Repo(repo)
 
-    print(config)
     return BaseRegistry(
         repo=repo,
         version_manager=VERSION_MAPPING[config.VERSION_BASE](repo=repo),
