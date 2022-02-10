@@ -4,11 +4,10 @@ from typing import FrozenSet, Iterable, Optional, Union
 import git
 from pydantic import BaseModel
 
-from gitops.exceptions import MissingArg, RefNotFound, UnknownAction
-from gitops.index import RepoIndexState
-
 from .base import BaseLabel, BaseManager, BaseObject, BaseRegistryState, BaseVersion
 from .constants import ACTION, LABEL, NAME, NUMBER, VERSION, Action
+from .exceptions import MissingArg, RefNotFound, UnknownAction
+from .index import RepoIndexState
 
 
 def name_tag(
@@ -135,26 +134,13 @@ def version_from_tag(tag: git.Tag) -> BaseVersion:
     )
 
 
-def label_from_tag(tag: git.Tag) -> BaseLabel:
+def label_from_tag(tag: git.Tag, obj: BaseObject) -> BaseLabel:
     mtag = parse_tag(tag)
-    version_candidates = [
-        t
-        for t in find(
-            action=Action.REGISTER,
-            name=mtag.name,
-            repo=tag.repo,
-        )
-        if t.commit.hexsha == tag.commit.hexsha
-    ]
-    if len(version_candidates) != 1:
-        # TODO: resolve this
-        raise ValueError(
-            f"Found {len(version_candidates)} tags for '{mtag.name}' label '{mtag.label}'"
-        )
-    version = parse_tag(version_candidates[0]).version
     return BaseLabel(
         object=mtag.name,
-        version=version,
+        version=obj.find_version(
+            commit_hexsha=tag.commit.hexsha, raise_if_not_found=True
+        ).name,  # type: ignore
         name=mtag.label,
         creation_date=mtag.creation_date,
         author=tag.tag.tagger.name,
@@ -169,7 +155,7 @@ def index_tag(obj: BaseObject, tag: git.Tag) -> BaseObject:
     if mtag.action == Action.UNREGISTER:
         obj.find_version(mtag.version).unregistered_date = mtag.creation_date  # type: ignore
     if mtag.action == Action.PROMOTE:
-        obj.labels.append(label_from_tag(tag))
+        obj.labels.append(label_from_tag(tag, obj))
     if mtag.action == Action.DEMOTE:
         if mtag.label not in obj.latest_labels:
             raise ValueError(f"Active label '{mtag.label}' not found")

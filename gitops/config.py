@@ -108,7 +108,6 @@ class RegistryConfig(BaseSettings):
 
     @validator("ENV_WHITELIST", always=True)
     def validate_env_whitelist(cls, value, values):
-        print(values)
         if values["ENV_BASE"] == BRANCH:
             # logging.warning("ENV_WHITELIST is ignored when ENV_BASE is BRANCH")
             pass
