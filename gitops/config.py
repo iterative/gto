@@ -1,16 +1,14 @@
-# pylint: disable=no-self-use, no-self-argument, inconsistent-return-statements
+# pylint: disable=no-self-use, no-self-argument, inconsistent-return-statements, invalid-name, import-outside-toplevel
 from pathlib import Path
 from typing import Any, Dict, List
 
 import yaml
 from pydantic import BaseSettings, validator
 
-from .constants import BRANCH, TAG
+from .constants import BRANCH, COMMIT, TAG
 from .exceptions import UnknownEnvironment
-from .versions import NumberedVersion, SemVer
 
 CONFIG_FILE = Path(__file__).parent.parent / "gitops_config.yaml"
-VERSIONS_MAPPING = {"NumberedVersion": NumberedVersion, "SemVer": SemVer}
 
 
 def config_settings_source(settings: BaseSettings) -> Dict[str, Any]:
@@ -35,6 +33,26 @@ class RegistryConfig(BaseSettings):
     ENV_BASE: str = BRANCH
     ENV_WHITELIST: List[str] = []
     ENV_BRANCH_MAPPING: Dict[str, str] = {}
+
+    @property
+    def VERSION_SYSTEM_MAPPING(self):
+        from .versions import NumberedVersion, SemVer
+
+        return {"NumberedVersion": NumberedVersion, "SemVer": SemVer}
+
+    @property
+    def VERSION_MANAGERS_MAPPING(self):
+        from .commit import CommitVersionManager
+        from .tag import TagVersionManager
+
+        return {COMMIT: CommitVersionManager, TAG: TagVersionManager}
+
+    @property
+    def ENV_MANAGERS_MAPPING(self):
+        from .branch import BranchEnvManager
+        from .tag import TagEnvManager
+
+        return {TAG: TagEnvManager, BRANCH: BranchEnvManager}
 
     def assert_env(self, name):
         if not self.check_env(name):
@@ -81,14 +99,16 @@ class RegistryConfig(BaseSettings):
     #         raise NotImplementedError
     #     return value
 
-    @validator("ENV_BASE", always=True)
-    def validate_env_base(cls, value):
-        if value not in (BRANCH, TAG):
-            raise ValueError("ENV_BASE must be either 'branch' or 'tag'")
-        return value
+    # TODO: now fails, make this work
+    # @validator("ENV_BASE", always=True, pre=True)
+    # def validate_env_base(cls, value):
+    #     if value not in cls.ENV_MANAGERS_MAPPING:
+    #         raise ValueError(f"ENV_BASE must be one of: {cls.ENV_MANAGERS_MAPPING.keys()}")
+    #     return value
 
     @validator("ENV_WHITELIST", always=True)
     def validate_env_whitelist(cls, value, values):
+        print(values)
         if values["ENV_BASE"] == BRANCH:
             # logging.warning("ENV_WHITELIST is ignored when ENV_BASE is BRANCH")
             pass
@@ -114,9 +134,9 @@ class RegistryConfig(BaseSettings):
 
     @property
     def versions_class(self):
-        if self.VERSION_CONVENTION not in VERSIONS_MAPPING:
+        if self.VERSION_CONVENTION not in self.VERSION_SYSTEM_MAPPING:
             raise ValueError(f"Unknown versioning system {self.VERSION_CONVENTION}")
-        return VERSIONS_MAPPING[self.VERSION_CONVENTION]
+        return self.VERSION_SYSTEM_MAPPING[self.VERSION_CONVENTION]
 
 
 CONFIG = RegistryConfig()

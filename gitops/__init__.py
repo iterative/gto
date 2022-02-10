@@ -1,14 +1,7 @@
 import git
 
-from gitops.base import BaseRegistry
-from gitops.branch import BranchEnvManager
-
+from .base import BaseRegistry
 from .config import CONFIG
-from .constants import BRANCH, TAG
-from .tag import TagEnvManager, TagVersionManager
-
-VERSION_MAPPING = {TAG: TagVersionManager}
-ENV_MAPPING = {TAG: TagEnvManager, BRANCH: BranchEnvManager}
 
 print(CONFIG)
 
@@ -18,6 +11,6 @@ def init_registry(repo=".", config=CONFIG):
 
     return BaseRegistry(
         repo=repo,
-        version_manager=VERSION_MAPPING[config.VERSION_BASE](repo=repo),
-        env_manager=ENV_MAPPING[config.ENV_BASE](repo=repo),
+        version_manager=CONFIG.VERSION_MANAGERS_MAPPING[config.VERSION_BASE](repo=repo),
+        env_manager=CONFIG.ENV_MANAGERS_MAPPING[config.ENV_BASE](repo=repo),
     )

@@ -133,10 +133,8 @@ class BaseRegistryState(BaseModel):
     class Config:
         arbitrary_types_allowed = True
 
-    def find_object(self, name, allow_new=False):
+    def find_object(self, name):
         obj = self.objects.get(name)
-        if not obj and allow_new:
-            return BaseObject(name=name, versions=[], labels=[])
         if not obj:
             raise ObjectNotFound(name)
         return obj
@@ -225,11 +223,11 @@ class BaseRegistry(BaseModel):
         """Register object version"""
         self.update_state()
         if ref is None:
-            ref = self.repo.active_branch.commit.hexsha
+            ref = self.repo.commit().hexsha
         # TODO: add the same check for other actions, to promote and etc
         # also we need to check integrity of the index+state
         self.index.assert_existence(name, ref)
-        found_object = self.state.find_object(name, allow_new=True)
+        found_object = self.state.find_object(name)
         found_version = found_object.find_version(version, skip_unregistered=False)
         if found_version is not None:
             raise VersionAlreadyRegistered(version)
@@ -266,6 +264,8 @@ class BaseRegistry(BaseModel):
             raise ValueError("Either version or commit must be specified")
         if promote_version is not None and promote_commit is not None:
             raise ValueError("Only one of version or commit must be specified")
+        if promote_commit:
+            promote_commit = self.repo.commit(promote_commit).hexsha
         self.update_state()
         try:
             found_object = self.state.find_object(name)
