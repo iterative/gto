@@ -1,4 +1,5 @@
 # pylint: disable=no-self-argument, no-else-return, unused-argument, no-self-use, unused-import
+import logging
 from typing import FrozenSet, List
 
 import git
@@ -51,54 +52,55 @@ class BranchEnvManager(BaseManager):
         self, state: BaseRegistryState, index: RepoIndexState
     ) -> BaseRegistryState:
         if not CONFIG.VERSION_REQUIRED_FOR_ENV:
+            # we assume that the model is promoted the same moment it is registered
+            for cat, obj in state.objects:
+                for version in state.objects[(cat, obj)].versions:
+                    # TODO: For each branch that has this commit in history
+                    # we assume the model was promoted to corresponding env
+                    # we should see are there any options to do this differently
+                    for branch in find_branches(self.repo, version.commit_hexsha):
+                        # figure out env from branch name
+                        if CONFIG.ENV_BRANCH_MAPPING:
+                            name = CONFIG.ENV_BRANCH_MAPPING.get(branch.name)
+                        else:
+                            name = branch.name
+                        if name is None:
+                            continue
+                        state.objects[(cat, obj)].labels.append(
+                            BaseLabel(
+                                category=version.category,
+                                object=version.object,
+                                version=version.name,
+                                name=branch.name,
+                                creation_date=version.creation_date,
+                                author=version.author,
+                                commit_hexsha=version.commit_hexsha,
+                                unregistered_date=version.unregistered_date,
+                            )
+                        )
+        else:
             # we assume each commit in a branch is a promotion to branch env
-            # removing those commits in which the object was not indexed
+            # if object was indexed
             for (cat, obj), commits in index.object_centric_representation().items():
-                for cmt in commits:
-                    commit = self.repo.commit(cmt)
-                    state.objects[(cat, obj)].labels.append(
-                        BaseLabel(
-                            category=cat,
-                            object=obj,
-                            version=commit.hexsha,
-                            name="ALL BRANCHES THROUGH WHICH I CAN DISCOVER THIS COMMIT",
-                            creation_date=commit.committed_date,
-                            author=commit.author,
-                            commit_hexsha=commit.hexsha,
-                            unregistered_date=None,
+                for hexsha in commits:
+                    commit = self.repo.commit(hexsha)
+                    for branch in find_branches(self.repo, hexsha):
+                        state.objects[(cat, obj)].labels.append(
+                            BaseLabel(
+                                category=cat,
+                                object=obj,
+                                version=commit.hexsha,
+                                name=branch.name,
+                                creation_date=commit.committed_date,
+                                author=commit.author.name,
+                                commit_hexsha=commit.hexsha,
+                                unregistered_date=None,
+                            )
                         )
-                    )
-            return state
-            # raise NotImplementedError
-        # we assume that the model is promoted the same moment it is registered
-        for cat, obj in state.objects:
-            for version in state.objects[(cat, obj)].versions:
-                # TODO: For each branch that has this commit in history
-                # we assume the model was promoted to corresponding env
-                # we should see are there any options to do this differently
-                for branch in find_branches(self.repo, version.commit_hexsha):
-                    # figure out env from branch name
-                    if CONFIG.ENV_BRANCH_MAPPING:
-                        name = CONFIG.ENV_BRANCH_MAPPING.get(branch.name)
-                    else:
-                        name = branch.name
-                    if name is None:
-                        continue
-                    state.objects[(cat, obj)].labels.append(
-                        BaseLabel(
-                            category=version.category,
-                            object=version.object,
-                            version=version.name,
-                            name=branch.name,
-                            creation_date=version.creation_date,
-                            author=version.author,
-                            commit_hexsha=version.commit_hexsha,
-                            unregistered_date=version.unregistered_date,
-                        )
-                    )
         return state
 
     def promote(
+        self,
         category,
         object,
         label,
@@ -108,24 +110,37 @@ class BranchEnvManager(BaseManager):
         if CONFIG.VERSION_REQUIRED_FOR_ENV:
             # to promote, we need to register the version
             # with this setting, the versions should be already registered in BaseRegistry.promote
-            # so we should not need to do anything here
-            # special case: if you are trying to promote not the HEAD but another commit
-            #   which has a version already registered and you don't want to deprecate it,
-            #   then you need to create new commit with a model you want to use and register a version there
-            return
-        else:
-            # to promote, we don't need anything
-            #
-            # except maybe creating a commit in the branch (do we want this?):
-            # "gitops promote $MODEL $PATH staging" -> create commit in branch for "staging"
-            raise NotImplementedError
+            # so we should not need to do anything here, except for maybe checking that it's done
 
-    def demote(self):
+            # special case: if you are trying to promote a commit
+            # which has a version already registered and you don't want to deprecate it,
+            # then you need to create new commit with a model you want to use and register a version there
+            return None
+
+        # to promote, we don't need anything
+        if self.repo.heads[CONFIG.env_to_branch(label)].commit.hexsha == ref:
+            logging.info(
+                "HEAD commit in BRANCH is promoted to ENV by default, so you don't need to run 'promote' command"
+            )
+            return None
+        # except maybe creating a commit in the branch (do we want this?):
+        # "gitops promote $MODEL $PATH staging" -> create commit in branch for "staging"
+        raise NotImplementedError(
+            "If you want to promote a REF which is not HEAD of the appropriate branch, "
+            "you need to create a new commit to that branch "
+            "or move HEAD of it to the REF you want to promote"
+        )
+
+    def demote(self, category, object, label, message=None):
         if CONFIG.VERSION_REQUIRED_FOR_ENV:
             # can be done by deprecating a version. Need something like --deprecate_version flag for CLI
             # to acknowledge the actor understands the implication
-            pass
-        else:
-            # can be done by reversing commit. Need something like --reverse_commit flag for CLI?
-            # that will generate a commit with the model from the previous commit
-            pass
+            raise NotImplementedError("To demote, you need to deprecate a version")
+
+        # can be done by reversing commit. Need something like --reverse_commit flag for CLI?
+        # that will generate a commit with the model from the previous commit
+        raise NotImplementedError(
+            "To demote, you need to reverse a commit, "
+            "move HEAD of the branch to the previous commit, "
+            "or create a new commit with the model from the previous commit"
+        )

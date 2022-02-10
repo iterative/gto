@@ -70,27 +70,28 @@ class BaseObject(BaseModel):
         return f"Object(versions=[{versions}], labels=[{labels}])"
 
     @property
-    def latest_version(self) -> str:
-        return sorted(
-            (v for v in self.versions if v.is_registered),
-            key=lambda x: x.creation_date,
-        )[-1].name
+    def latest_version(self) -> Optional[str]:
+        if self.versions:
+            return sorted(
+                (v for v in self.versions if v.is_registered),
+                key=lambda x: x.creation_date,
+            )[-1].name
+        return None
 
     @property
-    def latest_labels(self) -> Dict[str, Optional[BaseLabel]]:
-        labels = {}
-        for label in self.unique_labels:
-            found = sorted(
-                (
-                    l
-                    for l in self.labels
-                    if l.name == label
-                    and l.is_registered
-                    and self.find_version(l.version) is not None
-                ),
-                key=lambda x: x.creation_date,
-            )
-            labels[label] = found[-1] if found else None
+    def latest_labels(self) -> Dict[str, BaseLabel]:
+        labels: Dict[str, BaseLabel] = {}
+        for label in self.labels:
+            # TODO: check that version exists and wasn't demoted???
+            # probably this check should be done during State construction
+            # as the rules to know it are all there
+            if not label.is_registered:
+                continue
+            if (
+                label.name not in labels
+                or labels[label.name].creation_date < label.creation_date
+            ):
+                labels[label.name] = label
         return labels
 
     def find_version(
@@ -211,7 +212,12 @@ class BaseRegistry(BaseModel):
         return read_index(self.repo)
 
     def update_state(self):
-        state = BaseRegistryState(objects=[])
+        state = BaseRegistryState(
+            objects={
+                (cat, obj): BaseObject(category=cat, name=obj, versions=[], labels=[])
+                for cat, obj in self.index.object_centric_representation()
+            }
+        )
         state = self.version_manager.update_state(state, self.index)
         state = self.env_manager.update_state(state, self.index)
         self.state = state

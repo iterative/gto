@@ -47,12 +47,15 @@ class RegistryConfig(BaseSettings):
             return name in self.ENV_BRANCH_MAPPING or not self.ENV_BRANCH_MAPPING
 
     def branch_to_env(self, branch_name):
-        if self.ENV_BASE == TAG:
-            return branch_name
-        if self.ENV_BASE == BRANCH:
-            if self.ENV_BRANCH_MAPPING:
-                return self.ENV_BRANCH_MAPPING[branch_name]
-            return branch_name
+        if self.ENV_BRANCH_MAPPING:
+            return self.ENV_BRANCH_MAPPING[branch_name]
+        return branch_name
+
+    def env_to_branch(self, env_name):
+        if self.ENV_BRANCH_MAPPING:
+            return {value: key for key, value in self.ENV_BRANCH_MAPPING.items()}[
+                env_name
+            ]
 
     class Config:
         env_prefix = "gitops_"
