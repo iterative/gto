@@ -7,12 +7,12 @@ from IPython.display import display
 from ruamel import yaml
 
 from . import init_registry
+from .constants import LABEL, NAME, VERSION
 from .utils import serialize
 
-arg_category = click.argument("category")
-arg_object = click.argument("object")
-arg_version = click.argument("version")
-arg_label = click.argument("label")
+arg_name = click.argument(NAME)
+arg_version = click.argument(VERSION)
+arg_label = click.argument(LABEL)
 option_repo = click.option("-r", "--repo", default=".", help="Repository to use")
 
 
@@ -23,30 +23,27 @@ def cli():
 
 @cli.command()
 @option_repo
-@arg_category
-@arg_object
+@arg_name
 @arg_version
-def register(repo: str, category: str, object: str, version: str):
+def register(repo: str, name: str, version: str):
     """Register new object version"""
-    init_registry(repo=repo).register(category, object, version)
-    click.echo(f"Registered {category} {object} version {version}")
+    init_registry(repo=repo).register(name, version)
+    click.echo(f"Registered {name} version {version}")
 
 
 @cli.command()
 @option_repo
-@arg_category
-@arg_object
+@arg_name
 @arg_version
-def unregister(repo: str, category: str, object: str, version: str):
+def unregister(repo: str, name: str, version: str):
     """Unregister object version"""
-    init_registry(repo=repo).unregister(category, object, version)
-    click.echo(f"Unregistered {category} {object} version {version}")
+    init_registry(repo=repo).unregister(name, version)
+    click.echo(f"Unregistered {name} version {version}")
 
 
 @cli.command()
 @option_repo
-@arg_category
-@arg_object
+@arg_name
 @arg_label
 @click.option(
     "--version",
@@ -54,9 +51,7 @@ def unregister(repo: str, category: str, object: str, version: str):
     help="If you provide --commit, this will be used to name new version",
 )
 @click.option("--commit", default=None)
-def promote(
-    repo: str, category: str, object: str, label: str, version: str, commit: str
-):
+def promote(repo: str, name: str, label: str, version: str, commit: str):
     """Assign label to specific object version"""
     if commit is not None:
         name_version = version
@@ -65,47 +60,39 @@ def promote(
         name_version = None
         promote_version = version
     result = init_registry(repo=repo).promote(
-        category, object, label, promote_version, commit, name_version
+        name, label, promote_version, commit, name_version
     )
-    click.echo(
-        f"Promoted {category} {object} version {result['version']} to label {label}"
-    )
+    click.echo(f"Promoted {name} version {result['version']} to label {label}")
 
 
 @cli.command()
 @option_repo
-@arg_category
-@arg_object
-def latest(repo: str, category: str, object: str):
+@arg_name
+def latest(repo: str, name: str):
     """Return latest version for object"""
-    click.echo(init_registry(repo=repo).latest(category, object))
+    click.echo(init_registry(repo=repo).latest(name))
 
 
 @cli.command()
 @option_repo
-@arg_category
-@arg_object
+@arg_name
 @arg_label
-def which(repo: str, category: str, object: str, label: str):
+def which(repo: str, name: str, label: str):
     """Return version of object with specific label active"""
-    version = init_registry(repo=repo).which(
-        category, object, label, raise_if_not_found=False
-    )
-    if version:
+    if version := init_registry(repo=repo).which(name, label, raise_if_not_found=False):
         click.echo(version)
     else:
-        click.echo(f"No version of {category} '{object}' with label '{label}' active")
+        click.echo(f"No version of '{name}' with label '{label}' active")
 
 
 @cli.command()
 @option_repo
-@arg_category
-@arg_object
+@arg_name
 @arg_label
-def demote(repo: str, category: str, object: str, label: str):
+def demote(repo: str, name: str, label: str):
     """De-promote object from given label"""
-    init_registry(repo=repo).demote(category, object, label)
-    click.echo(f"Demoted {category} {object} from label {label}")
+    init_registry(repo=repo).demote(name, label)
+    click.echo(f"Demoted {name} from label {label}")
 
 
 @cli.command()
@@ -149,7 +136,7 @@ def show(repo: str):
 
     label_assignment_audit_trail = [
         {
-            "category": o.category,
+            # "category": o.category,
             "object": o.name,
             "label": l.name,
             "version": l.version,

@@ -22,13 +22,13 @@ mkdir models
 echo "1st version" > models/random-forest.pkl
 echo "1st version" > models/neural-network.pkl
 cat << EOF > index.yaml
-- category: model
+- type: model
   name: rf
   path: models/random-forest.pkl
-- category: model
+- type: model
   name: nn
   path: models/neural-network.pkl
-- category: dataset
+- type: dataset
   name: features
   path: datasets/features.csv
 EOF
@@ -36,8 +36,8 @@ git add index.yaml models
 git commit -am "Create models"
 
 echo "Register new model"
-gitops register model rf v1
-gitops register model nn v1
+gitops register rf v1
+gitops register nn v1
 
 echo "Update the model"
 sleep 1
@@ -45,18 +45,18 @@ echo "2nd version" > models/random-forest.pkl
 git commit -am "Update model"
 
 echo "Register models"
-gitops register model rf v2
+gitops register rf v2
 
 echo "Promote models"
-gitops promote model nn staging --version v1
+gitops promote nn staging --version v1
 sleep 1
-gitops promote model rf production --version v1
+gitops promote rf production --version v1
 sleep 1
-gitops promote model rf staging --commit `git rev-parse HEAD`
+gitops promote rf staging --commit `git rev-parse HEAD`
 sleep 1
-gitops promote model rf production --commit `git rev-parse HEAD`
+gitops promote rf production --commit `git rev-parse HEAD`
 sleep 1
-gitops promote model rf production --version v1
+gitops promote rf production --version v1
 
 gitops show
 

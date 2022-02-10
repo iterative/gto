@@ -13,7 +13,7 @@ from .config import CONFIG
 class Object(BaseModel):
     name: str
     path: str
-    category: str
+    type_: str
 
 
 Index = List[Object]
@@ -26,21 +26,18 @@ class RepoIndexState(BaseModel):
     class Config:
         arbitrary_types_allowed = True
 
-    def check_existence(self, category, object, commit):
-        return any(
-            obj.category == category and obj.name == object
-            for obj in self.index[commit]
-        )
+    def check_existence(self, name, commit):
+        return any(obj.name == name for obj in self.index[commit])
 
-    def assert_existence(self, category, object, commit):
-        if not self.check_existence(category, object, commit):
-            raise ObjectNotFound(category, object)
+    def assert_existence(self, name, commit):
+        if not self.check_existence(name, commit):
+            raise ObjectNotFound(name)
 
-    def object_centric_representation(self) -> Dict[Tuple[str, str], List[str]]:
+    def object_centric_representation(self) -> Dict[str, List[str]]:
         representation = defaultdict(list)
         for commit, index in self.index.items():
             for obj in index:
-                representation[(obj.category, obj.name)].append(commit)
+                representation[obj.name].append(commit)
         return representation
 
 

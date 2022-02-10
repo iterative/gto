@@ -8,30 +8,28 @@ from gitops.exceptions import MissingArg, RefNotFound, UnknownAction
 from gitops.index import RepoIndexState
 
 from .base import BaseLabel, BaseManager, BaseObject, BaseRegistryState, BaseVersion
-from .constants import ACTION, CATEGORY, LABEL, NUMBER, OBJECT, VERSION, Action
+from .constants import ACTION, LABEL, NAME, NUMBER, VERSION, Action
 
 
 def name_tag(
     action: Action,
-    category: str,
-    object: str,
+    name: str,
     version: Optional[str] = None,
     label: Optional[str] = None,
     repo: Optional[git.Repo] = None,
 ):
     if action in (Action.REGISTER, Action.UNREGISTER):
-        return f"{category}-{object}-{action.value}-{version}"
+        return f"{name}-{action.value}-{version}"
 
     if action in (Action.PROMOTE, Action.DEMOTE):
         if repo is None:
             raise MissingArg(arg="repo")
-        basename = f"{category}-{object}-{Action.PROMOTE.value}-{label}"
-        existing_names = [c.name for c in repo.tags if c.name.startswith(basename)]
-        if existing_names:
+        basename = f"{name}-{Action.PROMOTE.value}-{label}"
+        if existing_names := [c.name for c in repo.tags if c.name.startswith(basename)]:
             last_number = 1 + max(int(n[len(basename) + 1 :]) for n in existing_names)
         else:
             last_number = 1
-        return f"{category}-{object}-{action.value}-{label}-{last_number}"
+        return f"{name}-{action.value}-{label}-{last_number}"
     raise UnknownAction(action=action.value)
 
 
@@ -40,31 +38,23 @@ def add_dashes(string: str):
 
 
 def parse_name(name: str, raise_on_fail: bool = True):
-    def deduce_category(string: str):
-        i = string.index("-")
-        category, object = string[:i], string[i + 1 :]
-        return category, object
 
     for action in (Action.REGISTER, Action.UNREGISTER):
         if add_dashes(action.value) in name:
-            object, version = name.split(add_dashes(action.value))
-            category, object = deduce_category(object)
+            name, version = name.split(add_dashes(action.value))
             return {
-                CATEGORY: category,
                 ACTION: action,
-                OBJECT: object,
+                NAME: name,
                 VERSION: version,
             }
 
     for action in (Action.PROMOTE, Action.DEMOTE):
         if add_dashes(action.value) in name:
-            object, label = name.split(add_dashes(action.value))
-            category, object = deduce_category(object)
+            name, label = name.split(add_dashes(action.value))
             label, number = label.split("-")
             return {
-                CATEGORY: category,
                 ACTION: action,
-                OBJECT: object,
+                NAME: name,
                 LABEL: label,
                 NUMBER: int(number),
             }
@@ -75,8 +65,7 @@ def parse_name(name: str, raise_on_fail: bool = True):
 
 class ObjectTag(BaseModel):
     action: Action
-    category: str
-    object: str
+    name: str
     version: Optional[str]
     label: Optional[str]
     creation_date: datetime
@@ -96,8 +85,7 @@ def parse_tag(tag: git.Tag):
 
 def find(
     action: Union[Action, FrozenSet[Action]] = None,
-    category: Optional[str] = None,
-    object: Optional[str] = None,
+    name: Optional[str] = None,
     version: Optional[str] = None,
     label: Optional[str] = None,
     repo: Optional[git.Repo] = None,
@@ -110,12 +98,10 @@ def find(
         if repo is None:
             raise MissingArg(arg="repo")
         tags = [t for t in repo.tags if parse_name(t.name, raise_on_fail=False)]
-    if category:
-        tags = [t for t in tags if parse_name(t.name)[CATEGORY] == category]
     if action:
         tags = [t for t in tags if parse_name(t.name)[ACTION] in action]
-    if object:
-        tags = [t for t in tags if parse_name(t.name).get(OBJECT) == object]
+    if name:
+        tags = [t for t in tags if parse_name(t.name).get(NAME) == name]
     if version:
         tags = [t for t in tags if parse_name(t.name).get(VERSION) == version]
     if label:
@@ -141,8 +127,7 @@ def create_tag(repo, name, ref, message):
 def version_from_tag(tag: git.Tag) -> BaseVersion:
     mtag = parse_tag(tag)
     return BaseVersion(
-        category=mtag.category,
-        object=mtag.object,
+        object=mtag.name,
         name=mtag.version,
         creation_date=mtag.creation_date,
         author=tag.tag.tagger.name,
@@ -155,9 +140,8 @@ def label_from_tag(tag: git.Tag) -> BaseLabel:
     version_candidates = [
         t
         for t in find(
-            category=mtag.category,
             action=Action.REGISTER,
-            object=mtag.object,
+            name=mtag.name,
             repo=tag.repo,
         )
         if t.commit.hexsha == tag.commit.hexsha
@@ -165,12 +149,11 @@ def label_from_tag(tag: git.Tag) -> BaseLabel:
     if len(version_candidates) != 1:
         # TODO: resolve this
         raise ValueError(
-            f"Found {len(version_candidates)} tags for {mtag.category} '{mtag.object}' label '{mtag.label}'"
+            f"Found {len(version_candidates)} tags for '{mtag.name}' label '{mtag.label}'"
         )
     version = parse_tag(version_candidates[0]).version
     return BaseLabel(
-        category=mtag.category,
-        object=mtag.object,
+        object=mtag.name,
         version=version,
         name=mtag.label,
         creation_date=mtag.creation_date,
@@ -202,75 +185,66 @@ class TagManager(BaseManager):
         # this is important to check that history is not broken
         tags = [parse_tag(t) for t in find(repo=self.repo, action=self.actions)]
         for tag in tags:
-            ind = (tag.category, tag.object)
-            if ind not in state.objects:
-                state.objects[ind] = BaseObject(
-                    category=tag.category, name=tag.object, versions=[], labels=[]
+            if tag.name not in state.objects:
+                state.objects[tag.name] = BaseObject(
+                    name=tag.name, versions=[], labels=[]
                 )
-            state.objects[ind] = index_tag(state.objects[ind], tag.tag)
+            state.objects[tag.name] = index_tag(state.objects[tag.name], tag.tag)
         return state
 
 
 class TagVersionManager(TagManager):
     actions: FrozenSet[Action] = frozenset((Action.REGISTER, Action.UNREGISTER))
 
-    def register(self, category, object, version, ref, message):
+    def register(self, name, version, ref, message):
         create_tag(
             self.repo,
-            name_tag(
-                Action.REGISTER, category, object, version=version, repo=self.repo
-            ),
+            name_tag(Action.REGISTER, name, version=version, repo=self.repo),
             ref=ref,
             message=message,
         )
 
-    def unregister(self, category, object, version):
+    def unregister(self, name, version):
         """Unregister object version"""
         # TODO: search in self, move to base
         tags = find(
             action=Action.REGISTER,
-            category=category,
-            object=object,
+            name=name,
             version=version,
             repo=self.repo,
         )
         if len(tags) != 1:
-            raise ValueError(
-                f"Found {len(tags)} git tags for {category} {object} version {version}"
-            )
+            raise ValueError(f"Found {len(tags)} git tags for {name} version {version}")
         create_tag(
             self.repo,
-            name_tag(
-                Action.UNREGISTER, category, object, version=version, repo=self.repo
-            ),
+            name_tag(Action.UNREGISTER, name, version=version, repo=self.repo),
             ref=tags[0].commit.hexsha,
-            message=f"Unregistering {category} {object} version {version}",
+            message=f"Unregistering {name} version {version}",
         )
 
 
 class TagEnvManager(TagManager):
     actions: FrozenSet[Action] = frozenset((Action.PROMOTE, Action.DEMOTE))
 
-    def promote(self, category, object, label, ref, message):
+    def promote(self, name, label, ref, message):
         create_tag(
             self.repo,
-            name_tag(Action.PROMOTE, category, object, label=label, repo=self.repo),
+            name_tag(Action.PROMOTE, name, label=label, repo=self.repo),
             ref=ref,
             message=message,
         )
 
-    def demote(self, category, object, label, message):
+    def demote(self, name, label, message):
         # TODO: search in self, move to base
         promoted_tag = find(
             action=Action.PROMOTE,
-            category=category,
-            object=object,
+            name=name,
             label=label,
             repo=self.repo,
         )[-1]
         create_tag(
             self.repo,
-            name_tag(Action.DEMOTE, category, object, label=label, repo=self.repo),
+            name_tag(Action.DEMOTE, name, label=label, repo=self.repo),
             ref=promoted_tag.commit.hexsha,
             message=message,
         )

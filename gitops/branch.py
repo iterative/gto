@@ -53,22 +53,18 @@ class BranchEnvManager(BaseManager):
     ) -> BaseRegistryState:
         if not CONFIG.VERSION_REQUIRED_FOR_ENV:
             # we assume that the model is promoted the same moment it is registered
-            for cat, obj in state.objects:
-                for version in state.objects[(cat, obj)].versions:
+            for name in state.objects:
+                for version in state.objects[name].versions:
                     # TODO: For each branch that has this commit in history
                     # we assume the model was promoted to corresponding env
                     # we should see are there any options to do this differently
                     for branch in find_branches(self.repo, version.commit_hexsha):
                         # figure out env from branch name
-                        if CONFIG.ENV_BRANCH_MAPPING:
-                            name = CONFIG.ENV_BRANCH_MAPPING.get(branch.name)
-                        else:
-                            name = branch.name
+                        name = CONFIG.branch_to_env(branch.name)
                         if name is None:
                             continue
-                        state.objects[(cat, obj)].labels.append(
+                        state.objects[name].labels.append(
                             BaseLabel(
-                                category=version.category,
                                 object=version.object,
                                 version=version.name,
                                 name=branch.name,
@@ -81,14 +77,13 @@ class BranchEnvManager(BaseManager):
         else:
             # we assume each commit in a branch is a promotion to branch env
             # if object was indexed
-            for (cat, obj), commits in index.object_centric_representation().items():
+            for name, commits in index.object_centric_representation().items():
                 for hexsha in commits:
                     commit = self.repo.commit(hexsha)
                     for branch in find_branches(self.repo, hexsha):
-                        state.objects[(cat, obj)].labels.append(
+                        state.objects[name].labels.append(
                             BaseLabel(
-                                category=cat,
-                                object=obj,
+                                object=name,
                                 version=commit.hexsha,
                                 name=branch.name,
                                 creation_date=commit.committed_date,
@@ -101,8 +96,7 @@ class BranchEnvManager(BaseManager):
 
     def promote(
         self,
-        category,
-        object,
+        name,
         label,
         ref,
         message=None,  # arg is ignored
@@ -131,7 +125,7 @@ class BranchEnvManager(BaseManager):
             "or move HEAD of it to the REF you want to promote"
         )
 
-    def demote(self, category, object, label, message=None):
+    def demote(self, name, label, message=None):
         if CONFIG.VERSION_REQUIRED_FOR_ENV:
             # can be done by deprecating a version. Need something like --deprecate_version flag for CLI
             # to acknowledge the actor understands the implication
