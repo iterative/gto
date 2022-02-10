@@ -13,7 +13,7 @@ from .config import CONFIG
 class Object(BaseModel):
     name: str
     path: str
-    type_: str
+    type: str
 
 
 Index = List[Object]
