@@ -219,19 +219,20 @@ class BaseRegistry(BaseModel):
         state = self.env_manager.update_state(state, self.index)
         self.state = state
 
-    def register(self, name, version, ref=None):
+    def register(self, name, version, ref):
         """Register object version"""
         self.update_state()
-        if ref is None:
-            ref = self.repo.commit().hexsha
+        ref = self.repo.commit(ref).hexsha
         # TODO: add the same check for other actions, to promote and etc
         # also we need to check integrity of the index+state
         self.index.assert_existence(name, ref)
         found_object = self.state.find_object(name)
-        found_version = found_object.find_version(version, skip_unregistered=False)
+        found_version = found_object.find_version(name=version, skip_unregistered=False)
         if found_version is not None:
             raise VersionAlreadyRegistered(version)
-        found_version = found_object.find_version(None, ref, skip_unregistered=True)
+        found_version = found_object.find_version(
+            commit_hexsha=ref, skip_unregistered=True
+        )
         if found_version is not None:
             raise VersionExistsForCommit(name, found_version.name)
         if (
@@ -255,43 +256,39 @@ class BaseRegistry(BaseModel):
         name,
         label,
         promote_version=None,
-        promote_commit=None,
+        promote_ref=None,
         name_version=None,
     ):
         """Assign label to specific object version"""
         CONFIG.assert_env(label)
-        if promote_version is None and promote_commit is None:
+        if promote_version is None and promote_ref is None:
             raise ValueError("Either version or commit must be specified")
-        if promote_version is not None and promote_commit is not None:
+        if promote_version is not None and promote_ref is not None:
             raise ValueError("Only one of version or commit must be specified")
-        if promote_commit:
-            promote_commit = self.repo.commit(promote_commit).hexsha
+        if promote_ref:
+            promote_ref = self.repo.commit(promote_ref).hexsha
         self.update_state()
-        try:
-            found_object = self.state.find_object(name)
-        except ObjectNotFound as exc:
-            raise BaseException(
-                "To promote a object automatically you need to manually register it once."
-            ) from exc
+        self.index.assert_existence(name, promote_ref)
+        found_object = self.state.find_object(name)
         if promote_version is not None:
-            found_version = found_object.find_version(promote_version)
-            if found_version is None:
-                raise BaseException("Version is not found")
-            promote_commit = self.find_commit(name, promote_version)
+            found_version = found_object.find_version(
+                name=promote_version, raise_if_not_found=True
+            )
+            promote_ref = self.find_commit(name, promote_version)
         else:
-            found_version = found_object.find_version(None, promote_commit)
+            found_version = found_object.find_version(commit_hexsha=promote_ref)
             if found_version is None:
                 if name_version is None:
                     last_version = self.state.find_object(name).latest_version
                     promote_version = CONFIG.versions_class(last_version).bump().version
-                self.register(name, name_version, ref=promote_commit)
+                self.register(name, name_version, ref=promote_ref)
                 click.echo(
-                    f"Registered new version '{promote_version}' of '{name}' at commit '{promote_commit}'"
+                    f"Registered new version '{promote_version}' of '{name}' at commit '{promote_ref}'"
                 )
         self.env_manager.promote(
             name,
             label,
-            ref=promote_commit,
+            ref=promote_ref,
             message=f"Promoting {name} version {promote_version} to label {label}",
         )
         return {"version": promote_version}

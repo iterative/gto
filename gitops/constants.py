@@ -1,5 +1,6 @@
 from enum import Enum
 
+REF = "ref"
 COMMIT = "commit"
 TAG = "tag"
 BRANCH = "branch"

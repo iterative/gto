@@ -7,12 +7,13 @@ from IPython.display import display
 from ruamel import yaml
 
 from . import init_registry
-from .constants import LABEL, NAME, VERSION
+from .constants import LABEL, NAME, REF, VERSION
 from .utils import serialize
 
 arg_name = click.argument(NAME)
 arg_version = click.argument(VERSION)
 arg_label = click.argument(LABEL)
+arg_ref = click.argument(REF)
 option_repo = click.option("-r", "--repo", default=".", help="Repository to use")
 
 
@@ -25,9 +26,10 @@ def cli():
 @option_repo
 @arg_name
 @arg_version
-def register(repo: str, name: str, version: str):
+@arg_ref
+def register(repo: str, name: str, version: str, ref: str):
     """Register new object version"""
-    init_registry(repo=repo).register(name, version)
+    init_registry(repo=repo).register(name, version, ref)
     click.echo(f"Registered {name} version {version}")
 
 
@@ -50,17 +52,17 @@ def unregister(repo: str, name: str, version: str):
     default=None,
     help="If you provide --commit, this will be used to name new version",
 )
-@click.option("--commit", default=None)
-def promote(repo: str, name: str, label: str, version: str, commit: str):
+@click.option("--ref", default=None)
+def promote(repo: str, name: str, label: str, version: str, ref: str):
     """Assign label to specific object version"""
-    if commit is not None:
+    if ref is not None:
         name_version = version
         promote_version = None
     else:
         name_version = None
         promote_version = version
     result = init_registry(repo=repo).promote(
-        name, label, promote_version, commit, name_version
+        name, label, promote_version, ref, name_version
     )
     click.echo(f"Promoted {name} version {result['version']} to label {label}")
 

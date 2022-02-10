@@ -36,8 +36,8 @@ git add index.yaml models
 git commit -am "Create models"
 
 echo "Register new model"
-gitops register rf v1
-gitops register nn v1
+gitops register rf v1 HEAD
+gitops register nn v1 HEAD
 
 echo "Update the model"
 sleep 1
@@ -45,7 +45,7 @@ echo "2nd version" > models/random-forest.pkl
 git commit -am "Update model"
 
 echo "Register models"
-gitops register rf v2
+gitops register rf v2 HEAD
 
 echo "Promote models"
 gitops promote nn staging --version v1
