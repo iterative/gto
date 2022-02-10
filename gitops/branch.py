@@ -51,7 +51,28 @@ class BranchEnvManager(BaseManager):
     def update_state(
         self, state: BaseRegistryState, index: RepoIndexState
     ) -> BaseRegistryState:
-        if not CONFIG.VERSION_REQUIRED_FOR_ENV:
+        if CONFIG.VERSION_REQUIRED_FOR_ENV:
+            # we assume each commit in a branch is a promotion to branch env
+            # if object was indexed
+            for name, commits in index.object_centric_representation().items():
+                for hexsha in commits:
+                    commit = self.repo.commit(hexsha)
+                    for branch in find_branches(self.repo, hexsha):
+                        env = CONFIG.branch_to_env(branch.name)
+                        if env is None:
+                            continue
+                        state.objects[name].labels.append(
+                            BaseLabel(
+                                object=name,
+                                version=commit.hexsha,
+                                name=env,
+                                creation_date=commit.committed_date,
+                                author=commit.author.name,
+                                commit_hexsha=commit.hexsha,
+                                unregistered_date=None,
+                            )
+                        )
+        else:
             # we assume that the model is promoted the same moment it is registered
             for name in state.objects:
                 for version in state.objects[name].versions:
@@ -60,36 +81,18 @@ class BranchEnvManager(BaseManager):
                     # we should see are there any options to do this differently
                     for branch in find_branches(self.repo, version.commit_hexsha):
                         # figure out env from branch name
-                        name = CONFIG.branch_to_env(branch.name)
-                        if name is None:
+                        env = CONFIG.branch_to_env(branch.name)
+                        if env is None:
                             continue
                         state.objects[name].labels.append(
                             BaseLabel(
                                 object=version.object,
                                 version=version.name,
-                                name=branch.name,
+                                name=env,
                                 creation_date=version.creation_date,
                                 author=version.author,
                                 commit_hexsha=version.commit_hexsha,
                                 unregistered_date=version.unregistered_date,
-                            )
-                        )
-        else:
-            # we assume each commit in a branch is a promotion to branch env
-            # if object was indexed
-            for name, commits in index.object_centric_representation().items():
-                for hexsha in commits:
-                    commit = self.repo.commit(hexsha)
-                    for branch in find_branches(self.repo, hexsha):
-                        state.objects[name].labels.append(
-                            BaseLabel(
-                                object=name,
-                                version=commit.hexsha,
-                                name=branch.name,
-                                creation_date=commit.committed_date,
-                                author=commit.author.name,
-                                commit_hexsha=commit.hexsha,
-                                unregistered_date=None,
                             )
                         )
         return state
