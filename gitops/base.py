@@ -271,7 +271,8 @@ class BaseRegistry(BaseModel):
         if promote_ref:
             promote_ref = self.repo.commit(promote_ref).hexsha
         self.update_state()
-        self.index.assert_existence(name, promote_ref)
+        if promote_ref:
+            self.index.assert_existence(name, promote_ref)
         found_object = self.state.find_object(name)
         if promote_version is not None:
             found_version = found_object.find_version(
