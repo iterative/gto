@@ -1,4 +1,4 @@
-from typing import FrozenSet
+from typing import Dict, FrozenSet
 
 from .base import BaseManager, BaseRegistryState, BaseVersion
 from .constants import Action
@@ -25,3 +25,11 @@ class CommitVersionManager(BaseManager):
                     )
                 )
         return state
+
+    def parse_ref(self, ref: str, state: BaseRegistryState) -> Dict[str, BaseVersion]:
+        return {
+            name: version
+            for name in state.objects
+            for version in state.objects[name].versions
+            if version.commit_hexsha == ref
+        }

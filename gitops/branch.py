@@ -1,6 +1,6 @@
 # pylint: disable=no-self-argument, no-else-return, unused-argument, no-self-use, unused-import
 import logging
-from typing import FrozenSet, List
+from typing import Dict, FrozenSet, List
 
 import git
 
@@ -143,3 +143,11 @@ class BranchEnvManager(BaseManager):
             "move HEAD of the branch to the previous commit, "
             "or create a new commit with the model from the previous commit"
         )
+
+    def parse_ref(self, ref: str, state: BaseRegistryState) -> Dict[str, BaseLabel]:
+        return {
+            name: label
+            for name in state.objects
+            for label in state.objects[name].labels
+            if label.commit_hexsha == ref
+        }

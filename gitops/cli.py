@@ -111,6 +111,28 @@ def parse_tag(name: str, key: str):
 
 
 @cli.command()
+@click.argument("ref")
+def parse_ref(ref: str):
+    """Find out what have been registered/promoted in the provided ref"""
+    result = init_registry(".").parse_ref(ref)
+    try:
+        result_ = {
+            action: {name: version.dict() for name, version in found.items()}
+            for action, found in result.items()
+        }
+    except:  # pylint: disable=bare-except
+        # this should be removed, here only for debugging purposes
+        result_ = {
+            action: {
+                name: [v.dict() for v in version] for name, version in found.items()
+            }
+            for action, found in result.items()
+        }
+    click.echo(yaml.dump(result_, default_style='"'))
+    return result
+
+
+@cli.command()
 @option_repo
 def show(repo: str):
     """Show current registry state"""

@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime
 from typing import FrozenSet, Iterable, Optional, Union
 
@@ -163,7 +164,7 @@ def index_tag(obj: BaseObject, tag: git.Tag) -> BaseObject:
     return obj
 
 
-class TagManager(BaseManager):
+class TagManager(BaseManager):  # pylint: disable=abstract-method
     def update_state(
         self, state: BaseRegistryState, index: RepoIndexState
     ) -> BaseRegistryState:
@@ -208,6 +209,19 @@ class TagVersionManager(TagManager):
             message=f"Unregistering {name} version {version}",
         )
 
+    def parse_ref(self, ref: str, state: BaseRegistryState):
+        try:
+            version_name = parse_name(ref)[VERSION]
+        except (KeyError, ValueError):
+            logging.warning("Provided ref is not a tag that registers a version")
+            return {}
+        return {
+            name: version
+            for name in state.objects
+            for version in state.objects[name].versions
+            if version.name == version_name
+        }
+
 
 class TagEnvManager(TagManager):
     actions: FrozenSet[Action] = frozenset((Action.PROMOTE, Action.DEMOTE))
@@ -234,3 +248,18 @@ class TagEnvManager(TagManager):
             ref=promoted_tag.commit.hexsha,
             message=message,
         )
+
+    def parse_ref(self, ref: str, state: BaseRegistryState):
+        try:
+            parse_name(ref)[LABEL]
+        except (KeyError, ValueError):
+            logging.warning("Provided ref is not a tag that promotes to an environment")
+
+        tag = self.repo.tag(ref)
+        return {
+            name: label
+            for name in state.objects
+            for label in state.objects[name].labels
+            if label.commit_hexsha == tag.commit.hexsha
+            and label.creation_date == datetime.fromtimestamp(tag.tag.tagged_date)
+        }

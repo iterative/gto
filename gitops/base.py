@@ -176,17 +176,20 @@ class BaseManager(BaseModel):
 
     # better to uncomment this for typing, but it breaks the pylint
 
-    # def register(self, category, object, version, ref, message):
+    # def register(self, name, version, ref, message):
     #     raise NotImplementedError
 
-    # def unregister(self, category, object, version):
+    # def unregister(self, name, version):
     #     raise NotImplementedError
 
-    # def promote(self, category, object, label, ref, message):
+    # def promote(self, name, label, ref, message):
     #     raise NotImplementedError
 
-    # def demote(self, category, object, label, message):
+    # def demote(self, name, label, message):
     #     raise NotImplementedError
+
+    def parse_ref(self, ref: str, state: BaseRegistryState):
+        raise NotImplementedError
 
 
 class BaseRegistry(BaseModel):
@@ -304,6 +307,14 @@ class BaseRegistry(BaseModel):
             label,
             message=f"Demoting {name} from label {label}",
         )
+
+    def parse_ref(self, ref: str):
+        "Find out what was registered/promoted in this ref"
+        self.update_state()
+        return {
+            "version": self.version_manager.parse_ref(ref, self.state),
+            "env": self.env_manager.parse_ref(ref, self.state),
+        }
 
     def find_commit(self, name, version):
         self.update_state()
