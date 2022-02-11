@@ -52,9 +52,9 @@ gitops promote nn staging --version v1
 sleep 1
 gitops promote rf production --version v1
 sleep 1
-gitops promote rf staging --commit `git rev-parse HEAD`
+gitops promote rf staging --ref `git rev-parse HEAD`
 sleep 1
-gitops promote rf production --commit `git rev-parse HEAD`
+gitops promote rf production --ref `git rev-parse HEAD`
 sleep 1
 gitops promote rf production --version v1
 
