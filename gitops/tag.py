@@ -209,17 +209,21 @@ class TagVersionManager(TagManager):
             message=f"Unregistering {name} version {version}",
         )
 
-    def parse_ref(self, ref: str, state: BaseRegistryState):
+    def check_ref(self, ref: str, state: BaseRegistryState):
         try:
+            _ = self.repo.tags[ref]
+            obj_name = parse_name(ref)[NAME]
             version_name = parse_name(ref)[VERSION]
-        except (KeyError, ValueError):
-            logging.warning("Provided ref is not a tag that registers a version")
+        except (KeyError, ValueError, IndexError):
+            logging.warning(
+                "Provided ref doesn't exist or it is not a tag that registers a version"
+            )
             return {}
         return {
             name: version
             for name in state.objects
             for version in state.objects[name].versions
-            if version.name == version_name
+            if name == obj_name and version.name == version_name
         }
 
 
@@ -249,17 +253,21 @@ class TagEnvManager(TagManager):
             message=message,
         )
 
-    def parse_ref(self, ref: str, state: BaseRegistryState):
+    def check_ref(self, ref: str, state: BaseRegistryState):
         try:
-            parse_name(ref)[LABEL]
-        except (KeyError, ValueError):
-            logging.warning("Provided ref is not a tag that promotes to an environment")
-
-        tag = self.repo.tag(ref)
+            tag = self.repo.tags[ref]
+            _ = parse_name(ref)[LABEL]
+            obj_name = parse_name(ref)[NAME]
+        except (KeyError, ValueError, IndexError):
+            logging.warning(
+                "Provided ref doesn't exist or it is not a tag that promotes to an environment"
+            )
+            return {}
         return {
             name: label
             for name in state.objects
             for label in state.objects[name].labels
-            if label.commit_hexsha == tag.commit.hexsha
+            if name == obj_name
+            and label.commit_hexsha == tag.commit.hexsha
             and label.creation_date == datetime.fromtimestamp(tag.tag.tagged_date)
         }

@@ -112,9 +112,9 @@ def parse_tag(name: str, key: str):
 
 @cli.command()
 @click.argument("ref")
-def parse_ref(ref: str):
+def check_ref(ref: str):
     """Find out what have been registered/promoted in the provided ref"""
-    result = init_registry(".").parse_ref(ref)
+    result = init_registry(".").check_ref(ref)
     try:
         result_ = {
             action: {name: version.dict() for name, version in found.items()}

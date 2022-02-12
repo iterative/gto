@@ -33,6 +33,8 @@ class RegistryConfig(BaseSettings):
     ENV_BASE: str = BRANCH
     ENV_WHITELIST: List[str] = []
     ENV_BRANCH_MAPPING: Dict[str, str] = {}
+    LOG_LEVEL: str = "INFO"
+    DEBUG: bool = False
 
     @property
     def VERSION_SYSTEM_MAPPING(self):

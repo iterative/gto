@@ -144,7 +144,17 @@ class BranchEnvManager(BaseManager):
             "or create a new commit with the model from the previous commit"
         )
 
-    def parse_ref(self, ref: str, state: BaseRegistryState) -> Dict[str, BaseLabel]:
+    def check_ref(self, ref: str, state: BaseRegistryState) -> Dict[str, BaseLabel]:
+        # we assume ref is a commit. If it's a tag then we don't need to return anything
+        # this is my assumption that should be discussed
+        # it's based on case when CI will be triggered twice - for registration tag and promotion commit
+        # VERSION_BASE='tag' VERSION_REQUIRED_FOR_ENV=True ENV_BASE='branch'
+        try:
+            assert all(r.name != ref for r in self.repo.refs)
+            ref = self.repo.commit(ref).hexsha
+        except (git.BadName, AssertionError):
+            logging.warning("Reference is not a commit hexsha or it doesn't exist")
+            return {}
         return {
             name: label
             for name in state.objects

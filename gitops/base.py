@@ -188,7 +188,7 @@ class BaseManager(BaseModel):
     # def demote(self, name, label, message):
     #     raise NotImplementedError
 
-    def parse_ref(self, ref: str, state: BaseRegistryState):
+    def check_ref(self, ref: str, state: BaseRegistryState):
         raise NotImplementedError
 
 
@@ -309,12 +309,12 @@ class BaseRegistry(BaseModel):
             message=f"Demoting {name} from label {label}",
         )
 
-    def parse_ref(self, ref: str):
+    def check_ref(self, ref: str):
         "Find out what was registered/promoted in this ref"
         self.update_state()
         return {
-            "version": self.version_manager.parse_ref(ref, self.state),
-            "env": self.env_manager.parse_ref(ref, self.state),
+            "version": self.version_manager.check_ref(ref, self.state),
+            "env": self.env_manager.check_ref(ref, self.state),
         }
 
     def find_commit(self, name, version):
