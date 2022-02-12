@@ -21,27 +21,26 @@ echo "Create new models"
 mkdir models
 echo "1st version" > models/random-forest.pkl
 echo "1st version" > models/neural-network.pkl
-# cat << EOF > index.yaml
-# rf:
-#   type: model
-#   path: models/random-forest.pkl
-# nn:
-#   type: model
-#   path: models/neural-network.pkl
-# features:
-#   type: dataset
-#   path: datasets/features.csv
-# EOF
-cat << EOF > index.yaml
-- type: model
-  name: rf
+cat << EOF > index_alias.yaml
+rf:
+  type: model
   path: models/random-forest.pkl
-- type: model
-  name: nn
+nn:
+  type: model
   path: models/neural-network.pkl
-- type: dataset
-  name: features
+features:
+  type: dataset
   path: datasets/features.csv
+EOF
+cat << EOF > index_type.yaml
+model:
+  - name: rf
+    path: models/random-forest.pkl
+  - name: nn
+    path: models/neural-network.pkl
+dataset:
+  - name: features
+    path: datasets/features.csv
 EOF
 git add index.yaml models
 git commit -am "Create models"

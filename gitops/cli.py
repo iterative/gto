@@ -210,6 +210,13 @@ def print_state(repo: str):
     click.echo(yaml.dump(serialize(reg.state.dict())))
 
 
+@cli.command()
+@option_repo
+def print_index(repo: str):
+    reg = init_registry(repo=repo)
+    click.echo(yaml.dump(serialize(reg.index.dict())))
+
+
 if __name__ == "__main__":
     warnings.filterwarnings("ignore")
     pd.set_option("display.max_colwidth", 100)
