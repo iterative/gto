@@ -114,7 +114,12 @@ def parse_tag(name: str, key: str):
 @click.argument("ref")
 def check_ref(ref: str):
     """Find out what have been registered/promoted in the provided ref"""
-    result = init_registry(".").check_ref(ref)
+    reg = init_registry(".")
+    if ref.startswith("refs/tags/"):
+        ref = ref[len("refs/tags/") :]
+    if ref.startswith("refs/heads/"):
+        ref = reg.repo.commit(ref).hexsha
+    result = reg.check_ref(ref)
     try:
         result_ = {
             action: {name: version.dict() for name, version in found.items()}
