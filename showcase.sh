@@ -21,6 +21,17 @@ echo "Create new models"
 mkdir models
 echo "1st version" > models/random-forest.pkl
 echo "1st version" > models/neural-network.pkl
+cat << EOF > index.yaml
+- type: model
+  name: rf
+  path: models/random-forest.pkl
+- type: model
+  name: nn
+  path: models/neural-network.pkl
+- type: dataset
+  name: features
+  path: datasets/features.csv
+EOF
 cat << EOF > index_alias.yaml
 rf:
   type: model
