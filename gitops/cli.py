@@ -160,7 +160,6 @@ def show(repo: str):
 
     label_assignment_audit_trail = [
         {
-            # "category": o.category,
             "name": o.name,
             "label": l.name,
             "version": l.version,
@@ -174,9 +173,9 @@ def show(repo: str):
     ]
     click.echo("\n=== Promotion audit trail ===")
     display(
-        pd.DataFrame(label_assignment_audit_trail).sort_values(
-            "creation_date", ascending=False
-        )
+        pd.DataFrame(label_assignment_audit_trail)
+        .sort_values("creation_date", ascending=False)
+        .set_index(["creation_date", "name"])
     )
 
     model_registration_audit_trail = [
@@ -193,9 +192,9 @@ def show(repo: str):
     ]
     click.echo("\n=== Registration audit trail ===")
     display(
-        pd.DataFrame(model_registration_audit_trail).sort_values(
-            "creation_date", ascending=False
-        )
+        pd.DataFrame(model_registration_audit_trail)
+        .sort_values("creation_date", ascending=False)
+        .set_index(["creation_date", "name"])
     )
 
 

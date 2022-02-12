@@ -21,6 +21,17 @@ echo "Create new models"
 mkdir models
 echo "1st version" > models/random-forest.pkl
 echo "1st version" > models/neural-network.pkl
+# cat << EOF > index.yaml
+# rf:
+#   type: model
+#   path: models/random-forest.pkl
+# nn:
+#   type: model
+#   path: models/neural-network.pkl
+# features:
+#   type: dataset
+#   path: datasets/features.csv
+# EOF
 cat << EOF > index.yaml
 - type: model
   name: rf
@@ -52,7 +63,7 @@ gitops promote nn staging --version v1
 sleep 1
 gitops promote rf production --version v1
 sleep 1
-gitops promote rf staging --ref `git rev-parse HEAD`
+gitops promote rf staging --ref HEAD
 sleep 1
 gitops promote rf production --ref `git rev-parse HEAD`
 sleep 1
