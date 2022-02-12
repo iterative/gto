@@ -2,7 +2,7 @@ from collections import defaultdict
 from typing import Dict, Generator, List, Tuple
 
 import git
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 from ruamel.yaml import safe_load
 
 from gitops.exceptions import ObjectNotFound
@@ -51,10 +51,35 @@ def traverse_commit(
 
 
 def read_index(repo: git.Repo) -> RepoIndexState:
-    return RepoIndexState(
-        index={
-            commit.hexsha: index
-            for branch in repo.heads
-            for commit, index in traverse_commit(branch.commit)
-        }
-    )
+    index = {
+        commit.hexsha: index
+        for branch in repo.heads
+        for commit, index in traverse_commit(branch.commit)
+    }
+    try:
+        # list of items
+        return RepoIndexState(index=index)
+    except ValidationError:
+        try:
+            # dict with aliases as keys
+            return RepoIndexState(
+                index={
+                    hexsha: [
+                        Object(name=name, path=details["path"], type=details["type"])
+                        for name, details in index_at_commit.items()  # type: ignore
+                    ]
+                    for hexsha, index_at_commit in index.items()
+                }
+            )
+        except (ValidationError, TypeError):
+            # dict with types as keys
+            return RepoIndexState(
+                index={
+                    hexsha: [
+                        Object(name=el["name"], path=el["path"], type=type_)
+                        for type_, elements in index_at_commit.items()  # type: ignore
+                        for el in elements
+                    ]
+                    for hexsha, index_at_commit in index.items()
+                }
+            )
