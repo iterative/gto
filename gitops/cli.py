@@ -213,8 +213,13 @@ def print_state(repo: str):
 @cli.command()
 @option_repo
 def print_index(repo: str):
-    reg = init_registry(repo=repo)
-    click.echo(yaml.dump(serialize(reg.index.dict())))
+    import git  # pylint: disable=import-outside-toplevel
+
+    from .index import read_index  # pylint: disable=import-outside-toplevel
+
+    click.echo(yaml.dump(serialize(read_index(git.Repo(repo)).dict())))
+    # reg = init_registry(repo=repo)
+    # click.echo(yaml.dump(serialize(reg.index.dict())))
 
 
 if __name__ == "__main__":

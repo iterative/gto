@@ -53,7 +53,7 @@ dataset:
   - name: features
     path: datasets/features.csv
 EOF
-git add index.yaml models
+git add index.yaml index_alias.yaml index_type.yaml models
 git commit -am "Create models"
 
 echo "Register new model"
