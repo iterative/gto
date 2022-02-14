@@ -4,13 +4,16 @@ import click
 import numpy as np
 import pandas as pd
 from IPython.display import display
+from ruamel import yaml
 
 from . import init_registry
+from .constants import LABEL, NAME, REF, VERSION
+from .utils import serialize
 
-arg_category = click.argument("category")
-arg_object = click.argument("object")
-arg_version = click.argument("version")
-arg_label = click.argument("label")
+arg_name = click.argument(NAME)
+arg_version = click.argument(VERSION)
+arg_label = click.argument(LABEL)
+arg_ref = click.argument(REF)
 option_repo = click.option("-r", "--repo", default=".", help="Repository to use")
 
 
@@ -21,89 +24,77 @@ def cli():
 
 @cli.command()
 @option_repo
-@arg_category
-@arg_object
+@arg_name
 @arg_version
-def register(repo: str, category: str, object: str, version: str):
+@arg_ref
+def register(repo: str, name: str, version: str, ref: str):
     """Register new object version"""
-    init_registry(repo=repo).register(category, object, version)
-    click.echo(f"Registered {category} {object} version {version}")
+    init_registry(repo=repo).register(name, version, ref)
+    click.echo(f"Registered {name} version {version}")
 
 
 @cli.command()
 @option_repo
-@arg_category
-@arg_object
+@arg_name
 @arg_version
-def unregister(repo: str, category: str, object: str, version: str):
+def unregister(repo: str, name: str, version: str):
     """Unregister object version"""
-    init_registry(repo=repo).unregister(category, object, version)
-    click.echo(f"Unregistered {category} {object} version {version}")
+    init_registry(repo=repo).unregister(name, version)
+    click.echo(f"Unregistered {name} version {version}")
 
 
 @cli.command()
 @option_repo
-@arg_category
-@arg_object
+@arg_name
 @arg_label
 @click.option(
     "--version",
     default=None,
     help="If you provide --commit, this will be used to name new version",
 )
-@click.option("--commit", default=None)
-def promote(
-    repo: str, category: str, object: str, label: str, version: str, commit: str
-):
+@click.option("--ref", default=None)
+def promote(repo: str, name: str, label: str, version: str, ref: str):
     """Assign label to specific object version"""
-    if commit is not None:
+    if ref is not None:
         name_version = version
         promote_version = None
     else:
         name_version = None
         promote_version = version
     result = init_registry(repo=repo).promote(
-        category, object, label, promote_version, commit, name_version
+        name, label, promote_version, ref, name_version
     )
-    click.echo(
-        f"Promoted {category} {object} version {result['version']} to label {label}"
-    )
+    click.echo(f"Promoted {name} version {result['version']} to label {label}")
 
 
 @cli.command()
 @option_repo
-@arg_category
-@arg_object
-def latest(repo: str, category: str, object: str):
+@arg_name
+def latest(repo: str, name: str):
     """Return latest version for object"""
-    click.echo(init_registry(repo=repo).latest(category, object))
+    click.echo(init_registry(repo=repo).latest(name))
 
 
 @cli.command()
 @option_repo
-@arg_category
-@arg_object
+@arg_name
 @arg_label
-def which(repo: str, category: str, object: str, label: str):
+def which(repo: str, name: str, label: str):
     """Return version of object with specific label active"""
-    version = init_registry(repo=repo).which(
-        category, object, label, raise_if_not_found=False
-    )
-    if version:
+    if version := init_registry(repo=repo).which(name, label, raise_if_not_found=False):
         click.echo(version)
     else:
-        click.echo(f"No version of {category} '{object}' with label '{label}' active")
+        click.echo(f"No version of '{name}' with label '{label}' active")
 
 
 @cli.command()
 @option_repo
-@arg_category
-@arg_object
+@arg_name
 @arg_label
-def demote(repo: str, category: str, object: str, label: str):
+def demote(repo: str, name: str, label: str):
     """De-promote object from given label"""
-    init_registry(repo=repo).demote(category, object, label)
-    click.echo(f"Demoted {category} {object} from label {label}")
+    init_registry(repo=repo).demote(name, label)
+    click.echo(f"Demoted {name} from label {label}")
 
 
 @cli.command()
@@ -117,6 +108,33 @@ def parse_tag(name: str, key: str):
         parsed = parsed[key]
     click.echo(parsed)
     return parsed
+
+
+@cli.command()
+@click.argument("ref")
+def check_ref(ref: str):
+    """Find out what have been registered/promoted in the provided ref"""
+    reg = init_registry(".")
+    if ref.startswith("refs/tags/"):
+        ref = ref[len("refs/tags/") :]
+    if ref.startswith("refs/heads/"):
+        ref = reg.repo.commit(ref).hexsha
+    result = reg.check_ref(ref)
+    try:
+        result_ = {
+            action: {name: version.dict() for name, version in found.items()}
+            for action, found in result.items()
+        }
+    except:  # pylint: disable=bare-except
+        # this should be removed, here only for debugging purposes
+        result_ = {
+            action: {
+                name: [v.dict() for v in version] for name, version in found.items()
+            }
+            for action, found in result.items()
+        }
+    click.echo(yaml.dump(result_, default_style='"'))
+    return result
 
 
 @cli.command()
@@ -140,15 +158,14 @@ def show(repo: str):
                 for l in o.unique_labels
             ]
         )
-        for o in reg.state.objects
+        for o in reg.state.objects.values()
     }
-    print("\n=== Current labels (MLflow dashboard) ===")
+    click.echo("\n=== Active version and labels ===")
     display(pd.DataFrame.from_records(models_state).T)
 
     label_assignment_audit_trail = [
         {
-            "category": o.category,
-            "object": o.name,
+            "name": o.name,
             "label": l.name,
             "version": l.version,
             "creation_date": l.creation_date,
@@ -156,34 +173,53 @@ def show(repo: str):
             "commit_hexsha": l.commit_hexsha,
             "unregistered_date": l.unregistered_date,
         }
-        for o in reg.state.objects
+        for o in reg.state.objects.values()
         for l in o.labels
     ]
-    print("\n=== Label assignment audit trail ===")
+    click.echo("\n=== Promotion audit trail ===")
     display(
-        pd.DataFrame(label_assignment_audit_trail).sort_values(
-            "creation_date", ascending=False
-        )
+        pd.DataFrame(label_assignment_audit_trail)
+        .sort_values("creation_date", ascending=False)
+        .set_index(["creation_date", "name"])
     )
 
     model_registration_audit_trail = [
         {
-            "model": o.name,
+            "name": o.name,
             "version": v.name,
             "creation_date": v.creation_date,
             "author": v.author,
             "commit_hexsha": v.commit_hexsha,
             "unregistered_date": v.unregistered_date,
         }
-        for o in reg.state.objects
+        for o in reg.state.objects.values()
         for v in o.versions
     ]
-    print("\n=== Model registration audit trail ===")
+    click.echo("\n=== Registration audit trail ===")
     display(
-        pd.DataFrame(model_registration_audit_trail).sort_values(
-            "creation_date", ascending=False
-        )
+        pd.DataFrame(model_registration_audit_trail)
+        .sort_values("creation_date", ascending=False)
+        .set_index(["creation_date", "name"])
     )
+
+
+@cli.command()
+@option_repo
+def print_state(repo: str):
+    reg = init_registry(repo=repo)
+    click.echo(yaml.dump(serialize(reg.state.dict())))
+
+
+@cli.command()
+@option_repo
+def print_index(repo: str):
+    import git  # pylint: disable=import-outside-toplevel
+
+    from .index import read_index  # pylint: disable=import-outside-toplevel
+
+    click.echo(yaml.dump(serialize(read_index(git.Repo(repo)).dict())))
+    # reg = init_registry(repo=repo)
+    # click.echo(yaml.dump(serialize(reg.index.dict())))
 
 
 if __name__ == "__main__":

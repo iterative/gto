@@ -1,13 +1,16 @@
 import git
 
+from .base import BaseRegistry
 from .config import CONFIG
-from .tag import TagBasedRegistry
 
-BASE_MAPPING = {"tag": TagBasedRegistry}
+print(CONFIG)
 
 
-def init_registry(repo=".", base=CONFIG.VERSION_UNIT):
+def init_registry(repo=".", config=CONFIG):
     repo = git.Repo(repo)
-    if base not in BASE_MAPPING:
-        raise ValueError("Other implementations except of tag-based aren't supported")
-    return BASE_MAPPING[base](repo=repo)
+
+    return BaseRegistry(
+        repo=repo,
+        version_manager=CONFIG.VERSION_MANAGERS_MAPPING[config.VERSION_BASE](repo=repo),
+        env_manager=CONFIG.ENV_MANAGERS_MAPPING[config.ENV_BASE](repo=repo),
+    )

@@ -8,10 +8,10 @@ class GitopsException(Exception):
 
 
 class ObjectNotFound(GitopsException):
-    _message = "Requested {category} '{object}' wasn't found in registry"
+    _message = "Requested '{name}' wasn't found in registry"
 
-    def __init__(self, category, object) -> None:
-        self.message = self._message.format(category=category, object=object)
+    def __init__(self, name) -> None:
+        self.message = self._message.format(name=name)
         super().__init__(self.message)
 
 
@@ -49,17 +49,15 @@ class UnknownEnvironment(GitopsException):
         # to avoid circular import
         from .config import CONFIG  # pylint: disable=import-outside-toplevel
 
-        self.message = self._message.format(env=env, envs=CONFIG.ENVIRONMENT_WHITELIST)
+        self.message = self._message.format(env=env, envs=CONFIG.ENV_WHITELIST)
         super().__init__(self.message)
 
 
 class NoActiveLabel(GitopsException):
-    _message = "No active label '{label}' was found for {category} '{object}'"
+    _message = "No active label '{label}' was found for '{name}'"
 
-    def __init__(self, label, category, object) -> None:
-        self.message = self._message.format(
-            label=label, category=category, object=object
-        )
+    def __init__(self, label, name) -> None:
+        self.message = self._message.format(label=label, name=name)
         super().__init__(self.message)
 
 

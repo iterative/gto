@@ -1,8 +1,13 @@
 from enum import Enum
 
+REF = "ref"
+COMMIT = "commit"
+TAG = "tag"
+BRANCH = "branch"
+FILE = "file"
+
 ACTION = "action"
-CATEGORY = "category"
-OBJECT = "object"
+NAME = "name"
 VERSION = "version"
 LABEL = "label"
 NUMBER = "number"
