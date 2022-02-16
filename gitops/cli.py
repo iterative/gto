@@ -23,6 +23,18 @@ def cli():
 
 
 @cli.command()
+@arg_name
+@click.argument("type")
+@click.argument("path")
+@option_repo
+def add(name: str, type: str, path: str, repo: str):
+    """Add an object to the Index, e.g.
+    $ gitops index name model path
+    """
+    init_registry(repo=repo).index.add(name, type, path)
+
+
+@cli.command()
 @option_repo
 @arg_name
 @arg_version

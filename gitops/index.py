@@ -1,13 +1,13 @@
+import os
 from collections import defaultdict
-from typing import Dict, Generator, List, Tuple
+from typing import Dict, Generator, List, Optional, Tuple
 
 import git
 from pydantic import BaseModel, ValidationError
-from ruamel.yaml import safe_load
-
-from gitops.exceptions import ObjectNotFound
+from ruamel.yaml import safe_dump, safe_load
 
 from .config import CONFIG
+from .exceptions import ObjectNotFound
 
 
 class Object(BaseModel):
@@ -17,14 +17,10 @@ class Object(BaseModel):
 
 
 Index = List[Object]
-# RepoIndexState = Dict[git.Commit, Index]
 
 
 class RepoIndexState(BaseModel):
     index: Dict[str, Index]
-
-    class Config:
-        arbitrary_types_allowed = True
 
     def check_existence(self, name, commit):
         return any(obj.name == name for obj in self.index[commit])
@@ -41,6 +37,40 @@ class RepoIndexState(BaseModel):
         return representation
 
 
+class RepoIndex(BaseModel):  # maybe this should be one class? Why we need State?
+    repo: git.Repo
+    state: Optional[RepoIndexState]
+
+    class Config:
+        arbitrary_types_allowed = True
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.update_state()
+
+    def update_state(self):
+        self.state = read_index(self.repo)
+
+    def load(self) -> Index:
+        if os.path.exists(CONFIG.INDEX):
+            with open(CONFIG.INDEX) as f:
+                index = safe_load(f.read())
+            if index is None:
+                index = []
+            return index
+        return []
+
+    def dump(self, index: Index) -> None:
+        with open(CONFIG.INDEX, "w") as f:
+            f.write(safe_dump(index))
+
+    def add(self, name, type, path):
+        checkouted_index = self.load()
+        checkouted_index.append(Object(name=name, type=type, path=path))
+        print(checkouted_index)
+        self.dump(checkouted_index)
+
+
 def traverse_commit(
     commit: git.Commit,
 ) -> Generator[Tuple[git.Commit, Index], None, None]:
@@ -51,6 +81,10 @@ def traverse_commit(
 
 
 def read_index(repo: git.Repo) -> RepoIndexState:
+    # need to check what we return here for the checkouted commit,
+    # do we return unstaged changes
+    # for tags-based you don't need unstaged changes
+    # for file-based you need unstaged changes
     index = {
         commit.hexsha: index
         for branch in repo.heads

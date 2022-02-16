@@ -3,10 +3,10 @@ from typing import Dict, FrozenSet, List, Optional
 
 import click
 import git
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, validator
 
 from gitops.constants import Action
-from gitops.index import RepoIndexState, read_index
+from gitops.index import RepoIndex, RepoIndexState
 
 from .config import CONFIG
 from .exceptions import (
@@ -196,9 +196,8 @@ class BaseRegistry(BaseModel):
     repo: git.Repo
     version_manager: BaseManager
     env_manager: BaseManager
-    state: BaseRegistryState = Field(
-        default_factory=lambda: BaseRegistryState(objects=[])
-    )
+    state: Optional[BaseRegistryState]
+    index: Optional[RepoIndex]
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -207,20 +206,20 @@ class BaseRegistry(BaseModel):
     class Config:
         arbitrary_types_allowed = True
 
-    @property
-    def index(self) -> RepoIndexState:
-        return read_index(self.repo)
-
     def update_state(self):
+        self.index = RepoIndex(repo=self.repo)
         state = BaseRegistryState(
             objects={
                 name: BaseObject(name=name, versions=[], labels=[])
-                for name in self.index.object_centric_representation()
+                for name in self.index.state.object_centric_representation()
             }
         )
-        state = self.version_manager.update_state(state, self.index)
-        state = self.env_manager.update_state(state, self.index)
+        state = self.version_manager.update_state(state, self.index.state)
+        state = self.env_manager.update_state(state, self.index.state)
         self.state = state
+
+    def add(self, name, type, path):
+        return self.index.add(name, type, path)
 
     def register(self, name, version, ref):
         """Register object version"""
@@ -228,7 +227,7 @@ class BaseRegistry(BaseModel):
         ref = self.repo.commit(ref).hexsha
         # TODO: add the same check for other actions, to promote and etc
         # also we need to check integrity of the index+state
-        self.index.assert_existence(name, ref)
+        self.index.state.assert_existence(name, ref)
         found_object = self.state.find_object(name)
         found_version = found_object.find_version(name=version, skip_unregistered=False)
         if found_version is not None:
@@ -272,7 +271,7 @@ class BaseRegistry(BaseModel):
             promote_ref = self.repo.commit(promote_ref).hexsha
         self.update_state()
         if promote_ref:
-            self.index.assert_existence(name, promote_ref)
+            self.index.state.assert_existence(name, promote_ref)
         found_object = self.state.find_object(name)
         if promote_version is not None:
             found_version = found_object.find_version(
