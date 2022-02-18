@@ -30,16 +30,16 @@ tests = [
 
 setup_args = dict(  # noqa: C408
     name="gto",
-    version="0.0.1",
+    version="0.0.2",
     description="Version and deploy your models following GitOps principles",
     long_description=(Path(__file__).parent / "README.md").read_text(encoding="utf8"),
     author="Alexander Guschin",
     author_email="aguschin@iterative.ai",
-    download_url="https://github.com/iterative/gto-object-registry",
+    download_url="https://github.com/iterative/gto",
     license="Apache License 2.0",
     install_requires=install_requires,
     extras_require={"tests": tests},
-    keywords="git gto mlops object registry developer-tools collaboration",
+    keywords="git gitops mlops object registry developer-tools collaboration",
     python_requires=">=3.6",
     classifiers=[
         "Development Status :: 2 - Pre-Alpha",
