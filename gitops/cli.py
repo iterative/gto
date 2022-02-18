@@ -227,9 +227,15 @@ def print_state(repo: str):
 def print_index(repo: str):
     import git  # pylint: disable=import-outside-toplevel
 
-    from .index import read_index  # pylint: disable=import-outside-toplevel
+    from .index import RepoIndexManager  # pylint: disable=import-outside-toplevel
 
-    click.echo(yaml.dump(serialize(read_index(git.Repo(repo)).dict())))
+    click.echo(
+        yaml.dump(
+            serialize(
+                RepoIndexManager(repo=git.Repo(repo)).object_centric_representation
+            )
+        )
+    )
     # reg = init_registry(repo=repo)
     # click.echo(yaml.dump(serialize(reg.index.dict())))
 

@@ -4,9 +4,9 @@ from typing import Dict, FrozenSet, List
 
 import git
 
-from gitops.index import RepoIndexState
+from gitops.index import ObjectCommits
 
-from .base import BaseLabel, BaseManager, BaseRegistryState, BaseVersion
+from .base import BaseLabel, BaseManager, BaseRegistryState
 from .config import CONFIG  # need to pass this when you initialize BranchEnvManager
 from .constants import Action
 
@@ -25,31 +25,11 @@ def find_branches(repo: git.Repo, desired: str) -> List[git.Head]:
     ]
 
 
-# def traverse_commit_apply(commit: git.Commit, func: callable):
-#     func(commit)
-#     for parent in commit.parents:
-#         traverse_commit_apply(parent, func)
-
-
-# def add_baselabel(commit: git.Commit, obj: BaseObject):
-#     obj.labels.append(
-#         BaseLabel(
-#             category=obj.category,
-#             object=obj.name,
-#             version=commit.hexsha,
-#             name=branch.name,
-#             creation_date=commit.committed_date,
-#             author=commit.author,
-#             commit_hexsha=commit.hexsha,
-#         )
-#     )
-
-
 class BranchEnvManager(BaseManager):
     actions: FrozenSet[Action] = frozenset((Action.PROMOTE, Action.DEMOTE))
 
     def update_state(
-        self, state: BaseRegistryState, index: RepoIndexState
+        self, state: BaseRegistryState, index: ObjectCommits
     ) -> BaseRegistryState:
         if CONFIG.VERSION_REQUIRED_FOR_ENV:
             # we assume that the model is promoted the same moment it is registered
@@ -77,7 +57,7 @@ class BranchEnvManager(BaseManager):
         else:
             # we assume each commit in a branch is a promotion to branch env
             # if object was indexed
-            for name, commits in index.object_centric_representation().items():
+            for name, commits in index.items():
                 for hexsha in commits:
                     commit = self.repo.commit(hexsha)
                     version = state.objects[name].find_version(commit_hexsha=hexsha)  # type: ignore

@@ -8,7 +8,7 @@ from pydantic import BaseModel
 from .base import BaseLabel, BaseManager, BaseObject, BaseRegistryState, BaseVersion
 from .constants import ACTION, LABEL, NAME, NUMBER, VERSION, Action
 from .exceptions import MissingArg, RefNotFound, UnknownAction
-from .index import RepoIndexState
+from .index import ObjectCommits
 
 
 def name_tag(
@@ -166,7 +166,7 @@ def index_tag(obj: BaseObject, tag: git.Tag) -> BaseObject:
 
 class TagManager(BaseManager):  # pylint: disable=abstract-method
     def update_state(
-        self, state: BaseRegistryState, index: RepoIndexState
+        self, state: BaseRegistryState, index: ObjectCommits
     ) -> BaseRegistryState:
         # tags are sorted and then indexed by timestamp
         # this is important to check that history is not broken

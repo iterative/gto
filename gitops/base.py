@@ -3,10 +3,10 @@ from typing import Dict, FrozenSet, List, Optional
 
 import click
 import git
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel
 
 from gitops.constants import Action
-from gitops.index import RepoIndex, RepoIndexState
+from gitops.index import ObjectCommits, RepoIndexManager
 
 from .config import CONFIG
 from .exceptions import (
@@ -170,7 +170,7 @@ class BaseManager(BaseModel):
         arbitrary_types_allowed = True
 
     def update_state(
-        self, state: BaseRegistryState, index: RepoIndexState
+        self, state: BaseRegistryState, index: ObjectCommits
     ) -> BaseRegistryState:  # pylint: disable=no-self-use
         raise NotImplementedError
 
@@ -196,8 +196,8 @@ class BaseRegistry(BaseModel):
     repo: git.Repo
     version_manager: BaseManager
     env_manager: BaseManager
-    state: Optional[BaseRegistryState]
-    index: Optional[RepoIndex]
+    state: BaseRegistryState = None  # type: ignore
+    index: RepoIndexManager = None  # type: ignore
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -207,15 +207,14 @@ class BaseRegistry(BaseModel):
         arbitrary_types_allowed = True
 
     def update_state(self):
-        self.index = RepoIndex(repo=self.repo)
+        index = RepoIndexManager(repo=self.repo).object_centric_representation()
         state = BaseRegistryState(
             objects={
-                name: BaseObject(name=name, versions=[], labels=[])
-                for name in self.index.state.object_centric_representation()
+                name: BaseObject(name=name, versions=[], labels=[]) for name in index
             }
         )
-        state = self.version_manager.update_state(state, self.index.state)
-        state = self.env_manager.update_state(state, self.index.state)
+        state = self.version_manager.update_state(state, index)
+        state = self.env_manager.update_state(state, index)
         self.state = state
 
     def add(self, name, type, path):
@@ -227,7 +226,7 @@ class BaseRegistry(BaseModel):
         ref = self.repo.commit(ref).hexsha
         # TODO: add the same check for other actions, to promote and etc
         # also we need to check integrity of the index+state
-        self.index.state.assert_existence(name, ref)
+        self.index.assert_existence(name, ref)
         found_object = self.state.find_object(name)
         found_version = found_object.find_version(name=version, skip_unregistered=False)
         if found_version is not None:
@@ -271,7 +270,7 @@ class BaseRegistry(BaseModel):
             promote_ref = self.repo.commit(promote_ref).hexsha
         self.update_state()
         if promote_ref:
-            self.index.state.assert_existence(name, promote_ref)
+            self.index.assert_existence(name, promote_ref)
         found_object = self.state.find_object(name)
         if promote_version is not None:
             found_version = found_object.find_version(
