@@ -8,7 +8,7 @@ git tag -d $(git tag --list)
 git branch -D demo
 set -exu
 git checkout -b demo
-rm -rf models gto.yaml index.yaml
+rm -rf models gto.yaml artifacts.yaml
 
 cat << EOF > gto.yaml
 env_base: tag
@@ -56,7 +56,7 @@ echo "1st version" > models/neural-network.pkl
 gto add rf model models/random-forest.pkl
 gto add nn model models/neural-network.pkl
 gto add features dataset datasets/features.csv
-git add index.yaml models
+git add artifacts.yaml models
 git commit -am "Create models"
 
 echo "Register new model"
