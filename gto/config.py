@@ -26,7 +26,7 @@ def config_settings_source(settings: BaseSettings) -> Dict[str, Any]:
 
 
 class RegistryConfig(BaseSettings):
-    INDEX: str = "index.yaml"
+    INDEX: str = "artifacts.yaml"
     VERSION_BASE: str = TAG
     VERSION_CONVENTION: str = "NumberedVersion"
     VERSION_REQUIRED_FOR_ENV: bool = True

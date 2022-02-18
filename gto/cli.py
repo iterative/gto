@@ -31,7 +31,7 @@ def add(name: str, type: str, path: str):
     init_index().add(name, type, path)
 
 
-@cli.command()
+@cli.command("rm")
 @arg_name
 def remove(name: str):
     """Remove an object from the Index"""

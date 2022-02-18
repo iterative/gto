@@ -11,8 +11,8 @@ git checkout -b demo
 rm -rf models gto.yaml index.yaml
 
 cat << EOF > gto.yaml
-ENV_BASE: tag
-# ENV_BRANCH_MAPPING:
+env_base: tag
+# env_branch_mapping:
 #   master: production
 #   demo: demo
 EOF
