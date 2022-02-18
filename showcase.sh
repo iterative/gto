@@ -8,7 +8,7 @@ git tag -d $(git tag --list)
 git branch -D demo
 set -exu
 git checkout -b demo
-rm -rf models gitops_config.yaml
+rm -rf models gitops_config.yaml index.yaml
 
 cat << EOF > gitops_config.yaml
 ENV_BASE: tag
