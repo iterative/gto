@@ -207,7 +207,8 @@ class BaseRegistry(BaseModel):
         arbitrary_types_allowed = True
 
     def update_state(self):
-        index = RepoIndexManager(repo=self.repo).object_centric_representation()
+        self.index = RepoIndexManager(repo=self.repo)
+        index = self.index.object_centric_representation()
         state = BaseRegistryState(
             objects={
                 name: BaseObject(name=name, versions=[], labels=[]) for name in index

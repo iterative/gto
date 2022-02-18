@@ -231,13 +231,10 @@ def print_index(repo: str):
 
     click.echo(
         yaml.dump(
-            serialize(
-                RepoIndexManager(repo=git.Repo(repo)).object_centric_representation
-            )
+            dict(RepoIndexManager(repo=git.Repo(repo)).object_centric_representation()),
+            default_flow_style=False,
         )
     )
-    # reg = init_registry(repo=repo)
-    # click.echo(yaml.dump(serialize(reg.index.dict())))
 
 
 if __name__ == "__main__":

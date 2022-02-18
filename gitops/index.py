@@ -7,17 +7,19 @@ from pydantic import BaseModel
 from ruamel.yaml import safe_dump, safe_load
 
 from .config import CONFIG
-from .exceptions import ObjectNotFound
+from .exceptions import GitopsException, ObjectNotFound
 
 
-class Object(BaseModel):
+class Artifact(BaseModel):
     name: str
     path: str
     type: str
 
 
 class BaseIndex(BaseModel):
-    state: List[Object]
+    state: Dict[
+        str, Artifact
+    ] = {}  # TODO should not be populated until load() is called
 
     def check_existense(self, name):
         return name in self.state
@@ -28,23 +30,28 @@ class BaseIndex(BaseModel):
 
 class FileIndex(BaseIndex):
     def add(self, name, type, path):
-        self.state.append(Object(name=name, type=type, path=path))
+        if self.check_existense(name):
+            raise GitopsException(f"Object {name} already exists")
+        self.state[name] = Artifact(name=name, type=type, path=path)
 
     def load(self):
         state = []
         if os.path.exists(CONFIG.INDEX):
             with open(CONFIG.INDEX, encoding="utf8") as indexfile:
                 state = safe_load(indexfile.read())
-        self.state = state or []
+        self.state = state or {}
 
     def dump(self) -> None:
         with open(CONFIG.INDEX, "w", encoding="utf8") as indexfile:
-            indexfile.write(safe_dump(self.state))
+            indexfile.write(safe_dump(self.dict()["state"], default_flow_style=False))
 
 
 class CommitIndex(BaseIndex):
     repo: git.Repo
     ref: Optional[str]
+
+    class Config:
+        arbitrary_types_allowed = True
 
     def load(self):
         self.state = safe_load(
@@ -66,6 +73,9 @@ class BaseIndexManager(BaseModel):
 
 
 class NoRepoIndexManager(BaseIndexManager):
+    # maybe we don't need this at all
+    # are there some additional methods/things to do
+    # when there is no repo (compared to the case when we have a repo)?
     pass
 
 
@@ -85,14 +95,14 @@ class RepoIndexManager(BaseIndexManager):
 
     def read_index(self):
         commits = {
-            commit.hexsha
+            commit
             for branch in self.repo.heads
             for commit in traverse_commit(branch.commit)
         }
         repo_index = {}
         for commit in commits:
             if CONFIG.INDEX in commit.tree:
-                index = CommitIndex(ref=commit.hexsha)
+                index = CommitIndex(repo=self.repo, ref=commit.hexsha)
                 index.load()
                 repo_index[commit.hexsha] = index
         return repo_index
@@ -101,7 +111,8 @@ class RepoIndexManager(BaseIndexManager):
         representation = defaultdict(list)
         for commit, index in self.read_index().items():
             for obj in index.state:
-                representation[obj.name].append(commit)
+                print(obj)
+                representation[obj].append(commit)
         return representation
 
     def check_existence(self, name, commit):
