@@ -25,22 +25,24 @@ State = Dict[str, Artifact]
 
 def not_frozen(f):
     @wraps(f)
-    def inner(self: "BaseIndex", *args, **kwargs):
+    def inner(self: "Index", *args, **kwargs):
         if self.frozen:
             raise ValueError(f"Cannot {f.__name__}: {self.__class__} is frozen")
         return f(self, *args, **kwargs)
+
     return inner
 
 
 class Index(BaseModel, ABC):
     state: State = {}  # TODO should not be populated until load() is called
-    frozen: ClassVar[bool]
+    frozen: bool = False
 
     def __contains__(self, item):
         return item in self.state
+
     @classmethod
-    def read(cls, path_or_file: Union[str, IO]):
-        index = Index()
+    def read(cls, path_or_file: Union[str, IO], frozen: bool = False):
+        index = Index(frozen=frozen)
         index.read_state(path_or_file)
         return index
 
@@ -67,12 +69,6 @@ class Index(BaseModel, ABC):
         if name not in self:
             raise GitopsException(f"Artifact {name} does not exist")
         del self.state[name]
-
-
-
-
-
-
 
 
 class BaseIndexManager(BaseModel):
@@ -120,17 +116,12 @@ class FileIndexManager(BaseIndexManager):
     def get_history(self) -> Dict[str, Index]:
         raise NotImplementedError("Not a git repo: history is not available")
 
-    # maybe we don't need this at all
-    # are there some additional methods/things to do
-    # when there is no repo (compared to the case when we have a repo)?
-
 
 ObjectCommits = Dict[str, List[str]]
 
 
 class RepoIndexManager(BaseIndexManager):
     repo: git.Repo
-
 
     @property
     def index_path(self):
@@ -148,9 +139,8 @@ class RepoIndexManager(BaseIndexManager):
         if self.current is not None:
             self.current.write_state(self.index_path)
 
-    def get_commit_index(self, ref: str):
-        index = Index.read((self.repo.commit(ref).tree / CONFIG.INDEX).data_stream)
-        return index
+    def get_commit_index(self, ref: str) -> Index:
+        return Index.read((self.repo.commit(ref).tree / CONFIG.INDEX).data_stream, frozen=True)
 
     def get_history(self) -> Dict[str, Index]:
         commits = {
@@ -180,37 +170,8 @@ class RepoIndexManager(BaseIndexManager):
 
 
 def traverse_commit(
-    commit: git.Commit,
+        commit: git.Commit,
 ) -> Generator[Tuple[git.Commit], None, None]:
     yield commit
     for parent in commit.parents:
         yield from traverse_commit(parent)
-
-
-# try:
-#     # list of items
-#     return RepoIndexState(index=index)
-# except ValidationError:
-#     try:
-#         # dict with aliases as keys
-#         return RepoIndexState(
-#             index={
-#                 hexsha: [
-#                     Object(name=name, path=details["path"], type=details["type"])
-#                     for name, details in index_at_commit.items()  # type: ignore
-#                 ]
-#                 for hexsha, index_at_commit in index.items()
-#             }
-#         )
-#     except (ValidationError, TypeError):
-#         # dict with types as keys
-#         return RepoIndexState(
-#             index={
-#                 hexsha: [
-#                     Object(name=el["name"], path=el["path"], type=type_)
-#                     for type_, elements in index_at_commit.items()  # type: ignore
-#                     for el in elements
-#                 ]
-#                 for hexsha, index_at_commit in index.items()
-#             }
-#         )
