@@ -106,9 +106,12 @@ class FileIndexManager(BaseIndexManager):
     def get_index(self) -> Index:
         if os.path.exists(self.index_path()):
             self.current = Index.read(self.index_path())
-        return self.current or Index()
+        if not self.current:
+            self.current = Index()
+        return self.current
 
     def update(self):
+        print(self.current, self.index_path())
         if self.current is not None:
             self.current.write_state(self.index_path())
 
@@ -124,7 +127,7 @@ class RepoIndexManager(FileIndexManager):
 
     def index_path(self):
         # TODO: config should be loaded from repo too
-        return os.path.join(self.repo.git_dir, CONFIG.INDEX)
+        return os.path.join(os.path.dirname(self.repo.git_dir), CONFIG.INDEX)
 
     class Config:
         arbitrary_types_allowed = True
