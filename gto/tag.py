@@ -10,6 +10,13 @@ from .constants import ACTION, LABEL, NAME, NUMBER, VERSION, Action
 from .exceptions import MissingArg, RefNotFound, UnknownAction
 from .index import ObjectCommits
 
+ActionSign = {
+    Action.REGISTER: "@",
+    Action.UNREGISTER: "@!",
+    Action.PROMOTE: "#",
+    Action.DEMOTE: "#!",
+}
+
 
 def name_tag(
     action: Action,
@@ -19,38 +26,36 @@ def name_tag(
     repo: Optional[git.Repo] = None,
 ):
     if action in (Action.REGISTER, Action.UNREGISTER):
-        return f"{name}-{action.value}-{version}"
+        return f"{name}{ActionSign[action]}{version}"
 
     if action in (Action.PROMOTE, Action.DEMOTE):
         if repo is None:
             raise MissingArg(arg="repo")
-        basename = f"{name}-{Action.PROMOTE.value}-{label}"
+        basename = f"{name}{ActionSign[Action.PROMOTE]}-{label}"
         if existing_names := [c.name for c in repo.tags if c.name.startswith(basename)]:
             last_number = 1 + max(int(n[len(basename) + 1 :]) for n in existing_names)
         else:
             last_number = 1
-        return f"{name}-{action.value}-{label}-{last_number}"
+        return f"{name}{ActionSign[action]}{label}-{last_number}"
     raise UnknownAction(action=action.value)
-
-
-def add_dashes(string: str):
-    return f"-{string}-"
 
 
 def parse_name(name: str, raise_on_fail: bool = True):
 
-    for action in (Action.REGISTER, Action.UNREGISTER):
-        if add_dashes(action.value) in name:
-            name, version = name.split(add_dashes(action.value))
+    # order does matter if you take into account ActionSign values
+    for action in (Action.UNREGISTER, Action.REGISTER):
+        if ActionSign[action] in name:
+            name, version = name.split(ActionSign[action])
             return {
                 ACTION: action,
                 NAME: name,
                 VERSION: version,
             }
 
-    for action in (Action.PROMOTE, Action.DEMOTE):
-        if add_dashes(action.value) in name:
-            name, label = name.split(add_dashes(action.value))
+    # order does matter if you take into account ActionSign values
+    for action in (Action.DEMOTE, Action.PROMOTE):
+        if ActionSign[action] in name:
+            name, label = name.split(ActionSign[action])
             label, number = label.split("-")
             return {
                 ACTION: action,
