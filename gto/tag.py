@@ -36,7 +36,7 @@ def name_tag(
             parsed = parse_name(tag.name)
             if parsed[ACTION] in (Action.PROMOTE, Action.DEMOTE):
                 numbers.append(parsed[NUMBER])
-        new_number = (max(numbers) or 0) + 1
+        new_number = max(numbers) + 1 if numbers else 1
         return f"{name}{ActionSign[action]}{label}-{new_number}"
     raise UnknownAction(action=action)
 
