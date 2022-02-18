@@ -71,7 +71,7 @@ class Index(BaseModel):
         del self.state[name]
 
 
-class BaseIndexManager(BaseModel):
+class BaseIndexManager(BaseModel, ABC):
     current: Optional[Index]
 
     @abstractmethod
