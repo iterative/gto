@@ -131,8 +131,7 @@ def parse_tag(name: str, key: str):
 def check_ref(ref: str):
     """Find out what have been registered/promoted in the provided ref"""
     reg = init_registry(".")
-    if ref.startswith("refs/tags/"):
-        ref = ref[len("refs/tags/") :]
+    ref = ref.removeprefix("refs/tags/")
     if ref.startswith("refs/heads/"):
         ref = reg.repo.commit(ref).hexsha
     result = reg.check_ref(ref)
@@ -176,47 +175,57 @@ def show(repo: str):
         )
         for o in reg.state.objects.values()
     }
-    click.echo("\n=== Active version and labels ===")
+    # click.echo("\n=== Active version and labels ===")
     display(pd.DataFrame.from_records(models_state).T)
 
-    label_assignment_audit_trail = [
-        {
-            "name": o.name,
-            "label": l.name,
-            "version": l.version,
-            "creation_date": l.creation_date,
-            "author": l.author,
-            "commit_hexsha": l.commit_hexsha,
-            "unregistered_date": l.unregistered_date,
-        }
-        for o in reg.state.objects.values()
-        for l in o.labels
-    ]
-    click.echo("\n=== Promotion audit trail ===")
-    display(
-        pd.DataFrame(label_assignment_audit_trail)
-        .sort_values("creation_date", ascending=False)
-        .set_index(["creation_date", "name"])
-    )
 
-    model_registration_audit_trail = [
-        {
-            "name": o.name,
-            "version": v.name,
-            "creation_date": v.creation_date,
-            "author": v.author,
-            "commit_hexsha": v.commit_hexsha,
-            "unregistered_date": v.unregistered_date,
-        }
-        for o in reg.state.objects.values()
-        for v in o.versions
-    ]
-    click.echo("\n=== Registration audit trail ===")
-    display(
-        pd.DataFrame(model_registration_audit_trail)
-        .sort_values("creation_date", ascending=False)
-        .set_index(["creation_date", "name"])
-    )
+@cli.command()
+@click.argument("action")
+@option_repo
+def audit(action: str, repo: str):
+    """Audit registry state"""
+    reg = init_registry(repo=repo)
+
+    if action in {"reg", "registration", "register", "all"}:
+        model_registration_audit_trail = [
+            {
+                "name": o.name,
+                "version": v.name,
+                "creation_date": v.creation_date,
+                "author": v.author,
+                "commit_hexsha": v.commit_hexsha,
+                "unregistered_date": v.unregistered_date,
+            }
+            for o in reg.state.objects.values()
+            for v in o.versions
+        ]
+        click.echo("\n=== Registration audit trail ===")
+        display(
+            pd.DataFrame(model_registration_audit_trail)
+            .sort_values("creation_date", ascending=False)
+            .set_index(["creation_date", "name"])
+        )
+
+    if action in {"promote", "promotion", "all"}:
+        label_assignment_audit_trail = [
+            {
+                "name": o.name,
+                "label": l.name,
+                "version": l.version,
+                "creation_date": l.creation_date,
+                "author": l.author,
+                "commit_hexsha": l.commit_hexsha,
+                "unregistered_date": l.unregistered_date,
+            }
+            for o in reg.state.objects.values()
+            for l in o.labels
+        ]
+        click.echo("\n=== Promotion audit trail ===")
+        display(
+            pd.DataFrame(label_assignment_audit_trail)
+            .sort_values("creation_date", ascending=False)
+            .set_index(["creation_date", "name"])
+        )
 
 
 @cli.command()

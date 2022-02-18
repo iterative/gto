@@ -83,6 +83,7 @@ sleep 1
 gto promote rf production --version v1
 
 gto show
+gto audit all
 
 
 cat << EOF
