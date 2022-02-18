@@ -56,7 +56,7 @@ echo "1st version" > models/neural-network.pkl
 gitops add rf model models/random-forest.pkl
 gitops add nn model models/neural-network.pkl
 gitops add features dataset datasets/features.csv
-git add index.yaml index_alias.yaml index_type.yaml models
+git add index.yaml models
 git commit -am "Create models"
 
 echo "Register new model"
