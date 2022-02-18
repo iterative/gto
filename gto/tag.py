@@ -31,13 +31,14 @@ def name_tag(
     if action in (Action.PROMOTE, Action.DEMOTE):
         if repo is None:
             raise MissingArg(arg="repo")
-        basename = f"{name}{ActionSign[Action.PROMOTE]}-{label}"
-        if existing_names := [c.name for c in repo.tags if c.name.startswith(basename)]:
-            last_number = 1 + max(int(n[len(basename) + 1 :]) for n in existing_names)
-        else:
-            last_number = 1
-        return f"{name}{ActionSign[action]}{label}-{last_number}"
-    raise UnknownAction(action=action.value)
+        numbers = []
+        for tag in repo.tags:
+            parsed = parse_name(tag.name)
+            if parsed[ACTION] in (Action.PROMOTE, Action.DEMOTE):
+                numbers.append(parsed[NUMBER])
+        new_number = (max(numbers) or 0) + 1
+        return f"{name}{ActionSign[action]}{label}-{new_number}"
+    raise UnknownAction(action=action)
 
 
 def parse_name(name: str, raise_on_fail: bool = True):
