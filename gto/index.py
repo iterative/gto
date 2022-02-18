@@ -3,12 +3,12 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from functools import wraps
 from pathlib import Path
-from typing import ClassVar, Dict, Generator, List, Optional, Tuple, Union
-from typing.io import IO
+from typing import Dict, Generator, List, Optional, Tuple, Union
 
 import git
 from pydantic import BaseModel, parse_obj_as
 from ruamel.yaml import safe_dump, safe_load
+from typing.io import IO
 
 from .config import CONFIG
 from .exceptions import GitopsException, ObjectNotFound
