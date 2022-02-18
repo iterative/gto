@@ -8,7 +8,7 @@ from pydantic import BaseSettings, validator
 from .constants import BRANCH, COMMIT, TAG
 from .exceptions import UnknownEnvironment
 
-CONFIG_FILE = Path(__file__).parent.parent / "gto_config.yaml"
+CONFIG_FILE = Path(__file__).parent.parent / "gto.yaml"
 
 
 def config_settings_source(settings: BaseSettings) -> Dict[str, Any]:
