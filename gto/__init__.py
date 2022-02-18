@@ -1,10 +1,9 @@
 import git
 
+import gto.log  # noqa
 from gto.base import GitRegistry
 from gto.config import CONFIG
 from gto.index import FileIndexManager, RepoIndexManager
-
-print(CONFIG)
 
 
 def init_registry(repo=".", config=CONFIG):

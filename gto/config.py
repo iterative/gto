@@ -13,7 +13,7 @@ CONFIG_FILE = Path(__file__).parent.parent / "gto.yaml"
 
 def config_settings_source(settings: BaseSettings) -> Dict[str, Any]:
     """
-    A simple settings source that loads variables from a yaml file in MLEM DIR
+    A simple settings source that loads variables from a yaml file in GTO DIR
     """
 
     encoding = settings.__config__.env_file_encoding

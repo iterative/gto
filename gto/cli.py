@@ -1,4 +1,6 @@
+import logging
 import warnings
+from functools import wraps
 
 import click
 import numpy as np
@@ -6,9 +8,9 @@ import pandas as pd
 from IPython.display import display
 from ruamel import yaml
 
-from . import init_index, init_registry
-from .constants import LABEL, NAME, REF, VERSION
-from .utils import serialize
+from gto import init_index, init_registry
+from gto.constants import LABEL, NAME, REF, VERSION
+from gto.utils import serialize
 
 arg_name = click.argument(NAME)
 arg_version = click.argument(VERSION)
@@ -19,10 +21,44 @@ option_repo = click.option("-r", "--repo", default=".", help="Repository to use"
 
 @click.group()
 def cli():
-    """Early prototype for registering/label assignment for tags-based approach"""
+    """\b
+    Great Tool Ops. Turn your Git Repo into Artifact Registry:
+    * Index your artifacts and add enrichments
+    * Register artifact versions
+    * Promote artifacts to environments
+    * Act on new versions and promotions in CI
+    """
 
 
-@cli.command()
+def _set_log_level(ctx, param, value):  # pylint: disable=unused-argument
+    if value:
+        logger = logging.getLogger("gto")
+        logger.handlers[0].setLevel(logging.DEBUG)
+        logger.setLevel(logging.DEBUG)
+        from gto.config import CONFIG
+
+        click.echo(CONFIG)
+
+
+verbose_option = click.option(
+    "-v",
+    "--verbose",
+    callback=_set_log_level,
+    expose_value=False,
+    is_eager=True,
+    is_flag=True,
+)
+
+
+@wraps(cli.command)
+def gto_command(*args, **kwargs):
+    def decorator(f):
+        return cli.command(*args, **kwargs)(verbose_option(f))
+
+    return decorator
+
+
+@gto_command()
 @arg_name
 @click.argument("type")
 @click.argument("path")
@@ -38,7 +74,7 @@ def remove(name: str):
     init_index().remove(name)
 
 
-@cli.command()
+@gto_command()
 @option_repo
 @arg_name
 @arg_version
@@ -49,7 +85,7 @@ def register(repo: str, name: str, version: str, ref: str):
     click.echo(f"Registered {name} version {version}")
 
 
-@cli.command()
+@gto_command()
 @option_repo
 @arg_name
 @arg_version
@@ -59,7 +95,7 @@ def unregister(repo: str, name: str, version: str):
     click.echo(f"Unregistered {name} version {version}")
 
 
-@cli.command()
+@gto_command()
 @option_repo
 @arg_name
 @arg_label
@@ -83,7 +119,7 @@ def promote(repo: str, name: str, label: str, version: str, ref: str):
     click.echo(f"Promoted {name} version {result['version']} to label {label}")
 
 
-@cli.command()
+@gto_command()
 @option_repo
 @arg_name
 def latest(repo: str, name: str):
@@ -91,7 +127,7 @@ def latest(repo: str, name: str):
     click.echo(init_registry(repo=repo).latest(name))
 
 
-@cli.command()
+@gto_command()
 @option_repo
 @arg_name
 @arg_label
@@ -103,7 +139,7 @@ def which(repo: str, name: str, label: str):
         click.echo(f"No version of '{name}' with label '{label}' active")
 
 
-@cli.command()
+@gto_command()
 @option_repo
 @arg_name
 @arg_label
@@ -113,7 +149,7 @@ def demote(repo: str, name: str, label: str):
     click.echo(f"Demoted {name} from label {label}")
 
 
-@cli.command()
+@gto_command()
 @click.argument("name")
 @click.option("--key", default=None, help="Which key to return")
 def parse_tag(name: str, key: str):
@@ -126,7 +162,7 @@ def parse_tag(name: str, key: str):
     return parsed
 
 
-@cli.command()
+@gto_command()
 @click.argument("ref")
 def check_ref(ref: str):
     """Find out what have been registered/promoted in the provided ref"""
@@ -152,7 +188,7 @@ def check_ref(ref: str):
     return result
 
 
-@cli.command()
+@gto_command()
 @option_repo
 def show(repo: str):
     """Show current registry state"""
@@ -179,7 +215,7 @@ def show(repo: str):
     display(pd.DataFrame.from_records(models_state).T)
 
 
-@cli.command()
+@gto_command()
 @click.argument("action")
 @option_repo
 def audit(action: str, repo: str):
@@ -228,14 +264,14 @@ def audit(action: str, repo: str):
         )
 
 
-@cli.command()
+@gto_command()
 @option_repo
 def print_state(repo: str):
     reg = init_registry(repo=repo)
     click.echo(yaml.dump(serialize(reg.state.dict())))
 
 
-@cli.command()
+@gto_command()
 @option_repo
 def print_index(repo: str):
     import git  # pylint: disable=import-outside-toplevel

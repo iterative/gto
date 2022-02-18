@@ -82,7 +82,7 @@ gto promote rf production --ref `git rev-parse HEAD`
 sleep 1
 gto promote rf production --version v1
 
-gto show
+gto show -v
 gto audit all
 
 

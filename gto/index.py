@@ -4,11 +4,11 @@ from collections import defaultdict
 from functools import wraps
 from pathlib import Path
 from typing import Dict, Generator, List, Optional, Tuple, Union
+from typing.io import IO
 
 import git
 from pydantic import BaseModel, parse_obj_as
 from ruamel.yaml import safe_dump, safe_load
-from typing.io import IO
 
 from .config import CONFIG
 from .exceptions import GitopsException, ObjectNotFound
@@ -130,7 +130,9 @@ class RepoIndexManager(FileIndexManager):
         arbitrary_types_allowed = True
 
     def get_commit_index(self, ref: str) -> Index:
-        return Index.read((self.repo.commit(ref).tree / CONFIG.INDEX).data_stream, frozen=True)
+        return Index.read(
+            (self.repo.commit(ref).tree / CONFIG.INDEX).data_stream, frozen=True
+        )
 
     def get_history(self) -> Dict[str, Index]:
         commits = {
@@ -138,11 +140,11 @@ class RepoIndexManager(FileIndexManager):
             for branch in self.repo.heads
             for commit in traverse_commit(branch.commit)
         }
-        repo_index = {}
-        for commit in commits:
-            if CONFIG.INDEX in commit.tree:
-                repo_index[commit.hexsha] = self.get_commit_index(commit.hexsha)
-        return repo_index
+        return {
+            commit.hexsha: self.get_commit_index(commit.hexsha)
+            for commit in commits
+            if CONFIG.INDEX in commit.tree
+        }
 
     def object_centric_representation(self) -> ObjectCommits:
         representation = defaultdict(list)
@@ -160,7 +162,7 @@ class RepoIndexManager(FileIndexManager):
 
 
 def traverse_commit(
-        commit: git.Commit,
+    commit: git.Commit,
 ) -> Generator[Tuple[git.Commit], None, None]:
     yield commit
     for parent in commit.parents:
