@@ -192,12 +192,11 @@ class BaseManager(BaseModel):
         raise NotImplementedError
 
 
-class BaseRegistry(BaseModel):
+class GitRegistry(BaseModel):
     repo: git.Repo
     version_manager: BaseManager
     env_manager: BaseManager
     state: BaseRegistryState = None  # type: ignore
-    index: RepoIndexManager = None  # type: ignore
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -206,8 +205,11 @@ class BaseRegistry(BaseModel):
     class Config:
         arbitrary_types_allowed = True
 
+    @property
+    def index(self):
+        return RepoIndexManager(repo=self.repo)
+
     def update_state(self):
-        self.index = RepoIndexManager(repo=self.repo)
         index = self.index.object_centric_representation()
         state = BaseRegistryState(
             objects={
@@ -217,9 +219,6 @@ class BaseRegistry(BaseModel):
         state = self.version_manager.update_state(state, index)
         state = self.env_manager.update_state(state, index)
         self.state = state
-
-    def add(self, name, type, path):
-        return self.index.add(name, type, path)
 
     def register(self, name, version, ref):
         """Register object version"""

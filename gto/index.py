@@ -31,8 +31,13 @@ class BaseIndex(BaseModel):
 class FileIndex(BaseIndex):
     def add(self, name, type, path):
         if self.check_existense(name):
-            raise GitopsException(f"Object {name} already exists")
+            raise GitopsException(f"Artifact {name} already exists")
         self.state[name] = Artifact(name=name, type=type, path=path)
+
+    def remove(self, name):
+        if not self.check_existense(name):
+            raise GitopsException(f"Artifact {name} does not exist")
+        del self.state[name]
 
     def load(self):
         state = []
@@ -69,6 +74,11 @@ class BaseIndexManager(BaseModel):
     def add(self, name, type, path):
         index = self.get_file_index()
         index.add(name, type, path)
+        index.dump()
+
+    def remove(self, name):
+        index = self.get_file_index()
+        index.remove(name)
         index.dump()
 
 
@@ -111,7 +121,6 @@ class RepoIndexManager(BaseIndexManager):
         representation = defaultdict(list)
         for commit, index in self.read_index().items():
             for obj in index.state:
-                print(obj)
                 representation[obj].append(commit)
         return representation
 

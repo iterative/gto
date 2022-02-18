@@ -6,7 +6,7 @@ import pandas as pd
 from IPython.display import display
 from ruamel import yaml
 
-from . import init_registry
+from . import init_index, init_registry
 from .constants import LABEL, NAME, REF, VERSION
 from .utils import serialize
 
@@ -26,12 +26,16 @@ def cli():
 @arg_name
 @click.argument("type")
 @click.argument("path")
-@option_repo
-def add(name: str, type: str, path: str, repo: str):
-    """Add an object to the Index, e.g.
-    $ gto index name model path
-    """
-    init_registry(repo=repo).index.add(name, type, path)
+def add(name: str, type: str, path: str):
+    """Add an object to the Index"""
+    init_index().add(name, type, path)
+
+
+@cli.command()
+@arg_name
+def remove(name: str):
+    """Remove an object from the Index"""
+    init_index().remove(name)
 
 
 @cli.command()
