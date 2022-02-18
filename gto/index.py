@@ -33,7 +33,7 @@ def not_frozen(f):
     return inner
 
 
-class Index(BaseModel, ABC):
+class Index(BaseModel):
     state: State = {}  # TODO should not be populated until load() is called
     frozen: bool = False
 
