@@ -42,7 +42,7 @@ class Index(BaseModel):
 
     @classmethod
     def read(cls, path_or_file: Union[str, IO], frozen: bool = False):
-        index = Index(frozen=frozen)
+        index = cls(frozen=frozen)
         index.read_state(path_or_file)
         return index
 
@@ -100,18 +100,17 @@ class BaseIndexManager(BaseModel, ABC):
 class FileIndexManager(BaseIndexManager):
     path: str = ""
 
-    @property
     def index_path(self):
         return str(Path(self.path) / CONFIG.INDEX)
 
     def get_index(self) -> Index:
-        if os.path.exists(self.index_path):
-            self.current = Index.read(self.index_path)
+        if os.path.exists(self.index_path()):
+            self.current = Index.read(self.index_path())
         return self.current or Index()
 
     def update(self):
         if self.current is not None:
-            self.current.write_state(self.index_path)
+            self.current.write_state(self.index_path())
 
     def get_history(self) -> Dict[str, Index]:
         raise NotImplementedError("Not a git repo: history is not available")
@@ -120,24 +119,15 @@ class FileIndexManager(BaseIndexManager):
 ObjectCommits = Dict[str, List[str]]
 
 
-class RepoIndexManager(BaseIndexManager):
+class RepoIndexManager(FileIndexManager):
     repo: git.Repo
 
-    @property
     def index_path(self):
         # TODO: config should be loaded from repo too
         return os.path.join(self.repo.git_dir, CONFIG.INDEX)
 
     class Config:
         arbitrary_types_allowed = True
-
-    def get_index(self) -> Index:
-        self.current = Index.read(self.index_path)
-        return self.current
-
-    def update(self):
-        if self.current is not None:
-            self.current.write_state(self.index_path)
 
     def get_commit_index(self, ref: str) -> Index:
         return Index.read((self.repo.commit(ref).tree / CONFIG.INDEX).data_stream, frozen=True)
