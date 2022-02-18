@@ -5,7 +5,7 @@ import git
 from pydantic import BaseModel, ValidationError
 from ruamel.yaml import safe_load
 
-from gitops.exceptions import ObjectNotFound
+from gto.exceptions import ObjectNotFound
 
 from .config import CONFIG
 

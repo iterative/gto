@@ -1,6 +1,6 @@
 import pytest
 
-from gitops.versions import NumberedVersion
+from gto.versions import NumberedVersion
 
 
 @pytest.mark.parametrize("version", ["v0", "v1"])
