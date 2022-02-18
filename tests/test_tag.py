@@ -1,5 +1,5 @@
-from gitops.constants import Action
-from gitops.tag import name_tag, parse_name
+from gto.constants import Action
+from gto.tag import name_tag, parse_name
 
 
 def test_name_tag():

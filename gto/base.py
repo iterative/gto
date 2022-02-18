@@ -5,8 +5,8 @@ import click
 import git
 from pydantic import BaseModel
 
-from gitops.constants import Action
-from gitops.index import ObjectCommits, RepoIndexManager
+from gto.constants import Action
+from gto.index import ObjectCommits, RepoIndexManager
 
 from .config import CONFIG
 from .exceptions import (

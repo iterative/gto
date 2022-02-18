@@ -29,7 +29,7 @@ def cli():
 @option_repo
 def add(name: str, type: str, path: str, repo: str):
     """Add an object to the Index, e.g.
-    $ gitops index name model path
+    $ gto index name model path
     """
     init_registry(repo=repo).index.add(name, type, path)
 

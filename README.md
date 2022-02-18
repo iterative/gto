@@ -3,8 +3,8 @@
 **1. Clone this repository**
 
 ```bash
-git clone git@github.com:iterative/gitops-object-registry.git
-cd gitops-object-registry
+git clone git@github.com:iterative/gto.git
+cd gto
 ```
 
 **2. Create virtual environment named `venv`**
@@ -27,7 +27,7 @@ bash showcase.sh
 This will create `demo` branch and tags. Please don't push them back to this repo :)
 To continue experimenting, call
 ```bash
-gitops --help
+gto --help
 ```
 to see functionality and read through demo example.
 For this to work, you need to be locally in this repo.
