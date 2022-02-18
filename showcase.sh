@@ -8,9 +8,9 @@ git tag -d $(git tag --list)
 git branch -D demo
 set -exu
 git checkout -b demo
-rm -rf models gitops_config.yaml
+rm -rf models gto_config.yaml
 
-cat << EOF > gitops_config.yaml
+cat << EOF > gto_config.yaml
 ENV_BASE: tag
 # ENV_BRANCH_MAPPING:
 #   master: production
@@ -57,8 +57,8 @@ git add index.yaml index_alias.yaml index_type.yaml models
 git commit -am "Create models"
 
 echo "Register new model"
-gitops register rf v1 HEAD
-gitops register nn v1 HEAD
+gto register rf v1 HEAD
+gto register nn v1 HEAD
 
 echo "Update the model"
 sleep 1
@@ -66,28 +66,28 @@ echo "2nd version" > models/random-forest.pkl
 git commit -am "Update model"
 
 echo "Register models"
-gitops register rf v2 HEAD
+gto register rf v2 HEAD
 
 echo "Promote models"
-gitops promote nn staging --version v1
+gto promote nn staging --version v1
 sleep 1
-gitops promote rf production --version v1
+gto promote rf production --version v1
 sleep 1
-gitops promote rf staging --ref HEAD
+gto promote rf staging --ref HEAD
 sleep 1
-gitops promote rf production --ref `git rev-parse HEAD`
+gto promote rf production --ref `git rev-parse HEAD`
 sleep 1
-gitops promote rf production --version v1
+gto promote rf production --version v1
 
-gitops show
+gto show
 
 
 cat << EOF
 Now you have your models registered and promoted.
-Try to unregister and demote them and see what happens by running "gitops show"
+Try to unregister and demote them and see what happens by running "gto show"
 For example:
-gitops unregister rf v1
-gitops demote rf v2
+gto unregister rf v1
+gto demote rf v2
 
 Right now you can't delete tags to unregister/demote models.
 Only create new tags which will do that.

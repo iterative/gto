@@ -1,6 +1,6 @@
 from functools import total_ordering
 
-from gitops.exceptions import IncomparableVersions, InvalidVersion
+from gto.exceptions import IncomparableVersions, InvalidVersion
 
 
 class AbstractVersion:

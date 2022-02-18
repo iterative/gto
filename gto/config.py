@@ -8,7 +8,7 @@ from pydantic import BaseSettings, validator
 from .constants import BRANCH, COMMIT, TAG
 from .exceptions import UnknownEnvironment
 
-CONFIG_FILE = Path(__file__).parent.parent / "gitops_config.yaml"
+CONFIG_FILE = Path(__file__).parent.parent / "gto_config.yaml"
 
 
 def config_settings_source(settings: BaseSettings) -> Dict[str, Any]:
@@ -78,7 +78,7 @@ class RegistryConfig(BaseSettings):
             ]
 
     class Config:
-        env_prefix = "gitops_"
+        env_prefix = "gto_"
         env_file_encoding = "utf-8"
 
         @classmethod

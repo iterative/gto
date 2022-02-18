@@ -4,7 +4,7 @@ from typing import Dict, FrozenSet, List
 
 import git
 
-from gitops.index import RepoIndexState
+from gto.index import RepoIndexState
 
 from .base import BaseLabel, BaseManager, BaseRegistryState, BaseVersion
 from .config import CONFIG  # need to pass this when you initialize BranchEnvManager
@@ -123,7 +123,7 @@ class BranchEnvManager(BaseManager):
             )
             return None
         # except maybe creating a commit in the branch (do we want this?):
-        # "gitops promote $MODEL $PATH staging" -> create commit in branch for "staging"
+        # "gto promote $MODEL $PATH staging" -> create commit in branch for "staging"
         raise NotImplementedError(
             "If you want to promote a REF which is not HEAD of the appropriate branch, "
             "you need to create a new commit to that branch "

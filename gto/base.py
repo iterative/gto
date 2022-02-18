@@ -5,12 +5,12 @@ import click
 import git
 from pydantic import BaseModel, Field
 
-from gitops.constants import Action
-from gitops.index import RepoIndexState, read_index
+from gto.constants import Action
+from gto.index import RepoIndexState, read_index
 
 from .config import CONFIG
 from .exceptions import (
-    GitopsException,
+    gtoException,
     NoActiveLabel,
     ObjectNotFound,
     VersionAlreadyRegistered,
@@ -109,7 +109,7 @@ class BaseObject(BaseModel):
         ]
         if raise_if_not_found:
             if len(versions) != 1:
-                raise GitopsException(
+                raise gtoException(
                     f"{len(versions)} versions of object {self.name} found"
                     + ", skipping unregistered"
                     if skip_unregistered
@@ -118,7 +118,7 @@ class BaseObject(BaseModel):
             return versions[0]
 
         if len(versions) > 1:
-            raise GitopsException(
+            raise gtoException(
                 f"{len(versions)} versions of object {self.name} found"
                 + ", skipping unregistered"
                 if skip_unregistered
