@@ -43,7 +43,7 @@ class Index(BaseModel):
     @classmethod
     def read(cls, path_or_file: Union[str, IO], frozen: bool = False):
         index = cls(frozen=frozen)
-        index.read_state(path_or_file)
+        index.state = index.read_state(path_or_file)
         return index
 
     @staticmethod
@@ -111,7 +111,6 @@ class FileIndexManager(BaseIndexManager):
         return self.current
 
     def update(self):
-        print(self.current, self.index_path())
         if self.current is not None:
             self.current.write_state(self.index_path())
 
