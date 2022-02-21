@@ -10,7 +10,7 @@ from pydantic import BaseModel, parse_obj_as
 from ruamel.yaml import safe_dump, safe_load
 
 from .config import CONFIG
-from .exceptions import GitopsException, ObjectNotFound
+from .exceptions import GTOException, ObjectNotFound
 
 
 class Artifact(BaseModel):
@@ -60,13 +60,13 @@ class Index(BaseModel):
     @not_frozen
     def add(self, name, type, path):
         if name in self:
-            raise GitopsException(f"Artifact {name} already exists")
+            raise GTOException(f"Artifact {name} already exists")
         self.state[name] = Artifact(name=name, type=type, path=path)
 
     @not_frozen
     def remove(self, name):
         if name not in self:
-            raise GitopsException(f"Artifact {name} does not exist")
+            raise GTOException(f"Artifact {name} does not exist")
         del self.state[name]
 
 

@@ -10,7 +10,7 @@ from gto.index import ObjectCommits, RepoIndexManager
 
 from .config import CONFIG
 from .exceptions import (
-    GitopsException,
+    GTOException,
     NoActiveLabel,
     ObjectNotFound,
     VersionAlreadyRegistered,
@@ -109,7 +109,7 @@ class BaseObject(BaseModel):
         ]
         if raise_if_not_found:
             if len(versions) != 1:
-                raise GitopsException(
+                raise GTOException(
                     f"{len(versions)} versions of object {self.name} found"
                     + ", skipping unregistered"
                     if skip_unregistered
@@ -118,7 +118,7 @@ class BaseObject(BaseModel):
             return versions[0]
 
         if len(versions) > 1:
-            raise GitopsException(
+            raise GTOException(
                 f"{len(versions)} versions of object {self.name} found"
                 + ", skipping unregistered"
                 if skip_unregistered
