@@ -8,12 +8,12 @@ from pydantic import BaseSettings, validator
 from .constants import BRANCH, COMMIT, TAG
 from .exceptions import UnknownEnvironment
 
-CONFIG_FILE = Path(__file__).parent.parent / "gto_config.yaml"
+CONFIG_FILE = Path(__file__).parent.parent / "gto.yaml"
 
 
 def config_settings_source(settings: BaseSettings) -> Dict[str, Any]:
     """
-    A simple settings source that loads variables from a yaml file in MLEM DIR
+    A simple settings source that loads variables from a yaml file in GTO DIR
     """
 
     encoding = settings.__config__.env_file_encoding
@@ -26,7 +26,7 @@ def config_settings_source(settings: BaseSettings) -> Dict[str, Any]:
 
 
 class RegistryConfig(BaseSettings):
-    INDEX: str = "index.yaml"
+    INDEX: str = "artifacts.yaml"
     VERSION_BASE: str = TAG
     VERSION_CONVENTION: str = "NumberedVersion"
     VERSION_REQUIRED_FOR_ENV: bool = True

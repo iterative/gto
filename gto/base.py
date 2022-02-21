@@ -3,14 +3,14 @@ from typing import Dict, FrozenSet, List, Optional
 
 import click
 import git
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from gto.constants import Action
-from gto.index import RepoIndexState, read_index
+from gto.index import ObjectCommits, RepoIndexManager
 
 from .config import CONFIG
 from .exceptions import (
-    gtoException,
+    GTOException,
     NoActiveLabel,
     ObjectNotFound,
     VersionAlreadyRegistered,
@@ -109,7 +109,7 @@ class BaseObject(BaseModel):
         ]
         if raise_if_not_found:
             if len(versions) != 1:
-                raise gtoException(
+                raise GTOException(
                     f"{len(versions)} versions of object {self.name} found"
                     + ", skipping unregistered"
                     if skip_unregistered
@@ -118,7 +118,7 @@ class BaseObject(BaseModel):
             return versions[0]
 
         if len(versions) > 1:
-            raise gtoException(
+            raise GTOException(
                 f"{len(versions)} versions of object {self.name} found"
                 + ", skipping unregistered"
                 if skip_unregistered
@@ -170,7 +170,7 @@ class BaseManager(BaseModel):
         arbitrary_types_allowed = True
 
     def update_state(
-        self, state: BaseRegistryState, index: RepoIndexState
+        self, state: BaseRegistryState, index: ObjectCommits
     ) -> BaseRegistryState:  # pylint: disable=no-self-use
         raise NotImplementedError
 
@@ -192,13 +192,11 @@ class BaseManager(BaseModel):
         raise NotImplementedError
 
 
-class BaseRegistry(BaseModel):
+class GitRegistry(BaseModel):
     repo: git.Repo
     version_manager: BaseManager
     env_manager: BaseManager
-    state: BaseRegistryState = Field(
-        default_factory=lambda: BaseRegistryState(objects=[])
-    )
+    state: BaseRegistryState = None  # type: ignore
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -208,18 +206,18 @@ class BaseRegistry(BaseModel):
         arbitrary_types_allowed = True
 
     @property
-    def index(self) -> RepoIndexState:
-        return read_index(self.repo)
+    def index(self):
+        return RepoIndexManager(repo=self.repo)
 
     def update_state(self):
+        index = self.index.object_centric_representation()
         state = BaseRegistryState(
             objects={
-                name: BaseObject(name=name, versions=[], labels=[])
-                for name in self.index.object_centric_representation()
+                name: BaseObject(name=name, versions=[], labels=[]) for name in index
             }
         )
-        state = self.version_manager.update_state(state, self.index)
-        state = self.env_manager.update_state(state, self.index)
+        state = self.version_manager.update_state(state, index)
+        state = self.env_manager.update_state(state, index)
         self.state = state
 
     def register(self, name, version, ref):

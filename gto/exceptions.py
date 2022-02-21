@@ -1,4 +1,4 @@
-class gtoException(Exception):
+class GTOException(Exception):
     """Base class for all prototype exceptions."""
 
     def __init__(self, msg, *args):
@@ -7,7 +7,7 @@ class gtoException(Exception):
         super().__init__(msg, *args)
 
 
-class ObjectNotFound(gtoException):
+class ObjectNotFound(GTOException):
     _message = "Requested '{name}' wasn't found in registry"
 
     def __init__(self, name) -> None:
@@ -15,7 +15,7 @@ class ObjectNotFound(gtoException):
         super().__init__(self.message)
 
 
-class VersionAlreadyRegistered(gtoException):
+class VersionAlreadyRegistered(GTOException):
     _message = (
         "Version '{version}' already was registered.\n"
         "Even if it was unregistered, you must use another name to avoid confusion."
@@ -26,7 +26,7 @@ class VersionAlreadyRegistered(gtoException):
         super().__init__(self.message)
 
 
-class VersionExistsForCommit(gtoException):
+class VersionExistsForCommit(GTOException):
     _message = "The model {model} was already registered in this commit with version '{version}'."
 
     def __init__(self, model, version) -> None:
@@ -34,7 +34,7 @@ class VersionExistsForCommit(gtoException):
         super().__init__(self.message)
 
 
-class VersionIsOld(gtoException):
+class VersionIsOld(GTOException):
     _message = "Version '{suggested}' is younger than the latest {latest}"
 
     def __init__(self, latest, suggested) -> None:
@@ -42,7 +42,7 @@ class VersionIsOld(gtoException):
         super().__init__(self.message)
 
 
-class UnknownEnvironment(gtoException):
+class UnknownEnvironment(GTOException):
     _message = "Environment '{env}' is not present in your config file. Allowed envs are: {envs}."
 
     def __init__(self, env) -> None:
@@ -53,7 +53,7 @@ class UnknownEnvironment(gtoException):
         super().__init__(self.message)
 
 
-class NoActiveLabel(gtoException):
+class NoActiveLabel(GTOException):
     _message = "No active label '{label}' was found for '{name}'"
 
     def __init__(self, label, name) -> None:
@@ -61,7 +61,7 @@ class NoActiveLabel(gtoException):
         super().__init__(self.message)
 
 
-class RefNotFound(gtoException):
+class RefNotFound(GTOException):
     _message = "Ref '{ref}' was not found in the repository history"
 
     def __init__(self, ref) -> None:
@@ -69,7 +69,7 @@ class RefNotFound(gtoException):
         super().__init__(self.message)
 
 
-class InvalidVersion(gtoException):
+class InvalidVersion(GTOException):
     _message = "Supplied version {version} doesn't look like {cls} version"
 
     def __init__(self, version, cls) -> None:
@@ -77,14 +77,14 @@ class InvalidVersion(gtoException):
         super().__init__(self.message)
 
 
-class IncomparableVersions(gtoException):
+class IncomparableVersions(GTOException):
     message = "You can compare only versions of the same system."
 
     def __init__(self) -> None:
         super().__init__(self.message)
 
 
-class UnknownAction(gtoException):
+class UnknownAction(GTOException):
     message = "Unknown action '{action}' was requested."
 
     def __init__(self, action) -> None:
@@ -92,7 +92,7 @@ class UnknownAction(gtoException):
         super().__init__(self.message)
 
 
-class MissingArg(gtoException):
+class MissingArg(GTOException):
     message = "'{arg}' is required."
 
     def __init__(self, arg) -> None:

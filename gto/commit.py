@@ -5,17 +5,17 @@ from git import BadName
 
 from .base import BaseManager, BaseRegistryState, BaseVersion
 from .constants import Action
-from .index import RepoIndexState
+from .index import ObjectCommits
 
 
 class CommitVersionManager(BaseManager):
     actions: FrozenSet[Action] = frozenset((Action.PROMOTE, Action.DEMOTE))
 
     def update_state(
-        self, state: BaseRegistryState, index: RepoIndexState
+        self, state: BaseRegistryState, index: ObjectCommits
     ) -> BaseRegistryState:
         # each commit is a version if object is indexed in that commit
-        for name, commits in index.object_centric_representation().items():
+        for name, commits in index.items():
             for hexsha in commits:
                 commit = self.repo.commit(hexsha)
                 state.objects[name].versions.append(

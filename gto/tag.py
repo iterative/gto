@@ -8,7 +8,14 @@ from pydantic import BaseModel
 from .base import BaseLabel, BaseManager, BaseObject, BaseRegistryState, BaseVersion
 from .constants import ACTION, LABEL, NAME, NUMBER, VERSION, Action
 from .exceptions import MissingArg, RefNotFound, UnknownAction
-from .index import RepoIndexState
+from .index import ObjectCommits
+
+ActionSign = {
+    Action.REGISTER: "@",
+    Action.UNREGISTER: "@!",
+    Action.PROMOTE: "#",
+    Action.DEMOTE: "#!",
+}
 
 
 def name_tag(
@@ -19,38 +26,37 @@ def name_tag(
     repo: Optional[git.Repo] = None,
 ):
     if action in (Action.REGISTER, Action.UNREGISTER):
-        return f"{name}-{action.value}-{version}"
+        return f"{name}{ActionSign[action]}{version}"
 
     if action in (Action.PROMOTE, Action.DEMOTE):
         if repo is None:
             raise MissingArg(arg="repo")
-        basename = f"{name}-{Action.PROMOTE.value}-{label}"
-        if existing_names := [c.name for c in repo.tags if c.name.startswith(basename)]:
-            last_number = 1 + max(int(n[len(basename) + 1 :]) for n in existing_names)
-        else:
-            last_number = 1
-        return f"{name}-{action.value}-{label}-{last_number}"
-    raise UnknownAction(action=action.value)
-
-
-def add_dashes(string: str):
-    return f"-{string}-"
+        numbers = []
+        for tag in repo.tags:
+            parsed = parse_name(tag.name)
+            if parsed[ACTION] in (Action.PROMOTE, Action.DEMOTE):
+                numbers.append(parsed[NUMBER])
+        new_number = max(numbers) + 1 if numbers else 1
+        return f"{name}{ActionSign[action]}{label}-{new_number}"
+    raise UnknownAction(action=action)
 
 
 def parse_name(name: str, raise_on_fail: bool = True):
 
-    for action in (Action.REGISTER, Action.UNREGISTER):
-        if add_dashes(action.value) in name:
-            name, version = name.split(add_dashes(action.value))
+    # order does matter if you take into account ActionSign values
+    for action in (Action.UNREGISTER, Action.REGISTER):
+        if ActionSign[action] in name:
+            name, version = name.split(ActionSign[action])
             return {
                 ACTION: action,
                 NAME: name,
                 VERSION: version,
             }
 
-    for action in (Action.PROMOTE, Action.DEMOTE):
-        if add_dashes(action.value) in name:
-            name, label = name.split(add_dashes(action.value))
+    # order does matter if you take into account ActionSign values
+    for action in (Action.DEMOTE, Action.PROMOTE):
+        if ActionSign[action] in name:
+            name, label = name.split(ActionSign[action])
             label, number = label.split("-")
             return {
                 ACTION: action,
@@ -166,7 +172,7 @@ def index_tag(obj: BaseObject, tag: git.Tag) -> BaseObject:
 
 class TagManager(BaseManager):  # pylint: disable=abstract-method
     def update_state(
-        self, state: BaseRegistryState, index: RepoIndexState
+        self, state: BaseRegistryState, index: ObjectCommits
     ) -> BaseRegistryState:
         # tags are sorted and then indexed by timestamp
         # this is important to check that history is not broken

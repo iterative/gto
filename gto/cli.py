@@ -1,4 +1,6 @@
+import logging
 import warnings
+from functools import wraps
 
 import click
 import numpy as np
@@ -6,9 +8,9 @@ import pandas as pd
 from IPython.display import display
 from ruamel import yaml
 
-from . import init_registry
-from .constants import LABEL, NAME, REF, VERSION
-from .utils import serialize
+from gto import init_index, init_registry
+from gto.constants import LABEL, NAME, REF, VERSION
+from gto.utils import serialize
 
 arg_name = click.argument(NAME)
 arg_version = click.argument(VERSION)
@@ -19,10 +21,60 @@ option_repo = click.option("-r", "--repo", default=".", help="Repository to use"
 
 @click.group()
 def cli():
-    """Early prototype for registering/label assignment for tags-based approach"""
+    """\b
+    Great Tool Ops. Turn your Git Repo into Artifact Registry:
+    * Index your artifacts and add enrichments
+    * Register artifact versions
+    * Promote artifacts to environments
+    * Act on new versions and promotions in CI
+    """
 
 
-@cli.command()
+def _set_log_level(ctx, param, value):  # pylint: disable=unused-argument
+    if value:
+        logger = logging.getLogger("gto")
+        logger.handlers[0].setLevel(logging.DEBUG)
+        logger.setLevel(logging.DEBUG)
+        from gto.config import CONFIG  # pylint: disable=import-outside-toplevel
+
+        click.echo(CONFIG)
+
+
+verbose_option = click.option(
+    "-v",
+    "--verbose",
+    callback=_set_log_level,
+    expose_value=False,
+    is_eager=True,
+    is_flag=True,
+)
+
+
+@wraps(cli.command)
+def gto_command(*args, **kwargs):
+    def decorator(func):
+        return cli.command(*args, **kwargs)(verbose_option(func))
+
+    return decorator
+
+
+@gto_command()
+@arg_name
+@click.argument("type")
+@click.argument("path")
+def add(name: str, type: str, path: str):
+    """Add an object to the Index"""
+    init_index().add(name, type, path)
+
+
+@cli.command("rm")
+@arg_name
+def remove(name: str):
+    """Remove an object from the Index"""
+    init_index().remove(name)
+
+
+@gto_command()
 @option_repo
 @arg_name
 @arg_version
@@ -33,7 +85,7 @@ def register(repo: str, name: str, version: str, ref: str):
     click.echo(f"Registered {name} version {version}")
 
 
-@cli.command()
+@gto_command()
 @option_repo
 @arg_name
 @arg_version
@@ -43,7 +95,7 @@ def unregister(repo: str, name: str, version: str):
     click.echo(f"Unregistered {name} version {version}")
 
 
-@cli.command()
+@gto_command()
 @option_repo
 @arg_name
 @arg_label
@@ -67,7 +119,7 @@ def promote(repo: str, name: str, label: str, version: str, ref: str):
     click.echo(f"Promoted {name} version {result['version']} to label {label}")
 
 
-@cli.command()
+@gto_command()
 @option_repo
 @arg_name
 def latest(repo: str, name: str):
@@ -75,7 +127,7 @@ def latest(repo: str, name: str):
     click.echo(init_registry(repo=repo).latest(name))
 
 
-@cli.command()
+@gto_command()
 @option_repo
 @arg_name
 @arg_label
@@ -87,7 +139,7 @@ def which(repo: str, name: str, label: str):
         click.echo(f"No version of '{name}' with label '{label}' active")
 
 
-@cli.command()
+@gto_command()
 @option_repo
 @arg_name
 @arg_label
@@ -97,7 +149,7 @@ def demote(repo: str, name: str, label: str):
     click.echo(f"Demoted {name} from label {label}")
 
 
-@cli.command()
+@gto_command()
 @click.argument("name")
 @click.option("--key", default=None, help="Which key to return")
 def parse_tag(name: str, key: str):
@@ -110,13 +162,12 @@ def parse_tag(name: str, key: str):
     return parsed
 
 
-@cli.command()
+@gto_command()
 @click.argument("ref")
 def check_ref(ref: str):
     """Find out what have been registered/promoted in the provided ref"""
     reg = init_registry(".")
-    if ref.startswith("refs/tags/"):
-        ref = ref[len("refs/tags/") :]
+    ref = ref.removeprefix("refs/tags/")
     if ref.startswith("refs/heads/"):
         ref = reg.repo.commit(ref).hexsha
     result = reg.check_ref(ref)
@@ -137,7 +188,7 @@ def check_ref(ref: str):
     return result
 
 
-@cli.command()
+@gto_command()
 @option_repo
 def show(repo: str):
     """Show current registry state"""
@@ -160,66 +211,79 @@ def show(repo: str):
         )
         for o in reg.state.objects.values()
     }
-    click.echo("\n=== Active version and labels ===")
+    # click.echo("\n=== Active version and labels ===")
     display(pd.DataFrame.from_records(models_state).T)
 
-    label_assignment_audit_trail = [
-        {
-            "name": o.name,
-            "label": l.name,
-            "version": l.version,
-            "creation_date": l.creation_date,
-            "author": l.author,
-            "commit_hexsha": l.commit_hexsha,
-            "unregistered_date": l.unregistered_date,
-        }
-        for o in reg.state.objects.values()
-        for l in o.labels
-    ]
-    click.echo("\n=== Promotion audit trail ===")
-    display(
-        pd.DataFrame(label_assignment_audit_trail)
-        .sort_values("creation_date", ascending=False)
-        .set_index(["creation_date", "name"])
-    )
 
-    model_registration_audit_trail = [
-        {
-            "name": o.name,
-            "version": v.name,
-            "creation_date": v.creation_date,
-            "author": v.author,
-            "commit_hexsha": v.commit_hexsha,
-            "unregistered_date": v.unregistered_date,
-        }
-        for o in reg.state.objects.values()
-        for v in o.versions
-    ]
-    click.echo("\n=== Registration audit trail ===")
-    display(
-        pd.DataFrame(model_registration_audit_trail)
-        .sort_values("creation_date", ascending=False)
-        .set_index(["creation_date", "name"])
-    )
+@gto_command()
+@click.argument("action")
+@option_repo
+def audit(action: str, repo: str):
+    """Audit registry state"""
+    reg = init_registry(repo=repo)
+
+    if action in {"reg", "registration", "register", "all"}:
+        model_registration_audit_trail = [
+            {
+                "name": o.name,
+                "version": v.name,
+                "creation_date": v.creation_date,
+                "author": v.author,
+                "commit_hexsha": v.commit_hexsha,
+                "unregistered_date": v.unregistered_date,
+            }
+            for o in reg.state.objects.values()
+            for v in o.versions
+        ]
+        click.echo("\n=== Registration audit trail ===")
+        display(
+            pd.DataFrame(model_registration_audit_trail)
+            .sort_values("creation_date", ascending=False)
+            .set_index(["creation_date", "name"])
+        )
+
+    if action in {"promote", "promotion", "all"}:
+        label_assignment_audit_trail = [
+            {
+                "name": o.name,
+                "label": l.name,
+                "version": l.version,
+                "creation_date": l.creation_date,
+                "author": l.author,
+                "commit_hexsha": l.commit_hexsha,
+                "unregistered_date": l.unregistered_date,
+            }
+            for o in reg.state.objects.values()
+            for l in o.labels
+        ]
+        click.echo("\n=== Promotion audit trail ===")
+        display(
+            pd.DataFrame(label_assignment_audit_trail)
+            .sort_values("creation_date", ascending=False)
+            .set_index(["creation_date", "name"])
+        )
 
 
-@cli.command()
+@gto_command()
 @option_repo
 def print_state(repo: str):
     reg = init_registry(repo=repo)
     click.echo(yaml.dump(serialize(reg.state.dict())))
 
 
-@cli.command()
+@gto_command()
 @option_repo
 def print_index(repo: str):
     import git  # pylint: disable=import-outside-toplevel
 
-    from .index import read_index  # pylint: disable=import-outside-toplevel
+    from .index import RepoIndexManager  # pylint: disable=import-outside-toplevel
 
-    click.echo(yaml.dump(serialize(read_index(git.Repo(repo)).dict())))
-    # reg = init_registry(repo=repo)
-    # click.echo(yaml.dump(serialize(reg.index.dict())))
+    click.echo(
+        yaml.dump(
+            dict(RepoIndexManager(repo=git.Repo(repo)).object_centric_representation()),
+            default_flow_style=False,
+        )
+    )
 
 
 if __name__ == "__main__":
