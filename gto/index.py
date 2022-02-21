@@ -3,8 +3,7 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from functools import wraps
 from pathlib import Path
-from typing import Dict, Generator, List, Optional, Tuple, Union
-from typing.io import IO
+from typing import IO, Dict, Generator, List, Optional, Union
 
 import git
 from pydantic import BaseModel, parse_obj_as
@@ -23,12 +22,12 @@ class Artifact(BaseModel):
 State = Dict[str, Artifact]
 
 
-def not_frozen(f):
-    @wraps(f)
+def not_frozen(func):
+    @wraps(func)
     def inner(self: "Index", *args, **kwargs):
         if self.frozen:
-            raise ValueError(f"Cannot {f.__name__}: {self.__class__} is frozen")
-        return f(self, *args, **kwargs)
+            raise ValueError(f"Cannot {func.__name__}: {self.__class__} is frozen")
+        return func(self, *args, **kwargs)
 
     return inner
 
@@ -49,14 +48,14 @@ class Index(BaseModel):
     @staticmethod
     def read_state(path_or_file: Union[str, IO]):
         if isinstance(path_or_file, str):
-            with open(path_or_file, "r") as f:
-                return parse_obj_as(State, safe_load(f))
+            with open(path_or_file, "r", encoding="utf8") as file:
+                return parse_obj_as(State, safe_load(file))
         return parse_obj_as(State, safe_load(path_or_file))
 
     def write_state(self, path_or_file: Union[str, IO]):
         if isinstance(path_or_file, str):
-            with open(path_or_file, "w", encoding="utf8") as f:
-                f.write(safe_dump(self.dict()["state"], default_flow_style=False))
+            with open(path_or_file, "w", encoding="utf8") as file:
+                file.write(safe_dump(self.dict()["state"], default_flow_style=False))
 
     @not_frozen
     def add(self, name, type, path):
@@ -163,9 +162,7 @@ class RepoIndexManager(FileIndexManager):
             raise ObjectNotFound(name)
 
 
-def traverse_commit(
-    commit: git.Commit,
-) -> Generator[Tuple[git.Commit], None, None]:
+def traverse_commit(commit: git.Commit) -> Generator[git.Commit, None, None]:
     yield commit
     for parent in commit.parents:
         yield from traverse_commit(parent)

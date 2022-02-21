@@ -35,7 +35,7 @@ def _set_log_level(ctx, param, value):  # pylint: disable=unused-argument
         logger = logging.getLogger("gto")
         logger.handlers[0].setLevel(logging.DEBUG)
         logger.setLevel(logging.DEBUG)
-        from gto.config import CONFIG
+        from gto.config import CONFIG  # pylint: disable=import-outside-toplevel
 
         click.echo(CONFIG)
 
@@ -52,8 +52,8 @@ verbose_option = click.option(
 
 @wraps(cli.command)
 def gto_command(*args, **kwargs):
-    def decorator(f):
-        return cli.command(*args, **kwargs)(verbose_option(f))
+    def decorator(func):
+        return cli.command(*args, **kwargs)(verbose_option(func))
 
     return decorator
 

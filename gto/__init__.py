@@ -19,5 +19,5 @@ def init_registry(repo=".", config=CONFIG):
 def init_index(path: str = ""):
     try:
         return RepoIndexManager(repo=git.Repo(path))
-    except Exception:  # TODO repo not found exception
+    except git.InvalidGitRepositoryError:
         return FileIndexManager(path=path)
