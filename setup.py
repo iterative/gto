@@ -11,6 +11,7 @@ install_requires = [
     "pydantic",
     "pyyaml",
     "ruamel.yaml",
+    "ipython",
 ]
 
 
