@@ -76,12 +76,14 @@ def test_api(init_showcase):  # pylint: disable=too-many-locals
     assert len(nn_object.versions) == 1
     nn_version = nn_object.versions[0]
     assert isinstance(nn_version, BaseVersion)
+    author = git.Repo(path).commit().author.name
+
     _check_dict(
         nn_version,
         dict(
             object="nn",
             name="v1",
-            author=git.Repo(".").commit().author.name,
+            author=author,
             commit_hexsha=first_commit.hexsha,
             unregistered_date=None,
         ),
@@ -110,7 +112,6 @@ def test_api(init_showcase):  # pylint: disable=too-many-locals
     assert len(rf_object.versions) == 2
     assert all(isinstance(v, BaseVersion) for v in rf_object.versions)
     rf_ver1, rf_ver2 = rf_object.versions
-    author = git.Repo(".").commit().author.name
     _check_dict(
         rf_ver1,
         dict(

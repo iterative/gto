@@ -3,6 +3,7 @@ import pytest
 from gto import CONFIG, init_index
 from gto.index import Artifact, RepoIndexManager
 
+
 @pytest.fixture
 def git_index_repo(empty_git_repo):
     return init_index(empty_git_repo.working_dir), empty_git_repo
@@ -21,6 +22,7 @@ def test_git_index_add(git_index_repo):
     commit = repo.index.commit("add index")
 
     assert new_index.get_history()[commit.hexsha].state == index_value.state
+
 
 def test_git_index_remove(git_index_repo):
     index, repo = git_index_repo
