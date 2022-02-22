@@ -2,7 +2,6 @@
 import os.path
 from typing import Any, Dict, Set
 
-import git
 import pytest
 from pydantic import BaseModel
 
@@ -76,8 +75,7 @@ def test_api(init_showcase):  # pylint: disable=too-many-locals
     assert len(nn_object.versions) == 1
     nn_version = nn_object.versions[0]
     assert isinstance(nn_version, BaseVersion)
-    author = git.Repo(path).commit().author.name
-
+    author = repo.commit().author.name
     _check_dict(
         nn_version,
         dict(
@@ -98,7 +96,7 @@ def test_api(init_showcase):  # pylint: disable=too-many-locals
             object="nn",
             version="v1",
             name="staging",
-            author=git.Repo(".").commit().author.name,
+            author=author,
             commit_hexsha=first_commit.hexsha,
             unregistered_date=None,
         ),
