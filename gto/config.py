@@ -11,12 +11,15 @@ from .exceptions import UnknownEnvironment
 
 CONFIG_FILE = "gto.yaml"
 
+
 def _set_location_init_source(init_source: InitSettingsSource):
     def inner(settings: "RegistryConfig"):
         if "CONFIG_FILE" in init_source.init_kwargs:
             settings.__dict__["CONFIG_FILE"] = init_source.init_kwargs["CONFIG_FILE"]
         return {}
+
     return inner
+
 
 def config_settings_source(settings: "RegistryConfig") -> Dict[str, Any]:
     """

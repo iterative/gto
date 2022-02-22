@@ -31,7 +31,7 @@ def _check_dict(obj: BaseModel, values: Dict[str, Any], skip_keys: Set[str]):
     assert obj_values == values
 
 
-def test_api(init_showcase):  # pylint: disable=too-many-locals
+def test_api(init_showcase):  # pylint: disable=too-many-locals, too-many-statements
     path, repo, write_file = init_showcase  # pylint: disable=unused-variable
 
     write_file("models/random-forest.pkl", "1st version")
