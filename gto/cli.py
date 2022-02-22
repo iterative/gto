@@ -133,7 +133,8 @@ def latest(repo: str, name: str):
 @arg_label
 def which(repo: str, name: str, label: str):
     """Return version of object with specific label active"""
-    if version := init_registry(repo=repo).which(name, label, raise_if_not_found=False):
+    version = init_registry(repo=repo).which(name, label, raise_if_not_found=False)
+    if version:
         click.echo(version)
     else:
         click.echo(f"No version of '{name}' with label '{label}' active")
