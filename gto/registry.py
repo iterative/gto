@@ -17,11 +17,6 @@ class GitRegistry(BaseModel):
     repo: git.Repo
     version_manager: BaseManager
     env_manager: BaseManager
-    state: BaseRegistryState = None  # type: ignore
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.update_state()
 
     class Config:
         arbitrary_types_allowed = True
@@ -30,7 +25,8 @@ class GitRegistry(BaseModel):
     def index(self):
         return RepoIndexManager(repo=self.repo)
 
-    def update_state(self):
+    @property
+    def state(self):
         index = self.index.object_centric_representation()
         state = BaseRegistryState(
             objects={
@@ -39,11 +35,11 @@ class GitRegistry(BaseModel):
         )
         state = self.version_manager.update_state(state, index)
         state = self.env_manager.update_state(state, index)
-        self.state = state
+        state.sort()
+        return state
 
     def register(self, name, version, ref):
         """Register object version"""
-        self.update_state()
         ref = self.repo.commit(ref).hexsha
         # TODO: add the same check for other actions, to promote and etc
         # also we need to check integrity of the index+state
@@ -70,7 +66,6 @@ class GitRegistry(BaseModel):
         )
 
     def unregister(self, name, version):
-        self.update_state()
         return self.version_manager.unregister(name, version)
 
     def promote(
@@ -89,7 +84,6 @@ class GitRegistry(BaseModel):
             raise ValueError("Only one of version or commit must be specified")
         if promote_ref:
             promote_ref = self.repo.commit(promote_ref).hexsha
-        self.update_state()
         if promote_ref:
             self.index.assert_existence(name, promote_ref)
         found_object = self.state.find_object(name)
@@ -119,7 +113,6 @@ class GitRegistry(BaseModel):
     def demote(self, name, label):
         """De-promote object from given label"""
         # TODO: check if label wasn't demoted already
-        self.update_state()
         if self.state.find_object(name).latest_labels.get(label) is None:
             raise NoActiveLabel(label=label, name=name)
         return self.env_manager.demote(
@@ -130,22 +123,18 @@ class GitRegistry(BaseModel):
 
     def check_ref(self, ref: str):
         "Find out what was registered/promoted in this ref"
-        self.update_state()
         return {
             "version": self.version_manager.check_ref(ref, self.state),
             "env": self.env_manager.check_ref(ref, self.state),
         }
 
     def find_commit(self, name, version):
-        self.update_state()
         return self.state.find_commit(name, version)
 
     def which(self, name, label, raise_if_not_found=True):
         """Return version of object with specific label active"""
-        self.update_state()
         return self.state.which(name, label, raise_if_not_found)
 
     def latest(self, name: str):
         """Return latest version for object"""
-        self.update_state()
         return self.state.find_object(name).latest_version

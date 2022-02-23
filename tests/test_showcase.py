@@ -1,5 +1,6 @@
 """TODO: break this file into multiple test/files"""
 import os.path
+from time import sleep
 from typing import Any, Dict, Set
 
 import pytest
@@ -63,8 +64,12 @@ def test_api(init_showcase):  # pylint: disable=too-many-locals, too-many-statem
 
     registry.promote("nn", "staging", promote_version="v1")
     registry.promote("rf", "production", promote_version="v1")
+    sleep(1)  # this is needed to ensure right order of labels in later checks
+    # the problem is git tags doesn't have miliseconds precision, so we need to wait a bit
     registry.promote("rf", "staging", promote_ref="HEAD")
+    sleep(1)
     registry.promote("rf", "production", promote_ref=repo.head.ref.commit.hexsha)
+    sleep(1)
     registry.promote("rf", "production", promote_version="v1")
 
     objects = registry.state.objects
@@ -134,9 +139,9 @@ def test_api(init_showcase):  # pylint: disable=too-many-locals, too-many-statem
         {"creation_date"},
     )
 
-    assert len(rf_object.labels) == 3
+    assert len(rf_object.labels) == 4
     assert all(isinstance(l, BaseLabel) for l in rf_object.labels)
-    rf_l1, rf_l2, rf_l3 = rf_object.labels
+    rf_l1, rf_l2, rf_l3, _ = rf_object.labels
 
     _check_dict(
         rf_l1,
@@ -151,7 +156,7 @@ def test_api(init_showcase):  # pylint: disable=too-many-locals, too-many-statem
         {"creation_date"},
     )
     _check_dict(
-        rf_l2,
+        rf_l3,
         dict(
             object="rf",
             version="v2",
@@ -163,7 +168,7 @@ def test_api(init_showcase):  # pylint: disable=too-many-locals, too-many-statem
         {"creation_date"},
     )
     _check_dict(
-        rf_l3,
+        rf_l2,
         dict(
             object="rf",
             version="v2",

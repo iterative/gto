@@ -152,6 +152,13 @@ class BaseRegistryState(BaseModel):
             raise ValueError(f"Label {label} not found for {name}")
         return None
 
+    def sort(self):
+        for name in self.objects:
+            self.objects[name].versions.sort(key=lambda x: (x.creation_date, x.name))
+            self.objects[name].labels.sort(
+                key=lambda x: (x.creation_date, x.version, x.name)
+            )
+
 
 class BaseManager(BaseModel):
     repo: git.Repo
