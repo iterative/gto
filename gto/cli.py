@@ -8,8 +8,9 @@ import pandas as pd
 from IPython.display import display
 from ruamel import yaml
 
-from gto import init_index, init_registry
 from gto.constants import LABEL, NAME, REF, VERSION
+from gto.index import RepoIndexManager
+from gto.registry import GitRegistry
 from gto.utils import serialize
 
 arg_name = click.argument(NAME)
@@ -62,16 +63,18 @@ def gto_command(*args, **kwargs):
 @arg_name
 @click.argument("type")
 @click.argument("path")
-def add(name: str, type: str, path: str):
+@option_repo
+def add(name: str, type: str, path: str, repo: str):
     """Add an object to the Index"""
-    init_index().add(name, type, path)
+    RepoIndexManager.from_path(repo).add(name, type, path)
 
 
 @cli.command("rm")
 @arg_name
-def remove(name: str):
+@option_repo
+def remove(name: str, repo: str):
     """Remove an object from the Index"""
-    init_index().remove(name)
+    RepoIndexManager.from_path(repo).remove(name)
 
 
 @gto_command()
@@ -81,7 +84,7 @@ def remove(name: str):
 @arg_ref
 def register(repo: str, name: str, version: str, ref: str):
     """Register new object version"""
-    init_registry(repo=repo).register(name, version, ref)
+    GitRegistry.from_repo(repo).register(name, version, ref)
     click.echo(f"Registered {name} version {version}")
 
 
@@ -91,7 +94,7 @@ def register(repo: str, name: str, version: str, ref: str):
 @arg_version
 def unregister(repo: str, name: str, version: str):
     """Unregister object version"""
-    init_registry(repo=repo).unregister(name, version)
+    GitRegistry.from_repo(repo).unregister(name, version)
     click.echo(f"Unregistered {name} version {version}")
 
 
@@ -113,7 +116,7 @@ def promote(repo: str, name: str, label: str, version: str, ref: str):
     else:
         name_version = None
         promote_version = version
-    result = init_registry(repo=repo).promote(
+    result = GitRegistry.from_repo(repo).promote(
         name, label, promote_version, ref, name_version
     )
     click.echo(f"Promoted {name} version {result['version']} to label {label}")
@@ -124,7 +127,7 @@ def promote(repo: str, name: str, label: str, version: str, ref: str):
 @arg_name
 def latest(repo: str, name: str):
     """Return latest version for object"""
-    click.echo(init_registry(repo=repo).latest(name))
+    click.echo(GitRegistry.from_repo(repo).latest(name))
 
 
 @gto_command()
@@ -133,7 +136,7 @@ def latest(repo: str, name: str):
 @arg_label
 def which(repo: str, name: str, label: str):
     """Return version of object with specific label active"""
-    version = init_registry(repo=repo).which(name, label, raise_if_not_found=False)
+    version = GitRegistry.from_repo(repo).which(name, label, raise_if_not_found=False)
     if version:
         click.echo(version)
     else:
@@ -146,7 +149,7 @@ def which(repo: str, name: str, label: str):
 @arg_label
 def demote(repo: str, name: str, label: str):
     """De-promote object from given label"""
-    init_registry(repo=repo).demote(name, label)
+    GitRegistry.from_repo(repo).demote(name, label)
     click.echo(f"Demoted {name} from label {label}")
 
 
@@ -167,7 +170,7 @@ def parse_tag(name: str, key: str):
 @click.argument("ref")
 def check_ref(ref: str):
     """Find out what have been registered/promoted in the provided ref"""
-    reg = init_registry(".")
+    reg = GitRegistry.from_repo(".")
     ref = ref.removeprefix("refs/tags/")
     if ref.startswith("refs/heads/"):
         ref = reg.repo.commit(ref).hexsha
@@ -194,7 +197,7 @@ def check_ref(ref: str):
 def show(repo: str):
     """Show current registry state"""
 
-    reg = init_registry(repo=repo)
+    reg = GitRegistry.from_repo(repo)
     models_state = {
         o.name: dict(
             [
@@ -221,7 +224,7 @@ def show(repo: str):
 @option_repo
 def audit(action: str, repo: str):
     """Audit registry state"""
-    reg = init_registry(repo=repo)
+    reg = GitRegistry.from_repo(repo)
 
     if action in {"reg", "registration", "register", "all"}:
         model_registration_audit_trail = [
@@ -268,20 +271,16 @@ def audit(action: str, repo: str):
 @gto_command()
 @option_repo
 def print_state(repo: str):
-    reg = init_registry(repo=repo)
+    reg = GitRegistry.from_repo(repo)
     click.echo(yaml.dump(serialize(reg.state.dict())))
 
 
 @gto_command()
 @option_repo
 def print_index(repo: str):
-    import git  # pylint: disable=import-outside-toplevel
-
-    from .index import RepoIndexManager  # pylint: disable=import-outside-toplevel
-
     click.echo(
         yaml.dump(
-            dict(RepoIndexManager(repo=git.Repo(repo)).object_centric_representation()),
+            dict(RepoIndexManager.from_path(repo).object_centric_representation()),
             default_flow_style=False,
         )
     )

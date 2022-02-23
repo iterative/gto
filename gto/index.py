@@ -123,6 +123,13 @@ ObjectCommits = Dict[str, List[str]]
 class RepoIndexManager(FileIndexManager):
     repo: git.Repo
 
+    @classmethod
+    def from_path(cls, path: str = ""):
+        try:
+            return cls(repo=git.Repo(path))
+        except git.InvalidGitRepositoryError:
+            return FileIndexManager(path=path)
+
     def index_path(self):
         # TODO: config should be loaded from repo too
         return os.path.join(os.path.dirname(self.repo.git_dir), CONFIG.INDEX)

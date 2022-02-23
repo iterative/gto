@@ -1,7 +1,11 @@
 import pytest
 
-from gto import CONFIG, init_index
+from gto import CONFIG
 from gto.index import Artifact, RepoIndexManager
+
+
+def init_index(path):
+    return RepoIndexManager.from_path(path)
 
 
 @pytest.fixture

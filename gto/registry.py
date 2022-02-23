@@ -1,9 +1,11 @@
+import os
+
 import click
 import git
 from pydantic import BaseModel
 
 from gto.base import BaseManager, BaseObject, BaseRegistryState
-from gto.config import CONFIG
+from gto.config import RegistryConfig
 from gto.exceptions import (
     NoActiveLabel,
     VersionAlreadyRegistered,
@@ -17,9 +19,25 @@ class GitRegistry(BaseModel):
     repo: git.Repo
     version_manager: BaseManager
     env_manager: BaseManager
+    config: RegistryConfig
 
     class Config:
         arbitrary_types_allowed = True
+
+    @classmethod
+    def from_repo(cls, path=".", config=None):
+        repo = git.Repo(path)
+        if config is None:
+            config = RegistryConfig(CONFIG_FILE=os.path.join(path, "gto.yaml"))
+
+        return cls(
+            repo=repo,
+            version_manager=config.VERSION_MANAGERS_MAPPING[config.VERSION_BASE](
+                repo=repo
+            ),
+            env_manager=config.ENV_MANAGERS_MAPPING[config.ENV_BASE](repo=repo),
+            config=config,
+        )
 
     @property
     def index(self):
@@ -55,7 +73,7 @@ class GitRegistry(BaseModel):
             raise VersionExistsForCommit(name, found_version.name)
         if (
             found_object.versions
-            and CONFIG.versions_class(version) < found_object.latest_version
+            and self.config.versions_class(version) < found_object.latest_version
         ):
             raise VersionIsOld(latest=found_object.latest_version, suggested=version)
         self.version_manager.register(
@@ -77,7 +95,7 @@ class GitRegistry(BaseModel):
         name_version=None,
     ):
         """Assign label to specific object version"""
-        CONFIG.assert_env(label)
+        self.config.assert_env(label)
         if promote_version is None and promote_ref is None:
             raise ValueError("Either version or commit must be specified")
         if promote_version is not None and promote_ref is not None:
@@ -97,7 +115,9 @@ class GitRegistry(BaseModel):
             if found_version is None:
                 if name_version is None:
                     last_version = self.state.find_object(name).latest_version
-                    promote_version = CONFIG.versions_class(last_version).bump().version
+                    promote_version = (
+                        self.config.versions_class(last_version).bump().version
+                    )
                 self.register(name, name_version, ref=promote_ref)
                 click.echo(
                     f"Registered new version '{promote_version}' of '{name}' at commit '{promote_ref}'"

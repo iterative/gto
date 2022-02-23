@@ -8,7 +8,7 @@ from pydantic import BaseModel
 
 from gto import GitRegistry
 from gto.base import BaseLabel, BaseObject, BaseVersion
-from gto.config import CONFIG_FILE, RegistryConfig
+from gto.config import CONFIG_FILE
 from gto.index import RepoIndexManager
 
 
@@ -46,12 +46,7 @@ def test_api(init_showcase):  # pylint: disable=too-many-locals, too-many-statem
     repo.index.add(["artifacts.yaml", "models"])
     first_commit = repo.index.commit("Create models")
 
-    config = RegistryConfig(CONFIG_FILE=os.path.join(path, "gto.yaml"))
-    registry = GitRegistry(
-        repo=repo,
-        version_manager=config.VERSION_MANAGERS_MAPPING[config.VERSION_BASE](repo=repo),
-        env_manager=config.ENV_MANAGERS_MAPPING[config.ENV_BASE](repo=repo),
-    )
+    registry = GitRegistry.from_repo(path)
 
     registry.register("rf", "v1", "HEAD")
     registry.register("nn", "v1", "HEAD")

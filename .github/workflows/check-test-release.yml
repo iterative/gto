@@ -58,12 +58,6 @@ jobs:
         key: ${{ runner.os }}-pip-${{ hashFiles('setup.cfg') }}
         restore-keys: |
           ${{ runner.os }}-pip-
-#     - name: Install Mac-specific dependencies
-#       if: matrix.os == 'macos-latest'
-#       run: |
-#         brew install hdf5 wget c-blosc
-#         wget https://raw.githubusercontent.com/Homebrew/homebrew-core/fb8323f2b170bd4ae97e1bac9bf3e2983af3fdb0/Formula/libomp.rb
-#         brew install ./libomp.rb
     # legacy-resolver makes install faster by order of magnitude
     - name: Install
       if: steps.cache.pip-cache-dir.cache-hit != 'true'
@@ -76,9 +70,6 @@ jobs:
         git config --global user.email "olivaw@iterative.ai"
         git config --global user.name "Olivaw"
         pytest
-#       env:
-#         GITHUB_USERNAME: ${{ secrets.GH_USERNAME }}
-#         GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
     - run: pre-commit run pylint -a --show-diff-on-failure
     - name: "Upload coverage to Codecov"
       uses: codecov/codecov-action@v1
