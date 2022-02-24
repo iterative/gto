@@ -9,7 +9,7 @@ from IPython.display import display
 from ruamel import yaml
 
 from gto.constants import LABEL, NAME, REF, VERSION
-from gto.index import RepoIndexManager
+from gto.index import FileIndexManager, RepoIndexManager
 from gto.registry import GitRegistry
 from gto.utils import serialize
 
@@ -66,7 +66,7 @@ def gto_command(*args, **kwargs):
 @option_repo
 def add(name: str, type: str, path: str, repo: str):
     """Add an object to the Index"""
-    RepoIndexManager.from_path(repo).add(name, type, path)
+    FileIndexManager(path=repo).add(name, type, path)
 
 
 @cli.command("rm")
@@ -74,7 +74,7 @@ def add(name: str, type: str, path: str, repo: str):
 @option_repo
 def remove(name: str, repo: str):
     """Remove an object from the Index"""
-    RepoIndexManager.from_path(repo).remove(name)
+    FileIndexManager(path=repo).remove(name)
 
 
 @gto_command()

@@ -125,10 +125,7 @@ class RepoIndexManager(FileIndexManager):
 
     @classmethod
     def from_path(cls, path: str = ""):
-        try:
-            return cls(repo=git.Repo(path))
-        except git.InvalidGitRepositoryError:
-            return FileIndexManager(path=path)
+        return cls(repo=git.Repo(path))
 
     def index_path(self):
         # TODO: config should be loaded from repo too
