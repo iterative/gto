@@ -1,13 +1,14 @@
+import json
 import logging
 import warnings
 from functools import wraps
 
 import click
-import numpy as np
 import pandas as pd
 from IPython.display import display
 from ruamel import yaml
 
+import gto
 from gto.constants import LABEL, NAME, REF, VERSION
 from gto.index import FileIndexManager, RepoIndexManager
 from gto.registry import GitRegistry
@@ -194,29 +195,19 @@ def check_ref(ref: str):
 
 @gto_command()
 @option_repo
-def show(repo: str):
+@click.option("--format", "-f", default="dataframe", help="Output format")
+def show(repo: str, format: bool):
     """Show current registry state"""
-
-    reg = GitRegistry.from_repo(repo)
-    models_state = {
-        o.name: dict(
-            [
-                (("version", "latest"), o.latest_version),
-            ]
-            + [
-                (
-                    ("version", l),
-                    o.latest_labels[l].version
-                    if o.latest_labels[l] is not None
-                    else np.nan,
-                )
-                for l in o.unique_labels
-            ]
+    if format == "dataframe":
+        display(gto.api.show(repo, dataframe=True))
+    elif format == "json":
+        click.echo(json.dumps(gto.api.show(repo, dataframe=False)))
+    elif format == "yaml":
+        click.echo(
+            yaml.dump(gto.api.show(repo, dataframe=False), default_flow_style=False)
         )
-        for o in reg.state.objects.values()
-    }
-    # click.echo("\n=== Active version and labels ===")
-    display(pd.DataFrame.from_records(models_state).T)
+    else:
+        raise NotImplementedError("Unknown format")
 
 
 @gto_command()
@@ -224,48 +215,14 @@ def show(repo: str):
 @option_repo
 def audit(action: str, repo: str):
     """Audit registry state"""
-    reg = GitRegistry.from_repo(repo)
 
     if action in {"reg", "registration", "register", "all"}:
-        model_registration_audit_trail = [
-            {
-                "name": o.name,
-                "version": v.name,
-                "creation_date": v.creation_date,
-                "author": v.author,
-                "commit_hexsha": v.commit_hexsha,
-                "unregistered_date": v.unregistered_date,
-            }
-            for o in reg.state.objects.values()
-            for v in o.versions
-        ]
         click.echo("\n=== Registration audit trail ===")
-        display(
-            pd.DataFrame(model_registration_audit_trail)
-            .sort_values("creation_date", ascending=False)
-            .set_index(["creation_date", "name"])
-        )
+        display(gto.api.audit_registration(repo, dataframe=True))
 
     if action in {"promote", "promotion", "all"}:
-        label_assignment_audit_trail = [
-            {
-                "name": o.name,
-                "label": l.name,
-                "version": l.version,
-                "creation_date": l.creation_date,
-                "author": l.author,
-                "commit_hexsha": l.commit_hexsha,
-                "unregistered_date": l.unregistered_date,
-            }
-            for o in reg.state.objects.values()
-            for l in o.labels
-        ]
         click.echo("\n=== Promotion audit trail ===")
-        display(
-            pd.DataFrame(label_assignment_audit_trail)
-            .sort_values("creation_date", ascending=False)
-            .set_index(["creation_date", "name"])
-        )
+        display(gto.api.audit_promotion(repo, dataframe=True))
 
 
 @gto_command()
