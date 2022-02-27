@@ -65,7 +65,7 @@ class BaseObject(BaseModel):
             return sorted(
                 (v for v in self.versions if v.is_registered),
                 key=lambda x: x.creation_date,
-            )[-1].name
+            )[-1]
         return None
 
     @property
@@ -144,10 +144,10 @@ class BaseRegistryState(BaseModel):
         )
 
     def which(self, name, label, raise_if_not_found=True):
-        """Return version of object with specific label active"""
+        """Return label active in specific env"""
         latest_labels = self.find_object(name).latest_labels
         if label in latest_labels:
-            return latest_labels[label].version
+            return latest_labels[label]
         if raise_if_not_found:
             raise ValueError(f"Label {label} not found for {name}")
         return None

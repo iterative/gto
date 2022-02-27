@@ -1,6 +1,86 @@
 import pandas as pd
 
+from gto.index import FileIndexManager, RepoIndexManager
 from gto.registry import GitRegistry
+from gto.tag import parse_name
+
+
+def get_index(repo: str, file=False):
+    """Get index state"""
+    if file:
+        return FileIndexManager(path=repo)
+    return RepoIndexManager.from_path(repo)
+
+
+def get_state(repo: str):
+    """Show current registry state"""
+    return GitRegistry.from_repo(repo).state
+
+
+def add(repo: str, name: str, type: str, path: str):
+    """Add an object to the Index"""
+    return FileIndexManager(path=repo).add(name, type, path)
+
+
+def remove(repo: str, name: str):
+    """Remove an object from the Index"""
+    return FileIndexManager(path=repo).remove(name)
+
+
+def register(repo: str, name: str, version: str, ref: str):
+    """Register new object version"""
+    return GitRegistry.from_repo(repo).register(name, version, ref)
+
+
+def unregister(repo: str, name: str, version: str):
+    """Unregister object version"""
+    return GitRegistry.from_repo(repo).unregister(name, version)
+
+
+def promote(
+    repo: str,
+    name: str,
+    label: str,
+    promote_version: str = None,
+    promote_ref: str = None,
+    name_version: str = None,
+):
+    """Assign label to specific object version"""
+    return GitRegistry.from_repo(repo).promote(
+        name, label, promote_version, promote_ref, name_version
+    )
+
+
+def demote(repo: str, name: str, label: str):
+    """De-promote object from given label"""
+    return GitRegistry.from_repo(repo).demote(name, label)
+
+
+def parse_tag(name: str):
+    return parse_name(name)
+
+
+def find_latest_version(repo: str, name: str):
+    """Return latest version for object"""
+    return GitRegistry.from_repo(repo).latest(name)
+
+
+def find_active_label(repo: str, name: str, label: str):
+    """Return version of object with specific label active"""
+    return GitRegistry.from_repo(repo).which(name, label, raise_if_not_found=False)
+
+
+def check_ref(repo: str, ref: str):
+    """Find out what have been registered/promoted in the provided ref"""
+    reg = GitRegistry.from_repo(".")
+    ref = ref.removeprefix("refs/tags/")
+    if ref.startswith("refs/heads/"):
+        ref = reg.repo.commit(ref).hexsha
+    result = reg.check_ref(ref)
+    return {
+        action: {name: version.dict() for name, version in found.items()}
+        for action, found in result.items()
+    }
 
 
 def show(repo: str, dataframe: bool = False):
@@ -9,7 +89,7 @@ def show(repo: str, dataframe: bool = False):
     reg = GitRegistry.from_repo(repo)
     models_state = {
         o.name: {
-            "version": o.latest_version,
+            "version": o.latest_version.name if o.latest_version else None,
             "environment": {
                 l: o.latest_labels[l].version
                 if o.latest_labels[l] is not None

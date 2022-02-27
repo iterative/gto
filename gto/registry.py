@@ -73,9 +73,11 @@ class GitRegistry(BaseModel):
             raise VersionExistsForCommit(name, found_version.name)
         if (
             found_object.versions
-            and self.config.versions_class(version) < found_object.latest_version
+            and self.config.versions_class(version) < found_object.latest_version.name
         ):
-            raise VersionIsOld(latest=found_object.latest_version, suggested=version)
+            raise VersionIsOld(
+                latest=found_object.latest_version.name, suggested=version
+            )
         self.version_manager.register(
             name,
             version,
@@ -114,7 +116,7 @@ class GitRegistry(BaseModel):
             found_version = found_object.find_version(commit_hexsha=promote_ref)
             if found_version is None:
                 if name_version is None:
-                    last_version = self.state.find_object(name).latest_version
+                    last_version = self.state.find_object(name).latest_version.name
                     promote_version = (
                         self.config.versions_class(last_version).bump().version
                     )
@@ -152,7 +154,7 @@ class GitRegistry(BaseModel):
         return self.state.find_commit(name, version)
 
     def which(self, name, label, raise_if_not_found=True):
-        """Return version of object with specific label active"""
+        """Return label active in specific env"""
         return self.state.which(name, label, raise_if_not_found)
 
     def latest(self, name: str):

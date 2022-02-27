@@ -1,73 +1,19 @@
 """TODO: break this file into multiple test/files"""
-import os.path
-from time import sleep
-from typing import Any, Dict, Set
-
-import pytest
-from pydantic import BaseModel
-
-from gto import GitRegistry
+import gto
 from gto.base import BaseLabel, BaseObject, BaseVersion
-from gto.config import CONFIG_FILE
-from gto.index import RepoIndexManager
+from tests.utils import _check_dict
 
 
-@pytest.fixture
-def init_showcase(empty_git_repo):
-    path = empty_git_repo.working_dir
+def test_api(showcase):  # pylint: disable=too-many-locals, too-many-statements
+    (
+        path,
+        repo,
+        write_file,
+        first_commit,
+        second_commit,
+    ) = showcase  # pylint: disable=unused-variable
 
-    def write_file(name, content):
-        fullpath = os.path.join(path, name)
-        os.makedirs(os.path.dirname(fullpath), exist_ok=True)
-        with open(fullpath, "w", encoding="utf8") as file:
-            file.write(content)
-
-    write_file(CONFIG_FILE, "env_base: tag")
-
-    return path, empty_git_repo, write_file
-
-
-def _check_dict(obj: BaseModel, values: Dict[str, Any], skip_keys: Set[str]):
-    obj_values = obj.dict(exclude=skip_keys)
-    assert obj_values == values
-
-
-def test_api(init_showcase):  # pylint: disable=too-many-locals, too-many-statements
-    path, repo, write_file = init_showcase  # pylint: disable=unused-variable
-
-    write_file("models/random-forest.pkl", "1st version")
-    write_file("models/neural-network.pkl", "1st version")
-
-    index = RepoIndexManager(repo=repo)
-    index.add("rf", "model", "models/random-forest.pkl")
-    index.add("nn", "model", "models/neural-network.pkl")
-    index.add("features", "dataset", "datasets/features.csv")
-
-    repo.index.add(["artifacts.yaml", "models"])
-    first_commit = repo.index.commit("Create models")
-
-    registry = GitRegistry.from_repo(path)
-
-    registry.register("rf", "v1", "HEAD")
-    registry.register("nn", "v1", "HEAD")
-
-    write_file("models/random-forest.pkl", "2nd version")
-
-    second_commit = repo.index.commit("Update model")
-
-    registry.register("rf", "v2", "HEAD")
-
-    registry.promote("nn", "staging", promote_version="v1")
-    registry.promote("rf", "production", promote_version="v1")
-    sleep(1)  # this is needed to ensure right order of labels in later checks
-    # the problem is git tags doesn't have miliseconds precision, so we need to wait a bit
-    registry.promote("rf", "staging", promote_ref="HEAD")
-    sleep(1)
-    registry.promote("rf", "production", promote_ref=repo.head.ref.commit.hexsha)
-    sleep(1)
-    registry.promote("rf", "production", promote_version="v1")
-
-    objects = registry.state.objects
+    objects = gto.api.get_state(path).objects
     assert set(objects.keys()) == {"features", "nn", "rf"}
     assert objects["features"] == BaseObject(name="features", versions=[], labels=[])
     nn_object = objects["nn"]

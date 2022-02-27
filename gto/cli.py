@@ -10,8 +10,6 @@ from ruamel import yaml
 
 import gto
 from gto.constants import LABEL, NAME, REF, VERSION
-from gto.index import FileIndexManager, RepoIndexManager
-from gto.registry import GitRegistry
 from gto.utils import serialize
 
 arg_name = click.argument(NAME)
@@ -19,6 +17,7 @@ arg_version = click.argument(VERSION)
 arg_label = click.argument(LABEL)
 arg_ref = click.argument(REF)
 option_repo = click.option("-r", "--repo", default=".", help="Repository to use")
+option_format = click.option("--format", "-f", default="yaml", help="Output format")
 
 
 @click.group()
@@ -61,21 +60,21 @@ def gto_command(*args, **kwargs):
 
 
 @gto_command()
+@option_repo
 @arg_name
 @click.argument("type")
 @click.argument("path")
-@option_repo
-def add(name: str, type: str, path: str, repo: str):
+def add(repo: str, name: str, type: str, path: str):
     """Add an object to the Index"""
-    FileIndexManager(path=repo).add(name, type, path)
+    gto.api.add(repo, name, type, path)
 
 
 @cli.command("rm")
-@arg_name
 @option_repo
-def remove(name: str, repo: str):
+@arg_name
+def remove(repo: str, name: str):
     """Remove an object from the Index"""
-    FileIndexManager(path=repo).remove(name)
+    gto.api.remove(repo, name)
 
 
 @gto_command()
@@ -85,7 +84,7 @@ def remove(name: str, repo: str):
 @arg_ref
 def register(repo: str, name: str, version: str, ref: str):
     """Register new object version"""
-    GitRegistry.from_repo(repo).register(name, version, ref)
+    gto.api.register(repo, name, version, ref)
     click.echo(f"Registered {name} version {version}")
 
 
@@ -95,7 +94,7 @@ def register(repo: str, name: str, version: str, ref: str):
 @arg_version
 def unregister(repo: str, name: str, version: str):
     """Unregister object version"""
-    GitRegistry.from_repo(repo).unregister(name, version)
+    gto.api.unregister(repo, name, version)
     click.echo(f"Unregistered {name} version {version}")
 
 
@@ -117,9 +116,7 @@ def promote(repo: str, name: str, label: str, version: str, ref: str):
     else:
         name_version = None
         promote_version = version
-    result = GitRegistry.from_repo(repo).promote(
-        name, label, promote_version, ref, name_version
-    )
+    result = gto.api.promote(repo, name, label, promote_version, ref, name_version)
     click.echo(f"Promoted {name} version {result['version']} to label {label}")
 
 
@@ -128,7 +125,11 @@ def promote(repo: str, name: str, label: str, version: str, ref: str):
 @arg_name
 def latest(repo: str, name: str):
     """Return latest version for object"""
-    click.echo(GitRegistry.from_repo(repo).latest(name))
+    latest = gto.api.find_latest_version(repo, name)
+    if latest:
+        click.echo(latest.name)
+    else:
+        click.echo("No versions found")
 
 
 @gto_command()
@@ -137,9 +138,9 @@ def latest(repo: str, name: str):
 @arg_label
 def which(repo: str, name: str, label: str):
     """Return version of object with specific label active"""
-    version = GitRegistry.from_repo(repo).which(name, label, raise_if_not_found=False)
+    version = gto.api.find_active_label(repo, name, label)
     if version:
-        click.echo(version)
+        click.echo(version.version)
     else:
         click.echo(f"No version of '{name}' with label '{label}' active")
 
@@ -150,47 +151,33 @@ def which(repo: str, name: str, label: str):
 @arg_label
 def demote(repo: str, name: str, label: str):
     """De-promote object from given label"""
-    GitRegistry.from_repo(repo).demote(name, label)
+    gto.api.demote(repo, name, label)
     click.echo(f"Demoted {name} from label {label}")
 
 
 @gto_command()
-@click.argument("name")
+@arg_name
 @click.option("--key", default=None, help="Which key to return")
 def parse_tag(name: str, key: str):
-    from .tag import parse_name  # pylint: disable=import-outside-toplevel
-
-    parsed = parse_name(name)
+    parsed = gto.api.parse_tag(name)
     if key:
         parsed = parsed[key]
     click.echo(parsed)
-    return parsed
 
 
 @gto_command()
+@option_repo
 @click.argument("ref")
-def check_ref(ref: str):
+@option_format
+def check_ref(repo: str, ref: str, format: str):
     """Find out what have been registered/promoted in the provided ref"""
-    reg = GitRegistry.from_repo(".")
-    ref = ref.removeprefix("refs/tags/")
-    if ref.startswith("refs/heads/"):
-        ref = reg.repo.commit(ref).hexsha
-    result = reg.check_ref(ref)
-    try:
-        result_ = {
-            action: {name: version.dict() for name, version in found.items()}
-            for action, found in result.items()
-        }
-    except:  # pylint: disable=bare-except
-        # this should be removed, here only for debugging purposes
-        result_ = {
-            action: {
-                name: [v.dict() for v in version] for name, version in found.items()
-            }
-            for action, found in result.items()
-        }
-    click.echo(yaml.dump(result_, default_style='"'))
-    return result
+    result = gto.api.check_ref(repo, ref)
+    if format == "yaml":
+        click.echo(yaml.dump(result, default_style='"'))
+    elif format == "json":
+        click.echo(json.dumps(serialize(result)))
+    else:
+        raise NotImplementedError("Unknown format")
 
 
 @gto_command()
@@ -227,20 +214,34 @@ def audit(action: str, repo: str):
 
 @gto_command()
 @option_repo
-def print_state(repo: str):
-    reg = GitRegistry.from_repo(repo)
-    click.echo(yaml.dump(serialize(reg.state.dict())))
+@option_format
+def print_state(repo: str, format: str):
+    """Print current registry state"""
+    state = serialize(gto.api.get_state(repo).dict())
+    if format == "yaml":
+        click.echo(yaml.dump(serialize(state), default_flow_style=False))
+    elif format == "json":
+        click.echo(json.dumps(state))
+    else:
+        raise NotImplementedError("Unknown format")
 
 
 @gto_command()
 @option_repo
-def print_index(repo: str):
-    click.echo(
-        yaml.dump(
-            dict(RepoIndexManager.from_path(repo).object_centric_representation()),
-            default_flow_style=False,
+@option_format
+def print_index(repo: str, format: str):
+    index = gto.api.get_index(repo).object_centric_representation()
+    if format == "yaml":
+        click.echo(
+            yaml.dump(
+                dict(index),
+                default_flow_style=False,
+            )
         )
-    )
+    elif format == "json":
+        click.echo(json.dumps(index))
+    else:
+        raise NotImplementedError("Unknown format")
 
 
 if __name__ == "__main__":
