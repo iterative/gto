@@ -1,11 +1,13 @@
 import os
+from typing import Union
 
 import click
 import git
+from git import Repo
 from pydantic import BaseModel
 
 from gto.base import BaseManager, BaseObject, BaseRegistryState
-from gto.config import RegistryConfig
+from gto.config import CONFIG_FILE, RegistryConfig
 from gto.exceptions import (
     NoActiveLabel,
     VersionAlreadyRegistered,
@@ -25,10 +27,13 @@ class GitRegistry(BaseModel):
         arbitrary_types_allowed = True
 
     @classmethod
-    def from_repo(cls, path=".", config=None):
-        repo = git.Repo(path)
+    def from_repo(cls, repo=Union[str, Repo], config=None):
+        if isinstance(repo, str):
+            repo = git.Repo(repo)
         if config is None:
-            config = RegistryConfig(CONFIG_FILE=os.path.join(path, "gto.yaml"))
+            config = RegistryConfig(
+                CONFIG_FILE=os.path.join(repo.working_dir, CONFIG_FILE)
+            )
 
         return cls(
             repo=repo,

@@ -1,44 +1,49 @@
+from typing import Union
+
 import pandas as pd
+from git import Repo
 
 from gto.index import FileIndexManager, RepoIndexManager
 from gto.registry import GitRegistry
 from gto.tag import parse_name
 
 
-def get_index(repo: str, file=False):
+def get_index(repo: Union[str, Repo], file=False):
     """Get index state"""
     if file:
-        return FileIndexManager(path=repo)
-    return RepoIndexManager.from_path(repo)
+        return FileIndexManager(
+            path=repo if isinstance(repo, str) else repo.working_dir
+        )
+    return RepoIndexManager.from_repo(repo)
 
 
-def get_state(repo: str):
+def get_state(repo: Union[str, Repo]):
     """Show current registry state"""
     return GitRegistry.from_repo(repo).state
 
 
-def add(repo: str, name: str, type: str, path: str):
+def add(repo: Union[str, Repo], name: str, type: str, path: str):
     """Add an object to the Index"""
     return FileIndexManager(path=repo).add(name, type, path)
 
 
-def remove(repo: str, name: str):
+def remove(repo: Union[str, Repo], name: str):
     """Remove an object from the Index"""
     return FileIndexManager(path=repo).remove(name)
 
 
-def register(repo: str, name: str, version: str, ref: str):
+def register(repo: Union[str, Repo], name: str, version: str, ref: str):
     """Register new object version"""
     return GitRegistry.from_repo(repo).register(name, version, ref)
 
 
-def unregister(repo: str, name: str, version: str):
+def unregister(repo: Union[str, Repo], name: str, version: str):
     """Unregister object version"""
     return GitRegistry.from_repo(repo).unregister(name, version)
 
 
 def promote(
-    repo: str,
+    repo: Union[str, Repo],
     name: str,
     label: str,
     promote_version: str = None,
@@ -51,7 +56,7 @@ def promote(
     )
 
 
-def demote(repo: str, name: str, label: str):
+def demote(repo: Union[str, Repo], name: str, label: str):
     """De-promote object from given label"""
     return GitRegistry.from_repo(repo).demote(name, label)
 
@@ -60,17 +65,17 @@ def parse_tag(name: str):
     return parse_name(name)
 
 
-def find_latest_version(repo: str, name: str):
+def find_latest_version(repo: Union[str, Repo], name: str):
     """Return latest version for object"""
     return GitRegistry.from_repo(repo).latest(name)
 
 
-def find_active_label(repo: str, name: str, label: str):
+def find_active_label(repo: Union[str, Repo], name: str, label: str):
     """Return version of object with specific label active"""
     return GitRegistry.from_repo(repo).which(name, label, raise_if_not_found=False)
 
 
-def check_ref(repo: str, ref: str):
+def check_ref(repo: Union[str, Repo], ref: str):
     """Find out what have been registered/promoted in the provided ref"""
     reg = GitRegistry.from_repo(repo)
     ref = ref.removeprefix("refs/tags/")
@@ -83,9 +88,8 @@ def check_ref(repo: str, ref: str):
     }
 
 
-def show(repo: str, dataframe: bool = False):
+def show(repo: Union[str, Repo], dataframe: bool = False):
     """Show current registry state"""
-
     reg = GitRegistry.from_repo(repo)
     models_state = {
         o.name: {
@@ -115,7 +119,7 @@ def show(repo: str, dataframe: bool = False):
     return models_state
 
 
-def audit_registration(repo: str, dataframe: bool = False):
+def audit_registration(repo: Union[str, Repo], dataframe: bool = False):
     """Audit registry state"""
     reg = GitRegistry.from_repo(repo)
 
@@ -140,7 +144,7 @@ def audit_registration(repo: str, dataframe: bool = False):
     return model_registration_audit_trail
 
 
-def audit_promotion(repo: str, dataframe: bool = False):
+def audit_promotion(repo: Union[str, Repo], dataframe: bool = False):
     """Audit registry state"""
     reg = GitRegistry.from_repo(repo)
     label_assignment_audit_trail = [

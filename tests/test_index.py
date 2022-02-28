@@ -5,7 +5,7 @@ from gto.index import Artifact, RepoIndexManager
 
 
 def init_index(path):
-    return RepoIndexManager.from_path(path)
+    return RepoIndexManager.from_repo(path)
 
 
 @pytest.fixture

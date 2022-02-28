@@ -124,8 +124,10 @@ class RepoIndexManager(FileIndexManager):
     repo: git.Repo
 
     @classmethod
-    def from_path(cls, path: str = ""):
-        return cls(repo=git.Repo(path))
+    def from_repo(cls, repo: Union[str, git.Repo]):
+        if isinstance(repo, str):
+            repo = git.Repo(repo)
+        return cls(repo=repo)
 
     def index_path(self):
         # TODO: config should be loaded from repo too
