@@ -5,7 +5,6 @@ from functools import wraps
 
 import click
 import pandas as pd
-from IPython.display import display
 from ruamel import yaml
 
 import gto
@@ -186,7 +185,7 @@ def check_ref(repo: str, ref: str, format: str):
 def show(repo: str, format: bool):
     """Show current registry state"""
     if format == "dataframe":
-        display(gto.api.show(repo, dataframe=True))
+        click.echo(gto.api.show(repo, dataframe=True))
     elif format == "json":
         click.echo(json.dumps(gto.api.show(repo, dataframe=False)))
     elif format == "yaml":
@@ -205,11 +204,11 @@ def audit(action: str, repo: str):
 
     if action in {"reg", "registration", "register", "all"}:
         click.echo("\n=== Registration audit trail ===")
-        display(gto.api.audit_registration(repo, dataframe=True))
+        click.echo(gto.api.audit_registration(repo, dataframe=True))
 
     if action in {"promote", "promotion", "all"}:
         click.echo("\n=== Promotion audit trail ===")
-        display(gto.api.audit_promotion(repo, dataframe=True))
+        click.echo(gto.api.audit_promotion(repo, dataframe=True))
 
 
 @gto_command()
