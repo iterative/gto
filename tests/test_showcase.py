@@ -8,10 +8,10 @@ def test_api(showcase):  # pylint: disable=too-many-locals, too-many-statements
     (
         path,
         repo,
-        write_file,
+        write_file,  # pylint: disable=unused-variable
         first_commit,
         second_commit,
-    ) = showcase  # pylint: disable=unused-variable
+    ) = showcase
 
     objects = gto.api.get_state(path).objects
     assert set(objects.keys()) == {"features", "nn", "rf"}

@@ -125,9 +125,9 @@ def promote(repo: str, name: str, label: str, version: str, ref: str):
 @arg_name
 def latest(repo: str, name: str):
     """Return latest version for object"""
-    latest = gto.api.find_latest_version(repo, name)
-    if latest:
-        click.echo(latest.name)
+    latest_version = gto.api.find_latest_version(repo, name)
+    if latest_version:
+        click.echo(latest_version.name)
     else:
         click.echo("No versions found")
 

@@ -72,7 +72,7 @@ def find_active_label(repo: str, name: str, label: str):
 
 def check_ref(repo: str, ref: str):
     """Find out what have been registered/promoted in the provided ref"""
-    reg = GitRegistry.from_repo(".")
+    reg = GitRegistry.from_repo(repo)
     ref = ref.removeprefix("refs/tags/")
     if ref.startswith("refs/heads/"):
         ref = reg.repo.commit(ref).hexsha

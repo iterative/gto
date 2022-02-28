@@ -60,7 +60,7 @@ class BaseObject(BaseModel):
         return f"Object(versions=[{versions}], labels=[{labels}])"
 
     @property
-    def latest_version(self) -> Optional[str]:
+    def latest_version(self) -> Optional[BaseVersion]:
         if self.versions:
             return sorted(
                 (v for v in self.versions if v.is_registered),
