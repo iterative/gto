@@ -1,14 +1,13 @@
+import json
 import logging
 import warnings
 from functools import wraps
 
 import click
-import numpy as np
 import pandas as pd
-from IPython.display import display
 from ruamel import yaml
 
-from gto import init_index, init_registry
+import gto
 from gto.constants import LABEL, NAME, REF, VERSION
 from gto.utils import serialize
 
@@ -17,6 +16,7 @@ arg_version = click.argument(VERSION)
 arg_label = click.argument(LABEL)
 arg_ref = click.argument(REF)
 option_repo = click.option("-r", "--repo", default=".", help="Repository to use")
+option_format = click.option("--format", "-f", default="yaml", help="Output format")
 
 
 @click.group()
@@ -59,19 +59,21 @@ def gto_command(*args, **kwargs):
 
 
 @gto_command()
+@option_repo
 @arg_name
 @click.argument("type")
 @click.argument("path")
-def add(name: str, type: str, path: str):
+def add(repo: str, name: str, type: str, path: str):
     """Add an object to the Index"""
-    init_index().add(name, type, path)
+    gto.api.add(repo, name, type, path)
 
 
 @cli.command("rm")
+@option_repo
 @arg_name
-def remove(name: str):
+def remove(repo: str, name: str):
     """Remove an object from the Index"""
-    init_index().remove(name)
+    gto.api.remove(repo, name)
 
 
 @gto_command()
@@ -81,7 +83,7 @@ def remove(name: str):
 @arg_ref
 def register(repo: str, name: str, version: str, ref: str):
     """Register new object version"""
-    init_registry(repo=repo).register(name, version, ref)
+    gto.api.register(repo, name, version, ref)
     click.echo(f"Registered {name} version {version}")
 
 
@@ -91,7 +93,7 @@ def register(repo: str, name: str, version: str, ref: str):
 @arg_version
 def unregister(repo: str, name: str, version: str):
     """Unregister object version"""
-    init_registry(repo=repo).unregister(name, version)
+    gto.api.unregister(repo, name, version)
     click.echo(f"Unregistered {name} version {version}")
 
 
@@ -113,9 +115,7 @@ def promote(repo: str, name: str, label: str, version: str, ref: str):
     else:
         name_version = None
         promote_version = version
-    result = init_registry(repo=repo).promote(
-        name, label, promote_version, ref, name_version
-    )
+    result = gto.api.promote(repo, name, label, promote_version, ref, name_version)
     click.echo(f"Promoted {name} version {result['version']} to label {label}")
 
 
@@ -124,7 +124,11 @@ def promote(repo: str, name: str, label: str, version: str, ref: str):
 @arg_name
 def latest(repo: str, name: str):
     """Return latest version for object"""
-    click.echo(init_registry(repo=repo).latest(name))
+    latest_version = gto.api.find_latest_version(repo, name)
+    if latest_version:
+        click.echo(latest_version.name)
+    else:
+        click.echo("No versions found")
 
 
 @gto_command()
@@ -133,8 +137,9 @@ def latest(repo: str, name: str):
 @arg_label
 def which(repo: str, name: str, label: str):
     """Return version of object with specific label active"""
-    if version := init_registry(repo=repo).which(name, label, raise_if_not_found=False):
-        click.echo(version)
+    version = gto.api.find_active_label(repo, name, label)
+    if version:
+        click.echo(version.version)
     else:
         click.echo(f"No version of '{name}' with label '{label}' active")
 
@@ -145,74 +150,50 @@ def which(repo: str, name: str, label: str):
 @arg_label
 def demote(repo: str, name: str, label: str):
     """De-promote object from given label"""
-    init_registry(repo=repo).demote(name, label)
+    gto.api.demote(repo, name, label)
     click.echo(f"Demoted {name} from label {label}")
 
 
 @gto_command()
-@click.argument("name")
+@arg_name
 @click.option("--key", default=None, help="Which key to return")
 def parse_tag(name: str, key: str):
-    from .tag import parse_name  # pylint: disable=import-outside-toplevel
-
-    parsed = parse_name(name)
+    parsed = gto.api.parse_tag(name)
     if key:
         parsed = parsed[key]
     click.echo(parsed)
-    return parsed
-
-
-@gto_command()
-@click.argument("ref")
-def check_ref(ref: str):
-    """Find out what have been registered/promoted in the provided ref"""
-    reg = init_registry(".")
-    ref = ref.removeprefix("refs/tags/")
-    if ref.startswith("refs/heads/"):
-        ref = reg.repo.commit(ref).hexsha
-    result = reg.check_ref(ref)
-    try:
-        result_ = {
-            action: {name: version.dict() for name, version in found.items()}
-            for action, found in result.items()
-        }
-    except:  # pylint: disable=bare-except
-        # this should be removed, here only for debugging purposes
-        result_ = {
-            action: {
-                name: [v.dict() for v in version] for name, version in found.items()
-            }
-            for action, found in result.items()
-        }
-    click.echo(yaml.dump(result_, default_style='"'))
-    return result
 
 
 @gto_command()
 @option_repo
-def show(repo: str):
-    """Show current registry state"""
+@click.argument("ref")
+@option_format
+def check_ref(repo: str, ref: str, format: str):
+    """Find out what have been registered/promoted in the provided ref"""
+    result = gto.api.check_ref(repo, ref)
+    if format == "yaml":
+        click.echo(yaml.dump(result, default_style='"'))
+    elif format == "json":
+        click.echo(json.dumps(serialize(result)))
+    else:
+        raise NotImplementedError("Unknown format")
 
-    reg = init_registry(repo=repo)
-    models_state = {
-        o.name: dict(
-            [
-                (("version", "latest"), o.latest_version),
-            ]
-            + [
-                (
-                    ("version", l),
-                    o.latest_labels[l].version
-                    if o.latest_labels[l] is not None
-                    else np.nan,
-                )
-                for l in o.unique_labels
-            ]
+
+@gto_command()
+@option_repo
+@click.option("--format", "-f", default="dataframe", help="Output format")
+def show(repo: str, format: bool):
+    """Show current registry state"""
+    if format == "dataframe":
+        click.echo(gto.api.show(repo, dataframe=True))
+    elif format == "json":
+        click.echo(json.dumps(gto.api.show(repo, dataframe=False)))
+    elif format == "yaml":
+        click.echo(
+            yaml.dump(gto.api.show(repo, dataframe=False), default_flow_style=False)
         )
-        for o in reg.state.objects.values()
-    }
-    # click.echo("\n=== Active version and labels ===")
-    display(pd.DataFrame.from_records(models_state).T)
+    else:
+        raise NotImplementedError("Unknown format")
 
 
 @gto_command()
@@ -220,70 +201,46 @@ def show(repo: str):
 @option_repo
 def audit(action: str, repo: str):
     """Audit registry state"""
-    reg = init_registry(repo=repo)
 
     if action in {"reg", "registration", "register", "all"}:
-        model_registration_audit_trail = [
-            {
-                "name": o.name,
-                "version": v.name,
-                "creation_date": v.creation_date,
-                "author": v.author,
-                "commit_hexsha": v.commit_hexsha,
-                "unregistered_date": v.unregistered_date,
-            }
-            for o in reg.state.objects.values()
-            for v in o.versions
-        ]
         click.echo("\n=== Registration audit trail ===")
-        display(
-            pd.DataFrame(model_registration_audit_trail)
-            .sort_values("creation_date", ascending=False)
-            .set_index(["creation_date", "name"])
-        )
+        click.echo(gto.api.audit_registration(repo, dataframe=True))
 
     if action in {"promote", "promotion", "all"}:
-        label_assignment_audit_trail = [
-            {
-                "name": o.name,
-                "label": l.name,
-                "version": l.version,
-                "creation_date": l.creation_date,
-                "author": l.author,
-                "commit_hexsha": l.commit_hexsha,
-                "unregistered_date": l.unregistered_date,
-            }
-            for o in reg.state.objects.values()
-            for l in o.labels
-        ]
         click.echo("\n=== Promotion audit trail ===")
-        display(
-            pd.DataFrame(label_assignment_audit_trail)
-            .sort_values("creation_date", ascending=False)
-            .set_index(["creation_date", "name"])
-        )
+        click.echo(gto.api.audit_promotion(repo, dataframe=True))
 
 
 @gto_command()
 @option_repo
-def print_state(repo: str):
-    reg = init_registry(repo=repo)
-    click.echo(yaml.dump(serialize(reg.state.dict())))
+@option_format
+def print_state(repo: str, format: str):
+    """Print current registry state"""
+    state = serialize(gto.api.get_state(repo).dict())
+    if format == "yaml":
+        click.echo(yaml.dump(serialize(state), default_flow_style=False))
+    elif format == "json":
+        click.echo(json.dumps(state))
+    else:
+        raise NotImplementedError("Unknown format")
 
 
 @gto_command()
 @option_repo
-def print_index(repo: str):
-    import git  # pylint: disable=import-outside-toplevel
-
-    from .index import RepoIndexManager  # pylint: disable=import-outside-toplevel
-
-    click.echo(
-        yaml.dump(
-            dict(RepoIndexManager(repo=git.Repo(repo)).object_centric_representation()),
-            default_flow_style=False,
+@option_format
+def print_index(repo: str, format: str):
+    index = gto.api.get_index(repo).object_centric_representation()
+    if format == "yaml":
+        click.echo(
+            yaml.dump(
+                dict(index),
+                default_flow_style=False,
+            )
         )
-    )
+    elif format == "json":
+        click.echo(json.dumps(index))
+    else:
+        raise NotImplementedError("Unknown format")
 
 
 if __name__ == "__main__":

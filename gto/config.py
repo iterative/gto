@@ -1,23 +1,35 @@
 # pylint: disable=no-self-use, no-self-argument, inconsistent-return-statements, invalid-name, import-outside-toplevel
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import yaml
 from pydantic import BaseSettings, validator
+from pydantic.env_settings import InitSettingsSource
 
 from .constants import BRANCH, COMMIT, TAG
 from .exceptions import UnknownEnvironment
 
-CONFIG_FILE = Path(__file__).parent.parent / "gto.yaml"
+CONFIG_FILE = "gto.yaml"
 
 
-def config_settings_source(settings: BaseSettings) -> Dict[str, Any]:
+def _set_location_init_source(init_source: InitSettingsSource):
+    def inner(settings: "RegistryConfig"):
+        if "CONFIG_FILE" in init_source.init_kwargs:
+            settings.__dict__["CONFIG_FILE"] = init_source.init_kwargs["CONFIG_FILE"]
+        return {}
+
+    return inner
+
+
+def config_settings_source(settings: "RegistryConfig") -> Dict[str, Any]:
     """
     A simple settings source that loads variables from a yaml file in GTO DIR
     """
 
     encoding = settings.__config__.env_file_encoding
-    config_file = CONFIG_FILE
+    config_file = getattr(settings, "CONFIG_FILE", CONFIG_FILE)
+    if not isinstance(config_file, Path):
+        config_file = Path(config_file)
     if not config_file.exists():
         return {}
     conf = yaml.safe_load(config_file.read_text(encoding=encoding))
@@ -35,6 +47,7 @@ class RegistryConfig(BaseSettings):
     ENV_BRANCH_MAPPING: Dict[str, str] = {}
     LOG_LEVEL: str = "INFO"
     DEBUG: bool = False
+    CONFIG_FILE: Optional[str] = None
 
     @property
     def VERSION_SYSTEM_MAPPING(self):
@@ -89,6 +102,7 @@ class RegistryConfig(BaseSettings):
             file_secret_settings,
         ):
             return (
+                _set_location_init_source(init_settings),
                 init_settings,
                 env_settings,
                 config_settings_source,
