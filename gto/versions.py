@@ -1,5 +1,7 @@
 from functools import total_ordering
 
+import semver
+
 from gto.exceptions import IncomparableVersions, InvalidVersion
 
 
@@ -29,6 +31,8 @@ class AbstractVersion:
 class NumberedVersion(AbstractVersion):
     @classmethod
     def is_valid(cls, version):
+        if not isinstance(version, str):
+            return False
         return version.startswith("v") and version[1:].isdigit()
 
     def to_number(self):
@@ -36,21 +40,67 @@ class NumberedVersion(AbstractVersion):
 
     def __eq__(self, other):
         if isinstance(other, str):
-            other = NumberedVersion(other)
-        if not isinstance(other, NumberedVersion):
+            other = self.__class__(other)
+        if not isinstance(other, self.__class__):
             raise IncomparableVersions()
         return self.version == other.version
 
     def __lt__(self, other):
         if isinstance(other, str):
-            other = NumberedVersion(other)
-        if not isinstance(other, NumberedVersion):
+            other = self.__class__(other)
+        if not isinstance(other, self.__class__):
             raise IncomparableVersions()
         return self.to_number() < other.to_number()
 
     def bump(self):
-        return NumberedVersion(f"v{self.to_number() + 1}")
+        return self.__class__(f"v{self.to_number() + 1}")
 
 
-class SemVer(AbstractVersion):  # pylint: disable=abstract-method
-    pass
+@total_ordering
+class SemVer(AbstractVersion):
+    """
+    A subclass of Version which allows a "v" prefix
+    """
+
+    @classmethod
+    def is_valid(cls, version):
+        try:
+            cls.parse(version)
+            return True
+        except ValueError:
+            return False
+
+    @classmethod
+    def parse(cls, version: str) -> "SemVer":
+        """
+        Parse version string to a Version instance.
+
+        :param version: version string with "v" or "V" prefix
+        :raises ValueError: when version does not start with "v" or "V"
+        :return: a new instance
+        """
+        if not isinstance(version, str):
+            raise ValueError("Version should be of type str")
+        if version[0] not in ("v"):
+            raise ValueError(
+                f"{version}: not a valid semantic version tag. Must start with 'v'"
+            )
+        return semver.VersionInfo.parse(version[1:])
+
+    def __eq__(self, other):
+        if isinstance(other, str):
+            other = self.__class__(other)
+        if not isinstance(other, self.__class__):
+            raise IncomparableVersions()
+        return self.version == other.version
+
+    def __lt__(self, other):
+        if isinstance(other, str):
+            other = self.__class__(other)
+        if not isinstance(other, self.__class__):
+            raise IncomparableVersions()
+        return self.parse(self.version) < self.parse(other.version)
+
+    def bump(self, part: str = "patch"):  # pylint: disable=arguments-differ
+        next_version = getattr(self.parse(self.version), f"bump_{part}")()
+        return self.__class__(f"v{next_version}")
