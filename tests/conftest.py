@@ -42,14 +42,14 @@ def showcase(init_showcase):  # pylint: disable=too-many-locals, too-many-statem
     repo.index.add(["artifacts.yaml", "models"])
     first_commit = repo.index.commit("Create models")
 
-    gto.api.register(path, "rf", "v1", "HEAD")
-    gto.api.register(path, "nn", "v1", "HEAD")
+    gto.api.register(path, "rf", "HEAD", "v1")
+    gto.api.register(path, "nn", "HEAD", "v1")
 
     write_file("models/random-forest.pkl", "2nd version")
 
     second_commit = repo.index.commit("Update model")
 
-    gto.api.register(path, "rf", "v2", "HEAD")
+    gto.api.register(path, "rf", "HEAD", "v2")  # TODO: remove "v2"
 
     gto.api.promote(path, "nn", "staging", promote_version="v1")
     gto.api.promote(path, "rf", "production", promote_version="v1")

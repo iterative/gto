@@ -61,7 +61,7 @@ class GitRegistry(BaseModel):
         state.sort()
         return state
 
-    def register(self, name, version, ref):
+    def register(self, name, ref, version):
         """Register object version"""
         ref = self.repo.commit(ref).hexsha
         # TODO: add the same check for other actions, to promote and etc
@@ -125,7 +125,7 @@ class GitRegistry(BaseModel):
                     promote_version = (
                         self.config.versions_class(last_version).bump().version
                     )
-                self.register(name, name_version, ref=promote_ref)
+                self.register(name, version=name_version, ref=promote_ref)
                 click.echo(
                     f"Registered new version '{promote_version}' of '{name}' at commit '{promote_ref}'"
                 )

@@ -81,9 +81,9 @@ def remove(repo: str, name: str):
 @arg_name
 @arg_version
 @arg_ref
-def register(repo: str, name: str, version: str, ref: str):
+def register(repo: str, name: str, ref: str, version: str):
     """Register new object version"""
-    gto.api.register(repo, name, version, ref)
+    gto.api.register(repo, name, ref, version)
     click.echo(f"Registered {name} version {version}")
 
 
