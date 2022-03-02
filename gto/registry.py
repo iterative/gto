@@ -13,6 +13,7 @@ from gto.exceptions import (
     VersionAlreadyRegistered,
     VersionExistsForCommit,
     VersionIsOld,
+    VersionRequired,
 )
 from gto.index import RepoIndexManager
 
@@ -61,34 +62,46 @@ class GitRegistry(BaseModel):
         state.sort()
         return state
 
-    def register(self, name, ref, version):
+    def register(self, name, ref, version=None):
         """Register object version"""
         ref = self.repo.commit(ref).hexsha
         # TODO: add the same check for other actions, to promote and etc
         # also we need to check integrity of the index+state
         self.index.assert_existence(name, ref)
         found_object = self.state.find_object(name)
-        found_version = found_object.find_version(name=version, skip_unregistered=False)
-        if found_version is not None:
-            raise VersionAlreadyRegistered(version)
+        # check that this commit don't have a version already
         found_version = found_object.find_version(
             commit_hexsha=ref, skip_unregistered=True
         )
         if found_version is not None:
             raise VersionExistsForCommit(name, found_version.name)
-        if (
-            found_object.versions
-            and self.config.versions_class(version) < found_object.latest_version.name
-        ):
-            raise VersionIsOld(
-                latest=found_object.latest_version.name, suggested=version
-            )
+        # if version name wasn't provided, figure it out
+        if not version:
+            if not found_object.versions:
+                raise VersionRequired(name=name)
+            last_version = self.state.find_object(name).latest_version.name
+            version = self.config.versions_class(last_version).bump().version
+        else:
+            if (
+                found_object.find_version(name=version, skip_unregistered=False)
+                is not None
+            ):
+                raise VersionAlreadyRegistered(version)
+            if (
+                found_object.versions
+                and self.config.versions_class(version)
+                < found_object.latest_version.name
+            ):
+                raise VersionIsOld(
+                    latest=found_object.latest_version.name, suggested=version
+                )
         self.version_manager.register(
             name,
             version,
             ref,
             message=f"Registering object {name} version {version}",
         )
+        return found_object.find_version(name=version)
 
     def unregister(self, name, version):
         return self.version_manager.unregister(name, version)
@@ -120,11 +133,6 @@ class GitRegistry(BaseModel):
         else:
             found_version = found_object.find_version(commit_hexsha=promote_ref)
             if found_version is None:
-                if name_version is None:
-                    last_version = self.state.find_object(name).latest_version.name
-                    promote_version = (
-                        self.config.versions_class(last_version).bump().version
-                    )
                 self.register(name, version=name_version, ref=promote_ref)
                 click.echo(
                     f"Registered new version '{promote_version}' of '{name}' at commit '{promote_ref}'"

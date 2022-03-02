@@ -32,7 +32,7 @@ def remove(repo: Union[str, Repo], name: str):
     return FileIndexManager(path=repo).remove(name)
 
 
-def register(repo: Union[str, Repo], name: str, ref: str, version: str):
+def register(repo: Union[str, Repo], name: str, ref: str, version: str = None):
     """Register new object version"""
     return GitRegistry.from_repo(repo).register(name=name, ref=ref, version=version)
 

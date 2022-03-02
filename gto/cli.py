@@ -79,8 +79,8 @@ def remove(repo: str, name: str):
 @gto_command()
 @option_repo
 @arg_name
-@arg_version
 @arg_ref
+@click.option("--version", "-v", default=None, help="Version to promote")
 def register(repo: str, name: str, ref: str, version: str):
     """Register new object version"""
     gto.api.register(repo, name, ref, version)

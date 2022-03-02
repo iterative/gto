@@ -49,7 +49,8 @@ def showcase(init_showcase):  # pylint: disable=too-many-locals, too-many-statem
 
     second_commit = repo.index.commit("Update model")
 
-    gto.api.register(path, "rf", "HEAD", "v2")  # TODO: remove "v2"
+    # bump version automatically
+    gto.api.register(path, "rf", "HEAD")
 
     gto.api.promote(path, "nn", "staging", promote_version="v1")
     gto.api.promote(path, "rf", "production", promote_version="v1")

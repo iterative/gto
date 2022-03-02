@@ -15,6 +15,14 @@ class ObjectNotFound(GTOException):
         super().__init__(self.message)
 
 
+class VersionRequired(GTOException):
+    _message = "No versions found for '{name}'"
+
+    def __init__(self, name):
+        self.message = self._message.format(name=name)
+        super().__init__(self.message)
+
+
 class VersionAlreadyRegistered(GTOException):
     _message = (
         "Version '{version}' already was registered.\n"

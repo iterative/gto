@@ -36,6 +36,19 @@ def test_add_remove(empty_git_repo):
     assert name not in index
 
 
+def test_register(repo_with_artifact):
+    repo, name = repo_with_artifact
+    vname1, vname2 = "v1", "v2"
+    gto.api.register(repo.working_dir, name, "HEAD", vname1)
+    latest = gto.api.find_latest_version(repo.working_dir, name)
+    assert latest.name == vname1
+    gto.api.add(repo.working_dir, "something-irrelevant", "doesnt-matter", "anything")
+    repo.index.commit("Irrelevant action to create a git commit")
+    gto.api.register(repo.working_dir, name, "HEAD")
+    latest = gto.api.find_latest_version(repo.working_dir, name)
+    assert latest.name == vname2
+
+
 def test_promote(repo_with_artifact):
     repo, name = repo_with_artifact
     env = "staging"
