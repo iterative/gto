@@ -1,4 +1,5 @@
 from functools import total_ordering
+from typing import Optional
 
 import semver
 
@@ -23,7 +24,7 @@ class AbstractVersion:
     def __lt__(self, other):
         raise NotImplementedError
 
-    def bump(self):
+    def bump(self, part: Optional[str] = None) -> "AbstractVersion":
         raise NotImplementedError
 
 
@@ -52,7 +53,7 @@ class NumberedVersion(AbstractVersion):
             raise IncomparableVersions()
         return self.to_number() < other.to_number()
 
-    def bump(self):
+    def bump(self, part: Optional[str] = None):  # pylint: disable=unused-argument
         return self.__class__(f"v{self.to_number() + 1}")
 
 
@@ -101,6 +102,7 @@ class SemVer(AbstractVersion):
             raise IncomparableVersions()
         return self.parse(self.version) < self.parse(other.version)
 
-    def bump(self, part: str = "patch"):  # pylint: disable=arguments-differ
+    def bump(self, part: Optional[str] = None):
+        part = part or "patch"
         next_version = getattr(self.parse(self.version), f"bump_{part}")()
         return self.__class__(f"v{next_version}")

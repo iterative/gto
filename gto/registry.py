@@ -62,7 +62,7 @@ class GitRegistry(BaseModel):
         state.sort()
         return state
 
-    def register(self, name, ref, version=None):
+    def register(self, name, ref, version=None, bump=None):
         """Register object version"""
         ref = self.repo.commit(ref).hexsha
         # TODO: add the same check for other actions, to promote and etc
@@ -80,7 +80,7 @@ class GitRegistry(BaseModel):
             if not found_object.versions:
                 raise VersionRequired(name=name)
             last_version = self.state.find_object(name).latest_version.name
-            version = self.config.versions_class(last_version).bump().version
+            version = self.config.versions_class(last_version).bump(part=bump).version
         else:
             if (
                 found_object.find_version(name=version, skip_unregistered=False)
@@ -101,7 +101,9 @@ class GitRegistry(BaseModel):
             ref,
             message=f"Registering object {name} version {version}",
         )
-        return found_object.find_version(name=version)
+        return self.state.find_object(name).find_version(
+            name=version, raise_if_not_found=True
+        )
 
     def unregister(self, name, version):
         return self.version_manager.unregister(name, version)

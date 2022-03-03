@@ -53,7 +53,7 @@ class RegistryConfig(BaseSettings):
     def VERSION_SYSTEM_MAPPING(self):
         from .versions import NumberedVersion, SemVer
 
-        return {"NumberedVersion": NumberedVersion, "SemVer": SemVer}
+        return {"numbers": NumberedVersion, "semver": SemVer}
 
     @property
     def VERSION_MANAGERS_MAPPING(self):

@@ -16,8 +16,8 @@ def test_empty_state(empty_git_repo):
 
 
 @pytest.fixture
-def repo_with_artifact(init_showcase):
-    path, repo, write_file = init_showcase  # pylint: disable=unused-variable
+def repo_with_artifact(init_showcase_numbers):
+    path, repo, write_file = init_showcase_numbers  # pylint: disable=unused-variable
     name, type, path_ = "new-artifact", "new-type", "new/path"
     gto.api.add(path, name, type, path_)
     repo.index.add(["artifacts.yaml"])
