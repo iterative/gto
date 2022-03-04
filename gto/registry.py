@@ -13,7 +13,6 @@ from gto.exceptions import (
     VersionAlreadyRegistered,
     VersionExistsForCommit,
     VersionIsOld,
-    VersionRequired,
 )
 from gto.index import RepoIndexManager
 
@@ -75,13 +74,8 @@ class GitRegistry(BaseModel):
         )
         if found_version is not None:
             raise VersionExistsForCommit(name, found_version.name)
-        # if version name wasn't provided, figure it out
-        if not version:
-            if not found_object.versions:
-                raise VersionRequired(name=name)
-            last_version = self.state.find_object(name).latest_version.name
-            version = self.config.versions_class(last_version).bump(part=bump).version
-        else:
+        # if version name is provided, use it
+        if version:
             if (
                 found_object.find_version(name=version, skip_unregistered=False)
                 is not None
@@ -95,6 +89,18 @@ class GitRegistry(BaseModel):
                 raise VersionIsOld(
                     latest=found_object.latest_version.name, suggested=version
                 )
+        # if version name wasn't provided but there were some, bump the last one
+        elif found_object.versions:
+            version = (
+                self.config.versions_class(
+                    self.state.find_object(name).latest_version.name
+                )
+                .bump(part=bump)
+                .version
+            )
+        # if no versions exist, use the minimal version possible
+        else:
+            version = self.config.versions_class.get_minimal().version
         self.version_manager.register(
             name,
             version,
@@ -118,10 +124,8 @@ class GitRegistry(BaseModel):
     ):
         """Assign label to specific object version"""
         self.config.assert_env(label)
-        if promote_version is None and promote_ref is None:
-            raise ValueError("Either version or commit must be specified")
-        if promote_version is not None and promote_ref is not None:
-            raise ValueError("Only one of version or commit must be specified")
+        if not (promote_version is None) ^ (promote_ref is None):
+            raise ValueError("One and only one of (version, commit) must be specified.")
         if promote_ref:
             promote_ref = self.repo.commit(promote_ref).hexsha
         if promote_ref:

@@ -27,6 +27,10 @@ class AbstractVersion:
     def bump(self, part: Optional[str] = None) -> "AbstractVersion":
         raise NotImplementedError
 
+    @classmethod
+    def get_minimal(cls):
+        raise NotImplementedError
+
 
 @total_ordering
 class NumberedVersion(AbstractVersion):
@@ -55,6 +59,10 @@ class NumberedVersion(AbstractVersion):
 
     def bump(self, part: Optional[str] = None):  # pylint: disable=unused-argument
         return self.__class__(f"v{self.to_number() + 1}")
+
+    @classmethod
+    def get_minimal(cls):
+        return cls("v1")
 
 
 @total_ordering
@@ -106,3 +114,7 @@ class SemVer(AbstractVersion):
         part = part or "patch"
         next_version = getattr(self.parse(self.version), f"bump_{part}")()
         return self.__class__(f"v{next_version}")
+
+    @classmethod
+    def get_minimal(cls):
+        return cls("v0.0.1")

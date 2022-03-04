@@ -76,7 +76,7 @@ def showcase(
     nn_vname = "v0.0.1"
     rf_vname = "v1.2.3"
     gto.api.register(path, "rf", "HEAD", rf_vname)
-    gto.api.register(path, "nn", "HEAD", nn_vname)
+    gto.api.register(path, "nn", "HEAD")
 
     write_file("models/random-forest.pkl", "2nd version")
 

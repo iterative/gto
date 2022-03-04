@@ -12,6 +12,7 @@ rm -rf models gto.yaml artifacts.yaml
 
 cat << EOF > gto.yaml
 env_base: tag
+versions_convention: numbers
 # env_branch_mapping:
 #   master: production
 #   demo: demo
