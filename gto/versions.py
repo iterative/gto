@@ -48,14 +48,14 @@ class NumberedVersion(AbstractVersion):
         if isinstance(other, str):
             other = self.__class__(other)
         if not isinstance(other, self.__class__):
-            raise IncomparableVersions()
+            raise IncomparableVersions(self, other)
         return self.version == other.version
 
     def __lt__(self, other):
         if isinstance(other, str):
             other = self.__class__(other)
         if not isinstance(other, self.__class__):
-            raise IncomparableVersions()
+            raise IncomparableVersions(self, other)
         return self.to_number() < other.to_number()
 
     def bump(self, part: Union[VersionPart, str] = VersionPart.MAJOR):
@@ -104,14 +104,14 @@ class SemVer(AbstractVersion):
         if isinstance(other, str):
             other = self.__class__(other)
         if not isinstance(other, self.__class__):
-            raise IncomparableVersions()
+            raise IncomparableVersions(self, other)
         return self.version == other.version
 
     def __lt__(self, other):
         if isinstance(other, str):
             other = self.__class__(other)
         if not isinstance(other, self.__class__):
-            raise IncomparableVersions()
+            raise IncomparableVersions(self, other)
         return self.parse(self.version) < self.parse(other.version)
 
     def bump(self, part: Union[VersionPart, str] = VersionPart.PATCH):

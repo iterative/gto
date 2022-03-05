@@ -86,9 +86,10 @@ class InvalidVersion(GTOException):
 
 
 class IncomparableVersions(GTOException):
-    message = "You can compare only versions of the same system."
+    _message = "You can compare only versions of the same system, but not {} and {}"
 
-    def __init__(self) -> None:
+    def __init__(self, this, that) -> None:
+        self.message = self._message.format(this, that)
         super().__init__(self.message)
 
 
