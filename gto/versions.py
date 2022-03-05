@@ -1,9 +1,10 @@
 from functools import total_ordering
-from typing import Optional
+from typing import Union
 
 import semver
 
-from gto.exceptions import IncomparableVersions, InvalidVersion
+from gto.constants import VersionPart
+from gto.exceptions import GTOException, IncomparableVersions, InvalidVersion
 
 
 class AbstractVersion:
@@ -24,7 +25,7 @@ class AbstractVersion:
     def __lt__(self, other):
         raise NotImplementedError
 
-    def bump(self, part: Optional[str] = None) -> "AbstractVersion":
+    def bump(self, part: Union[VersionPart, str]) -> "AbstractVersion":
         raise NotImplementedError
 
     @classmethod
@@ -57,7 +58,10 @@ class NumberedVersion(AbstractVersion):
             raise IncomparableVersions()
         return self.to_number() < other.to_number()
 
-    def bump(self, part: Optional[str] = None):  # pylint: disable=unused-argument
+    def bump(self, part: Union[VersionPart, str] = VersionPart.MAJOR):
+        part = VersionPart(part)
+        if part != VersionPart.MAJOR:
+            raise GTOException(f"With {self.__class__} you can only bump MAJOR part")
         return self.__class__(f"v{self.to_number() + 1}")
 
     @classmethod
@@ -110,9 +114,9 @@ class SemVer(AbstractVersion):
             raise IncomparableVersions()
         return self.parse(self.version) < self.parse(other.version)
 
-    def bump(self, part: Optional[str] = None):
-        part = part or "patch"
-        next_version = getattr(self.parse(self.version), f"bump_{part}")()
+    def bump(self, part: Union[VersionPart, str] = VersionPart.PATCH):
+        part = VersionPart(part)
+        next_version = getattr(self.parse(self.version), f"bump_{part.value}")()
         return self.__class__(f"v{next_version}")
 
     @classmethod

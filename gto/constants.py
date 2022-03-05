@@ -18,3 +18,9 @@ class Action(Enum):
     UNREGISTER = "unregister"
     PROMOTE = "promote"
     DEMOTE = "demote"
+
+
+class VersionPart(Enum):
+    MAJOR = "major"
+    MINOR = "minor"
+    PATCH = "patch"

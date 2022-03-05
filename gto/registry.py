@@ -95,7 +95,7 @@ class GitRegistry(BaseModel):
                 self.config.versions_class(
                     self.state.find_object(name).latest_version.name
                 )
-                .bump(part=bump)
+                .bump(**({"part": bump} if bump else {}))
                 .version
             )
         # if no versions exist, use the minimal version possible
