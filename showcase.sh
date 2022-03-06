@@ -12,6 +12,7 @@ rm -rf models gto.yaml artifacts.yaml
 
 cat << EOF > gto.yaml
 env_base: tag
+versions_convention: numbers
 # env_branch_mapping:
 #   master: production
 #   demo: demo
@@ -28,8 +29,8 @@ git add artifacts.yaml models
 git commit -am "Create models"
 
 echo "Register new model"
-gto register rf v1 HEAD
-gto register nn v1 HEAD
+gto register rf HEAD v1
+gto register nn HEAD v1
 
 echo "Update the model"
 sleep 1
@@ -37,7 +38,7 @@ echo "2nd version" > models/random-forest.pkl
 git commit -am "Update model"
 
 echo "Register models"
-gto register rf v2 HEAD
+gto register rf HEAD
 
 echo "Promote models"
 gto promote nn staging --version v1

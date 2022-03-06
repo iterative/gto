@@ -27,7 +27,7 @@ def test_api(showcase):  # pylint: disable=too-many-locals, too-many-statements
         nn_version,
         dict(
             object="nn",
-            name="v1",
+            name="v0.0.1",
             author=author,
             commit_hexsha=first_commit.hexsha,
             unregistered_date=None,
@@ -41,7 +41,7 @@ def test_api(showcase):  # pylint: disable=too-many-locals, too-many-statements
         nn_label,
         dict(
             object="nn",
-            version="v1",
+            version="v0.0.1",
             name="staging",
             author=author,
             commit_hexsha=first_commit.hexsha,
@@ -61,7 +61,7 @@ def test_api(showcase):  # pylint: disable=too-many-locals, too-many-statements
         rf_ver1,
         dict(
             object="rf",
-            name="v1",
+            name="v1.2.3",
             author=author,
             commit_hexsha=first_commit.hexsha,
             unregistered_date=None,
@@ -72,7 +72,7 @@ def test_api(showcase):  # pylint: disable=too-many-locals, too-many-statements
         rf_ver2,
         dict(
             object="rf",
-            name="v2",
+            name="v1.2.4",
             author=author,
             commit_hexsha=second_commit.hexsha,
             unregistered_date=None,
@@ -88,7 +88,7 @@ def test_api(showcase):  # pylint: disable=too-many-locals, too-many-statements
         rf_l1,
         dict(
             object="rf",
-            version="v1",
+            version="v1.2.3",
             name="production",
             author=author,
             commit_hexsha=first_commit.hexsha,
@@ -100,7 +100,7 @@ def test_api(showcase):  # pylint: disable=too-many-locals, too-many-statements
         rf_l3,
         dict(
             object="rf",
-            version="v2",
+            version="v1.2.4",
             name="production",
             author=author,
             commit_hexsha=second_commit.hexsha,
@@ -112,7 +112,7 @@ def test_api(showcase):  # pylint: disable=too-many-locals, too-many-statements
         rf_l2,
         dict(
             object="rf",
-            version="v2",
+            version="v1.2.4",
             name="staging",
             author=author,
             commit_hexsha=second_commit.hexsha,
@@ -120,7 +120,3 @@ def test_api(showcase):  # pylint: disable=too-many-locals, too-many-statements
         ),
         {"creation_date"},
     )
-
-
-def test_cli(init_showcase):
-    pass

@@ -79,12 +79,19 @@ def remove(repo: str, name: str):
 @gto_command()
 @option_repo
 @arg_name
-@arg_version
 @arg_ref
-def register(repo: str, name: str, version: str, ref: str):
+@click.option("--version", "-v", default=None, help="Version to promote")
+@click.option(
+    "--bump", "-b", default=None, help="The exact part to use when bumping a version"
+)
+def register(repo: str, name: str, ref: str, version: str, bump: str):
     """Register new object version"""
-    gto.api.register(repo, name, version, ref)
-    click.echo(f"Registered {name} version {version}")
+    registered_version = gto.api.register(
+        repo=repo, name=name, ref=ref, version=version, bump=bump
+    )
+    click.echo(
+        f"Registered {registered_version.object} version {registered_version.name}"
+    )
 
 
 @gto_command()

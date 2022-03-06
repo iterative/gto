@@ -16,8 +16,8 @@ def test_empty_state(empty_git_repo):
 
 
 @pytest.fixture
-def repo_with_artifact(init_showcase):
-    path, repo, write_file = init_showcase  # pylint: disable=unused-variable
+def repo_with_artifact(init_showcase_numbers):
+    path, repo, write_file = init_showcase_numbers  # pylint: disable=unused-variable
     name, type, path_ = "new-artifact", "new-type", "new/path"
     gto.api.add(path, name, type, path_)
     repo.index.add(["artifacts.yaml"])
@@ -34,6 +34,19 @@ def test_add_remove(empty_git_repo):
     gto.api.remove(empty_git_repo.working_dir, name)
     index = gto.api.get_index(empty_git_repo.working_dir).get_index()
     assert name not in index
+
+
+def test_register(repo_with_artifact):
+    repo, name = repo_with_artifact
+    vname1, vname2 = "v1", "v2"
+    gto.api.register(repo.working_dir, name, "HEAD", vname1)
+    latest = gto.api.find_latest_version(repo.working_dir, name)
+    assert latest.name == vname1
+    gto.api.add(repo.working_dir, "something-irrelevant", "doesnt-matter", "anything")
+    repo.index.commit("Irrelevant action to create a git commit")
+    gto.api.register(repo.working_dir, name, "HEAD")
+    latest = gto.api.find_latest_version(repo.working_dir, name)
+    assert latest.name == vname2
 
 
 def test_promote(repo_with_artifact):

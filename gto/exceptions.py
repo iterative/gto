@@ -15,6 +15,14 @@ class ObjectNotFound(GTOException):
         super().__init__(self.message)
 
 
+class VersionRequired(GTOException):
+    _message = "No versions found for '{name}'"
+
+    def __init__(self, name):
+        self.message = self._message.format(name=name)
+        super().__init__(self.message)
+
+
 class VersionAlreadyRegistered(GTOException):
     _message = (
         "Version '{version}' already was registered.\n"
@@ -78,9 +86,10 @@ class InvalidVersion(GTOException):
 
 
 class IncomparableVersions(GTOException):
-    message = "You can compare only versions of the same system."
+    _message = "You can compare only versions of the same system, but not {} and {}"
 
-    def __init__(self) -> None:
+    def __init__(self, this, that) -> None:
+        self.message = self._message.format(this, that)
         super().__init__(self.message)
 
 

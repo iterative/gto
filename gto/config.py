@@ -6,6 +6,8 @@ import yaml
 from pydantic import BaseSettings, validator
 from pydantic.env_settings import InitSettingsSource
 
+from gto.versions import AbstractVersion
+
 from .constants import BRANCH, COMMIT, TAG
 from .exceptions import UnknownEnvironment
 
@@ -53,7 +55,7 @@ class RegistryConfig(BaseSettings):
     def VERSION_SYSTEM_MAPPING(self):
         from .versions import NumberedVersion, SemVer
 
-        return {"NumberedVersion": NumberedVersion, "SemVer": SemVer}
+        return {"numbers": NumberedVersion, "semver": SemVer}
 
     @property
     def VERSION_MANAGERS_MAPPING(self):
@@ -148,7 +150,7 @@ class RegistryConfig(BaseSettings):
         return value
 
     @property
-    def versions_class(self):
+    def versions_class(self) -> AbstractVersion:
         if self.VERSION_CONVENTION not in self.VERSION_SYSTEM_MAPPING:
             raise ValueError(f"Unknown versioning system {self.VERSION_CONVENTION}")
         return self.VERSION_SYSTEM_MAPPING[self.VERSION_CONVENTION]
