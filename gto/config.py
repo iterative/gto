@@ -44,12 +44,12 @@ class RegistryConfig(BaseSettings):
     VERSION_BASE: str = TAG
     VERSION_CONVENTION: str = "NumberedVersion"
     VERSION_REQUIRED_FOR_ENV: bool = True
-    ENV_BASE: str = BRANCH
+    ENV_BASE: str = TAG
     ENV_WHITELIST: List[str] = []
     ENV_BRANCH_MAPPING: Dict[str, str] = {}
     LOG_LEVEL: str = "INFO"
     DEBUG: bool = False
-    CONFIG_FILE: Optional[str] = None
+    CONFIG_FILE: Optional[str] = CONFIG_FILE
 
     @property
     def VERSION_SYSTEM_MAPPING(self):
