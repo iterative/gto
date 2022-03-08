@@ -31,7 +31,7 @@ tests = [
 
 setup_args = dict(  # noqa: C408
     name="great-tool-ops",
-    version="0.0.4",
+    version="0.0.5",
     description="Version and deploy your models following GitOps principles",
     long_description=(Path(__file__).parent / "README.md").read_text(encoding="utf8"),
     author="Alexander Guschin",
