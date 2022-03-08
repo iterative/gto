@@ -30,9 +30,10 @@ tests = [
 
 setup_args = dict(  # noqa: C408
     name="great-tool-ops",
-    version="0.0.5",
+    version="0.0.6",
     description="Version and deploy your models following GitOps principles",
     long_description=(Path(__file__).parent / "README.md").read_text(encoding="utf8"),
+    long_description_content_type="text/markdown",
     author="Alexander Guschin",
     author_email="aguschin@iterative.ai",
     download_url="https://github.com/iterative/gto",
