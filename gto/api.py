@@ -127,7 +127,7 @@ def audit_registration(repo: Union[str, Repo], dataframe: bool = False):
     """Audit registry state"""
     reg = GitRegistry.from_repo(repo)
 
-    model_registration_audit_trail = [
+    audit_trail = [
         {
             "name": o.name,
             "version": v.name,
@@ -139,19 +139,20 @@ def audit_registration(repo: Union[str, Repo], dataframe: bool = False):
         for o in reg.state.objects.values()
         for v in o.versions
     ]
-    if dataframe:
-        return (
-            pd.DataFrame(model_registration_audit_trail)
-            .sort_values("creation_date", ascending=False)
-            .set_index(["creation_date", "name"])
-        )
-    return model_registration_audit_trail
+    if not dataframe:
+        return audit_trail
+
+    df = pd.DataFrame(audit_trail)
+    if len(df):
+        df.sort_values("creation_date", ascending=False, inplace=True)
+        df.set_index(["creation_date", "name"], inplace=True)
+    return df
 
 
 def audit_promotion(repo: Union[str, Repo], dataframe: bool = False):
     """Audit registry state"""
     reg = GitRegistry.from_repo(repo)
-    label_assignment_audit_trail = [
+    audit_trail = [
         {
             "name": o.name,
             "label": l.name,
@@ -164,10 +165,11 @@ def audit_promotion(repo: Union[str, Repo], dataframe: bool = False):
         for o in reg.state.objects.values()
         for l in o.labels
     ]
-    if dataframe:
-        return (
-            pd.DataFrame(label_assignment_audit_trail)
-            .sort_values("creation_date", ascending=False)
-            .set_index(["creation_date", "name"])
-        )
-    return label_assignment_audit_trail
+    if not dataframe:
+        return audit_trail
+
+    df = pd.DataFrame(audit_trail)
+    if len(df):
+        df.sort_values("creation_date", ascending=False, inplace=True)
+        df.set_index(["creation_date", "name"], inplace=True)
+    return df
