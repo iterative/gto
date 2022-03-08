@@ -1,6 +1,5 @@
 import json
 import logging
-import warnings
 from functools import wraps
 
 import click
@@ -28,6 +27,7 @@ def cli():
     * Promote artifacts to environments
     * Act on new versions and promotions in CI
     """
+    pd.set_option("expand_frame_repr", False)
 
 
 def _set_log_level(ctx, param, value):  # pylint: disable=unused-argument
@@ -251,7 +251,4 @@ def print_index(repo: str, format: str):
 
 
 if __name__ == "__main__":
-    warnings.filterwarnings("ignore")
-    pd.set_option("display.max_colwidth", 100)
-
     cli()

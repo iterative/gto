@@ -7,9 +7,8 @@ from typing import IO, Dict, Generator, List, Optional, Union
 
 import git
 from pydantic import BaseModel, parse_obj_as
-from ruamel.yaml import safe_dump, safe_load
 
-from .config import CONFIG
+from .config import CONFIG, yaml
 from .exceptions import GTOException, ObjectNotFound
 
 
@@ -49,13 +48,13 @@ class Index(BaseModel):
     def read_state(path_or_file: Union[str, IO]):
         if isinstance(path_or_file, str):
             with open(path_or_file, "r", encoding="utf8") as file:
-                return parse_obj_as(State, safe_load(file))
-        return parse_obj_as(State, safe_load(path_or_file))
+                return parse_obj_as(State, yaml.load(file))
+        return parse_obj_as(State, yaml.load(path_or_file))
 
     def write_state(self, path_or_file: Union[str, IO]):
         if isinstance(path_or_file, str):
             with open(path_or_file, "w", encoding="utf8") as file:
-                file.write(safe_dump(self.dict()["state"], default_flow_style=False))
+                yaml.dump(self.dict()["state"], file)
 
     @not_frozen
     def add(self, name, type, path):
