@@ -5,6 +5,7 @@ if [[ $(git --no-pager diff) ]]; then
     exit 1
 fi
 git tag -d $(git tag --list)
+git pull --tags
 git branch -D demo
 set -exu
 git checkout -b demo

@@ -2,14 +2,17 @@
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-import yaml
 from pydantic import BaseSettings, validator
 from pydantic.env_settings import InitSettingsSource
+from ruamel.yaml import YAML
 
 from gto.versions import AbstractVersion
 
 from .constants import BRANCH, COMMIT, TAG
 from .exceptions import UnknownEnvironment
+
+yaml = YAML(typ="safe", pure=True)
+yaml.default_flow_style = False
 
 CONFIG_FILE = "gto.yaml"
 
@@ -34,7 +37,7 @@ def config_settings_source(settings: "RegistryConfig") -> Dict[str, Any]:
         config_file = Path(config_file)
     if not config_file.exists():
         return {}
-    conf = yaml.safe_load(config_file.read_text(encoding=encoding))
+    conf = yaml.load(config_file.read_text(encoding=encoding))
 
     return {k.upper(): v for k, v in conf.items()} if conf else {}
 
