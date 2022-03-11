@@ -140,7 +140,7 @@ def audit_registration(
             "timestamp": v.creation_date,
             "author": v.author,
             "commit": v.commit_hexsha,
-            "unregistered_date": v.unregistered_date,
+            "deprecated": v.unregistered_date,
         }
         for o in reg.state.objects.values()
         for v in o.versions
@@ -154,6 +154,8 @@ def audit_registration(
     if len(df):
         df.sort_values("timestamp", ascending=is_ascending(sort), inplace=True)
         df.set_index(["timestamp", "name"], inplace=True)
+        df = df[["version", "deprecated", "commit", "author"]]
+        df["commit"] = df["commit"].str[:7]
     return df
 
 
@@ -177,7 +179,7 @@ def audit_promotion(
             "timestamp": l.creation_date,
             "author": l.author,
             "commit": l.commit_hexsha,
-            "unregistered_date": l.unregistered_date,
+            "deprecated": l.unregistered_date,
         }
         for o in reg.state.objects.values()
         for l in o.labels
@@ -191,6 +193,8 @@ def audit_promotion(
     if len(df):
         df.sort_values("timestamp", ascending=is_ascending(sort), inplace=True)
         df.set_index(["timestamp", "name"], inplace=True)
+        df = df[["label", "version", "deprecated", "commit", "author"]]
+        df["commit"] = df["commit"].str[:7]
     return df
 
 
@@ -253,5 +257,7 @@ def history(
     if len(df):
         # df.sort_values("timestamp", ascending=is_ascending(sort), inplace=True)
         df.set_index(["timestamp", "name"], inplace=True)
-        df = df[["event"] + [col for col in df.columns if col != "event"]]
-    return df
+        cols_order = ["event", "version", "label", "deprecated", "commit", "author"]
+        df = df[[c for c in cols_order if c in df]]
+        df["commit"] = df["commit"].str[:7]
+    return df.fillna("-")
