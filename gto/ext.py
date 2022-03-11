@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from functools import lru_cache
 from typing import List
+
 import entrypoints
 from pydantic import BaseModel
 
@@ -36,5 +37,8 @@ class Enrichment(BaseModel, ABC):
 def find_enrichments() -> List[Enrichment]:
     eps = entrypoints.get_group_named(ENRICHMENT_ENRTYPOINT)
     enrichments = [ep.load() for _, ep in eps.items()]
-    enrichments = [e() if isinstance(e, type) and issubclass(e, Enrichment) else e for e in enrichments]
+    enrichments = [
+        e() if isinstance(e, type) and issubclass(e, Enrichment) else e
+        for e in enrichments
+    ]
     return [e for e in enrichments if isinstance(e, Enrichment)]

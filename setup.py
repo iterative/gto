@@ -11,6 +11,7 @@ install_requires = [
     "pydantic",
     "ruamel.yaml",
     "semver==3.0.0-dev.3",
+    "entrypoints",
 ]
 
 
@@ -54,7 +55,7 @@ setup_args = dict(  # noqa: C408
     include_package_data=True,
     entry_points={
         "console_scripts": ["gto = gto.cli:cli"],
-        "gto.enrichment": ["mlem = gto.ext_mlem:MlemEnrichment"]
+        "gto.enrichment": ["mlem = gto.ext_mlem:MlemEnrichment"],
     },
     cmdclass={"build_py": build_py},
     zip_safe=False,

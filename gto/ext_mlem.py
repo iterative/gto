@@ -1,11 +1,11 @@
 """This is temporary file that should be moved to mlem.gto module"""
+import mlem
 from mlem.core.errors import MlemObjectNotFound
 from mlem.core.metadata import load_meta
-from mlem.core.objects import MlemMeta, ModelMeta, DatasetMeta
+from mlem.core.objects import DatasetMeta, MlemMeta, ModelMeta
 from pydantic import BaseModel
 
 from gto.ext import Enrichment, EnrichmentInfo
-import mlem
 
 
 class MlemInfo(EnrichmentInfo):
