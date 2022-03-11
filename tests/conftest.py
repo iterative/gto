@@ -5,7 +5,7 @@ import git
 import pytest
 
 import gto
-from gto.config import CONFIG_FILE
+from gto.config import CONFIG_FILE_NAME
 
 
 @pytest.fixture
@@ -24,7 +24,7 @@ def init_showcase_numbers(empty_git_repo):
             file.write(content)
 
     write_file(
-        CONFIG_FILE,
+        CONFIG_FILE_NAME,
         """
         version_base: tag
         env_base: tag
@@ -46,7 +46,7 @@ def init_showcase_semver(empty_git_repo):
             file.write(content)
 
     write_file(
-        CONFIG_FILE,
+        CONFIG_FILE_NAME,
         """
         version_base: tag
         env_base: tag

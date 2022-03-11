@@ -250,5 +250,13 @@ def print_index(repo: str, format: str):
         raise NotImplementedError("Unknown format")
 
 
+@gto_command()
+@arg_name
+def describe(name: str):
+    infos = gto.api.describe(name)
+    for info in infos:
+        click.echo(info.get_human_readable())
+
+
 if __name__ == "__main__":
     cli()

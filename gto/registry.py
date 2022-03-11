@@ -7,7 +7,7 @@ from git import Repo
 from pydantic import BaseModel
 
 from gto.base import BaseManager, BaseObject, BaseRegistryState
-from gto.config import CONFIG_FILE, RegistryConfig
+from gto.config import CONFIG_FILE_NAME, RegistryConfig
 from gto.exceptions import (
     NoActiveLabel,
     VersionAlreadyRegistered,
@@ -32,7 +32,7 @@ class GitRegistry(BaseModel):
             repo = git.Repo(repo)
         if config is None:
             config = RegistryConfig(
-                CONFIG_FILE=os.path.join(repo.working_dir, CONFIG_FILE)
+                CONFIG_FILE=os.path.join(repo.working_dir, CONFIG_FILE_NAME)
             )
 
         return cls(

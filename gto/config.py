@@ -10,11 +10,12 @@ from gto.versions import AbstractVersion
 
 from .constants import BRANCH, COMMIT, TAG
 from .exceptions import UnknownEnvironment
+from .ext import Enrichment, find_enrichments
 
 yaml = YAML(typ="safe", pure=True)
 yaml.default_flow_style = False
 
-CONFIG_FILE = "gto.yaml"
+CONFIG_FILE_NAME = "gto.yaml"
 
 
 def _set_location_init_source(init_source: InitSettingsSource):
@@ -32,7 +33,7 @@ def config_settings_source(settings: "RegistryConfig") -> Dict[str, Any]:
     """
 
     encoding = settings.__config__.env_file_encoding
-    config_file = getattr(settings, "CONFIG_FILE", CONFIG_FILE)
+    config_file = getattr(settings, "CONFIG_FILE", CONFIG_FILE_NAME)
     if not isinstance(config_file, Path):
         config_file = Path(config_file)
     if not config_file.exists():
@@ -52,7 +53,9 @@ class RegistryConfig(BaseSettings):
     ENV_BRANCH_MAPPING: Dict[str, str] = {}
     LOG_LEVEL: str = "INFO"
     DEBUG: bool = False
-    CONFIG_FILE: Optional[str] = CONFIG_FILE
+    ENRICHMENTS: List[Enrichment] = []
+    AUTOLOAD_ENRICHMENTS: bool = True
+    CONFIG_FILE: Optional[str] = CONFIG_FILE_NAME
 
     @property
     def VERSION_SYSTEM_MAPPING(self):
@@ -73,6 +76,12 @@ class RegistryConfig(BaseSettings):
         from .tag import TagEnvManager
 
         return {TAG: TagEnvManager, BRANCH: BranchEnvManager}
+
+    @property
+    def enrichments(self) -> List[Enrichment]:
+        if self.AUTOLOAD_ENRICHMENTS:
+            return find_enrichments() + self.ENRICHMENTS
+        return self.ENRICHMENTS
 
     def assert_env(self, name):
         if not self.check_env(name):
