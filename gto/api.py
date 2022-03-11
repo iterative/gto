@@ -1,8 +1,10 @@
-from typing import Union
+from typing import List, Union
 
 import pandas as pd
 from git import Repo
 
+from gto.config import CONFIG
+from gto.ext import EnrichmentInfo
 from gto.index import FileIndexManager, RepoIndexManager
 from gto.registry import GitRegistry
 from gto.tag import parse_name
@@ -173,3 +175,11 @@ def audit_promotion(repo: Union[str, Repo], dataframe: bool = False):
         df.sort_values("creation_date", ascending=False, inplace=True)
         df.set_index(["creation_date", "name"], inplace=True)
     return df
+
+
+def describe(name: str) -> List[EnrichmentInfo]:
+    res = []
+    for enrichment in CONFIG.enrichments:
+        if enrichment.is_enriched(name):
+            res.append(enrichment.describe(name))
+    return res
