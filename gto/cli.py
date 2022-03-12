@@ -4,8 +4,8 @@ from functools import wraps
 
 import click
 import pandas as pd
-from tabulate import tabulate, tabulate_formats
 from ruamel import yaml
+from tabulate import tabulate, tabulate_formats
 
 import gto
 from gto.constants import LABEL, NAME, REF, VERSION
