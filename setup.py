@@ -11,6 +11,7 @@ install_requires = [
     "pydantic",
     "ruamel.yaml",
     "semver==3.0.0-dev.3",
+    "tabulate==0.8.9",
 ]
 
 
