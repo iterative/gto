@@ -36,6 +36,7 @@ repos:
           - types-PyYAML
           - pydantic
           - types-filelock
+          - types-tabulate
   - repo: local
     hooks:
       - id: pylint
