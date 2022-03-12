@@ -206,7 +206,12 @@ def show(repo: str, format: bool):
 
 @gto_command()
 @click.argument("action")
-@click.option("-ft", "--format-tables", type=click.Choice(tabulate_formats), default="fancy_outline")
+@click.option(
+    "-ft",
+    "--format-tables",
+    type=click.Choice(tabulate_formats),
+    default="fancy_outline",
+)
 @option_repo
 def audit(action: str, repo: str, format_tables):
     """Audit registry state"""
@@ -216,21 +221,29 @@ def audit(action: str, repo: str, format_tables):
         click.echo("\n=== Registration audit trail ===\n")
         audit_trail_df = gto.api.audit_registration(repo, dataframe=True)
         audit_trail_df.reset_index(level=["creation_date", "name"], inplace=True)
-        click.echo(tabulate(audit_trail_df,
-                            headers="keys",
-                            tablefmt=format_tables,
-                            showindex=False,
-                            missingval=missing_val))
+        click.echo(
+            tabulate(
+                audit_trail_df,
+                headers="keys",
+                tablefmt=format_tables,
+                showindex=False,
+                missingval=missing_val,
+            )
+        )
 
     if action in {"promote", "promotion", "all"}:
         click.echo("\n=== Promotion audit trail ===\n")
         promotion_trail_df = gto.api.audit_promotion(repo, dataframe=True)
         promotion_trail_df.reset_index(level=["creation_date", "name"], inplace=True)
-        click.echo(tabulate(promotion_trail_df,
-                            headers="keys",
-                            tablefmt=format_tables,
-                            showindex=False,
-                            missingval=missing_val))
+        click.echo(
+            tabulate(
+                promotion_trail_df,
+                headers="keys",
+                tablefmt=format_tables,
+                showindex=False,
+                missingval=missing_val,
+            )
+        )
 
 
 @gto_command()
