@@ -206,7 +206,7 @@ def show(repo: str, format: bool):
 
 @gto_command()
 @click.argument("action")
-@click.option("-f", "--format-tables", type=click.Choice(tabulate_formats), default="fancy_outline")
+@click.option("-ft", "--format-tables", type=click.Choice(tabulate_formats), default="fancy_outline")
 @option_repo
 def audit(action: str, repo: str, format_tables):
     """Audit registry state"""
