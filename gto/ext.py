@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from functools import lru_cache
-from typing import List
+from typing import List, Optional
 
 import entrypoints
 from pydantic import BaseModel
@@ -25,11 +25,7 @@ class EnrichmentInfo(BaseModel, ABC):
 
 class Enrichment(BaseModel, ABC):
     @abstractmethod
-    def is_enriched(self, obj: str) -> bool:
-        raise NotImplementedError
-
-    @abstractmethod
-    def describe(self, obj: str) -> EnrichmentInfo:
+    def describe(self, obj: str) -> Optional[EnrichmentInfo]:
         raise NotImplementedError
 
 

@@ -84,7 +84,8 @@ def find_active_label(repo: Union[str, Repo], name: str, label: str):
 def check_ref(repo: Union[str, Repo], ref: str):
     """Find out what have been registered/promoted in the provided ref"""
     reg = GitRegistry.from_repo(repo)
-    ref = ref.removeprefix("refs/tags/")
+    if ref.startswith("refs/tags/"):
+        ref = ref[len("refs/tags/") :]
     if ref.startswith("refs/heads/"):
         ref = reg.repo.commit(ref).hexsha
     result = reg.check_ref(ref)
@@ -180,6 +181,7 @@ def audit_promotion(repo: Union[str, Repo], dataframe: bool = False):
 def describe(name: str) -> List[EnrichmentInfo]:
     res = []
     for enrichment in CONFIG.enrichments:
-        if enrichment.is_enriched(name):
-            res.append(enrichment.describe(name))
+        enrichment_data = enrichment.describe(name)
+        if enrichment_data is not None:
+            res.append(enrichment_data)
     return res

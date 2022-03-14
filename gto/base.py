@@ -1,8 +1,9 @@
 from datetime import datetime
-from typing import Dict, FrozenSet, List, Optional
+from typing import Dict, FrozenSet, List, Optional, overload
 
 import git
 from pydantic import BaseModel
+from typing_extensions import Literal
 
 from gto.constants import Action
 from gto.index import ObjectCommits
@@ -84,11 +85,31 @@ class BaseObject(BaseModel):
                 labels[label.name] = label
         return labels
 
+    @overload
     def find_version(
         self,
         name: str = None,
         commit_hexsha: str = None,
-        raise_if_not_found=False,
+        raise_if_not_found: Literal[True] = ...,
+        skip_unregistered=True,
+    ) -> BaseVersion:
+        ...
+
+    @overload
+    def find_version(
+        self,
+        name: str = None,
+        commit_hexsha: str = None,
+        raise_if_not_found: Literal[False] = ...,
+        skip_unregistered=True,
+    ) -> Optional[BaseVersion]:
+        ...
+
+    def find_version(
+        self,
+        name: str = None,
+        commit_hexsha: str = None,
+        raise_if_not_found: bool = False,
         skip_unregistered=True,
     ) -> Optional[BaseVersion]:
         versions = [

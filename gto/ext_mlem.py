@@ -1,5 +1,6 @@
 """This is temporary file that should be moved to mlem.gto module"""
-import mlem
+from typing import Optional
+
 from mlem.core.errors import MlemObjectNotFound
 from mlem.core.metadata import load_meta
 from mlem.core.objects import DatasetMeta, MlemMeta, ModelMeta
@@ -25,12 +26,8 @@ class MlemInfo(EnrichmentInfo):
 
 
 class MlemEnrichment(Enrichment):
-    def is_enriched(self, obj: str) -> bool:
+    def describe(self, obj: str) -> Optional[MlemInfo]:
         try:
-            mlem.api.load_meta(obj)
-            return True
+            return MlemInfo(source="mlem", meta=load_meta(obj))
         except MlemObjectNotFound:
-            return False
-
-    def describe(self, obj: str) -> MlemInfo:
-        return MlemInfo(source="mlem", meta=load_meta(obj))
+            return None

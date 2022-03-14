@@ -147,7 +147,7 @@ def label_from_tag(tag: git.Tag, obj: BaseObject) -> BaseLabel:
         object=mtag.name,
         version=obj.find_version(
             commit_hexsha=tag.commit.hexsha, raise_if_not_found=True
-        ).name,  # type: ignore
+        ).name,
         name=mtag.label,
         creation_date=mtag.creation_date,
         author=tag.tag.tagger.name,
