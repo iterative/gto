@@ -100,10 +100,7 @@ def show(repo: Union[str, Repo], dataframe: bool = False):
         o.name: {
             "version": o.latest_version.name if o.latest_version else None,
             "environment": {
-                l: o.latest_labels[l].version
-                if o.latest_labels[l] is not None
-                else None
-                for l in o.unique_labels
+                name: label.version for name, label in o.latest_labels.items()
             },
         }
         for o in reg.state.objects.values()
@@ -120,7 +117,7 @@ def show(repo: Union[str, Repo], dataframe: bool = False):
                 }
         result_df = pd.DataFrame(result)
         result_df.columns = pd.MultiIndex.from_tuples(result_df.columns)
-        return result_df
+        return result_df.fillna("-")
     return models_state
 
 
@@ -196,26 +193,6 @@ def audit_promotion(
         df = df[["label", "version", "deprecated", "commit", "author"]]
         df["commit"] = df["commit"].str[:7]
     return df
-
-
-# def history(repo: str, name: str, dataframe: bool = False):
-#     reg = GitRegistry.from_repo(repo)
-#     commits = [
-#         {"name": name_, "commit": commit}
-#         for name_, commit_list in get_index(repo)
-#         .object_centric_representation()
-#         .items()
-#         for commit in commit_list
-#     ]
-#     commits = pd.DataFrame(commits)
-#     # commits = pd.Series(get_index(repo).object_centric_representation()[name], name="commit")
-#     registration = audit_registration(repo, dataframe=True).reset_index()
-#     promotion = audit_promotion(repo, dataframe=True).reset_index()
-#     return (
-#         commits
-#         .merge(registration, how="left", on=["commit", "name"])
-#         # .merge(promotion, how="left", on=["commit", "name"])
-#     )
 
 
 def history(

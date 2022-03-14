@@ -153,12 +153,12 @@ class GitRegistry(BaseModel):
 
     def demote(self, name, label):
         """De-promote object from given label"""
-        # TODO: check if label wasn't demoted already
-        if self.state.find_object(name).latest_labels.get(label) is None:
+        label_obj = self.state.find_object(name).latest_labels.get(label)
+        if label_obj is None:
             raise NoActiveLabel(label=label, name=name)
         return self.env_manager.demote(
             name,
-            label,
+            label_obj,
             message=f"Demoting {name} from label {label}",
         )
 
