@@ -61,11 +61,12 @@ class BaseObject(BaseModel):
 
     @property
     def latest_version(self) -> Optional[BaseVersion]:
-        if self.versions:
-            return sorted(
-                (v for v in self.versions if v.is_registered),
-                key=lambda x: x.creation_date,
-            )[-1]
+        versions = sorted(
+            (v for v in self.versions if v.is_registered),
+            key=lambda x: x.creation_date,
+        )
+        if versions:
+            return versions[-1]
         return None
 
     @property

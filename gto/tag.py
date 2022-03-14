@@ -1,4 +1,5 @@
 import logging
+import warnings
 from datetime import datetime
 from typing import FrozenSet, Iterable, Optional, Union
 
@@ -143,15 +144,28 @@ def version_from_tag(tag: git.Tag) -> BaseVersion:
 
 def label_from_tag(tag: git.Tag, obj: BaseObject) -> BaseLabel:
     mtag = parse_tag(tag)
+    registered_version = obj.find_version(commit_hexsha=tag.commit.hexsha)
+    unregistered_version = (
+        None
+        if registered_version
+        else obj.find_version(
+            commit_hexsha=tag.commit.hexsha,
+            skip_unregistered=False,
+            raise_if_not_found=True,
+        )
+    )
     return BaseLabel(
         object=mtag.name,
-        version=obj.find_version(
-            commit_hexsha=tag.commit.hexsha, raise_if_not_found=True
-        ).name,  # type: ignore
+        version=registered_version.name
+        if registered_version
+        else unregistered_version.name,  # type: ignore
         name=mtag.label,
         creation_date=mtag.creation_date,
         author=tag.tag.tagger.name,
         commit_hexsha=tag.commit.hexsha,
+        unregistered_date=unregistered_version.creation_date
+        if unregistered_version
+        else None,
     )
 
 
@@ -161,12 +175,21 @@ def index_tag(obj: BaseObject, tag: git.Tag) -> BaseObject:
         obj.versions.append(version_from_tag(tag))
     if mtag.action == Action.UNREGISTER:
         obj.find_version(mtag.version).unregistered_date = mtag.creation_date  # type: ignore
-    if mtag.action == Action.PROMOTE:
+    if (
+        mtag.action == Action.PROMOTE
+    ):  # and obj.find_version(commit_hexsha=tag.commit.hexsha) is not None:
         obj.labels.append(label_from_tag(tag, obj))
-    if mtag.action == Action.DEMOTE:
-        if mtag.label not in obj.latest_labels:
-            raise ValueError(f"Active label '{mtag.label}' not found")
-        obj.latest_labels[mtag.label].unregistered_date = mtag.creation_date  # type: ignore
+    if (
+        mtag.action == Action.DEMOTE
+    ):  # and obj.find_version(commit_hexsha=tag.commit.hexsha) is not None:
+        # this may "unregister" incorrect version
+        # if you deprecated correct version after demotion
+        if mtag.label in obj.latest_labels:
+            obj.latest_labels[mtag.label].unregistered_date = mtag.creation_date  # type: ignore
+        else:
+            # this may be result of deprecated version
+            # or incorrect demotion tag
+            warnings.warn(f"Active label '{mtag.label}' not found")
     return obj
 
 
@@ -245,17 +268,10 @@ class TagEnvManager(TagManager):
         )
 
     def demote(self, name, label, message):
-        # TODO: search in self, move to base
-        promoted_tag = find(
-            action=Action.PROMOTE,
-            name=name,
-            label=label,
-            repo=self.repo,
-        )[-1]
         create_tag(
             self.repo,
-            name_tag(Action.DEMOTE, name, label=label, repo=self.repo),
-            ref=promoted_tag.commit.hexsha,
+            name_tag(Action.DEMOTE, name, label=label.name, repo=self.repo),
+            ref=label.commit_hexsha,
             message=message,
         )
 

@@ -79,10 +79,15 @@ class RegistryConfig(BaseSettings):
             raise UnknownEnvironment(name)
 
     def check_env(self, name):
+        return name in self.envs or not self.envs
+
+    @property
+    def envs(self) -> List[str]:
         if self.ENV_BASE == TAG:
-            return name in self.ENV_WHITELIST or not self.ENV_WHITELIST
+            return self.ENV_WHITELIST
         if self.ENV_BASE == BRANCH:
-            return name in self.ENV_BRANCH_MAPPING or not self.ENV_BRANCH_MAPPING
+            return list(self.ENV_BRANCH_MAPPING)
+        raise NotImplementedError("Unknown ENV_BASE")
 
     def branch_to_env(self, branch_name):
         if self.ENV_BRANCH_MAPPING:

@@ -153,12 +153,12 @@ class GitRegistry(BaseModel):
 
     def demote(self, name, label):
         """De-promote object from given label"""
-        # TODO: check if label wasn't demoted already
-        if self.state.find_object(name).latest_labels.get(label) is None:
+        label_obj = self.state.find_object(name).latest_labels.get(label)
+        if label_obj is None:
             raise NoActiveLabel(label=label, name=name)
         return self.env_manager.demote(
             name,
-            label,
+            label_obj,
             message=f"Demoting {name} from label {label}",
         )
 
@@ -179,3 +179,16 @@ class GitRegistry(BaseModel):
     def latest(self, name: str):
         """Return latest version for object"""
         return self.state.find_object(name).latest_version
+
+    def get_envs(self, in_use: bool = False):
+        """Return list of envs in the registry.
+        If "in_use", return only those which are in use (skip deprecated).
+        If not, return all available: either all allowed or all ever used.
+        """
+        if in_use:
+            return {
+                label for o in self.state.objects.values() for label in o.latest_labels
+            }
+        return self.config.envs or {
+            label for o in self.state.objects.values() for label in o.unique_labels
+        }

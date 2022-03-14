@@ -66,3 +66,33 @@ def test_promote(repo_with_artifact):
         ),
         {"creation_date", "unregistered_date"},
     )
+
+
+def test_unregister_show_audit(showcase):
+    """Test that show/audit don't break after unregistering"""
+    (
+        path,
+        repo,
+        write_file,  # pylint: disable=unused-variable
+        first_commit,  # pylint: disable=unused-variable
+        second_commit,  # pylint: disable=unused-variable
+    ) = showcase
+
+    gto.api.show(path)
+    gto.api.audit_registration(path)
+    gto.api.audit_promotion(path)
+
+    gto.api.unregister(path, "rf", "v1.2.3")
+    gto.api.show(path)
+    gto.api.audit_registration(path)
+    gto.api.audit_promotion(path)
+
+    gto.api.unregister(repo, "nn", "v0.0.1")
+    gto.api.show(repo)
+    gto.api.audit_registration(repo)
+    gto.api.audit_promotion(repo)
+
+    gto.api.unregister(repo, "rf", "v1.2.4")
+    gto.api.show(repo)
+    gto.api.audit_registration(repo)
+    gto.api.audit_promotion(repo)
