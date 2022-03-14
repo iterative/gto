@@ -155,14 +155,14 @@ def audit_registration(
 
     df = pd.DataFrame(audit_trail)
     if len(df):
-        df.sort_values("timestamp", ascending=is_ascending(sort), inplace=True)
+        df.sort_values("timestamp", ascending=_is_ascending(sort), inplace=True)
         df.set_index(["timestamp", "name"], inplace=True)
         df = df[["version", "deprecated", "commit", "author"]]
         df["commit"] = df["commit"].str[:7]
     return df
 
 
-def is_ascending(sort):
+def _is_ascending(sort):
     return sort in {"asc", "Asc", "ascending", "Ascending"}
 
 
@@ -194,7 +194,7 @@ def audit_promotion(
 
     df = pd.DataFrame(audit_trail)
     if len(df):
-        df.sort_values("timestamp", ascending=is_ascending(sort), inplace=True)
+        df.sort_values("timestamp", ascending=_is_ascending(sort), inplace=True)
         df.set_index(["timestamp", "name"], inplace=True)
         df = df[["label", "version", "deprecated", "commit", "author"]]
         df["commit"] = df["commit"].str[:7]
@@ -230,7 +230,7 @@ def history(
         + add_event(promotion, "promotion"),
         key=lambda x: (x["timestamp"], events_order[x["event"]]),
     )
-    if is_ascending(sort):
+    if _is_ascending(sort):
         events.reverse()
     if artifact:
         events = [event for event in events if event["name"] == artifact]
