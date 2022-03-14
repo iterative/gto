@@ -108,7 +108,7 @@ def show(repo: Union[str, Repo], dataframe: bool = False):
     models_state = {
         o.name: {
             "version": o.get_latest_version().name if o.get_latest_version() else None,
-            "environment": {
+            "env": {
                 name: o.latest_labels[name].version if name in o.latest_labels else None
                 for name in reg.get_envs(in_use=False)
             },
@@ -120,14 +120,15 @@ def show(repo: Union[str, Repo], dataframe: bool = False):
             ("", "latest"): {name: d["version"] for name, d in models_state.items()}
         }
         for name, details in models_state.items():
-            for env, ver in details["environment"].items():
-                result[("environment", env)] = {
-                    **result.get(("environment", env), {}),
+            for env, ver in details["env"].items():
+                result[("env", env)] = {
+                    **result.get(("env", env), {}),
                     **{name: ver},
                 }
         result_df = pd.DataFrame(result)
+        result_df.index.name = "name"
         result_df.columns = pd.MultiIndex.from_tuples(result_df.columns)
-        return result_df.fillna("-")
+        return result_df
     return models_state
 
 
@@ -224,7 +225,6 @@ def history(
         .items()
         for commit in commit_list
     ]
-    # commits = pd.Series(get_index(repo).object_centric_representation()[name], name="commit_hexsha")
     registration = audit_registration(repo, dataframe=False)
     promotion = audit_promotion(repo, dataframe=False)
     events_order = {"commit": 0, "registration": 1, "promotion": 2}
@@ -247,4 +247,4 @@ def history(
         cols_order = ["event", "version", "label", "deprecated", "commit", "author"]
         df = df[[c for c in cols_order if c in df]]
         df["commit"] = df["commit"].str[:7]
-    return df.fillna("-")
+    return df

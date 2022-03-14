@@ -16,11 +16,32 @@ arg_version = click.argument(VERSION)
 arg_label = click.argument(LABEL)
 arg_ref = click.argument(REF)
 option_repo = click.option("-r", "--repo", default=".", help="Repository to use")
-option_format = click.option("--format", "-f", default="yaml", help="Output format")
+option_format = click.option(
+    "--format",
+    "-f",
+    default="yaml",
+    help="Output format",
+    type=click.Choice(["json", "yaml"], case_sensitive=False),
+)
+option_format_df = click.option(
+    "--format",
+    "-f",
+    default="dataframe",
+    help="Output format",
+    type=click.Choice(["dataframe", "json", "yaml"], case_sensitive=False),
+)
 option_artifact = click.option("--artifact", "-a", default=None, help="Artifact name")
 option_sort = click.option(
     "--sort", "-s", default="desc", help="Desc for recent first, Asc for older first"
 )
+option_format_table = click.option(
+    "-ft",
+    "--format-table",
+    type=click.Choice(tabulate_formats),
+    default="fancy_outline",
+)
+
+MISSING_VALUE = "-"
 
 
 @click.group()
@@ -196,25 +217,32 @@ def check_ref(repo: str, ref: str, format: str):
         click.echo(yaml.dump(result, default_style='"'))
     elif format == "json":
         click.echo(json.dumps(serialize(result)))
-    else:
-        raise NotImplementedError("Unknown format")
 
 
 @gto_command()
 @option_repo
-@click.option("--format", "-f", default="dataframe", help="Output format")
-def show(repo: str, format: str):
+@option_format_df
+@option_format_table
+def show(repo: str, format: str, format_table: str):
     """Show current registry state"""
     if format == "dataframe":
-        click.echo(gto.api.show(repo, dataframe=True))
+        status_df = gto.api.show(repo, dataframe=True)
+        status_df.reset_index(inplace=True)
+        click.echo(
+            tabulate(
+                status_df,
+                headers=["/".join([i for i in x if i]) for x in status_df.columns],
+                tablefmt=format_table,
+                showindex=False,
+                missingval=MISSING_VALUE,
+            )
+        )
     elif format == "json":
         click.echo(json.dumps(gto.api.show(repo, dataframe=False)))
     elif format == "yaml":
         click.echo(
             yaml.dump(gto.api.show(repo, dataframe=False), default_flow_style=False)
         )
-    else:
-        raise NotImplementedError("Unknown format")
 
 
 @gto_command()
@@ -222,29 +250,23 @@ def show(repo: str, format: str):
 @click.argument("action")
 @option_artifact
 @option_sort
-@click.option(
-    "-ft",
-    "--format-tables",
-    type=click.Choice(tabulate_formats),
-    default="fancy_outline",
-)
-def audit(repo: str, action: str, artifact: str, sort: str, format_tables: str):
+@option_format_table
+def audit(repo: str, action: str, artifact: str, sort: str, format_table: str):
     """Audit registry state"""
-    missing_val = "--"
 
     if action in {"reg", "registration", "register", "all"}:
         click.echo("\n=== Registration audit trail ===")
         audit_trail_df = gto.api.audit_registration(
             repo, artifact, sort, dataframe=True
         )
-        audit_trail_df.reset_index(level=["creation_date", "name"], inplace=True)
+        audit_trail_df.reset_index(inplace=True)
         click.echo(
             tabulate(
                 audit_trail_df,
                 headers="keys",
-                tablefmt=format_tables,
+                tablefmt=format_table,
                 showindex=False,
-                missingval=missing_val,
+                missingval=MISSING_VALUE,
             )
         )
 
@@ -253,14 +275,14 @@ def audit(repo: str, action: str, artifact: str, sort: str, format_tables: str):
         promotion_trail_df = gto.api.audit_promotion(
             repo, artifact, sort, dataframe=True
         )
-        promotion_trail_df.reset_index(level=["creation_date", "name"], inplace=True)
+        promotion_trail_df.reset_index(inplace=True)
         click.echo(
             tabulate(
                 promotion_trail_df,
                 headers="keys",
-                tablefmt=format_tables,
+                tablefmt=format_table,
                 showindex=False,
-                missingval=missing_val,
+                missingval=MISSING_VALUE,
             )
         )
 
@@ -268,12 +290,23 @@ def audit(repo: str, action: str, artifact: str, sort: str, format_tables: str):
 @gto_command()
 @option_repo
 @option_artifact
-@click.option("--format", "-f", default="dataframe", help="Output format")
+@option_format_df
+@option_format_table
 @option_sort
-def history(repo: str, artifact: str, format: str, sort: str):
+def history(repo: str, artifact: str, format: str, format_table: str, sort: str):
     """Show history of object"""
     if format == "dataframe":
-        click.echo(gto.api.history(repo, artifact, sort, dataframe=True))
+        history_df = gto.api.history(repo, artifact, sort, dataframe=True)
+        history_df.reset_index(inplace=True)
+        click.echo(
+            tabulate(
+                history_df,
+                headers="keys",
+                tablefmt=format_table,
+                showindex=False,
+                missingval=MISSING_VALUE,
+            )
+        )
     elif format == "json":
         click.echo(json.dumps(gto.api.history(repo, artifact, sort, dataframe=False)))
     elif format == "yaml":
@@ -284,8 +317,6 @@ def history(repo: str, artifact: str, format: str, sort: str):
                 default_flow_style=False,
             )
         )
-    else:
-        raise NotImplementedError("Unknown format")
 
 
 @gto_command()
@@ -309,8 +340,6 @@ def print_state(repo: str, format: str):
         click.echo(yaml.dump(serialize(state), default_flow_style=False))
     elif format == "json":
         click.echo(json.dumps(state))
-    else:
-        raise NotImplementedError("Unknown format")
 
 
 @gto_command()
@@ -327,8 +356,6 @@ def print_index(repo: str, format: str):
         )
     elif format == "json":
         click.echo(json.dumps(index))
-    else:
-        raise NotImplementedError("Unknown format")
 
 
 if __name__ == "__main__":
