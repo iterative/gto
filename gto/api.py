@@ -23,6 +23,10 @@ def get_state(repo: Union[str, Repo]):
     return GitRegistry.from_repo(repo).state
 
 
+def get_envs(repo: Union[str, Repo], in_use: bool = False):
+    return GitRegistry.from_repo(repo).get_envs(in_use=in_use)
+
+
 def add(repo: Union[str, Repo], name: str, type: str, path: str):
     """Add an object to the Index"""
     return FileIndexManager(path=repo).add(name, type, path)
@@ -95,12 +99,14 @@ def check_ref(repo: Union[str, Repo], ref: str):
 
 def show(repo: Union[str, Repo], dataframe: bool = False):
     """Show current registry state"""
+
     reg = GitRegistry.from_repo(repo)
     models_state = {
         o.name: {
             "version": o.latest_version.name if o.latest_version else None,
             "environment": {
-                name: label.version for name, label in o.latest_labels.items()
+                name: o.latest_labels[name].version if name in o.latest_labels else None
+                for name in reg.get_envs(in_use=False)
             },
         }
         for o in reg.state.objects.values()

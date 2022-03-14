@@ -277,6 +277,17 @@ def history(repo: str, artifact: str, format: str, sort: str):
 
 @gto_command()
 @option_repo
+@click.option("--in-use", is_flag=True, default=False, help="Show only in-use labels")
+def print_envs(repo: str, in_use: bool):
+    """Return list of envs in the registry.
+    If "in_use", return only those which are in use (skip deprecated).
+    If not, return all available: either all allowed or all ever used.
+    """
+    click.echo(gto.api.get_envs(repo, in_use=in_use))
+
+
+@gto_command()
+@option_repo
 @option_format
 def print_state(repo: str, format: str):
     """Print current registry state"""

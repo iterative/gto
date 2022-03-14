@@ -179,3 +179,16 @@ class GitRegistry(BaseModel):
     def latest(self, name: str):
         """Return latest version for object"""
         return self.state.find_object(name).latest_version
+
+    def get_envs(self, in_use: bool = False):
+        """Return list of envs in the registry.
+        If "in_use", return only those which are in use (skip deprecated).
+        If not, return all available: either all allowed or all ever used.
+        """
+        if in_use:
+            return {
+                label for o in self.state.objects.values() for label in o.latest_labels
+            }
+        return self.config.envs or {
+            label for o in self.state.objects.values() for label in o.unique_labels
+        }
