@@ -228,15 +228,18 @@ def show(repo: str, format: str, format_table: str):
     if format == "dataframe":
         status_df = gto.api.show(repo, dataframe=True)
         status_df.reset_index(inplace=True)
-        click.echo(
-            tabulate(
-                status_df,
-                headers=["/".join([i for i in x if i]) for x in status_df.columns],
-                tablefmt=format_table,
-                showindex=False,
-                missingval=MISSING_VALUE,
+        if len(status_df):
+            click.echo(
+                tabulate(
+                    status_df,
+                    headers=["/".join([i for i in x if i]) for x in status_df.columns],
+                    tablefmt=format_table,
+                    showindex=False,
+                    missingval=MISSING_VALUE,
+                )
             )
-        )
+        else:
+            click.echo("No tracked artifacts detected in the current workspace")
     elif format == "json":
         click.echo(json.dumps(gto.api.show(repo, dataframe=False)))
     elif format == "yaml":
@@ -268,6 +271,8 @@ def audit(repo: str, action: str, artifact: str, sort: str, format_table: str):
                 showindex=False,
                 missingval=MISSING_VALUE,
             )
+            if len(audit_trail_df)
+            else "No registered versions detected in the current workspace"
         )
 
     if action in {"promote", "promotion", "all"}:
@@ -284,6 +289,8 @@ def audit(repo: str, action: str, artifact: str, sort: str, format_table: str):
                 showindex=False,
                 missingval=MISSING_VALUE,
             )
+            if len(promotion_trail_df)
+            else "No promotions detected in the current workspace"
         )
 
 
@@ -306,6 +313,8 @@ def history(repo: str, artifact: str, format: str, format_table: str, sort: str)
                 showindex=False,
                 missingval=MISSING_VALUE,
             )
+            if len(history_df)
+            else "No history found"
         )
     elif format == "json":
         click.echo(json.dumps(gto.api.history(repo, artifact, sort, dataframe=False)))
