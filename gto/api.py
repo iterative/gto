@@ -74,9 +74,9 @@ def parse_tag(name: str):
     return parse_name(name)
 
 
-def find_latest_version(repo: Union[str, Repo], name: str):
+def find_latest_version(repo: Union[str, Repo], name: str, include_unregistered: bool = False):
     """Return latest version for object"""
-    return GitRegistry.from_repo(repo).latest(name)
+    return GitRegistry.from_repo(repo).latest(name, include_unregistered=include_unregistered)
 
 
 def find_active_label(repo: Union[str, Repo], name: str, label: str):
@@ -103,7 +103,7 @@ def show(repo: Union[str, Repo], dataframe: bool = False):
     reg = GitRegistry.from_repo(repo)
     models_state = {
         o.name: {
-            "version": o.latest_version.name if o.latest_version else None,
+            "version": o.get_latest_version().name if o.get_latest_version() else None,
             "environment": {
                 name: o.latest_labels[name].version if name in o.latest_labels else None
                 for name in reg.get_envs(in_use=False)

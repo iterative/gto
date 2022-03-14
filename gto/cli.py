@@ -134,9 +134,10 @@ def promote(repo: str, name: str, label: str, version: str, ref: str):
 @gto_command()
 @option_repo
 @arg_name
-def latest(repo: str, name: str):
+@click.option("-iu", "--include-unregistered", is_flag=True, default=False, help="Include unregistered versions")
+def latest(repo: str, name: str, include_unregistered: bool):
     """Return latest version for object"""
-    latest_version = gto.api.find_latest_version(repo, name)
+    latest_version = gto.api.find_latest_version(repo, name, include_unregistered=include_unregistered)
     if latest_version:
         click.echo(latest_version.name)
     else:

@@ -96,3 +96,6 @@ def test_unregister_show_audit(showcase):
     gto.api.show(repo)
     gto.api.audit_registration(repo)
     gto.api.audit_promotion(repo)
+
+    assert gto.api.find_latest_version(repo, "nn") is None
+    assert gto.api.find_latest_version(repo, "nn", include_unregistered=True).name == "v0.0.1"

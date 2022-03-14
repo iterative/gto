@@ -59,10 +59,9 @@ class BaseObject(BaseModel):
         labels = ", ".join(f"'{l}'" for l in self.unique_labels)
         return f"Object(versions=[{versions}], labels=[{labels}])"
 
-    @property
-    def latest_version(self) -> Optional[BaseVersion]:
+    def get_latest_version(self, include_unregistered=False) -> Optional[BaseVersion]:
         versions = sorted(
-            (v for v in self.versions if v.is_registered),
+            (v for v in self.versions if include_unregistered or v.is_registered),
             key=lambda x: x.creation_date,
         )
         if versions:

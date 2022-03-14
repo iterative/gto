@@ -81,19 +81,18 @@ class GitRegistry(BaseModel):
                 is not None
             ):
                 raise VersionAlreadyRegistered(version)
-            if (
-                found_object.versions
-                and self.config.versions_class(version)
-                < found_object.latest_version.name
-            ):
-                raise VersionIsOld(
-                    latest=found_object.latest_version.name, suggested=version
-                )
+            print(found_object.versions)
+            if found_object.versions:
+                latest_ver = found_object.get_latest_version(include_unregistered=True).name
+                if self.config.versions_class(version) < latest_ver:
+                    raise VersionIsOld(
+                        latest=latest_ver, suggested=version
+                    )
         # if version name wasn't provided but there were some, bump the last one
         elif found_object.versions:
             version = (
                 self.config.versions_class(
-                    self.state.find_object(name).latest_version.name
+                    self.state.find_object(name).get_latest_version(include_unregistered=True).name
                 )
                 .bump(**({"part": bump} if bump else {}))
                 .version
@@ -176,9 +175,9 @@ class GitRegistry(BaseModel):
         """Return label active in specific env"""
         return self.state.which(name, label, raise_if_not_found)
 
-    def latest(self, name: str):
-        """Return latest version for object"""
-        return self.state.find_object(name).latest_version
+    def latest(self, name: str, include_unregistered: bool):
+        """Return latest active version for object"""
+        return self.state.find_object(name).get_latest_version(include_unregistered=include_unregistered)
 
     def get_envs(self, in_use: bool = False):
         """Return list of envs in the registry.
