@@ -134,10 +134,18 @@ def promote(repo: str, name: str, label: str, version: str, ref: str):
 @gto_command()
 @option_repo
 @arg_name
-@click.option("-iu", "--include-unregistered", is_flag=True, default=False, help="Include unregistered versions")
+@click.option(
+    "-iu",
+    "--include-unregistered",
+    is_flag=True,
+    default=False,
+    help="Include unregistered versions",
+)
 def latest(repo: str, name: str, include_unregistered: bool):
     """Return latest version for object"""
-    latest_version = gto.api.find_latest_version(repo, name, include_unregistered=include_unregistered)
+    latest_version = gto.api.find_latest_version(
+        repo, name, include_unregistered=include_unregistered
+    )
     if latest_version:
         click.echo(latest_version.name)
     else:
@@ -226,7 +234,9 @@ def audit(repo: str, action: str, artifact: str, sort: str, format_tables: str):
 
     if action in {"reg", "registration", "register", "all"}:
         click.echo("\n=== Registration audit trail ===")
-        audit_trail_df = gto.api.audit_registration(repo, artifact, sort, dataframe=True)
+        audit_trail_df = gto.api.audit_registration(
+            repo, artifact, sort, dataframe=True
+        )
         audit_trail_df.reset_index(level=["creation_date", "name"], inplace=True)
         click.echo(
             tabulate(
@@ -240,7 +250,9 @@ def audit(repo: str, action: str, artifact: str, sort: str, format_tables: str):
 
     if action in {"promote", "promotion", "all"}:
         click.echo("\n=== Promotion audit trail ===")
-        promotion_trail_df = gto.api.audit_promotion(repo, artifact, sort, dataframe=True)
+        promotion_trail_df = gto.api.audit_promotion(
+            repo, artifact, sort, dataframe=True
+        )
         promotion_trail_df.reset_index(level=["creation_date", "name"], inplace=True)
         click.echo(
             tabulate(

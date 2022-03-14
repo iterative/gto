@@ -74,9 +74,13 @@ def parse_tag(name: str):
     return parse_name(name)
 
 
-def find_latest_version(repo: Union[str, Repo], name: str, include_unregistered: bool = False):
+def find_latest_version(
+    repo: Union[str, Repo], name: str, include_unregistered: bool = False
+):
     """Return latest version for object"""
-    return GitRegistry.from_repo(repo).latest(name, include_unregistered=include_unregistered)
+    return GitRegistry.from_repo(repo).latest(
+        name, include_unregistered=include_unregistered
+    )
 
 
 def find_active_label(repo: Union[str, Repo], name: str, label: str):
