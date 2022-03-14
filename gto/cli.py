@@ -17,6 +17,10 @@ arg_label = click.argument(LABEL)
 arg_ref = click.argument(REF)
 option_repo = click.option("-r", "--repo", default=".", help="Repository to use")
 option_format = click.option("--format", "-f", default="yaml", help="Output format")
+option_artifact = click.option("--artifact", "-a", default=None, help="Artifact name")
+option_sort = click.option(
+    "--sort", "-s", default="desc", help="Desc for recent first, Asc for older first"
+)
 
 
 @click.group()
@@ -190,7 +194,7 @@ def check_ref(repo: str, ref: str, format: str):
 @gto_command()
 @option_repo
 @click.option("--format", "-f", default="dataframe", help="Output format")
-def show(repo: str, format: bool):
+def show(repo: str, format: str):
     """Show current registry state"""
     if format == "dataframe":
         click.echo(gto.api.show(repo, dataframe=True))
@@ -205,21 +209,23 @@ def show(repo: str, format: bool):
 
 
 @gto_command()
+@option_repo
 @click.argument("action")
+@option_artifact
+@option_sort
 @click.option(
     "-ft",
     "--format-tables",
     type=click.Choice(tabulate_formats),
     default="fancy_outline",
 )
-@option_repo
-def audit(action: str, repo: str, format_tables):
+def audit(repo: str, action: str, artifact: str, sort: str, format_tables: str):
     """Audit registry state"""
     missing_val = "--"
 
     if action in {"reg", "registration", "register", "all"}:
-        click.echo("\n=== Registration audit trail ===\n")
-        audit_trail_df = gto.api.audit_registration(repo, dataframe=True)
+        click.echo("\n=== Registration audit trail ===")
+        audit_trail_df = gto.api.audit_registration(repo, artifact, sort, dataframe=True)
         audit_trail_df.reset_index(level=["creation_date", "name"], inplace=True)
         click.echo(
             tabulate(
@@ -232,8 +238,8 @@ def audit(action: str, repo: str, format_tables):
         )
 
     if action in {"promote", "promotion", "all"}:
-        click.echo("\n=== Promotion audit trail ===\n")
-        promotion_trail_df = gto.api.audit_promotion(repo, dataframe=True)
+        click.echo("\n=== Promotion audit trail ===")
+        promotion_trail_df = gto.api.audit_promotion(repo, artifact, sort, dataframe=True)
         promotion_trail_df.reset_index(level=["creation_date", "name"], inplace=True)
         click.echo(
             tabulate(
@@ -244,6 +250,29 @@ def audit(action: str, repo: str, format_tables):
                 missingval=missing_val,
             )
         )
+
+
+@gto_command()
+@option_repo
+@option_artifact
+@click.option("--format", "-f", default="dataframe", help="Output format")
+@option_sort
+def history(repo: str, artifact: str, format: str, sort: str):
+    """Show history of object"""
+    if format == "dataframe":
+        click.echo(gto.api.history(repo, artifact, sort, dataframe=True))
+    elif format == "json":
+        click.echo(json.dumps(gto.api.history(repo, artifact, sort, dataframe=False)))
+    elif format == "yaml":
+        click.echo(
+            yaml.dump(
+                gto.api.history(repo, artifact, dataframe=False),
+                sort,
+                default_flow_style=False,
+            )
+        )
+    else:
+        raise NotImplementedError("Unknown format")
 
 
 @gto_command()

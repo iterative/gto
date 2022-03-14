@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Union
 
 import pandas as pd
@@ -123,7 +124,12 @@ def show(repo: Union[str, Repo], dataframe: bool = False):
     return models_state
 
 
-def audit_registration(repo: Union[str, Repo], dataframe: bool = False):
+def audit_registration(
+    repo: Union[str, Repo],
+    artifact: str = None,
+    sort: str = "desc",
+    dataframe: bool = False,
+):
     """Audit registry state"""
     reg = GitRegistry.from_repo(repo)
 
@@ -131,25 +137,36 @@ def audit_registration(repo: Union[str, Repo], dataframe: bool = False):
         {
             "name": o.name,
             "version": v.name,
-            "creation_date": v.creation_date,
+            "timestamp": v.creation_date,
             "author": v.author,
-            "commit_hexsha": v.commit_hexsha,
+            "commit": v.commit_hexsha,
             "unregistered_date": v.unregistered_date,
         }
         for o in reg.state.objects.values()
         for v in o.versions
     ]
+    if artifact:
+        audit_trail = [event for event in audit_trail if event["name"] == artifact]
     if not dataframe:
         return audit_trail
 
     df = pd.DataFrame(audit_trail)
     if len(df):
-        df.sort_values("creation_date", ascending=False, inplace=True)
-        df.set_index(["creation_date", "name"], inplace=True)
+        df.sort_values("timestamp", ascending=is_ascending(sort), inplace=True)
+        df.set_index(["timestamp", "name"], inplace=True)
     return df
 
 
-def audit_promotion(repo: Union[str, Repo], dataframe: bool = False):
+def is_ascending(sort):
+    return sort in {"asc", "Asc", "ascending", "Ascending"}
+
+
+def audit_promotion(
+    repo: Union[str, Repo],
+    artifact: str = None,
+    sort: str = "desc",
+    dataframe: bool = False,
+):
     """Audit registry state"""
     reg = GitRegistry.from_repo(repo)
     audit_trail = [
@@ -157,19 +174,84 @@ def audit_promotion(repo: Union[str, Repo], dataframe: bool = False):
             "name": o.name,
             "label": l.name,
             "version": l.version,
-            "creation_date": l.creation_date,
+            "timestamp": l.creation_date,
             "author": l.author,
-            "commit_hexsha": l.commit_hexsha,
+            "commit": l.commit_hexsha,
             "unregistered_date": l.unregistered_date,
         }
         for o in reg.state.objects.values()
         for l in o.labels
     ]
+    if artifact:
+        audit_trail = [event for event in audit_trail if event["name"] == artifact]
     if not dataframe:
         return audit_trail
 
     df = pd.DataFrame(audit_trail)
     if len(df):
-        df.sort_values("creation_date", ascending=False, inplace=True)
-        df.set_index(["creation_date", "name"], inplace=True)
+        df.sort_values("timestamp", ascending=is_ascending(sort), inplace=True)
+        df.set_index(["timestamp", "name"], inplace=True)
+    return df
+
+
+# def history(repo: str, name: str, dataframe: bool = False):
+#     reg = GitRegistry.from_repo(repo)
+#     commits = [
+#         {"name": name_, "commit": commit}
+#         for name_, commit_list in get_index(repo)
+#         .object_centric_representation()
+#         .items()
+#         for commit in commit_list
+#     ]
+#     commits = pd.DataFrame(commits)
+#     # commits = pd.Series(get_index(repo).object_centric_representation()[name], name="commit")
+#     registration = audit_registration(repo, dataframe=True).reset_index()
+#     promotion = audit_promotion(repo, dataframe=True).reset_index()
+#     return (
+#         commits
+#         .merge(registration, how="left", on=["commit", "name"])
+#         # .merge(promotion, how="left", on=["commit", "name"])
+#     )
+
+
+def history(
+    repo: str, artifact: str = None, sort: str = "desc", dataframe: bool = False
+):
+    def add_event(event_list, event_name):
+        return [{**event, "event": event_name} for event in event_list]
+
+    reg = GitRegistry.from_repo(repo)
+    commits = [
+        {
+            "name": name_,
+            "commit": commit,
+            "timestamp": datetime.fromtimestamp(reg.repo.commit(commit).committed_date),
+            "author": reg.repo.commit(commit).author.name,
+        }
+        for name_, commit_list in get_index(repo)
+        .object_centric_representation()
+        .items()
+        for commit in commit_list
+    ]
+    # commits = pd.Series(get_index(repo).object_centric_representation()[name], name="commit_hexsha")
+    registration = audit_registration(repo, dataframe=False)
+    promotion = audit_promotion(repo, dataframe=False)
+    events_order = {"commit": 0, "registration": 1, "promotion": 2}
+    events = sorted(
+        add_event(commits, "commit")
+        + add_event(registration, "registration")
+        + add_event(promotion, "promotion"),
+        key=lambda x: (x["timestamp"], events_order[x["event"]]),
+    )
+    if is_ascending(sort):
+        events.reverse()
+    if artifact:
+        events = [event for event in events if event["name"] == artifact]
+    if not dataframe:
+        return events
+    df = pd.DataFrame(events)
+    if len(df):
+        # df.sort_values("timestamp", ascending=is_ascending(sort), inplace=True)
+        df.set_index(["timestamp", "name"], inplace=True)
+        df = df[["event"] + [col for col in df.columns if col != "event"]]
     return df
