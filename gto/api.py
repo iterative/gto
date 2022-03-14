@@ -46,9 +46,9 @@ def register(
     )
 
 
-def unregister(repo: Union[str, Repo], name: str, version: str):
+def deprecate(repo: Union[str, Repo], name: str, version: str):
     """Unregister object version"""
-    return GitRegistry.from_repo(repo).unregister(name, version)
+    return GitRegistry.from_repo(repo).deprecate(name, version)
 
 
 def promote(
@@ -75,11 +75,11 @@ def parse_tag(name: str):
 
 
 def find_latest_version(
-    repo: Union[str, Repo], name: str, include_unregistered: bool = False
+    repo: Union[str, Repo], name: str, include_deprecated: bool = False
 ):
     """Return latest version for object"""
     return GitRegistry.from_repo(repo).latest(
-        name, include_unregistered=include_unregistered
+        name, include_deprecated=include_deprecated
     )
 
 
@@ -147,7 +147,7 @@ def audit_registration(
             "timestamp": v.creation_date,
             "author": v.author,
             "commit": v.commit_hexsha,
-            "deprecated": v.unregistered_date,
+            "deprecated": v.deprecated_date,
         }
         for o in reg.state.objects.values()
         for v in o.versions
@@ -186,7 +186,7 @@ def audit_promotion(
             "timestamp": l.creation_date,
             "author": l.author,
             "commit": l.commit_hexsha,
-            "deprecated": l.unregistered_date,
+            "deprecated": l.deprecated_date,
         }
         for o in reg.state.objects.values()
         for l in o.labels

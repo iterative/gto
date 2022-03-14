@@ -70,21 +70,21 @@ class GitRegistry(BaseModel):
         found_object = self.state.find_object(name)
         # check that this commit don't have a version already
         found_version = found_object.find_version(
-            commit_hexsha=ref, skip_unregistered=True
+            commit_hexsha=ref, skip_deprecated=True
         )
         if found_version is not None:
             raise VersionExistsForCommit(name, found_version.name)
         # if version name is provided, use it
         if version:
             if (
-                found_object.find_version(name=version, skip_unregistered=False)
+                found_object.find_version(name=version, skip_deprecated=False)
                 is not None
             ):
                 raise VersionAlreadyRegistered(version)
             print(found_object.versions)
             if found_object.versions:
                 latest_ver = found_object.get_latest_version(
-                    include_unregistered=True
+                    include_deprecated=True
                 ).name
                 if self.config.versions_class(version) < latest_ver:
                     raise VersionIsOld(latest=latest_ver, suggested=version)
@@ -93,7 +93,7 @@ class GitRegistry(BaseModel):
             version = (
                 self.config.versions_class(
                     self.state.find_object(name)
-                    .get_latest_version(include_unregistered=True)
+                    .get_latest_version(include_deprecated=True)
                     .name
                 )
                 .bump(**({"part": bump} if bump else {}))
@@ -112,8 +112,8 @@ class GitRegistry(BaseModel):
             name=version, raise_if_not_found=True
         )
 
-    def unregister(self, name, version):
-        return self.version_manager.unregister(name, version)
+    def deprecate(self, name, version):
+        return self.version_manager.deprecate(name, version)
 
     def promote(
         self,
@@ -177,10 +177,10 @@ class GitRegistry(BaseModel):
         """Return label active in specific env"""
         return self.state.which(name, label, raise_if_not_found)
 
-    def latest(self, name: str, include_unregistered: bool):
+    def latest(self, name: str, include_deprecated: bool):
         """Return latest active version for object"""
         return self.state.find_object(name).get_latest_version(
-            include_unregistered=include_unregistered
+            include_deprecated=include_deprecated
         )
 
     def get_envs(self, in_use: bool = False):

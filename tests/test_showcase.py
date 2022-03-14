@@ -30,7 +30,7 @@ def test_api(showcase):  # pylint: disable=too-many-locals, too-many-statements
             name="v0.0.1",
             author=author,
             commit_hexsha=first_commit.hexsha,
-            unregistered_date=None,
+            deprecated_date=None,
         ),
         {"creation_date"},
     )
@@ -45,7 +45,7 @@ def test_api(showcase):  # pylint: disable=too-many-locals, too-many-statements
             name="staging",
             author=author,
             commit_hexsha=first_commit.hexsha,
-            unregistered_date=None,
+            deprecated_date=None,
         ),
         {"creation_date"},
     )
@@ -64,7 +64,7 @@ def test_api(showcase):  # pylint: disable=too-many-locals, too-many-statements
             name="v1.2.3",
             author=author,
             commit_hexsha=first_commit.hexsha,
-            unregistered_date=None,
+            deprecated_date=None,
         ),
         {"creation_date"},
     )
@@ -75,7 +75,7 @@ def test_api(showcase):  # pylint: disable=too-many-locals, too-many-statements
             name="v1.2.4",
             author=author,
             commit_hexsha=second_commit.hexsha,
-            unregistered_date=None,
+            deprecated_date=None,
         ),
         {"creation_date"},
     )
@@ -92,7 +92,7 @@ def test_api(showcase):  # pylint: disable=too-many-locals, too-many-statements
             name="production",
             author=author,
             commit_hexsha=first_commit.hexsha,
-            unregistered_date=None,
+            deprecated_date=None,
         ),
         {"creation_date"},
     )
@@ -104,7 +104,7 @@ def test_api(showcase):  # pylint: disable=too-many-locals, too-many-statements
             name="production",
             author=author,
             commit_hexsha=second_commit.hexsha,
-            unregistered_date=None,
+            deprecated_date=None,
         ),
         {"creation_date"},
     )
@@ -116,7 +116,7 @@ def test_api(showcase):  # pylint: disable=too-many-locals, too-many-statements
             name="staging",
             author=author,
             commit_hexsha=second_commit.hexsha,
-            unregistered_date=None,
+            deprecated_date=None,
         ),
         {"creation_date"},
     )

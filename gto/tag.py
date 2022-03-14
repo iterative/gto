@@ -13,7 +13,7 @@ from .index import ObjectCommits
 
 ActionSign = {
     Action.REGISTER: "@",
-    Action.UNREGISTER: "@!",
+    Action.DEPRECATE: "@!",
     Action.PROMOTE: "#",
     Action.DEMOTE: "#!",
 }
@@ -26,7 +26,7 @@ def name_tag(
     label: Optional[str] = None,
     repo: Optional[git.Repo] = None,
 ):
-    if action in (Action.REGISTER, Action.UNREGISTER):
+    if action in (Action.REGISTER, Action.DEPRECATE):
         return f"{name}{ActionSign[action]}{version}"
 
     if action in (Action.PROMOTE, Action.DEMOTE):
@@ -45,7 +45,7 @@ def name_tag(
 def parse_name(name: str, raise_on_fail: bool = True):
 
     # order does matter if you take into account ActionSign values
-    for action in (Action.UNREGISTER, Action.REGISTER):
+    for action in (Action.DEPRECATE, Action.REGISTER):
         if ActionSign[action] in name:
             name, version = name.split(ActionSign[action])
             return {
@@ -145,12 +145,12 @@ def version_from_tag(tag: git.Tag) -> BaseVersion:
 def label_from_tag(tag: git.Tag, obj: BaseObject) -> BaseLabel:
     mtag = parse_tag(tag)
     registered_version = obj.find_version(commit_hexsha=tag.commit.hexsha)
-    unregistered_version = (
+    deprecated_version = (
         None
         if registered_version
         else obj.find_version(
             commit_hexsha=tag.commit.hexsha,
-            skip_unregistered=False,
+            skip_deprecated=False,
             raise_if_not_found=True,
         )
     )
@@ -158,13 +158,13 @@ def label_from_tag(tag: git.Tag, obj: BaseObject) -> BaseLabel:
         object=mtag.name,
         version=registered_version.name
         if registered_version
-        else unregistered_version.name,  # type: ignore
+        else deprecated_version.name,  # type: ignore
         name=mtag.label,
         creation_date=mtag.creation_date,
         author=tag.tag.tagger.name,
         commit_hexsha=tag.commit.hexsha,
-        unregistered_date=unregistered_version.creation_date
-        if unregistered_version
+        deprecated_date=deprecated_version.creation_date
+        if deprecated_version
         else None,
     )
 
@@ -173,8 +173,8 @@ def index_tag(obj: BaseObject, tag: git.Tag) -> BaseObject:
     mtag = parse_tag(tag)
     if mtag.action == Action.REGISTER:
         obj.versions.append(version_from_tag(tag))
-    if mtag.action == Action.UNREGISTER:
-        obj.find_version(mtag.version).unregistered_date = mtag.creation_date  # type: ignore
+    if mtag.action == Action.DEPRECATE:
+        obj.find_version(mtag.version).deprecated_date = mtag.creation_date  # type: ignore
     if (
         mtag.action == Action.PROMOTE
     ):  # and obj.find_version(commit_hexsha=tag.commit.hexsha) is not None:
@@ -182,10 +182,10 @@ def index_tag(obj: BaseObject, tag: git.Tag) -> BaseObject:
     if (
         mtag.action == Action.DEMOTE
     ):  # and obj.find_version(commit_hexsha=tag.commit.hexsha) is not None:
-        # this may "unregister" incorrect version
+        # this may "deprecate" incorrect version
         # if you deprecated correct version after demotion
         if mtag.label in obj.latest_labels:
-            obj.latest_labels[mtag.label].unregistered_date = mtag.creation_date  # type: ignore
+            obj.latest_labels[mtag.label].deprecated_date = mtag.creation_date  # type: ignore
         else:
             # this may be result of deprecated version
             # or incorrect demotion tag
@@ -210,7 +210,7 @@ class TagManager(BaseManager):  # pylint: disable=abstract-method
 
 
 class TagVersionManager(TagManager):
-    actions: FrozenSet[Action] = frozenset((Action.REGISTER, Action.UNREGISTER))
+    actions: FrozenSet[Action] = frozenset((Action.REGISTER, Action.DEPRECATE))
 
     def register(self, name, version, ref, message):
         create_tag(
@@ -220,7 +220,7 @@ class TagVersionManager(TagManager):
             message=message,
         )
 
-    def unregister(self, name, version):
+    def deprecate(self, name, version):
         """Unregister object version"""
         # TODO: search in self, move to base
         tags = find(
@@ -233,7 +233,7 @@ class TagVersionManager(TagManager):
             raise ValueError(f"Found {len(tags)} git tags for {name} version {version}")
         create_tag(
             self.repo,
-            name_tag(Action.UNREGISTER, name, version=version, repo=self.repo),
+            name_tag(Action.DEPRECATE, name, version=version, repo=self.repo),
             ref=tags[0].commit.hexsha,
             message=f"Unregistering {name} version {version}",
         )

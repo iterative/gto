@@ -103,9 +103,9 @@ def register(repo: str, name: str, ref: str, version: str, bump: str):
 @option_repo
 @arg_name
 @arg_version
-def unregister(repo: str, name: str, version: str):
+def deprecate(repo: str, name: str, version: str):
     """Unregister object version"""
-    gto.api.unregister(repo, name, version)
+    gto.api.deprecate(repo, name, version)
     click.echo(f"Unregistered {name} version {version}")
 
 
@@ -136,15 +136,15 @@ def promote(repo: str, name: str, label: str, version: str, ref: str):
 @arg_name
 @click.option(
     "-iu",
-    "--include-unregistered",
+    "--include-deprecated",
     is_flag=True,
     default=False,
-    help="Include unregistered versions",
+    help="Include deprecated versions",
 )
-def latest(repo: str, name: str, include_unregistered: bool):
+def latest(repo: str, name: str, include_deprecated: bool):
     """Return latest version for object"""
     latest_version = gto.api.find_latest_version(
-        repo, name, include_unregistered=include_unregistered
+        repo, name, include_deprecated=include_deprecated
     )
     if latest_version:
         click.echo(latest_version.name)

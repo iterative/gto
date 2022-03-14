@@ -51,7 +51,7 @@ class BranchEnvManager(BaseManager):
                                 creation_date=version.creation_date,
                                 author=version.author,
                                 commit_hexsha=version.commit_hexsha,
-                                unregistered_date=version.unregistered_date,
+                                deprecated_date=version.deprecated_date,
                             )
                         )
         else:
@@ -74,7 +74,7 @@ class BranchEnvManager(BaseManager):
                                 creation_date=commit.committed_date,
                                 author=commit.author.name,
                                 commit_hexsha=commit.hexsha,
-                                unregistered_date=None,
+                                deprecated_date=None,
                             )
                         )
         return state

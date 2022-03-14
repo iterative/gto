@@ -26,7 +26,7 @@ class VersionRequired(GTOException):
 class VersionAlreadyRegistered(GTOException):
     _message = (
         "Version '{version}' already was registered.\n"
-        "Even if it was unregistered, you must use another name to avoid confusion."
+        "Even if it was deprecated, you must use another name to avoid confusion."
     )
 
     def __init__(self, version) -> None:

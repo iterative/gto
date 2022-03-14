@@ -64,12 +64,12 @@ def test_promote(repo_with_artifact):
             author=author,
             commit_hexsha=repo.commit().hexsha,
         ),
-        {"creation_date", "unregistered_date"},
+        {"creation_date", "deprecated_date"},
     )
 
 
-def test_unregister_show_audit(showcase):
-    """Test that show/audit don't break after unregistering"""
+def test_deprecate_show_audit(showcase):
+    """Test that show/audit don't break after deprecating"""
     (
         path,
         repo,
@@ -82,23 +82,23 @@ def test_unregister_show_audit(showcase):
     gto.api.audit_registration(path)
     gto.api.audit_promotion(path)
 
-    gto.api.unregister(path, "rf", "v1.2.3")
+    gto.api.deprecate(path, "rf", "v1.2.3")
     gto.api.show(path)
     gto.api.audit_registration(path)
     gto.api.audit_promotion(path)
 
-    gto.api.unregister(repo, "nn", "v0.0.1")
+    gto.api.deprecate(repo, "nn", "v0.0.1")
     gto.api.show(repo)
     gto.api.audit_registration(repo)
     gto.api.audit_promotion(repo)
 
-    gto.api.unregister(repo, "rf", "v1.2.4")
+    gto.api.deprecate(repo, "rf", "v1.2.4")
     gto.api.show(repo)
     gto.api.audit_registration(repo)
     gto.api.audit_promotion(repo)
 
     assert gto.api.find_latest_version(repo, "nn") is None
     assert (
-        gto.api.find_latest_version(repo, "nn", include_unregistered=True).name
+        gto.api.find_latest_version(repo, "nn", include_deprecated=True).name
         == "v0.0.1"
     )
