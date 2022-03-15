@@ -30,7 +30,7 @@ option_format_df = click.option(
     help="Output format",
     type=click.Choice(["dataframe", "json", "yaml"], case_sensitive=False),
 )
-option_artifact = click.option("--artifact", "-a", default=None, help="Artifact name")
+option_name = click.option("--name", "-n", default=None, help="Artifact name")
 option_sort = click.option(
     "--sort", "-s", default="desc", help="Desc for recent first, Asc for older first"
 )
@@ -249,20 +249,30 @@ def show(repo: str, format: str, format_table: str):
         )
 
 
+class ALIASES:
+    REGISTER = ["reg", "registration", "registrations", "register"]
+    PROMOTE = ["prom", "promote", "promotion", "promotions"]
+
+
 @gto_command()
 @option_repo
-@click.argument("action")
-@option_artifact
+@click.option(
+    "-a",
+    "--action",
+    default=["register", "promote"],
+    multiple=True,
+    help="What actions to audit",
+    type=click.Choice(ALIASES.REGISTER + ALIASES.PROMOTE),
+)
+@option_name
 @option_sort
 @option_format_table
-def audit(repo: str, action: str, artifact: str, sort: str, format_table: str):
+def audit(repo: str, action: str, name: str, sort: str, format_table: str):
     """Audit registry state"""
 
-    if action in {"reg", "registration", "register", "all"}:
+    if any(a in ALIASES.REGISTER for a in action):
         click.echo("\n=== Registration audit trail ===")
-        audit_trail_df = gto.api.audit_registration(
-            repo, artifact, sort, dataframe=True
-        )
+        audit_trail_df = gto.api.audit_registration(repo, name, sort, dataframe=True)
         audit_trail_df.reset_index(inplace=True)
         click.echo(
             tabulate(
@@ -276,11 +286,9 @@ def audit(repo: str, action: str, artifact: str, sort: str, format_table: str):
             else "No registered versions detected in the current workspace"
         )
 
-    if action in {"promote", "promotion", "all"}:
+    if any(a in ALIASES.PROMOTE for a in action):
         click.echo("\n=== Promotion audit trail ===")
-        promotion_trail_df = gto.api.audit_promotion(
-            repo, artifact, sort, dataframe=True
-        )
+        promotion_trail_df = gto.api.audit_promotion(repo, name, sort, dataframe=True)
         promotion_trail_df.reset_index(inplace=True)
         click.echo(
             tabulate(
@@ -297,7 +305,7 @@ def audit(repo: str, action: str, artifact: str, sort: str, format_table: str):
 
 @gto_command()
 @option_repo
-@option_artifact
+@option_name
 @option_format_df
 @option_format_table
 @option_sort
