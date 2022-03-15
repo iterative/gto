@@ -29,7 +29,7 @@ class GitRegistry(BaseModel):
     @classmethod
     def from_repo(cls, repo=Union[str, Repo], config=None):
         if isinstance(repo, str):
-            repo = git.Repo(repo)
+            repo = git.Repo(repo, search_parent_directories=True)
         if config is None:
             config = RegistryConfig(
                 CONFIG_FILE=os.path.join(repo.working_dir, CONFIG_FILE)

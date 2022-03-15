@@ -125,7 +125,7 @@ class RepoIndexManager(FileIndexManager):
     @classmethod
     def from_repo(cls, repo: Union[str, git.Repo]):
         if isinstance(repo, str):
-            repo = git.Repo(repo)
+            repo = git.Repo(repo, search_parent_directories=True)
         return cls(repo=repo)
 
     def index_path(self):
