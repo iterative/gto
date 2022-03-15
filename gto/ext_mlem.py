@@ -10,6 +10,7 @@ from gto.ext import Enrichment, EnrichmentInfo
 
 
 class MlemInfo(EnrichmentInfo):
+    source = "mlem"
     meta: MlemMeta
 
     def get_object(self) -> BaseModel:
@@ -28,6 +29,6 @@ class MlemInfo(EnrichmentInfo):
 class MlemEnrichment(Enrichment):
     def describe(self, obj: str) -> Optional[MlemInfo]:
         try:
-            return MlemInfo(source="mlem", meta=load_meta(obj))
+            return MlemInfo(meta=load_meta(obj))
         except MlemObjectNotFound:
             return None
