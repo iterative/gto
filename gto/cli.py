@@ -63,7 +63,8 @@ def _set_log_level(ctx, param, value):  # pylint: disable=unused-argument
         logger.setLevel(logging.DEBUG)
         from gto.config import CONFIG  # pylint: disable=import-outside-toplevel
 
-        click.echo(CONFIG)
+        click.echo(CONFIG.__repr_str__("\n"))
+        click.echo()
 
 
 verbose_option = click.option(
