@@ -90,9 +90,9 @@ def gto_command(*args, **kwargs):
 @arg_name
 @click.argument("type")
 @click.argument("path")
-def add(repo: str, name: str, type: str, path: str):
+def add(repo: str, type: str, name: str, path: str):
     """Add an object to the Index"""
-    gto.api.add(repo, name, type, path)
+    gto.api.add(repo, type, name, path)
 
 
 @cli.command("rm")

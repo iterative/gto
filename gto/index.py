@@ -13,9 +13,9 @@ from .exceptions import GTOException, ObjectNotFound
 
 
 class Artifact(BaseModel):
+    type: str
     name: str
     path: str
-    type: str
 
 
 State = Dict[str, Artifact]
@@ -57,10 +57,10 @@ class Index(BaseModel):
                 yaml.dump(self.dict()["state"], file)
 
     @not_frozen
-    def add(self, name, type, path):
+    def add(self, type, name, path):
         if name in self:
             raise GTOException(f"Artifact {name} already exists")
-        self.state[name] = Artifact(name=name, type=type, path=path)
+        self.state[name] = Artifact(type=type, name=name, path=path)
 
     @not_frozen
     def remove(self, name):
@@ -84,9 +84,9 @@ class BaseIndexManager(BaseModel, ABC):
     def get_history(self) -> Dict[str, Index]:
         raise NotImplementedError
 
-    def add(self, name, type, path):
+    def add(self, type, name, path):
         index = self.get_index()
-        index.add(name, type, path)
+        index.add(type, name, path)
         self.update()
 
     def remove(self, name):

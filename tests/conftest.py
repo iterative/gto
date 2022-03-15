@@ -66,9 +66,9 @@ def showcase(
     write_file("models/random-forest.pkl", "1st version")
     write_file("models/neural-network.pkl", "1st version")
 
-    gto.api.add(path, "rf", "model", "models/random-forest.pkl")
-    gto.api.add(path, "nn", "model", "models/neural-network.pkl")
-    gto.api.add(path, "features", "dataset", "datasets/features.csv")
+    gto.api.add(path, "model", "rf", "models/random-forest.pkl")
+    gto.api.add(path, "model", "nn", "models/neural-network.pkl")
+    gto.api.add(path, "dataset", "features", "datasets/features.csv")
 
     repo.index.add(["artifacts.yaml", "models"])
     first_commit = repo.index.commit("Create models")

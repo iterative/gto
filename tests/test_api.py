@@ -19,7 +19,7 @@ def test_empty_state(empty_git_repo):
 def repo_with_artifact(init_showcase_numbers):
     path, repo, write_file = init_showcase_numbers  # pylint: disable=unused-variable
     name, type, path_ = "new-artifact", "new-type", "new/path"
-    gto.api.add(path, name, type, path_)
+    gto.api.add(path, type, name, path_)
     repo.index.add(["artifacts.yaml"])
     repo.index.commit("Added index")
     return repo, name
@@ -27,7 +27,7 @@ def repo_with_artifact(init_showcase_numbers):
 
 def test_add_remove(empty_git_repo):
     name, type, path = "new-artifact", "new-type", "new/path"
-    gto.api.add(empty_git_repo.working_dir, name, type, path)
+    gto.api.add(empty_git_repo.working_dir, type, name, path)
     index = gto.api.get_index(empty_git_repo.working_dir).get_index()
     assert name in index
     _check_dict(index.state[name], dict(name=name, type=type, path=path), {})

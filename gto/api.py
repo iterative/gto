@@ -27,9 +27,9 @@ def get_envs(repo: Union[str, Repo], in_use: bool = False):
     return GitRegistry.from_repo(repo).get_envs(in_use=in_use)
 
 
-def add(repo: Union[str, Repo], name: str, type: str, path: str):
+def add(repo: Union[str, Repo], type: str, name: str, path: str):
     """Add an object to the Index"""
-    return FileIndexManager(path=repo).add(name, type, path)
+    return FileIndexManager(path=repo).add(type, name, path)
 
 
 def remove(repo: Union[str, Repo], name: str):
