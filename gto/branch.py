@@ -4,7 +4,7 @@ from typing import Dict, FrozenSet, List
 
 import git
 
-from gto.index import ObjectCommits
+from gto.index import ArtifactCommits
 
 from .base import BaseLabel, BaseManager, BaseRegistryState
 from .config import CONFIG  # need to pass this when you initialize BranchEnvManager
@@ -29,12 +29,12 @@ class BranchEnvManager(BaseManager):
     actions: FrozenSet[Action] = frozenset((Action.PROMOTE, Action.DEMOTE))
 
     def update_state(
-        self, state: BaseRegistryState, index: ObjectCommits
+        self, state: BaseRegistryState, index: ArtifactCommits
     ) -> BaseRegistryState:
         if CONFIG.VERSION_REQUIRED_FOR_ENV:
             # we assume that the model is promoted the same moment it is registered
-            for name in state.objects:
-                for version in state.objects[name].versions:
+            for name in state.artifacts:
+                for version in state.artifacts[name].versions:
                     # TODO: For each branch that has this commit in history
                     # we assume the model was promoted to corresponding env
                     # we should see are there any options to do this differently
@@ -43,9 +43,9 @@ class BranchEnvManager(BaseManager):
                         env = CONFIG.branch_to_env(branch.name)
                         if env is None:
                             continue
-                        state.objects[name].labels.append(
+                        state.artifacts[name].labels.append(
                             BaseLabel(
-                                object=version.object,
+                                artifact=version.artifact,
                                 version=version.name,
                                 name=env,
                                 creation_date=version.creation_date,
@@ -56,19 +56,19 @@ class BranchEnvManager(BaseManager):
                         )
         else:
             # we assume each commit in a branch is a promotion to branch env
-            # if object was indexed
+            # if artifact was indexed
             for name, commits in index.items():
                 for hexsha in commits:
                     commit = self.repo.commit(hexsha)
-                    version = state.objects[name].find_version(commit_hexsha=hexsha)  # type: ignore
+                    version = state.artifacts[name].find_version(commit_hexsha=hexsha)  # type: ignore
                     version = version.name if version else hexsha  # type: ignore
                     for branch in find_branches(self.repo, hexsha):
                         env = CONFIG.branch_to_env(branch.name)
                         if env is None:
                             continue
-                        state.objects[name].labels.append(
+                        state.artifacts[name].labels.append(
                             BaseLabel(
-                                object=name,
+                                artifact=name,
                                 version=version,
                                 name=env,
                                 creation_date=commit.committed_date,
@@ -137,7 +137,7 @@ class BranchEnvManager(BaseManager):
             return {}
         return {
             name: label
-            for name in state.objects
-            for label in state.objects[name].labels
+            for name in state.artifacts
+            for label in state.artifacts[name].labels
             if label.commit_hexsha == ref
         }

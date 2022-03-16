@@ -6,7 +6,7 @@ import git
 from git import InvalidGitRepositoryError, Repo
 from pydantic import BaseModel
 
-from gto.base import BaseManager, BaseObject, BaseRegistryState
+from gto.base import BaseArtifact, BaseLabel, BaseManager, BaseRegistryState
 from gto.config import CONFIG_FILE, RegistryConfig
 from gto.exceptions import (
     NoActiveLabel,
@@ -54,10 +54,10 @@ class GitRegistry(BaseModel):
 
     @property
     def state(self):
-        index = self.index.object_centric_representation()
+        index = self.index.artifact_centric_representation()
         state = BaseRegistryState(
-            objects={
-                name: BaseObject(name=name, versions=[], labels=[]) for name in index
+            artifacts={
+                name: BaseArtifact(name=name, versions=[], labels=[]) for name in index
             }
         )
         state = self.version_manager.update_state(state, index)
@@ -66,14 +66,14 @@ class GitRegistry(BaseModel):
         return state
 
     def register(self, name, ref, version=None, bump=None):
-        """Register object version"""
+        """Register artifact version"""
         ref = self.repo.commit(ref).hexsha
         # TODO: add the same check for other actions, to promote and etc
         # also we need to check integrity of the index+state
         self.index.assert_existence(name, ref)
-        found_object = self.state.find_object(name)
+        found_artifact = self.state.find_artifact(name)
         # check that this commit don't have a version already
-        found_version = found_object.find_version(
+        found_version = found_artifact.find_version(
             commit_hexsha=ref, skip_deprecated=True
         )
         if found_version is not None:
@@ -81,22 +81,22 @@ class GitRegistry(BaseModel):
         # if version name is provided, use it
         if version:
             if (
-                found_object.find_version(name=version, skip_deprecated=False)
+                found_artifact.find_version(name=version, skip_deprecated=False)
                 is not None
             ):
                 raise VersionAlreadyRegistered(version)
-            print(found_object.versions)
-            if found_object.versions:
-                latest_ver = found_object.get_latest_version(
+            print(found_artifact.versions)
+            if found_artifact.versions:
+                latest_ver = found_artifact.get_latest_version(
                     include_deprecated=True
                 ).name
                 if self.config.versions_class(version) < latest_ver:
                     raise VersionIsOld(latest=latest_ver, suggested=version)
         # if version name wasn't provided but there were some, bump the last one
-        elif found_object.versions:
+        elif found_artifact.versions:
             version = (
                 self.config.versions_class(
-                    self.state.find_object(name)
+                    self.state.find_artifact(name)
                     .get_latest_version(include_deprecated=True)
                     .name
                 )
@@ -110,9 +110,9 @@ class GitRegistry(BaseModel):
             name,
             version,
             ref,
-            message=f"Registering object {name} version {version}",
+            message=f"Registering artifact {name} version {version}",
         )
-        return self.state.find_object(name).find_version(
+        return self.state.find_artifact(name).find_version(
             name=version, raise_if_not_found=True
         )
 
@@ -126,8 +126,8 @@ class GitRegistry(BaseModel):
         promote_version=None,
         promote_ref=None,
         name_version=None,
-    ):
-        """Assign label to specific object version"""
+    ) -> BaseLabel:
+        """Assign label to specific artifact version"""
         self.config.assert_env(label)
         if not (promote_version is None) ^ (promote_ref is None):
             raise ValueError("One and only one of (version, commit) must be specified.")
@@ -135,35 +135,37 @@ class GitRegistry(BaseModel):
             promote_ref = self.repo.commit(promote_ref).hexsha
         if promote_ref:
             self.index.assert_existence(name, promote_ref)
-        found_object = self.state.find_object(name)
+        found_artifact = self.state.find_artifact(name)
         if promote_version is not None:
-            found_version = found_object.find_version(
+            found_version = found_artifact.find_version(
                 name=promote_version, raise_if_not_found=True
             )
             promote_ref = self.find_commit(name, promote_version)
         else:
-            found_version = found_object.find_version(commit_hexsha=promote_ref)
+            found_version = found_artifact.find_version(commit_hexsha=promote_ref)
             if found_version is None:
-                self.register(name, version=name_version, ref=promote_ref)
+                version = self.register(name, version=name_version, ref=promote_ref)
                 click.echo(
-                    f"Registered new version '{promote_version}' of '{name}' at commit '{promote_ref}'"
+                    f"Registered new version '{version.name}' of '{name}' at commit '{promote_ref}'"
                 )
-        self.env_manager.promote(
+        self.env_manager.promote(  # type: ignore
             name,
             label,
             ref=promote_ref,
             message=f"Promoting {name} version {promote_version} to label {label}",
         )
-        return {"version": promote_version}
+        return self.state.find_artifact(name).latest_labels[label]
 
     def demote(self, name, label):
-        """De-promote object from given label"""
-        label_obj = self.state.find_object(name).latest_labels.get(label)
-        if label_obj is None:
+        """De-promote artifact from given label"""
+        # TODO: now you can promote artifact to some env multiple times
+        # Then, if you'll try to `demote`, you should demote all promotions.
+        label_ = self.state.find_artifact(name).latest_labels.get(label)
+        if label_ is None:
             raise NoActiveLabel(label=label, name=name)
         return self.env_manager.demote(
             name,
-            label_obj,
+            label_,
             message=f"Demoting {name} from label {label}",
         )
 
@@ -182,8 +184,8 @@ class GitRegistry(BaseModel):
         return self.state.which(name, label, raise_if_not_found)
 
     def latest(self, name: str, include_deprecated: bool):
-        """Return latest active version for object"""
-        return self.state.find_object(name).get_latest_version(
+        """Return latest active version for artifact"""
+        return self.state.find_artifact(name).get_latest_version(
             include_deprecated=include_deprecated
         )
 
@@ -194,8 +196,10 @@ class GitRegistry(BaseModel):
         """
         if in_use:
             return {
-                label for o in self.state.objects.values() for label in o.latest_labels
+                label
+                for o in self.state.artifacts.values()
+                for label in o.latest_labels
             }
         return self.config.envs or {
-            label for o in self.state.objects.values() for label in o.unique_labels
+            label for o in self.state.artifacts.values() for label in o.unique_labels
         }

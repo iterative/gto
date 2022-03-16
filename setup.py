@@ -41,7 +41,7 @@ setup_args = dict(  # noqa: C408
     license="Apache License 2.0",
     install_requires=install_requires,
     extras_require={"tests": tests},
-    keywords="git gto mlops object registry developer-tools collaboration",
+    keywords="git gto mlops artifact registry developer-tools collaboration",
     python_requires=">=3.6",
     classifiers=[
         "Development Status :: 2 - Pre-Alpha",

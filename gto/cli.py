@@ -13,13 +13,16 @@ arg_name = click.argument(NAME)
 arg_version = click.argument(VERSION)
 arg_label = click.argument(LABEL)
 arg_ref = click.argument(REF)
-option_repo = click.option("-r", "--repo", default=".", help="Repository to use")
+option_repo = click.option(
+    "-r", "--repo", default=".", help="Repository to use", show_default=True
+)
 option_format = click.option(
     "--format",
     "-f",
     default="yaml",
     help="Output format",
     type=click.Choice(["json", "yaml"], case_sensitive=False),
+    show_default=True,
 )
 option_format_df = click.option(
     "--format",
@@ -27,19 +30,32 @@ option_format_df = click.option(
     default="dataframe",
     help="Output format",
     type=click.Choice(["dataframe", "json", "yaml"], case_sensitive=False),
+    show_default=True,
 )
-option_name = click.option("--name", "-n", default=None, help="Artifact name")
+option_name = click.option(
+    "--name", "-n", default=None, help="Artifact name", show_default=True
+)
 option_sort = click.option(
-    "--sort", "-s", default="desc", help="Desc for recent first, Asc for older first"
+    "--sort",
+    "-s",
+    default="desc",
+    help="Desc for recent first, Asc for older first",
+    show_default=True,
 )
 option_format_table = click.option(
     "-ft",
     "--format-table",
     type=click.Choice(tabulate_formats),
     default="fancy_outline",
+    show_default=True,
 )
 
 MISSING_VALUE = "-"
+
+
+class ALIAS:
+    REGISTER = ["reg", "registration", "registrations", "register"]
+    PROMOTE = ["prom", "promote", "promotion", "promotions"]
 
 
 @click.group()
@@ -85,11 +101,11 @@ def gto_command(*args, **kwargs):
 
 @gto_command()
 @option_repo
-@arg_name
 @click.argument("type")
+@arg_name
 @click.argument("path")
 def add(repo: str, type: str, name: str, path: str):
-    """Add an object to the Index"""
+    """Register new artifact (add it to the Index)"""
     gto.api.add(repo, type, name, path)
 
 
@@ -97,7 +113,7 @@ def add(repo: str, type: str, name: str, path: str):
 @option_repo
 @arg_name
 def remove(repo: str, name: str):
-    """Remove an object from the Index"""
+    """Deregister the artifact (remove it from the Index)"""
     gto.api.remove(repo, name)
 
 
@@ -105,17 +121,17 @@ def remove(repo: str, name: str):
 @option_repo
 @arg_name
 @arg_ref
-@click.option("--version", "-v", default=None, help="Version to promote")
+@click.option("--version", "--ver", default=None, help="Version to promote")
 @click.option(
     "--bump", "-b", default=None, help="The exact part to use when bumping a version"
 )
 def register(repo: str, name: str, ref: str, version: str, bump: str):
-    """Register new object version"""
+    """Register new artifact version"""
     registered_version = gto.api.register(
         repo=repo, name=name, ref=ref, version=version, bump=bump
     )
     click.echo(
-        f"Registered {registered_version.object} version {registered_version.name}"
+        f"Registered {registered_version.artifact} version {registered_version.name}"
     )
 
 
@@ -124,9 +140,9 @@ def register(repo: str, name: str, ref: str, version: str, bump: str):
 @arg_name
 @arg_version
 def deprecate(repo: str, name: str, version: str):
-    """Unregister object version"""
+    """Deprecate artifact version"""
     gto.api.deprecate(repo, name, version)
-    click.echo(f"Unregistered {name} version {version}")
+    click.echo(f"Deprecated {name} version {version}")
 
 
 @gto_command()
@@ -140,29 +156,40 @@ def deprecate(repo: str, name: str, version: str):
 )
 @click.option("--ref", default=None)
 def promote(repo: str, name: str, label: str, version: str, ref: str):
-    """Assign label to specific object version"""
+    """Assign label to specific artifact version"""
     if ref is not None:
         name_version = version
         promote_version = None
     else:
         name_version = None
         promote_version = version
-    result = gto.api.promote(repo, name, label, promote_version, ref, name_version)
-    click.echo(f"Promoted {name} version {result['version']} to label {label}")
+    label_ = gto.api.promote(repo, name, label, promote_version, ref, name_version)
+    click.echo(f"Promoted {name} version {label_.version} to label {label}")
+
+
+@gto_command(hidden=True)
+@option_repo
+@arg_name
+@arg_label
+def demote(repo: str, name: str, label: str):
+    """De-promote artifact from given label"""
+    gto.api.demote(repo, name, label)
+    click.echo(f"Demoted {name} from label {label}")
 
 
 @gto_command()
 @option_repo
 @arg_name
 @click.option(
-    "-iu",
-    "--include-deprecated",
+    "-d",
+    "--deprecated",
     is_flag=True,
     default=False,
     help="Include deprecated versions",
+    show_default=True,
 )
 def latest(repo: str, name: str, include_deprecated: bool):
-    """Return latest version for object"""
+    """Return latest version of artifact"""
     latest_version = gto.api.find_latest_version(
         repo, name, include_deprecated=include_deprecated
     )
@@ -177,22 +204,12 @@ def latest(repo: str, name: str, include_deprecated: bool):
 @arg_name
 @arg_label
 def which(repo: str, name: str, label: str):
-    """Return version of object with specific label active"""
+    """Return version of artifact with specific label active"""
     version = gto.api.find_active_label(repo, name, label)
     if version:
         click.echo(version.version)
     else:
         click.echo(f"No version of '{name}' with label '{label}' active")
-
-
-@gto_command()
-@option_repo
-@arg_name
-@arg_label
-def demote(repo: str, name: str, label: str):
-    """De-promote object from given label"""
-    gto.api.demote(repo, name, label)
-    click.echo(f"Demoted {name} from label {label}")
 
 
 @gto_command()
@@ -212,7 +229,7 @@ def parse_tag(name: str, key: str, format: str):
 @click.argument("ref")
 @option_format
 def check_ref(repo: str, ref: str, format: str):
-    """Find out what have been registered/promoted in the provided ref"""
+    """Find out artifact & version registered/promoted with the provided ref"""
     result = gto.api.check_ref(repo, ref)
     format_echo(result, format)
 
@@ -234,11 +251,6 @@ def show(repo: str, format: str, format_table: str):
         format_echo(gto.api.show(repo, dataframe=False), format=format)
 
 
-class ALIASES:
-    REGISTER = ["reg", "registration", "registrations", "register"]
-    PROMOTE = ["prom", "promote", "promotion", "promotions"]
-
-
 @gto_command()
 @option_repo
 @click.option(
@@ -247,15 +259,16 @@ class ALIASES:
     default=["register", "promote"],
     multiple=True,
     help="What actions to audit",
-    type=click.Choice(ALIASES.REGISTER + ALIASES.PROMOTE),
+    type=click.Choice(ALIAS.REGISTER + ALIAS.PROMOTE),
+    show_default=True,
 )
 @option_name
 @option_sort
 @option_format_table
 def audit(repo: str, action: str, name: str, sort: str, format_table: str):
-    """Audit registry state"""
+    """Audit actions made in registry"""
 
-    if any(a in ALIASES.REGISTER for a in action):
+    if any(a in ALIAS.REGISTER for a in action):
         click.echo("\n=== Registration audit trail ===")
         format_echo(
             gto.api.audit_registration(repo, name, sort, dataframe=True),
@@ -264,7 +277,7 @@ def audit(repo: str, action: str, name: str, sort: str, format_table: str):
             if_empty="No registered versions detected in the current workspace",
         )
 
-    if any(a in ALIASES.PROMOTE for a in action):
+    if any(a in ALIAS.PROMOTE for a in action):
         click.echo("\n=== Promotion audit trail ===")
         format_echo(
             gto.api.audit_promotion(repo, name, sort, dataframe=True),
@@ -281,7 +294,7 @@ def audit(repo: str, action: str, name: str, sort: str, format_table: str):
 @option_format_table
 @option_sort
 def history(repo: str, name: str, format: str, format_table: str, sort: str):
-    """Show history of object"""
+    """Show history of artifact"""
     if format == "dataframe":
         format_echo(
             gto.api.history(repo, name, sort, dataframe=True),
@@ -295,7 +308,13 @@ def history(repo: str, name: str, format: str, format_table: str, sort: str):
 
 @gto_command()
 @option_repo
-@click.option("--in-use", is_flag=True, default=False, help="Show only in-use labels")
+@click.option(
+    "--in-use",
+    is_flag=True,
+    default=False,
+    help="Show only in-use labels",
+    show_default=True,
+)
 def print_envs(repo: str, in_use: bool):
     """Return list of envs in the registry.
     If "in_use", return only those which are in use (skip deprecated).
@@ -308,8 +327,10 @@ def print_envs(repo: str, in_use: bool):
 @option_repo
 @option_format
 def print_state(repo: str, format: str):
-    """Print current registry state"""
-    state = serialize(gto.api.get_state(repo).dict())
+    """Technical cmd: Print current registry state"""
+    state = serialize(
+        gto.api._get_state(repo).dict()  # pylint: disable=protected-access
+    )
     format_echo(state, format)
 
 
@@ -317,7 +338,8 @@ def print_state(repo: str, format: str):
 @option_repo
 @option_format
 def print_index(repo: str, format: str):
-    index = gto.api.get_index(repo).object_centric_representation()
+    """Technical cmd: Print repo index"""
+    index = gto.api.get_index(repo).artifact_centric_representation()
     format_echo(index, format)
 
 

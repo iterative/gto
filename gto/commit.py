@@ -5,22 +5,22 @@ from git import BadName
 
 from .base import BaseManager, BaseRegistryState, BaseVersion
 from .constants import Action
-from .index import ObjectCommits
+from .index import ArtifactCommits
 
 
 class CommitVersionManager(BaseManager):
     actions: FrozenSet[Action] = frozenset((Action.PROMOTE, Action.DEMOTE))
 
     def update_state(
-        self, state: BaseRegistryState, index: ObjectCommits
+        self, state: BaseRegistryState, index: ArtifactCommits
     ) -> BaseRegistryState:
-        # each commit is a version if object is indexed in that commit
+        # each commit is a version if artifact is indexed in that commit
         for name, commits in index.items():
             for hexsha in commits:
                 commit = self.repo.commit(hexsha)
-                state.objects[name].versions.append(
+                state.artifacts[name].versions.append(
                     BaseVersion(
-                        object=name,
+                        artifact=name,
                         name=hexsha,
                         creation_date=commit.committed_datetime,
                         author=commit.author.name,
@@ -39,7 +39,7 @@ class CommitVersionManager(BaseManager):
             return {}
         return {
             name: version
-            for name in state.objects
-            for version in state.objects[name].versions
+            for name in state.artifacts
+            for version in state.artifacts[name].versions
             if version.commit_hexsha == ref
         }
