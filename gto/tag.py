@@ -145,27 +145,31 @@ def version_from_tag(tag: git.Tag) -> BaseVersion:
 def label_from_tag(tag: git.Tag, art: BaseArtifact) -> BaseLabel:
     mtag = parse_tag(tag)
     registered_version = art.find_version(commit_hexsha=tag.commit.hexsha)
-    deprecated_version = (
-        None
-        if registered_version
-        else art.find_version(
+    if registered_version:
+        version = None
+        deprecated_date = None
+        version_name = registered_version.name  # type: ignore
+    else:
+        deprecated_versions = art.find_version(
             commit_hexsha=tag.commit.hexsha,
             skip_deprecated=False,
             raise_if_not_found=True,
+            allow_multiple=True,
         )
-    )
+        version = sorted(
+            [v for v in deprecated_versions if v.creation_date <= mtag.creation_date],  # type: ignore
+            key=lambda v: v.creation_date,  # type: ignore
+        )[-1]
+        version_name = version.name  # type: ignore
+        deprecated_date = version.creation_date  # type: ignore
     return BaseLabel(
         artifact=mtag.name,
-        version=registered_version.name
-        if registered_version
-        else deprecated_version.name,  # type: ignore
+        version=version_name,
         name=mtag.label,
         creation_date=mtag.creation_date,
         author=tag.tag.tagger.name,
         commit_hexsha=tag.commit.hexsha,
-        deprecated_date=deprecated_version.creation_date
-        if deprecated_version
-        else None,
+        deprecated_date=deprecated_date,
     )
 
 

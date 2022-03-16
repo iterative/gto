@@ -26,8 +26,20 @@ class ArtifactNotFound(GTOException):
 class VersionRequired(GTOException):
     _message = "No versions found for '{name}'"
 
-    def __init__(self, name):
-        self.message = self._message.format(name=name)
+    def __init__(self, name, skip_deprecated=True) -> None:
+        self.message = self._message.format(name=name) + (
+            ", skipping deprecated" if skip_deprecated else ""
+        )
+        super().__init__(self.message)
+
+
+class ManyVersions(GTOException):
+    _message = "{versions} versions of artifact {name} found"
+
+    def __init__(self, name, versions, skip_deprecated) -> None:
+        self.message = self._message.format(
+            name=name, versions=versions, skip_deprecated=skip_deprecated
+        ) + (", skipping deprecated" if skip_deprecated else "")
         super().__init__(self.message)
 
 

@@ -144,9 +144,9 @@ class GitRegistry(BaseModel):
         else:
             found_version = found_artifact.find_version(commit_hexsha=promote_ref)
             if found_version is None:
-                self.register(name, version=name_version, ref=promote_ref)
+                version = self.register(name, version=name_version, ref=promote_ref)
                 click.echo(
-                    f"Registered new version '{promote_version}' of '{name}' at commit '{promote_ref}'"
+                    f"Registered new version '{version.name}' of '{name}' at commit '{promote_ref}'"
                 )
         self.env_manager.promote(
             name,

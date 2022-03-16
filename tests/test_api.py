@@ -1,4 +1,6 @@
 """TODO: add more tests for API"""
+from time import sleep
+
 import pytest
 
 import gto
@@ -11,7 +13,9 @@ def test_empty_index(empty_git_repo):
 
 
 def test_empty_state(empty_git_repo):
-    state = gto.api.get_state(empty_git_repo.working_dir)
+    state = gto.api._get_state(  # pylint: disable=protected-access
+        empty_git_repo.working_dir
+    )
     assert len(state.artifacts) == 0
 
 
@@ -109,3 +113,15 @@ def test_deprecate_show_audit(showcase):
         gto.api.find_latest_version(repo, "nn", include_deprecated=True).name
         == "v0.0.1"
     )
+
+
+def test_twice_deprecated(repo_with_artifact):
+    repo, name = repo_with_artifact
+    gto.api.promote(repo, name, "prod", promote_ref="HEAD")
+    sleep(1)
+    gto.api.deprecate(repo, name, "v1")
+    sleep(1)
+    gto.api.promote(repo, name, "prod", promote_ref="HEAD")
+    sleep(1)
+    gto.api.deprecate(repo, name, "v2")
+    gto.api.show(repo)

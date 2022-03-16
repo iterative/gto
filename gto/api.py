@@ -18,7 +18,7 @@ def get_index(repo: Union[str, Repo], file=False):
     return RepoIndexManager.from_repo(repo)
 
 
-def get_state(repo: Union[str, Repo]):
+def _get_state(repo: Union[str, Repo]):
     """Show current registry state"""
     return GitRegistry.from_repo(repo).state
 

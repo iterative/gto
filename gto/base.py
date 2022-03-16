@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Dict, FrozenSet, List, Optional
+from typing import Dict, FrozenSet, List, Optional, Union
 
 import git
 from pydantic import BaseModel
@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from gto.constants import Action
 from gto.index import ArtifactCommits
 
-from .exceptions import ArtifactNotFound, GTOException
+from .exceptions import ArtifactNotFound, ManyVersions, VersionRequired
 
 
 class BaseLabel(BaseModel):  # pylint: disable=too-many-instance-attributes
@@ -90,7 +90,8 @@ class BaseArtifact(BaseModel):
         commit_hexsha: str = None,
         raise_if_not_found=False,
         skip_deprecated=True,
-    ) -> Optional[BaseVersion]:
+        allow_multiple=False,
+    ) -> Union[None, BaseVersion, List[BaseVersion]]:
         versions = [
             v
             for v in self.versions
@@ -98,22 +99,13 @@ class BaseArtifact(BaseModel):
             and (v.commit_hexsha == commit_hexsha if commit_hexsha else True)
             and (v.deprecated_date is None if skip_deprecated else True)
         ]
-        if raise_if_not_found:
-            if len(versions) != 1:
-                raise GTOException(
-                    f"{len(versions)} versions of artifact {self.name} found"
-                    + ", skipping deprecated"
-                    if skip_deprecated
-                    else ""
-                )
-            return versions[0]
-
+        if allow_multiple:
+            return versions
+        if raise_if_not_found and not versions:
+            raise VersionRequired(name=self.name, skip_deprecated=skip_deprecated)
         if len(versions) > 1:
-            raise GTOException(
-                f"{len(versions)} versions of artifact {self.name} found"
-                + ", skipping deprecated"
-                if skip_deprecated
-                else ""
+            raise ManyVersions(
+                name=self.name, versions=len(versions), skip_deprecated=skip_deprecated
             )
         return versions[0] if versions else None
 

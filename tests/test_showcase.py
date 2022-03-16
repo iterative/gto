@@ -13,7 +13,7 @@ def test_api(showcase):  # pylint: disable=too-many-locals, too-many-statements
         second_commit,
     ) = showcase
 
-    artifacts = gto.api.get_state(path).artifacts
+    artifacts = gto.api._get_state(path).artifacts  # pylint: disable=protected-access
     assert set(artifacts.keys()) == {"features", "nn", "rf"}
     assert artifacts["features"] == BaseArtifact(
         name="features", versions=[], labels=[]

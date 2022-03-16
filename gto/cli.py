@@ -94,7 +94,7 @@ def gto_command(*args, **kwargs):
 @click.argument("type")
 @click.argument("path")
 def add(repo: str, type: str, name: str, path: str):
-    """Add an artifact to the Index"""
+    """Register new artifact (add it to the Index)"""
     gto.api.add(repo, type, name, path)
 
 
@@ -102,7 +102,7 @@ def add(repo: str, type: str, name: str, path: str):
 @option_repo
 @arg_name
 def remove(repo: str, name: str):
-    """Remove an artifact from the Index"""
+    """Deregister the artifact (remove it from the Index)"""
     gto.api.remove(repo, name)
 
 
@@ -129,9 +129,9 @@ def register(repo: str, name: str, ref: str, version: str, bump: str):
 @arg_name
 @arg_version
 def deprecate(repo: str, name: str, version: str):
-    """Unregister artifact version"""
+    """Deprecate artifact version"""
     gto.api.deprecate(repo, name, version)
-    click.echo(f"Unregistered {name} version {version}")
+    click.echo(f"Deprecated {name} version {version}")
 
 
 @gto_command()
@@ -160,14 +160,14 @@ def promote(repo: str, name: str, label: str, version: str, ref: str):
 @option_repo
 @arg_name
 @click.option(
-    "-iu",
-    "--include-deprecated",
+    "-d",
+    "--deprecated",
     is_flag=True,
     default=False,
     help="Include deprecated versions",
 )
 def latest(repo: str, name: str, include_deprecated: bool):
-    """Return latest version for artifact"""
+    """Return latest version of artifact"""
     latest_version = gto.api.find_latest_version(
         repo, name, include_deprecated=include_deprecated
     )
@@ -217,7 +217,7 @@ def parse_tag(name: str, key: str, format: str):
 @click.argument("ref")
 @option_format
 def check_ref(repo: str, ref: str, format: str):
-    """Find out what have been registered/promoted in the provided ref"""
+    """Find out artifact & version registered/promoted with the provided ref"""
     result = gto.api.check_ref(repo, ref)
     format_echo(result, format)
 
@@ -253,7 +253,7 @@ def show(repo: str, format: str, format_table: str):
 @option_sort
 @option_format_table
 def audit(repo: str, action: str, name: str, sort: str, format_table: str):
-    """Audit registry state"""
+    """Audit actions made in registry"""
 
     if any(a in ALIAS.REGISTER for a in action):
         click.echo("\n=== Registration audit trail ===")
@@ -308,8 +308,10 @@ def print_envs(repo: str, in_use: bool):
 @option_repo
 @option_format
 def print_state(repo: str, format: str):
-    """Print current registry state"""
-    state = serialize(gto.api.get_state(repo).dict())
+    """Technical cmd: Print current registry state"""
+    state = serialize(
+        gto.api._get_state(repo).dict()  # pylint: disable=protected-access
+    )
     format_echo(state, format)
 
 
@@ -317,6 +319,7 @@ def print_state(repo: str, format: str):
 @option_repo
 @option_format
 def print_index(repo: str, format: str):
+    """Technical cmd: Print repo index"""
     index = gto.api.get_index(repo).artifact_centric_representation()
     format_echo(index, format)
 
