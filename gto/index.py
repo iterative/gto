@@ -9,7 +9,7 @@ import git
 from pydantic import BaseModel, parse_obj_as
 
 from .config import CONFIG, yaml
-from .exceptions import GTOException, ObjectNotFound
+from .exceptions import GTOException, NoRepo, ObjectNotFound
 
 
 class Artifact(BaseModel):
@@ -125,7 +125,10 @@ class RepoIndexManager(FileIndexManager):
     @classmethod
     def from_repo(cls, repo: Union[str, git.Repo]):
         if isinstance(repo, str):
-            repo = git.Repo(repo, search_parent_directories=True)
+            try:
+                repo = git.Repo(repo, search_parent_directories=True)
+            except git.InvalidGitRepositoryError as e:
+                raise NoRepo(repo) from e
         return cls(repo=repo)
 
     def index_path(self):

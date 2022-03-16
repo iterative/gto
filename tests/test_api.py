@@ -15,6 +15,13 @@ def test_empty_state(empty_git_repo):
     assert len(state.objects) == 0
 
 
+def test_api_info_commands(empty_git_repo):
+    gto.api.show(empty_git_repo.working_dir)
+    gto.api.audit_registration(empty_git_repo.working_dir)
+    gto.api.audit_promotion(empty_git_repo.working_dir)
+    gto.api.history(empty_git_repo.working_dir)
+
+
 @pytest.fixture
 def repo_with_artifact(init_showcase_numbers):
     path, repo, write_file = init_showcase_numbers  # pylint: disable=unused-variable

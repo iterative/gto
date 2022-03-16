@@ -3,13 +3,14 @@ from typing import Union
 
 import click
 import git
-from git import Repo
+from git import InvalidGitRepositoryError, Repo
 from pydantic import BaseModel
 
 from gto.base import BaseManager, BaseObject, BaseRegistryState
 from gto.config import CONFIG_FILE, RegistryConfig
 from gto.exceptions import (
     NoActiveLabel,
+    NoRepo,
     VersionAlreadyRegistered,
     VersionExistsForCommit,
     VersionIsOld,
@@ -29,7 +30,10 @@ class GitRegistry(BaseModel):
     @classmethod
     def from_repo(cls, repo=Union[str, Repo], config=None):
         if isinstance(repo, str):
-            repo = git.Repo(repo, search_parent_directories=True)
+            try:
+                repo = git.Repo(repo, search_parent_directories=True)
+            except InvalidGitRepositoryError as e:
+                raise NoRepo(repo) from e
         if config is None:
             config = RegistryConfig(
                 CONFIG_FILE=os.path.join(repo.working_dir, CONFIG_FILE)
