@@ -6,7 +6,7 @@ import git
 from git import InvalidGitRepositoryError, Repo
 from pydantic import BaseModel
 
-from gto.base import BaseArtifact, BaseManager, BaseRegistryState
+from gto.base import BaseArtifact, BaseLabel, BaseManager, BaseRegistryState
 from gto.config import CONFIG_FILE, RegistryConfig
 from gto.exceptions import (
     NoActiveLabel,
@@ -126,7 +126,7 @@ class GitRegistry(BaseModel):
         promote_version=None,
         promote_ref=None,
         name_version=None,
-    ):
+    ) -> BaseLabel:
         """Assign label to specific artifact version"""
         self.config.assert_env(label)
         if not (promote_version is None) ^ (promote_ref is None):
@@ -148,16 +148,18 @@ class GitRegistry(BaseModel):
                 click.echo(
                     f"Registered new version '{version.name}' of '{name}' at commit '{promote_ref}'"
                 )
-        self.env_manager.promote(
+        self.env_manager.promote(  # type: ignore
             name,
             label,
             ref=promote_ref,
             message=f"Promoting {name} version {promote_version} to label {label}",
         )
-        return {"version": promote_version}
+        return self.state.find_artifact(name).latest_labels[label]
 
     def demote(self, name, label):
         """De-promote artifact from given label"""
+        # TODO: now you can promote artifact to some env multiple times
+        # Then, if you'll try to `demote`, you should demote all promotions.
         label_ = self.state.find_artifact(name).latest_labels.get(label)
         if label_ is None:
             raise NoActiveLabel(label=label, name=name)

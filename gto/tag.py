@@ -188,6 +188,8 @@ def index_tag(art: BaseArtifact, tag: git.Tag) -> BaseArtifact:
     ):  # and obj.find_version(commit_hexsha=tag.commit.hexsha) is not None:
         # this may "deprecate" incorrect version
         # if you deprecated correct version after demotion
+        # TODO: now you can promote artifact to some env multiple times
+        # Then, if you'll try to `demote`, you should demote all promotions.
         if mtag.label in art.latest_labels:
             art.latest_labels[mtag.label].deprecated_date = mtag.creation_date  # type: ignore
         else:

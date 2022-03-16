@@ -90,8 +90,8 @@ def gto_command(*args, **kwargs):
 
 @gto_command()
 @option_repo
-@arg_name
 @click.argument("type")
+@arg_name
 @click.argument("path")
 def add(repo: str, type: str, name: str, path: str):
     """Register new artifact (add it to the Index)"""
@@ -152,8 +152,20 @@ def promote(repo: str, name: str, label: str, version: str, ref: str):
     else:
         name_version = None
         promote_version = version
-    result = gto.api.promote(repo, name, label, promote_version, ref, name_version)
-    click.echo(f"Promoted {name} version {result['version']} to label {label}")
+    label_ = gto.api.promote(repo, name, label, promote_version, ref, name_version)
+    click.echo(f"Promoted {name} version {label_.version} to label {label}")
+
+
+@gto_command(hidden=True)
+@option_repo
+@arg_name
+@arg_label
+def demote(repo: str, name: str, label: str):
+    """De-promote artifact from given label"""
+    # TODO: now you can promote artifact to some env multiple times
+    # Then, if you'll try to `demote`, you should demote all promotions.
+    gto.api.demote(repo, name, label)
+    click.echo(f"Demoted {name} from label {label}")
 
 
 @gto_command()
@@ -188,16 +200,6 @@ def which(repo: str, name: str, label: str):
         click.echo(version.version)
     else:
         click.echo(f"No version of '{name}' with label '{label}' active")
-
-
-@gto_command()
-@option_repo
-@arg_name
-@arg_label
-def demote(repo: str, name: str, label: str):
-    """De-promote artifact from given label"""
-    gto.api.demote(repo, name, label)
-    click.echo(f"Demoted {name} from label {label}")
 
 
 @gto_command()
