@@ -13,13 +13,16 @@ arg_name = click.argument(NAME)
 arg_version = click.argument(VERSION)
 arg_label = click.argument(LABEL)
 arg_ref = click.argument(REF)
-option_repo = click.option("-r", "--repo", default=".", help="Repository to use")
+option_repo = click.option(
+    "-r", "--repo", default=".", help="Repository to use", show_default=True
+)
 option_format = click.option(
     "--format",
     "-f",
     default="yaml",
     help="Output format",
     type=click.Choice(["json", "yaml"], case_sensitive=False),
+    show_default=True,
 )
 option_format_df = click.option(
     "--format",
@@ -27,16 +30,24 @@ option_format_df = click.option(
     default="dataframe",
     help="Output format",
     type=click.Choice(["dataframe", "json", "yaml"], case_sensitive=False),
+    show_default=True,
 )
-option_name = click.option("--name", "-n", default=None, help="Artifact name")
+option_name = click.option(
+    "--name", "-n", default=None, help="Artifact name", show_default=True
+)
 option_sort = click.option(
-    "--sort", "-s", default="desc", help="Desc for recent first, Asc for older first"
+    "--sort",
+    "-s",
+    default="desc",
+    help="Desc for recent first, Asc for older first",
+    show_default=True,
 )
 option_format_table = click.option(
     "-ft",
     "--format-table",
     type=click.Choice(tabulate_formats),
     default="fancy_outline",
+    show_default=True,
 )
 
 MISSING_VALUE = "-"
@@ -110,7 +121,7 @@ def remove(repo: str, name: str):
 @option_repo
 @arg_name
 @arg_ref
-@click.option("--version", "-v", default=None, help="Version to promote")
+@click.option("--version", "--ver", default=None, help="Version to promote")
 @click.option(
     "--bump", "-b", default=None, help="The exact part to use when bumping a version"
 )
@@ -162,8 +173,6 @@ def promote(repo: str, name: str, label: str, version: str, ref: str):
 @arg_label
 def demote(repo: str, name: str, label: str):
     """De-promote artifact from given label"""
-    # TODO: now you can promote artifact to some env multiple times
-    # Then, if you'll try to `demote`, you should demote all promotions.
     gto.api.demote(repo, name, label)
     click.echo(f"Demoted {name} from label {label}")
 
@@ -177,6 +186,7 @@ def demote(repo: str, name: str, label: str):
     is_flag=True,
     default=False,
     help="Include deprecated versions",
+    show_default=True,
 )
 def latest(repo: str, name: str, include_deprecated: bool):
     """Return latest version of artifact"""
@@ -250,6 +260,7 @@ def show(repo: str, format: str, format_table: str):
     multiple=True,
     help="What actions to audit",
     type=click.Choice(ALIAS.REGISTER + ALIAS.PROMOTE),
+    show_default=True,
 )
 @option_name
 @option_sort
@@ -297,7 +308,13 @@ def history(repo: str, name: str, format: str, format_table: str, sort: str):
 
 @gto_command()
 @option_repo
-@click.option("--in-use", is_flag=True, default=False, help="Show only in-use labels")
+@click.option(
+    "--in-use",
+    is_flag=True,
+    default=False,
+    help="Show only in-use labels",
+    show_default=True,
+)
 def print_envs(repo: str, in_use: bool):
     """Return list of envs in the registry.
     If "in_use", return only those which are in use (skip deprecated).
