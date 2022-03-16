@@ -6,10 +6,10 @@ from typing import FrozenSet, Iterable, Optional, Union
 import git
 from pydantic import BaseModel
 
-from .base import BaseLabel, BaseManager, BaseObject, BaseRegistryState, BaseVersion
+from .base import BaseArtifact, BaseLabel, BaseManager, BaseRegistryState, BaseVersion
 from .constants import ACTION, LABEL, NAME, NUMBER, VERSION, Action
 from .exceptions import MissingArg, RefNotFound, UnknownAction
-from .index import ObjectCommits
+from .index import ArtifactCommits
 
 ActionSign = {
     Action.REGISTER: "@",
@@ -70,7 +70,7 @@ def parse_name(name: str, raise_on_fail: bool = True):
     return {}
 
 
-class ObjectTag(BaseModel):
+class Tag(BaseModel):
     action: Action
     name: str
     version: Optional[str]
@@ -83,7 +83,7 @@ class ObjectTag(BaseModel):
 
 
 def parse_tag(tag: git.Tag):
-    return ObjectTag(
+    return Tag(
         tag=tag,
         creation_date=datetime.fromtimestamp(tag.tag.tagged_date),
         **parse_name(tag.name),
@@ -134,7 +134,7 @@ def create_tag(repo, name, ref, message):
 def version_from_tag(tag: git.Tag) -> BaseVersion:
     mtag = parse_tag(tag)
     return BaseVersion(
-        object=mtag.name,
+        artifact=mtag.name,
         name=mtag.version,
         creation_date=mtag.creation_date,
         author=tag.tag.tagger.name,
@@ -142,20 +142,20 @@ def version_from_tag(tag: git.Tag) -> BaseVersion:
     )
 
 
-def label_from_tag(tag: git.Tag, obj: BaseObject) -> BaseLabel:
+def label_from_tag(tag: git.Tag, art: BaseArtifact) -> BaseLabel:
     mtag = parse_tag(tag)
-    registered_version = obj.find_version(commit_hexsha=tag.commit.hexsha)
+    registered_version = art.find_version(commit_hexsha=tag.commit.hexsha)
     deprecated_version = (
         None
         if registered_version
-        else obj.find_version(
+        else art.find_version(
             commit_hexsha=tag.commit.hexsha,
             skip_deprecated=False,
             raise_if_not_found=True,
         )
     )
     return BaseLabel(
-        object=mtag.name,
+        artifact=mtag.name,
         version=registered_version.name
         if registered_version
         else deprecated_version.name,  # type: ignore
@@ -169,43 +169,43 @@ def label_from_tag(tag: git.Tag, obj: BaseObject) -> BaseLabel:
     )
 
 
-def index_tag(obj: BaseObject, tag: git.Tag) -> BaseObject:
+def index_tag(art: BaseArtifact, tag: git.Tag) -> BaseArtifact:
     mtag = parse_tag(tag)
     if mtag.action == Action.REGISTER:
-        obj.versions.append(version_from_tag(tag))
+        art.versions.append(version_from_tag(tag))
     if mtag.action == Action.DEPRECATE:
-        obj.find_version(mtag.version).deprecated_date = mtag.creation_date  # type: ignore
+        art.find_version(mtag.version).deprecated_date = mtag.creation_date  # type: ignore
     if (
         mtag.action == Action.PROMOTE
     ):  # and obj.find_version(commit_hexsha=tag.commit.hexsha) is not None:
-        obj.labels.append(label_from_tag(tag, obj))
+        art.labels.append(label_from_tag(tag, art))
     if (
         mtag.action == Action.DEMOTE
     ):  # and obj.find_version(commit_hexsha=tag.commit.hexsha) is not None:
         # this may "deprecate" incorrect version
         # if you deprecated correct version after demotion
-        if mtag.label in obj.latest_labels:
-            obj.latest_labels[mtag.label].deprecated_date = mtag.creation_date  # type: ignore
+        if mtag.label in art.latest_labels:
+            art.latest_labels[mtag.label].deprecated_date = mtag.creation_date  # type: ignore
         else:
             # this may be result of deprecated version
             # or incorrect demotion tag
             warnings.warn(f"Active label '{mtag.label}' not found")
-    return obj
+    return art
 
 
 class TagManager(BaseManager):  # pylint: disable=abstract-method
     def update_state(
-        self, state: BaseRegistryState, index: ObjectCommits
+        self, state: BaseRegistryState, index: ArtifactCommits
     ) -> BaseRegistryState:
         # tags are sorted and then indexed by timestamp
         # this is important to check that history is not broken
         tags = [parse_tag(t) for t in find(repo=self.repo, action=self.actions)]
         for tag in tags:
-            if tag.name not in state.objects:
-                state.objects[tag.name] = BaseObject(
+            if tag.name not in state.artifacts:
+                state.artifacts[tag.name] = BaseArtifact(
                     name=tag.name, versions=[], labels=[]
                 )
-            state.objects[tag.name] = index_tag(state.objects[tag.name], tag.tag)
+            state.artifacts[tag.name] = index_tag(state.artifacts[tag.name], tag.tag)
         return state
 
 
@@ -221,7 +221,7 @@ class TagVersionManager(TagManager):
         )
 
     def deprecate(self, name, version):
-        """Unregister object version"""
+        """Unregister artifact version"""
         # TODO: search in self, move to base
         tags = find(
             action=Action.REGISTER,
@@ -241,7 +241,7 @@ class TagVersionManager(TagManager):
     def check_ref(self, ref: str, state: BaseRegistryState):
         try:
             _ = self.repo.tags[ref]
-            obj_name = parse_name(ref)[NAME]
+            art_name = parse_name(ref)[NAME]
             version_name = parse_name(ref)[VERSION]
         except (KeyError, ValueError, IndexError):
             logging.warning(
@@ -250,9 +250,9 @@ class TagVersionManager(TagManager):
             return {}
         return {
             name: version
-            for name in state.objects
-            for version in state.objects[name].versions
-            if name == obj_name and version.name == version_name
+            for name in state.artifacts
+            for version in state.artifacts[name].versions
+            if name == art_name and version.name == version_name
         }
 
 
@@ -279,7 +279,7 @@ class TagEnvManager(TagManager):
         try:
             tag = self.repo.tags[ref]
             _ = parse_name(ref)[LABEL]
-            obj_name = parse_name(ref)[NAME]
+            art_name = parse_name(ref)[NAME]
         except (KeyError, ValueError, IndexError):
             logging.warning(
                 "Provided ref doesn't exist or it is not a tag that promotes to an environment"
@@ -287,9 +287,9 @@ class TagEnvManager(TagManager):
             return {}
         return {
             name: label
-            for name in state.objects
-            for label in state.objects[name].labels
-            if name == obj_name
+            for name in state.artifacts
+            for label in state.artifacts[name].labels
+            if name == art_name
             and label.commit_hexsha == tag.commit.hexsha
             and label.creation_date == datetime.fromtimestamp(tag.tag.tagged_date)
         }

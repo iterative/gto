@@ -7,12 +7,12 @@ from tests.utils import _check_dict
 
 def test_empty_index(empty_git_repo):
     index = gto.api.get_index(empty_git_repo.working_dir)
-    assert len(index.object_centric_representation()) == 0
+    assert len(index.artifact_centric_representation()) == 0
 
 
 def test_empty_state(empty_git_repo):
     state = gto.api.get_state(empty_git_repo.working_dir)
-    assert len(state.objects) == 0
+    assert len(state.artifacts) == 0
 
 
 def test_api_info_commands(empty_git_repo):
@@ -65,7 +65,7 @@ def test_promote(repo_with_artifact):
     _check_dict(
         label,
         dict(
-            object=name,
+            artifact=name,
             version="v1",
             name=env,
             author=author,

@@ -28,26 +28,26 @@ def get_envs(repo: Union[str, Repo], in_use: bool = False):
 
 
 def add(repo: Union[str, Repo], type: str, name: str, path: str):
-    """Add an object to the Index"""
+    """Add an artifact to the Index"""
     return FileIndexManager(path=repo).add(type, name, path)
 
 
 def remove(repo: Union[str, Repo], name: str):
-    """Remove an object from the Index"""
+    """Remove an artifact from the Index"""
     return FileIndexManager(path=repo).remove(name)
 
 
 def register(
     repo: Union[str, Repo], name: str, ref: str, version: str = None, bump: str = None
 ):
-    """Register new object version"""
+    """Register new artifact version"""
     return GitRegistry.from_repo(repo).register(
         name=name, ref=ref, version=version, bump=bump
     )
 
 
 def deprecate(repo: Union[str, Repo], name: str, version: str):
-    """Unregister object version"""
+    """Unregister artifact version"""
     return GitRegistry.from_repo(repo).deprecate(name, version)
 
 
@@ -59,14 +59,14 @@ def promote(
     promote_ref: str = None,
     name_version: str = None,
 ):
-    """Assign label to specific object version"""
+    """Assign label to specific artifact version"""
     return GitRegistry.from_repo(repo).promote(
         name, label, promote_version, promote_ref, name_version
     )
 
 
 def demote(repo: Union[str, Repo], name: str, label: str):
-    """De-promote object from given label"""
+    """De-promote artifact from given label"""
     return GitRegistry.from_repo(repo).demote(name, label)
 
 
@@ -77,14 +77,14 @@ def parse_tag(name: str):
 def find_latest_version(
     repo: Union[str, Repo], name: str, include_deprecated: bool = False
 ):
-    """Return latest version for object"""
+    """Return latest version for artifact"""
     return GitRegistry.from_repo(repo).latest(
         name, include_deprecated=include_deprecated
     )
 
 
 def find_active_label(repo: Union[str, Repo], name: str, label: str):
-    """Return version of object with specific label active"""
+    """Return version of artifact with specific label active"""
     return GitRegistry.from_repo(repo).which(name, label, raise_if_not_found=False)
 
 
@@ -113,7 +113,7 @@ def show(repo: Union[str, Repo], dataframe: bool = False):
                 for name in reg.get_envs(in_use=False)
             },
         }
-        for o in reg.state.objects.values()
+        for o in reg.state.artifacts.values()
     }
     if dataframe:
         result = {
@@ -150,7 +150,7 @@ def audit_registration(
             "commit": v.commit_hexsha,
             "deprecated": v.deprecated_date,
         }
-        for o in reg.state.objects.values()
+        for o in reg.state.artifacts.values()
         for v in o.versions
     ]
     if artifact:
@@ -189,7 +189,7 @@ def audit_promotion(
             "commit": l.commit_hexsha,
             "deprecated": l.deprecated_date,
         }
-        for o in reg.state.objects.values()
+        for o in reg.state.artifacts.values()
         for l in o.labels
     ]
     if artifact:
@@ -221,7 +221,7 @@ def history(
             "author": reg.repo.commit(commit).author.name,
         }
         for name_, commit_list in get_index(repo)
-        .object_centric_representation()
+        .artifact_centric_representation()
         .items()
         for commit in commit_list
     ]

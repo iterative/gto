@@ -9,7 +9,7 @@ import git
 from pydantic import BaseModel, parse_obj_as
 
 from .config import CONFIG, yaml
-from .exceptions import GTOException, NoRepo, ObjectNotFound
+from .exceptions import ArtifactNotFound, GTOException, NoRepo
 
 
 class Artifact(BaseModel):
@@ -116,7 +116,7 @@ class FileIndexManager(BaseIndexManager):
         raise NotImplementedError("Not a git repo: history is not available")
 
 
-ObjectCommits = Dict[str, List[str]]
+ArtifactCommits = Dict[str, List[str]]
 
 
 class RepoIndexManager(FileIndexManager):
@@ -155,11 +155,11 @@ class RepoIndexManager(FileIndexManager):
             if CONFIG.INDEX in commit.tree
         }
 
-    def object_centric_representation(self) -> ObjectCommits:
+    def artifact_centric_representation(self) -> ArtifactCommits:
         representation = defaultdict(list)
         for commit, index in self.get_history().items():
-            for obj in index.state:
-                representation[obj].append(commit)
+            for art in index.state:
+                representation[art].append(commit)
         return representation
 
     def check_existence(self, name, commit):
@@ -167,7 +167,7 @@ class RepoIndexManager(FileIndexManager):
 
     def assert_existence(self, name, commit):
         if not self.check_existence(name, commit):
-            raise ObjectNotFound(name)
+            raise ArtifactNotFound(name)
 
 
 def traverse_commit(commit: git.Commit) -> Generator[git.Commit, None, None]:

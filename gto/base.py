@@ -5,14 +5,14 @@ import git
 from pydantic import BaseModel
 
 from gto.constants import Action
-from gto.index import ObjectCommits
+from gto.index import ArtifactCommits
 
-from .exceptions import GTOException, ObjectNotFound
+from .exceptions import ArtifactNotFound, GTOException
 
 
 class BaseLabel(BaseModel):  # pylint: disable=too-many-instance-attributes
     # category: str
-    object: str
+    artifact: str
     version: str
     name: str
     creation_date: datetime
@@ -21,7 +21,7 @@ class BaseLabel(BaseModel):  # pylint: disable=too-many-instance-attributes
     deprecated_date: Optional[datetime] = None
 
     def __repr__(self) -> str:
-        return f"Label('{self.object}', '{self.version}', '{self.name}')"
+        return f"Label('{self.artifact}', '{self.version}', '{self.name}')"
 
     @property
     def is_registered(self):
@@ -30,7 +30,7 @@ class BaseLabel(BaseModel):  # pylint: disable=too-many-instance-attributes
 
 class BaseVersion(BaseModel):
     # category: str
-    object: str
+    artifact: str
     name: str
     creation_date: datetime
     author: str
@@ -38,14 +38,14 @@ class BaseVersion(BaseModel):
     deprecated_date: Optional[datetime] = None
 
     def __repr__(self) -> str:
-        return f"Version('{self.object}', '{self.name}')"
+        return f"Version('{self.artifact}', '{self.name}')"
 
     @property
     def is_registered(self):
         return self.deprecated_date is None
 
 
-class BaseObject(BaseModel):
+class BaseArtifact(BaseModel):
     name: str
     versions: List[BaseVersion]
     labels: List[BaseLabel]
@@ -57,7 +57,7 @@ class BaseObject(BaseModel):
     def __repr__(self) -> str:
         versions = ", ".join(f"'{v.name}'" for v in self.versions)
         labels = ", ".join(f"'{l}'" for l in self.unique_labels)
-        return f"Object(versions=[{versions}], labels=[{labels}])"
+        return f"Artifact(versions=[{versions}], labels=[{labels}])"
 
     def get_latest_version(self, include_deprecated=False) -> Optional[BaseVersion]:
         versions = sorted(
@@ -101,7 +101,7 @@ class BaseObject(BaseModel):
         if raise_if_not_found:
             if len(versions) != 1:
                 raise GTOException(
-                    f"{len(versions)} versions of object {self.name} found"
+                    f"{len(versions)} versions of artifact {self.name} found"
                     + ", skipping deprecated"
                     if skip_deprecated
                     else ""
@@ -110,7 +110,7 @@ class BaseObject(BaseModel):
 
         if len(versions) > 1:
             raise GTOException(
-                f"{len(versions)} versions of object {self.name} found"
+                f"{len(versions)} versions of artifact {self.name} found"
                 + ", skipping deprecated"
                 if skip_deprecated
                 else ""
@@ -119,31 +119,31 @@ class BaseObject(BaseModel):
 
 
 class BaseRegistryState(BaseModel):
-    objects: Dict[str, BaseObject]
+    artifacts: Dict[str, BaseArtifact]
 
     class Config:
         arbitrary_types_allowed = True
 
-    def find_object(self, name):
-        obj = self.objects.get(name)
-        if not obj:
-            raise ObjectNotFound(name)
-        return obj
+    def find_artifact(self, name):
+        art = self.artifacts.get(name)
+        if not art:
+            raise ArtifactNotFound(name)
+        return art
 
     @property
     def unique_labels(self):
-        return sorted({l for o in self.objects.values() for l in o.unique_labels})
+        return sorted({l for o in self.artifacts.values() for l in o.unique_labels})
 
     def find_commit(self, name, version):
         return (
-            self.find_object(name)
+            self.find_artifact(name)
             .find_version(name=version, raise_if_not_found=True, skip_deprecated=False)
             .commit_hexsha
         )
 
     def which(self, name, label, raise_if_not_found=True):
         """Return label active in specific env"""
-        latest_labels = self.find_object(name).latest_labels
+        latest_labels = self.find_artifact(name).latest_labels
         if label in latest_labels:
             return latest_labels[label]
         if raise_if_not_found:
@@ -151,9 +151,9 @@ class BaseRegistryState(BaseModel):
         return None
 
     def sort(self):
-        for name in self.objects:
-            self.objects[name].versions.sort(key=lambda x: (x.creation_date, x.name))
-            self.objects[name].labels.sort(
+        for name in self.artifacts:
+            self.artifacts[name].versions.sort(key=lambda x: (x.creation_date, x.name))
+            self.artifacts[name].labels.sort(
                 key=lambda x: (x.creation_date, x.version, x.name)
             )
 
@@ -166,7 +166,7 @@ class BaseManager(BaseModel):
         arbitrary_types_allowed = True
 
     def update_state(
-        self, state: BaseRegistryState, index: ObjectCommits
+        self, state: BaseRegistryState, index: ArtifactCommits
     ) -> BaseRegistryState:  # pylint: disable=no-self-use
         raise NotImplementedError
 

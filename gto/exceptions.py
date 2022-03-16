@@ -15,7 +15,7 @@ class NoRepo(GTOException):
         super().__init__(self.message)
 
 
-class ObjectNotFound(GTOException):
+class ArtifactNotFound(GTOException):
     _message = "Requested '{name}' wasn't found in registry"
 
     def __init__(self, name) -> None:
