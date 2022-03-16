@@ -27,9 +27,9 @@ def get_envs(repo: Union[str, Repo], in_use: bool = False):
     return GitRegistry.from_repo(repo).get_envs(in_use=in_use)
 
 
-def add(repo: Union[str, Repo], name: str, type: str, path: str):
+def add(repo: Union[str, Repo], type: str, name: str, path: str):
     """Add an object to the Index"""
-    return FileIndexManager(path=repo).add(name, type, path)
+    return FileIndexManager(path=repo).add(type, name, path)
 
 
 def remove(repo: Union[str, Repo], name: str):
@@ -46,9 +46,9 @@ def register(
     )
 
 
-def unregister(repo: Union[str, Repo], name: str, version: str):
+def deprecate(repo: Union[str, Repo], name: str, version: str):
     """Unregister object version"""
-    return GitRegistry.from_repo(repo).unregister(name, version)
+    return GitRegistry.from_repo(repo).deprecate(name, version)
 
 
 def promote(
@@ -74,9 +74,13 @@ def parse_tag(name: str):
     return parse_name(name)
 
 
-def find_latest_version(repo: Union[str, Repo], name: str):
+def find_latest_version(
+    repo: Union[str, Repo], name: str, include_deprecated: bool = False
+):
     """Return latest version for object"""
-    return GitRegistry.from_repo(repo).latest(name)
+    return GitRegistry.from_repo(repo).latest(
+        name, include_deprecated=include_deprecated
+    )
 
 
 def find_active_label(repo: Union[str, Repo], name: str, label: str):
@@ -103,8 +107,8 @@ def show(repo: Union[str, Repo], dataframe: bool = False):
     reg = GitRegistry.from_repo(repo)
     models_state = {
         o.name: {
-            "version": o.latest_version.name if o.latest_version else None,
-            "environment": {
+            "version": o.get_latest_version().name if o.get_latest_version() else None,
+            "env": {
                 name: o.latest_labels[name].version if name in o.latest_labels else None
                 for name in reg.get_envs(in_use=False)
             },
@@ -116,14 +120,15 @@ def show(repo: Union[str, Repo], dataframe: bool = False):
             ("", "latest"): {name: d["version"] for name, d in models_state.items()}
         }
         for name, details in models_state.items():
-            for env, ver in details["environment"].items():
-                result[("environment", env)] = {
-                    **result.get(("environment", env), {}),
+            for env, ver in details["env"].items():
+                result[("env", env)] = {
+                    **result.get(("env", env), {}),
                     **{name: ver},
                 }
         result_df = pd.DataFrame(result)
+        result_df.index.name = "name"
         result_df.columns = pd.MultiIndex.from_tuples(result_df.columns)
-        return result_df.fillna("-")
+        return result_df
     return models_state
 
 
@@ -143,7 +148,7 @@ def audit_registration(
             "timestamp": v.creation_date,
             "author": v.author,
             "commit": v.commit_hexsha,
-            "deprecated": v.unregistered_date,
+            "deprecated": v.deprecated_date,
         }
         for o in reg.state.objects.values()
         for v in o.versions
@@ -182,7 +187,7 @@ def audit_promotion(
             "timestamp": l.creation_date,
             "author": l.author,
             "commit": l.commit_hexsha,
-            "deprecated": l.unregistered_date,
+            "deprecated": l.deprecated_date,
         }
         for o in reg.state.objects.values()
         for l in o.labels
@@ -220,7 +225,6 @@ def history(
         .items()
         for commit in commit_list
     ]
-    # commits = pd.Series(get_index(repo).object_centric_representation()[name], name="commit_hexsha")
     registration = audit_registration(repo, dataframe=False)
     promotion = audit_promotion(repo, dataframe=False)
     events_order = {"commit": 0, "registration": 1, "promotion": 2}
@@ -243,4 +247,4 @@ def history(
         cols_order = ["event", "version", "label", "deprecated", "commit", "author"]
         df = df[[c for c in cols_order if c in df]]
         df["commit"] = df["commit"].str[:7]
-    return df.fillna("-")
+    return df

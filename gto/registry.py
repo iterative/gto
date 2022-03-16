@@ -3,13 +3,14 @@ from typing import Union
 
 import click
 import git
-from git import Repo
+from git import InvalidGitRepositoryError, Repo
 from pydantic import BaseModel
 
 from gto.base import BaseManager, BaseObject, BaseRegistryState
 from gto.config import CONFIG_FILE, RegistryConfig
 from gto.exceptions import (
     NoActiveLabel,
+    NoRepo,
     VersionAlreadyRegistered,
     VersionExistsForCommit,
     VersionIsOld,
@@ -29,7 +30,10 @@ class GitRegistry(BaseModel):
     @classmethod
     def from_repo(cls, repo=Union[str, Repo], config=None):
         if isinstance(repo, str):
-            repo = git.Repo(repo)
+            try:
+                repo = git.Repo(repo, search_parent_directories=True)
+            except InvalidGitRepositoryError as e:
+                raise NoRepo(repo) from e
         if config is None:
             config = RegistryConfig(
                 CONFIG_FILE=os.path.join(repo.working_dir, CONFIG_FILE)
@@ -70,30 +74,31 @@ class GitRegistry(BaseModel):
         found_object = self.state.find_object(name)
         # check that this commit don't have a version already
         found_version = found_object.find_version(
-            commit_hexsha=ref, skip_unregistered=True
+            commit_hexsha=ref, skip_deprecated=True
         )
         if found_version is not None:
             raise VersionExistsForCommit(name, found_version.name)
         # if version name is provided, use it
         if version:
             if (
-                found_object.find_version(name=version, skip_unregistered=False)
+                found_object.find_version(name=version, skip_deprecated=False)
                 is not None
             ):
                 raise VersionAlreadyRegistered(version)
-            if (
-                found_object.versions
-                and self.config.versions_class(version)
-                < found_object.latest_version.name
-            ):
-                raise VersionIsOld(
-                    latest=found_object.latest_version.name, suggested=version
-                )
+            print(found_object.versions)
+            if found_object.versions:
+                latest_ver = found_object.get_latest_version(
+                    include_deprecated=True
+                ).name
+                if self.config.versions_class(version) < latest_ver:
+                    raise VersionIsOld(latest=latest_ver, suggested=version)
         # if version name wasn't provided but there were some, bump the last one
         elif found_object.versions:
             version = (
                 self.config.versions_class(
-                    self.state.find_object(name).latest_version.name
+                    self.state.find_object(name)
+                    .get_latest_version(include_deprecated=True)
+                    .name
                 )
                 .bump(**({"part": bump} if bump else {}))
                 .version
@@ -111,8 +116,8 @@ class GitRegistry(BaseModel):
             name=version, raise_if_not_found=True
         )
 
-    def unregister(self, name, version):
-        return self.version_manager.unregister(name, version)
+    def deprecate(self, name, version):
+        return self.version_manager.deprecate(name, version)
 
     def promote(
         self,
@@ -176,9 +181,11 @@ class GitRegistry(BaseModel):
         """Return label active in specific env"""
         return self.state.which(name, label, raise_if_not_found)
 
-    def latest(self, name: str):
-        """Return latest version for object"""
-        return self.state.find_object(name).latest_version
+    def latest(self, name: str, include_deprecated: bool):
+        """Return latest active version for object"""
+        return self.state.find_object(name).get_latest_version(
+            include_deprecated=include_deprecated
+        )
 
     def get_envs(self, in_use: bool = False):
         """Return list of envs in the registry.

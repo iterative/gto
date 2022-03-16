@@ -7,6 +7,14 @@ class GTOException(Exception):
         super().__init__(msg, *args)
 
 
+class NoRepo(GTOException):
+    _message = "No Git repo found in '{path}'"
+
+    def __init__(self, path) -> None:
+        self.message = self._message.format(path=path)
+        super().__init__(self.message)
+
+
 class ObjectNotFound(GTOException):
     _message = "Requested '{name}' wasn't found in registry"
 
@@ -26,7 +34,7 @@ class VersionRequired(GTOException):
 class VersionAlreadyRegistered(GTOException):
     _message = (
         "Version '{version}' already was registered.\n"
-        "Even if it was unregistered, you must use another name to avoid confusion."
+        "Even if it was deprecated, you must use another name to avoid confusion."
     )
 
     def __init__(self, version) -> None:

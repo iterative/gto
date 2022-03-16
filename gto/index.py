@@ -9,13 +9,13 @@ import git
 from pydantic import BaseModel, parse_obj_as
 
 from .config import CONFIG, yaml
-from .exceptions import GTOException, ObjectNotFound
+from .exceptions import GTOException, NoRepo, ObjectNotFound
 
 
 class Artifact(BaseModel):
+    type: str
     name: str
     path: str
-    type: str
 
 
 State = Dict[str, Artifact]
@@ -57,10 +57,10 @@ class Index(BaseModel):
                 yaml.dump(self.dict()["state"], file)
 
     @not_frozen
-    def add(self, name, type, path):
+    def add(self, type, name, path):
         if name in self:
             raise GTOException(f"Artifact {name} already exists")
-        self.state[name] = Artifact(name=name, type=type, path=path)
+        self.state[name] = Artifact(type=type, name=name, path=path)
 
     @not_frozen
     def remove(self, name):
@@ -84,9 +84,9 @@ class BaseIndexManager(BaseModel, ABC):
     def get_history(self) -> Dict[str, Index]:
         raise NotImplementedError
 
-    def add(self, name, type, path):
+    def add(self, type, name, path):
         index = self.get_index()
-        index.add(name, type, path)
+        index.add(type, name, path)
         self.update()
 
     def remove(self, name):
@@ -125,7 +125,10 @@ class RepoIndexManager(FileIndexManager):
     @classmethod
     def from_repo(cls, repo: Union[str, git.Repo]):
         if isinstance(repo, str):
-            repo = git.Repo(repo)
+            try:
+                repo = git.Repo(repo, search_parent_directories=True)
+            except git.InvalidGitRepositoryError as e:
+                raise NoRepo(repo) from e
         return cls(repo=repo)
 
     def index_path(self):

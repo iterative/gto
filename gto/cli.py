@@ -1,26 +1,45 @@
-import json
 import logging
 from functools import wraps
 
 import click
 import pandas as pd
-from ruamel import yaml
-from tabulate import tabulate, tabulate_formats
+from tabulate import tabulate_formats
 
 import gto
 from gto.constants import LABEL, NAME, REF, VERSION
-from gto.utils import serialize
+from gto.utils import format_echo, serialize
 
 arg_name = click.argument(NAME)
 arg_version = click.argument(VERSION)
 arg_label = click.argument(LABEL)
 arg_ref = click.argument(REF)
 option_repo = click.option("-r", "--repo", default=".", help="Repository to use")
-option_format = click.option("--format", "-f", default="yaml", help="Output format")
-option_artifact = click.option("--artifact", "-a", default=None, help="Artifact name")
+option_format = click.option(
+    "--format",
+    "-f",
+    default="yaml",
+    help="Output format",
+    type=click.Choice(["json", "yaml"], case_sensitive=False),
+)
+option_format_df = click.option(
+    "--format",
+    "-f",
+    default="dataframe",
+    help="Output format",
+    type=click.Choice(["dataframe", "json", "yaml"], case_sensitive=False),
+)
+option_name = click.option("--name", "-n", default=None, help="Artifact name")
 option_sort = click.option(
     "--sort", "-s", default="desc", help="Desc for recent first, Asc for older first"
 )
+option_format_table = click.option(
+    "-ft",
+    "--format-table",
+    type=click.Choice(tabulate_formats),
+    default="fancy_outline",
+)
+
+MISSING_VALUE = "-"
 
 
 @click.group()
@@ -42,7 +61,8 @@ def _set_log_level(ctx, param, value):  # pylint: disable=unused-argument
         logger.setLevel(logging.DEBUG)
         from gto.config import CONFIG  # pylint: disable=import-outside-toplevel
 
-        click.echo(CONFIG)
+        click.echo(CONFIG.__repr_str__("\n"))
+        click.echo()
 
 
 verbose_option = click.option(
@@ -68,9 +88,9 @@ def gto_command(*args, **kwargs):
 @arg_name
 @click.argument("type")
 @click.argument("path")
-def add(repo: str, name: str, type: str, path: str):
+def add(repo: str, type: str, name: str, path: str):
     """Add an object to the Index"""
-    gto.api.add(repo, name, type, path)
+    gto.api.add(repo, type, name, path)
 
 
 @cli.command("rm")
@@ -103,9 +123,9 @@ def register(repo: str, name: str, ref: str, version: str, bump: str):
 @option_repo
 @arg_name
 @arg_version
-def unregister(repo: str, name: str, version: str):
+def deprecate(repo: str, name: str, version: str):
     """Unregister object version"""
-    gto.api.unregister(repo, name, version)
+    gto.api.deprecate(repo, name, version)
     click.echo(f"Unregistered {name} version {version}")
 
 
@@ -134,9 +154,18 @@ def promote(repo: str, name: str, label: str, version: str, ref: str):
 @gto_command()
 @option_repo
 @arg_name
-def latest(repo: str, name: str):
+@click.option(
+    "-iu",
+    "--include-deprecated",
+    is_flag=True,
+    default=False,
+    help="Include deprecated versions",
+)
+def latest(repo: str, name: str, include_deprecated: bool):
     """Return latest version for object"""
-    latest_version = gto.api.find_latest_version(repo, name)
+    latest_version = gto.api.find_latest_version(
+        repo, name, include_deprecated=include_deprecated
+    )
     if latest_version:
         click.echo(latest_version.name)
     else:
@@ -169,11 +198,13 @@ def demote(repo: str, name: str, label: str):
 @gto_command()
 @arg_name
 @click.option("--key", default=None, help="Which key to return")
-def parse_tag(name: str, key: str):
+@option_format
+def parse_tag(name: str, key: str, format: str):
+    """Given git tag name created by this tool, parse it and return it's parts"""
     parsed = gto.api.parse_tag(name)
     if key:
         parsed = parsed[key]
-    click.echo(parsed)
+    format_echo(parsed, format)
 
 
 @gto_command()
@@ -183,96 +214,83 @@ def parse_tag(name: str, key: str):
 def check_ref(repo: str, ref: str, format: str):
     """Find out what have been registered/promoted in the provided ref"""
     result = gto.api.check_ref(repo, ref)
-    if format == "yaml":
-        click.echo(yaml.dump(result, default_style='"'))
-    elif format == "json":
-        click.echo(json.dumps(serialize(result)))
-    else:
-        raise NotImplementedError("Unknown format")
+    format_echo(result, format)
 
 
 @gto_command()
 @option_repo
-@click.option("--format", "-f", default="dataframe", help="Output format")
-def show(repo: str, format: str):
+@option_format_df
+@option_format_table
+def show(repo: str, format: str, format_table: str):
     """Show current registry state"""
     if format == "dataframe":
-        click.echo(gto.api.show(repo, dataframe=True))
-    elif format == "json":
-        click.echo(json.dumps(gto.api.show(repo, dataframe=False)))
-    elif format == "yaml":
-        click.echo(
-            yaml.dump(gto.api.show(repo, dataframe=False), default_flow_style=False)
+        format_echo(
+            gto.api.show(repo, dataframe=True),
+            format=format,
+            format_table=format_table,
+            if_empty="No tracked artifacts detected in the current workspace",
         )
     else:
-        raise NotImplementedError("Unknown format")
+        format_echo(gto.api.show(repo, dataframe=False), format=format)
+
+
+class ALIASES:
+    REGISTER = ["reg", "registration", "registrations", "register"]
+    PROMOTE = ["prom", "promote", "promotion", "promotions"]
 
 
 @gto_command()
 @option_repo
-@click.argument("action")
-@option_artifact
-@option_sort
 @click.option(
-    "-ft",
-    "--format-tables",
-    type=click.Choice(tabulate_formats),
-    default="fancy_outline",
+    "-a",
+    "--action",
+    default=["register", "promote"],
+    multiple=True,
+    help="What actions to audit",
+    type=click.Choice(ALIASES.REGISTER + ALIASES.PROMOTE),
 )
-def audit(repo: str, action: str, artifact: str, sort: str, format_tables: str):
+@option_name
+@option_sort
+@option_format_table
+def audit(repo: str, action: str, name: str, sort: str, format_table: str):
     """Audit registry state"""
-    missing_val = "--"
 
-    if action in {"reg", "registration", "register", "all"}:
+    if any(a in ALIASES.REGISTER for a in action):
         click.echo("\n=== Registration audit trail ===")
-        audit_trail_df = gto.api.audit_registration(repo, artifact, sort, dataframe=True)
-        audit_trail_df.reset_index(level=["creation_date", "name"], inplace=True)
-        click.echo(
-            tabulate(
-                audit_trail_df,
-                headers="keys",
-                tablefmt=format_tables,
-                showindex=False,
-                missingval=missing_val,
-            )
+        format_echo(
+            gto.api.audit_registration(repo, name, sort, dataframe=True),
+            format="dataframe",
+            format_table=format_table,
+            if_empty="No registered versions detected in the current workspace",
         )
 
-    if action in {"promote", "promotion", "all"}:
+    if any(a in ALIASES.PROMOTE for a in action):
         click.echo("\n=== Promotion audit trail ===")
-        promotion_trail_df = gto.api.audit_promotion(repo, artifact, sort, dataframe=True)
-        promotion_trail_df.reset_index(level=["creation_date", "name"], inplace=True)
-        click.echo(
-            tabulate(
-                promotion_trail_df,
-                headers="keys",
-                tablefmt=format_tables,
-                showindex=False,
-                missingval=missing_val,
-            )
+        format_echo(
+            gto.api.audit_promotion(repo, name, sort, dataframe=True),
+            format="dataframe",
+            format_table=format_table,
+            if_empty="No promotions detected in the current workspace",
         )
 
 
 @gto_command()
 @option_repo
-@option_artifact
-@click.option("--format", "-f", default="dataframe", help="Output format")
+@option_name
+@option_format_df
+@option_format_table
 @option_sort
-def history(repo: str, artifact: str, format: str, sort: str):
+def history(repo: str, name: str, format: str, format_table: str, sort: str):
     """Show history of object"""
     if format == "dataframe":
-        click.echo(gto.api.history(repo, artifact, sort, dataframe=True))
-    elif format == "json":
-        click.echo(json.dumps(gto.api.history(repo, artifact, sort, dataframe=False)))
-    elif format == "yaml":
-        click.echo(
-            yaml.dump(
-                gto.api.history(repo, artifact, dataframe=False),
-                sort,
-                default_flow_style=False,
-            )
+        format_echo(
+            gto.api.history(repo, name, sort, dataframe=True),
+            format=format,
+            format_table=format_table,
+            if_empty="No history found",
         )
     else:
-        raise NotImplementedError("Unknown format")
+        format_echo(gto.api.history(repo, name, sort, dataframe=False), format=format)
 
 
 @gto_command()
@@ -286,36 +304,21 @@ def print_envs(repo: str, in_use: bool):
     click.echo(gto.api.get_envs(repo, in_use=in_use))
 
 
-@gto_command()
+@gto_command(hidden=True)
 @option_repo
 @option_format
 def print_state(repo: str, format: str):
     """Print current registry state"""
     state = serialize(gto.api.get_state(repo).dict())
-    if format == "yaml":
-        click.echo(yaml.dump(serialize(state), default_flow_style=False))
-    elif format == "json":
-        click.echo(json.dumps(state))
-    else:
-        raise NotImplementedError("Unknown format")
+    format_echo(state, format)
 
 
-@gto_command()
+@gto_command(hidden=True)
 @option_repo
 @option_format
 def print_index(repo: str, format: str):
     index = gto.api.get_index(repo).object_centric_representation()
-    if format == "yaml":
-        click.echo(
-            yaml.dump(
-                dict(index),
-                default_flow_style=False,
-            )
-        )
-    elif format == "json":
-        click.echo(json.dumps(index))
-    else:
-        raise NotImplementedError("Unknown format")
+    format_echo(index, format)
 
 
 if __name__ == "__main__":
