@@ -2,7 +2,7 @@
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseSettings, validator
+from pydantic import BaseModel, BaseSettings, validator
 from pydantic.env_settings import InitSettingsSource
 from ruamel.yaml import YAML
 
@@ -10,7 +10,7 @@ from gto.versions import AbstractVersion
 
 from .constants import BRANCH, COMMIT, TAG
 from .exceptions import UnknownEnvironment
-from .ext import Enrichment, find_enrichments
+from .ext import Enrichment, find_enrichment_types, find_enrichments
 
 yaml = YAML(typ="safe", pure=True)
 yaml.default_flow_style = False
@@ -43,6 +43,14 @@ def config_settings_source(settings: "RegistryConfig") -> Dict[str, Any]:
     return {k.upper(): v for k, v in conf.items()} if conf else {}
 
 
+class EnrichmentConfig(BaseModel):
+    type: str
+    config: Dict = {}
+
+    def load(self) -> Enrichment:
+        return find_enrichment_types()[self.type](**self.config)
+
+
 class RegistryConfig(BaseSettings):
     INDEX: str = "artifacts.yaml"
     VERSION_BASE: str = TAG
@@ -53,7 +61,7 @@ class RegistryConfig(BaseSettings):
     ENV_BRANCH_MAPPING: Dict[str, str] = {}
     LOG_LEVEL: str = "INFO"
     DEBUG: bool = False
-    ENRICHMENTS: List[Enrichment] = []
+    ENRICHMENTS: List[EnrichmentConfig] = []
     AUTOLOAD_ENRICHMENTS: bool = True
     CONFIG_FILE: Optional[str] = CONFIG_FILE_NAME
 
@@ -79,9 +87,10 @@ class RegistryConfig(BaseSettings):
 
     @property
     def enrichments(self) -> List[Enrichment]:
+        res = [e.load() for e in self.ENRICHMENTS]
         if self.AUTOLOAD_ENRICHMENTS:
-            return find_enrichments() + self.ENRICHMENTS
-        return self.ENRICHMENTS
+            return find_enrichments() + res
+        return res
 
     def assert_env(self, name):
         if not self.check_env(name):
