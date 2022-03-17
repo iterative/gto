@@ -1,7 +1,7 @@
 import pytest
 
 from gto import CONFIG
-from gto.index import Artifact, RepoIndexManager
+from gto.index import Artifact, RepoIndexManager, find_nested_path
 
 
 def init_index(path):
@@ -38,3 +38,25 @@ def test_git_index_remove(git_index_repo):
     new_index.remove("a")
     index_value = new_index.get_index()
     assert index_value.state == {}
+
+
+@pytest.mark.parametrize(
+    "path, paths",
+    [
+        ("models/m1.txt", ["models/m1.txt"]),
+        ("models/m1.txt", ["models"]),
+        ("models", ["models/m1.txt"]),
+        ("models", ["models/"]),
+        ("models/m1.txt/", ["models/m1.txt"]),
+    ],
+)
+def test_check_path_found(path, paths):
+    assert find_nested_path(path, paths) is not None
+
+
+@pytest.mark.parametrize(
+    "path, paths",
+    [("models/m1.txt", ["models/m2.txt"]), ("models/a/m1.txt", ["models/m1.txt"])],
+)
+def test_check_path_not_found(path, paths):
+    assert find_nested_path(path, paths) is None

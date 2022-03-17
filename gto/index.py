@@ -9,7 +9,7 @@ import git
 from pydantic import BaseModel, parse_obj_as
 
 from .config import CONFIG, yaml
-from .exceptions import ArtifactNotFound, GTOException, NoRepo
+from .exceptions import ArtifactExists, ArtifactNotFound, NoRepo, PathIsUsed
 
 
 class Artifact(BaseModel):
@@ -29,6 +29,15 @@ def not_frozen(func):
         return func(self, *args, **kwargs)
 
     return inner
+
+
+def find_nested_path(path: str, paths: List[str]) -> Optional[Path]:
+    path_ = Path(path).resolve()
+    for p in paths:
+        p_ = Path(p).resolve()
+        if p_ == path_ or p_ in path_.parents or path_ in p_.parents:
+            return p_
+    return None
 
 
 class Index(BaseModel):
@@ -59,13 +68,18 @@ class Index(BaseModel):
     @not_frozen
     def add(self, type, name, path):
         if name in self:
-            raise GTOException(f"Artifact {name} already exists")
+            raise ArtifactExists(name)
+        if (
+            find_nested_path(path, [art.path for art in self.state.values()])
+            is not None
+        ):
+            raise PathIsUsed(type=type, name=name, path=path)
         self.state[name] = Artifact(type=type, name=name, path=path)
 
     @not_frozen
     def remove(self, name):
         if name not in self:
-            raise GTOException(f"Artifact {name} does not exist")
+            raise ArtifactNotFound(name)
         del self.state[name]
 
 
