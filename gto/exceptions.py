@@ -15,6 +15,14 @@ class NoRepo(GTOException):
         super().__init__(self.message)
 
 
+class NoFile(GTOException):
+    _message = "No file/folder found in '{path}' for checkouted commit"
+
+    def __init__(self, path) -> None:
+        self.message = self._message.format(path=path)
+        super().__init__(self.message)
+
+
 class ArtifactExists(GTOException):
     _message = "Artifact '{name}' is already exists in Index"
 

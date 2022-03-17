@@ -6,7 +6,7 @@ import pandas as pd
 from tabulate import tabulate_formats
 
 import gto
-from gto.constants import LABEL, NAME, REF, VERSION
+from gto.constants import LABEL, NAME, PATH, REF, TYPE, VERSION
 from gto.utils import format_echo, serialize
 
 arg_name = click.argument(NAME)
@@ -101,12 +101,13 @@ def gto_command(*args, **kwargs):
 
 @gto_command()
 @option_repo
-@click.argument("type")
+@click.argument(TYPE)
 @arg_name
-@click.argument("path")
-def add(repo: str, type: str, name: str, path: str):
+@click.argument(PATH)
+@click.option("-e", "--external", is_flag=True, default=False, help="External artifact")
+def add(repo: str, type: str, name: str, path: str, external: bool):
     """Register new artifact (add it to the Index)"""
-    gto.api.add(repo, type, name, path)
+    gto.api.add(repo, type, name, path, external)
 
 
 @cli.command("rm")

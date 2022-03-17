@@ -4,7 +4,7 @@ from typing import Union
 import pandas as pd
 from git import Repo
 
-from gto.index import FileIndexManager, RepoIndexManager
+from gto.index import FileIndexManager, RepoIndexManager, init_index_manager
 from gto.registry import GitRegistry
 from gto.tag import parse_name
 
@@ -27,14 +27,16 @@ def get_envs(repo: Union[str, Repo], in_use: bool = False):
     return GitRegistry.from_repo(repo).get_envs(in_use=in_use)
 
 
-def add(repo: Union[str, Repo], type: str, name: str, path: str):
+def add(
+    repo: Union[str, Repo], type: str, name: str, path: str, external: bool = False
+):
     """Add an artifact to the Index"""
-    return FileIndexManager(path=repo).add(type, name, path)
+    return init_index_manager(path=repo).add(type, name, path, external)
 
 
 def remove(repo: Union[str, Repo], name: str):
     """Remove an artifact from the Index"""
-    return FileIndexManager(path=repo).remove(name)
+    return init_index_manager(path=repo).remove(name)
 
 
 def register(

@@ -9,13 +9,14 @@ import git
 from pydantic import BaseModel, parse_obj_as
 
 from .config import CONFIG, yaml
-from .exceptions import ArtifactExists, ArtifactNotFound, NoRepo, PathIsUsed
+from .exceptions import ArtifactExists, ArtifactNotFound, NoFile, NoRepo, PathIsUsed
 
 
 class Artifact(BaseModel):
     type: str
     name: str
     path: str
+    external: bool = False
 
 
 State = Dict[str, Artifact]
@@ -38,6 +39,22 @@ def find_nested_path(path: str, paths: List[str]) -> Optional[Path]:
         if p_ == path_ or p_ in path_.parents or path_ in p_.parents:
             return p_
     return None
+
+
+def check_if_path_exists(path: str, repo: git.Repo = None, ref: str = None):
+    if repo is None:
+        return Path(path).exists()
+    try:
+        _ = (repo.commit(ref).tree / path).data_stream
+        return True
+    except KeyError:
+        return False
+
+
+def traverse_commit(commit: git.Commit) -> Generator[git.Commit, None, None]:
+    yield commit
+    for parent in commit.parents:
+        yield from traverse_commit(parent)
 
 
 class Index(BaseModel):
@@ -66,15 +83,12 @@ class Index(BaseModel):
                 yaml.dump(self.dict()["state"], file)
 
     @not_frozen
-    def add(self, type, name, path):
+    def add(self, type, name, path, external):
         if name in self:
             raise ArtifactExists(name)
-        if (
-            find_nested_path(path, [art.path for art in self.state.values()])
-            is not None
-        ):
+        if find_nested_path(path, [a.path for a in self.state.values()]) is not None:
             raise PathIsUsed(type=type, name=name, path=path)
-        self.state[name] = Artifact(type=type, name=name, path=path)
+        self.state[name] = Artifact(type=type, name=name, path=path, external=external)
 
     @not_frozen
     def remove(self, name):
@@ -98,9 +112,13 @@ class BaseIndexManager(BaseModel, ABC):
     def get_history(self) -> Dict[str, Index]:
         raise NotImplementedError
 
-    def add(self, type, name, path):
+    def add(self, type, name, path, external=False):
         index = self.get_index()
-        index.add(type, name, path)
+        if not external and not check_if_path_exists(
+            path, self.repo if hasattr(self, "repo") else None
+        ):
+            raise NoFile(path)
+        index.add(type, name, path, external)
         self.update()
 
     def remove(self, name):
@@ -184,7 +202,8 @@ class RepoIndexManager(FileIndexManager):
             raise ArtifactNotFound(name)
 
 
-def traverse_commit(commit: git.Commit) -> Generator[git.Commit, None, None]:
-    yield commit
-    for parent in commit.parents:
-        yield from traverse_commit(parent)
+def init_index_manager(path):
+    try:
+        return RepoIndexManager.from_repo(path)
+    except NoRepo:
+        return FileIndexManager(path)
