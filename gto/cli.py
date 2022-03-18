@@ -1,5 +1,6 @@
 import logging
 from functools import wraps
+from typing import Sequence
 
 import click
 import pandas as pd
@@ -54,8 +55,8 @@ MISSING_VALUE = "-"
 
 
 class ALIAS:
-    REGISTER = ["reg", "registration", "registrations", "register"]
-    PROMOTE = ["prom", "promote", "promotion", "promotions"]
+    REGISTER = ["register", "reg", "registration", "registrations"]
+    PROMOTE = ["promote", "prom", "promotion", "promotions"]
 
 
 @click.group()
@@ -254,21 +255,19 @@ def show(repo: str, format: str, format_table: str):
 
 @gto_command()
 @option_repo
-@click.option(
-    "-a",
-    "--action",
-    default=["register", "promote"],
-    multiple=True,
-    help="What actions to audit",
+@click.argument(
+    "action",
+    required=False,
     type=click.Choice(ALIAS.REGISTER + ALIAS.PROMOTE),
-    show_default=True,
+    nargs=-1,
 )
 @option_name
 @option_sort
 @option_format_table
-def audit(repo: str, action: str, name: str, sort: str, format_table: str):
+def audit(repo: str, action: Sequence[str], name: str, sort: str, format_table: str):
     """Audit actions made in registry"""
-
+    if not action:
+        action = ALIAS.REGISTER[:1] + ALIAS.PROMOTE[:1]
     if any(a in ALIAS.REGISTER for a in action):
         click.echo("\n=== Registration audit trail ===")
         format_echo(
