@@ -4,7 +4,12 @@ import git
 import pytest
 
 from gto import CONFIG
-from gto.index import Artifact, RepoIndexManager, check_if_path_exists, find_nested_path
+from gto.index import (
+    Artifact,
+    RepoIndexManager,
+    check_if_path_exists,
+    find_repeated_path,
+)
 
 
 def init_index(path):
@@ -57,7 +62,7 @@ def test_git_index_remove_external(git_index_repo):
     ],
 )
 def test_check_path_found(path, paths):
-    assert find_nested_path(path, paths) is not None
+    assert find_repeated_path(path, paths) is not None
 
 
 @pytest.mark.parametrize(
@@ -65,7 +70,7 @@ def test_check_path_found(path, paths):
     [("models/m1.txt", ["models/m2.txt"]), ("models/a/m1.txt", ["models/m1.txt"])],
 )
 def test_check_path_not_found(path, paths):
-    assert find_nested_path(path, paths) is None
+    assert find_repeated_path(path, paths) is None
 
 
 def test_check_existence_repo(empty_git_repo: Tuple[git.Repo, Callable]):

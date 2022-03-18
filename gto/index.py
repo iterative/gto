@@ -32,16 +32,24 @@ def not_frozen(func):
     return inner
 
 
-def find_nested_path(path: str, paths: List[str]) -> Optional[Path]:
-    path_ = Path(path).resolve()
+def find_repeated_path(
+    path: Union[str, Path], paths: List[Union[str, Path]]
+) -> Optional[Path]:
+    """Return the path from "paths" that conflicts with "path":
+    is equal to it or is a subpath (in both directions).
+    """
+    path = Path(path).resolve()
     for p in paths:
-        p_ = Path(p).resolve()
-        if p_ == path_ or p_ in path_.parents or path_ in p_.parents:
-            return p_
+        p = Path(p).resolve()
+        if p == path or p in path.parents or path in p.parents:
+            return p
     return None
 
 
 def check_if_path_exists(path: str, repo: git.Repo = None, ref: str = None):
+    """Check if path was committed to repo
+    or it just exists in case the repo is not provided.
+    """
     if repo is None:
         return Path(path).exists()
     try:
@@ -86,7 +94,7 @@ class Index(BaseModel):
     def add(self, type, name, path, external):
         if name in self:
             raise ArtifactExists(name)
-        if find_nested_path(path, [a.path for a in self.state.values()]) is not None:
+        if find_repeated_path(path, [a.path for a in self.state.values()]) is not None:
             raise PathIsUsed(type=type, name=name, path=path)
         self.state[name] = Artifact(type=type, name=name, path=path, external=external)
 
