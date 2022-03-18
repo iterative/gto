@@ -15,11 +15,35 @@ class NoRepo(GTOException):
         super().__init__(self.message)
 
 
-class ArtifactNotFound(GTOException):
-    _message = "Requested '{name}' wasn't found in registry"
+class NoFile(GTOException):
+    _message = "No file/folder found in '{path}' for checkouted commit"
+
+    def __init__(self, path) -> None:
+        self.message = self._message.format(path=path)
+        super().__init__(self.message)
+
+
+class ArtifactExists(GTOException):
+    _message = "Artifact '{name}' is already exists in Index"
 
     def __init__(self, name) -> None:
         self.message = self._message.format(name=name)
+        super().__init__(self.message)
+
+
+class ArtifactNotFound(GTOException):
+    _message = "Artifact '{name}' doesn't exist in Index"
+
+    def __init__(self, name) -> None:
+        self.message = self._message.format(name=name)
+        super().__init__(self.message)
+
+
+class PathIsUsed(GTOException):
+    _message = "Provided path conflicts with {path} ({type} {name})"
+
+    def __init__(self, type, name, path) -> None:
+        self.message = self._message.format(type=type, name=name, path=path)
         super().__init__(self.message)
 
 

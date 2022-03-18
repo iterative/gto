@@ -9,13 +9,14 @@ import git
 from pydantic import BaseModel, parse_obj_as
 
 from .config import CONFIG, yaml
-from .exceptions import ArtifactNotFound, GTOException, NoRepo
+from .exceptions import ArtifactExists, ArtifactNotFound, NoFile, NoRepo, PathIsUsed
 
 
 class Artifact(BaseModel):
     type: str
     name: str
     path: str
+    external: bool = False
 
 
 State = Dict[str, Artifact]
@@ -29,6 +30,39 @@ def not_frozen(func):
         return func(self, *args, **kwargs)
 
     return inner
+
+
+def find_repeated_path(
+    path: Union[str, Path], paths: List[Union[str, Path]]
+) -> Optional[Path]:
+    """Return the path from "paths" that conflicts with "path":
+    is equal to it or is a subpath (in both directions).
+    """
+    path = Path(path).resolve()
+    for p in paths:
+        p = Path(p).resolve()
+        if p == path or p in path.parents or path in p.parents:
+            return p
+    return None
+
+
+def check_if_path_exists(path: str, repo: git.Repo = None, ref: str = None):
+    """Check if path was committed to repo
+    or it just exists in case the repo is not provided.
+    """
+    if repo is None:
+        return Path(path).exists()
+    try:
+        _ = (repo.commit(ref).tree / path).data_stream
+        return True
+    except KeyError:
+        return False
+
+
+def traverse_commit(commit: git.Commit) -> Generator[git.Commit, None, None]:
+    yield commit
+    for parent in commit.parents:
+        yield from traverse_commit(parent)
 
 
 class Index(BaseModel):
@@ -57,15 +91,17 @@ class Index(BaseModel):
                 yaml.dump(self.dict()["state"], file)
 
     @not_frozen
-    def add(self, type, name, path):
+    def add(self, type, name, path, external):
         if name in self:
-            raise GTOException(f"Artifact {name} already exists")
-        self.state[name] = Artifact(type=type, name=name, path=path)
+            raise ArtifactExists(name)
+        if find_repeated_path(path, [a.path for a in self.state.values()]) is not None:
+            raise PathIsUsed(type=type, name=name, path=path)
+        self.state[name] = Artifact(type=type, name=name, path=path, external=external)
 
     @not_frozen
     def remove(self, name):
         if name not in self:
-            raise GTOException(f"Artifact {name} does not exist")
+            raise ArtifactNotFound(name)
         del self.state[name]
 
 
@@ -84,9 +120,13 @@ class BaseIndexManager(BaseModel, ABC):
     def get_history(self) -> Dict[str, Index]:
         raise NotImplementedError
 
-    def add(self, type, name, path):
+    def add(self, type, name, path, external=False):
         index = self.get_index()
-        index.add(type, name, path)
+        if not external and not check_if_path_exists(
+            path, self.repo if hasattr(self, "repo") else None
+        ):
+            raise NoFile(path)
+        index.add(type, name, path, external)
         self.update()
 
     def remove(self, name):
@@ -170,7 +210,8 @@ class RepoIndexManager(FileIndexManager):
             raise ArtifactNotFound(name)
 
 
-def traverse_commit(commit: git.Commit) -> Generator[git.Commit, None, None]:
-    yield commit
-    for parent in commit.parents:
-        yield from traverse_commit(parent)
+def init_index_manager(path):
+    try:
+        return RepoIndexManager.from_repo(path)
+    except NoRepo:
+        return FileIndexManager(path)
