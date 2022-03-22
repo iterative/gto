@@ -131,7 +131,7 @@ def remove(repo: str, name: str):
     "--bump", "-b", default=None, help="The exact part to use when bumping a version"
 )
 def register(repo: str, name: str, ref: str, version: str, bump: str):
-    """Register new artifact version"""
+    """Tag the object with a version (git tags)"""
     registered_version = gto.api.register(
         repo=repo, name=name, ref=ref, version=version, bump=bump
     )
@@ -268,7 +268,7 @@ def show(repo: str, format: str, format_table: str):
 @option_sort
 @option_format_table
 def audit(repo: str, action: Sequence[str], name: str, sort: str, format_table: str):
-    """Audit actions made in registry"""
+    """Shows a journal of actions made in registry"""
     if not action:
         action = ALIAS.REGISTER[:1] + ALIAS.PROMOTE[:1]
     if any(a in ALIAS.REGISTER for a in action):
