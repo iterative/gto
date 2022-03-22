@@ -1,4 +1,5 @@
 import logging
+import sys
 from functools import wraps
 from typing import Sequence
 
@@ -72,7 +73,7 @@ def cli():
 
 
 def _set_log_level(ctx, param, value):  # pylint: disable=unused-argument
-    if value:
+    if value or gto.CONFIG.DEBUG:
         logger = logging.getLogger("gto")
         logger.handlers[0].setLevel(logging.DEBUG)
         logger.setLevel(logging.DEBUG)
@@ -80,6 +81,8 @@ def _set_log_level(ctx, param, value):  # pylint: disable=unused-argument
 
         click.echo(CONFIG.__repr_str__("\n"))
         click.echo()
+    else:
+        sys.tracebacklimit = 0
 
 
 verbose_option = click.option(
