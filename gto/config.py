@@ -14,7 +14,7 @@ from .exceptions import UnknownEnvironment
 yaml = YAML(typ="safe", pure=True)
 yaml.default_flow_style = False
 
-CONFIG_FILE = "gto.yaml"
+CONFIG_FILE = ".gto"
 
 
 def _set_location_init_source(init_source: InitSettingsSource):
