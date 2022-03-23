@@ -107,10 +107,15 @@ def gto_command(*args, **kwargs):
 @click.argument(TYPE)
 @arg_name
 @click.argument(PATH)
-@click.option("-e", "--external", is_flag=True, default=False, help="External artifact")
-def add(repo: str, type: str, name: str, path: str, external: bool):
+@click.option(
+    "--virtual",
+    is_flag=True,
+    default=False,
+    help="Virtual artifact that wasn't committed to Git",
+)
+def add(repo: str, type: str, name: str, path: str, virtual: bool):
     """Register new artifact (add it to the Index)"""
-    gto.api.add(repo, type, name, path, external)
+    gto.api.add(repo, type, name, path, virtual)
 
 
 @cli.command("rm")

@@ -27,11 +27,9 @@ def get_envs(repo: Union[str, Repo], in_use: bool = False):
     return GitRegistry.from_repo(repo).get_envs(in_use=in_use)
 
 
-def add(
-    repo: Union[str, Repo], type: str, name: str, path: str, external: bool = False
-):
+def add(repo: Union[str, Repo], type: str, name: str, path: str, virtual: bool = False):
     """Add an artifact to the Index"""
-    return init_index_manager(path=repo).add(type, name, path, external)
+    return init_index_manager(path=repo).add(type, name, path, virtual)
 
 
 def remove(repo: Union[str, Repo], name: str):
