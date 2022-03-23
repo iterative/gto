@@ -129,7 +129,7 @@ class GitRegistry(BaseModel):
         """Assign label to specific artifact version"""
         self.config.assert_env(label)
         if not (promote_version is None) ^ (promote_ref is None):
-            raise ValueError("One and only one of (version, commit) must be specified.")
+            raise ValueError("One and only one of (version, ref) must be specified.")
         if promote_ref:
             promote_ref = self.repo.commit(promote_ref).hexsha
         if promote_ref:

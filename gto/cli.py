@@ -156,7 +156,7 @@ def deprecate(repo: str, name: str, version: str):
 @click.option(
     "--version",
     default=None,
-    help="If you provide --commit, this will be used to name new version",
+    help="If you provide --ref, this will be used to name new version",
 )
 @click.option("--ref", default=None)
 def promote(repo: str, name: str, label: str, version: str, ref: str):
