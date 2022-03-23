@@ -6,8 +6,6 @@ from setuptools.command.build_py import build_py
 install_requires = [
     "gitpython",
     "click",
-    "pandas",
-    "numpy",
     "pydantic",
     "ruamel.yaml",
     "semver==3.0.0-dev.3",

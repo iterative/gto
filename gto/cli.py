@@ -4,12 +4,19 @@ from functools import wraps
 from typing import Sequence
 
 import click
-import pandas as pd
 from tabulate import tabulate_formats
 
 import gto
 from gto.constants import LABEL, NAME, PATH, REF, TYPE, VERSION
 from gto.utils import format_echo, serialize
+
+TABLE = "table"
+
+
+class ALIAS:
+    REGISTER = ["register", "reg", "registration", "registrations"]
+    PROMOTE = ["promote", "prom", "promotion", "promotions"]
+
 
 arg_name = click.argument(NAME)
 arg_version = click.argument(VERSION)
@@ -29,9 +36,9 @@ option_format = click.option(
 option_format_df = click.option(
     "--format",
     "-f",
-    default="dataframe",
+    default=TABLE,
     help="Output format",
-    type=click.Choice(["dataframe", "json", "yaml"], case_sensitive=False),
+    type=click.Choice([TABLE, "json", "yaml"], case_sensitive=False),
     show_default=True,
 )
 option_name = click.option(
@@ -52,13 +59,6 @@ option_format_table = click.option(
     show_default=True,
 )
 
-MISSING_VALUE = "-"
-
-
-class ALIAS:
-    REGISTER = ["register", "reg", "registration", "registrations"]
-    PROMOTE = ["promote", "prom", "promotion", "promotions"]
-
 
 @click.group()
 def cli():
@@ -69,7 +69,6 @@ def cli():
     * Promote artifacts to environments
     * Act on new versions and promotions in CI
     """
-    pd.set_option("expand_frame_repr", False)
 
 
 def _set_log_level(ctx, param, value):  # pylint: disable=unused-argument
@@ -245,15 +244,15 @@ def check_ref(repo: str, ref: str, format: str):
 @option_format_table
 def show(repo: str, format: str, format_table: str):
     """Show current registry state"""
-    if format == "dataframe":
+    if format == TABLE:
         format_echo(
-            gto.api.show(repo, dataframe=True),
+            gto.api.show(repo, table=True),
             format=format,
             format_table=format_table,
             if_empty="No tracked artifacts detected in the current workspace",
         )
     else:
-        format_echo(gto.api.show(repo, dataframe=False), format=format)
+        format_echo(gto.api.show(repo, table=False), format=format)
 
 
 @gto_command()
@@ -274,8 +273,8 @@ def audit(repo: str, action: Sequence[str], name: str, sort: str, format_table: 
     if any(a in ALIAS.REGISTER for a in action):
         click.echo("\n=== Registration audit trail ===")
         format_echo(
-            gto.api.audit_registration(repo, name, sort, dataframe=True),
-            format="dataframe",
+            gto.api.audit_registration(repo, name, sort, table=True),
+            format=TABLE,
             format_table=format_table,
             if_empty="No registered versions detected in the current workspace",
         )
@@ -283,8 +282,8 @@ def audit(repo: str, action: Sequence[str], name: str, sort: str, format_table: 
     if any(a in ALIAS.PROMOTE for a in action):
         click.echo("\n=== Promotion audit trail ===")
         format_echo(
-            gto.api.audit_promotion(repo, name, sort, dataframe=True),
-            format="dataframe",
+            gto.api.audit_promotion(repo, name, sort, table=True),
+            format=TABLE,
             format_table=format_table,
             if_empty="No promotions detected in the current workspace",
         )
@@ -298,15 +297,15 @@ def audit(repo: str, action: Sequence[str], name: str, sort: str, format_table: 
 @option_sort
 def history(repo: str, name: str, format: str, format_table: str, sort: str):
     """Show history of artifact"""
-    if format == "dataframe":
+    if format == TABLE:
         format_echo(
-            gto.api.history(repo, name, sort, dataframe=True),
+            gto.api.history(repo, name, sort, table=True),
             format=format,
             format_table=format_table,
             if_empty="No history found",
         )
     else:
-        format_echo(gto.api.history(repo, name, sort, dataframe=False), format=format)
+        format_echo(gto.api.history(repo, name, sort, table=False), format=format)
 
 
 @gto_command()
