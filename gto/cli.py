@@ -221,7 +221,7 @@ def which(repo: str, name: str, label: str):
         click.echo(f"No version of '{name}' with label '{label}' active")
 
 
-@gto_command()
+@gto_command(hidden=True)
 @arg_name
 @click.option("--key", default=None, help="Which key to return")
 @option_format
