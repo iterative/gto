@@ -69,7 +69,7 @@ def showcase(
 
     gto.api.add(path, "model", "rf", "models/random-forest.pkl")
     gto.api.add(path, "model", "nn", "models/neural-network.pkl")
-    gto.api.add(path, "dataset", "features", "datasets/features.csv", external=True)
+    gto.api.add(path, "dataset", "features", "datasets/features.csv", virtual=True)
 
     repo.index.add(["artifacts.yaml"])
     first_commit = repo.index.commit("Add artifacts")

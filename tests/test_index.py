@@ -22,15 +22,15 @@ def git_index_repo(empty_git_repo: Tuple[git.Repo, Callable]):
     return init_index(repo.working_dir), repo
 
 
-def test_git_index_add_external(git_index_repo):
+def test_git_index_add_virtual(git_index_repo):
     index, repo = git_index_repo
-    index.add("a", "a", "a", external=True)
+    index.add("a", "a", "a", virtual=True)
 
     new_index = init_index(repo.git_dir)
     assert isinstance(new_index, RepoIndexManager)
     index_value = new_index.get_index()
     assert index_value.state["a"] == Artifact(
-        name="a", path="a", type="a", external=True
+        name="a", path="a", type="a", virtual=True
     )
 
     repo.index.add(CONFIG.INDEX)
@@ -39,9 +39,9 @@ def test_git_index_add_external(git_index_repo):
     assert new_index.get_history()[commit.hexsha].state == index_value.state
 
 
-def test_git_index_remove_external(git_index_repo):
+def test_git_index_remove_virtual(git_index_repo):
     index, repo = git_index_repo
-    index.add("a", "a", "a", external=True)
+    index.add("a", "a", "a", virtual=True)
 
     new_index = init_index(repo.git_dir)
     assert isinstance(new_index, RepoIndexManager)

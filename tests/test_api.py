@@ -31,13 +31,13 @@ def test_api_info_commands_empty_repo(empty_git_repo: Tuple[git.Repo, Callable])
 
 def test_add_remove(empty_git_repo: Tuple[git.Repo, Callable]):
     repo, write_file = empty_git_repo  # pylint: disable=unused-variable
-    name, type, path, external = "new-artifact", "new-type", "new/path", True
-    gto.api.add(repo.working_dir, type, name, path, external=external)
+    name, type, path, virtual = "new-artifact", "new-type", "new/path", True
+    gto.api.add(repo.working_dir, type, name, path, virtual=virtual)
     index = gto.api.get_index(repo.working_dir).get_index()
     assert name in index
     _check_dict(
         index.state[name],
-        dict(name=name, type=type, path=path, external=external),
+        dict(name=name, type=type, path=path, virtual=virtual),
         set(),
     )
     gto.api.remove(repo.working_dir, name)
@@ -49,8 +49,8 @@ def test_add_remove(empty_git_repo: Tuple[git.Repo, Callable]):
 def repo_with_artifact(init_showcase_numbers):
     repo: git.Repo
     repo, write_file = init_showcase_numbers  # pylint: disable=unused-variable
-    name, type, path_, external = "new-artifact", "new-type", "new/path", True
-    gto.api.add(repo.working_dir, type, name, path_, external=external)
+    name, type, path_, virtual = "new-artifact", "new-type", "new/path", True
+    gto.api.add(repo.working_dir, type, name, path_, virtual=virtual)
     repo.index.add(["artifacts.yaml"])
     repo.index.commit("Added index")
     return repo, name
@@ -67,7 +67,7 @@ def test_register(repo_with_artifact):
         "something-irrelevant",
         "doesnt-matter",
         "anything",
-        external=True,
+        virtual=True,
     )
     repo.index.commit("Irrelevant action to create a git commit")
     gto.api.register(repo.working_dir, name, "HEAD")

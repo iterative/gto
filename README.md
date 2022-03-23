@@ -29,20 +29,25 @@ source venv/bin/activate
 Install python libraries
 
 ```bash
-pip install --upgrade pip setuptools wheel .
+pip install --upgrade pip setuptools wheel ".[tests]"
 ```
 
 **3. Run**
 
 ```bash
-bash showcase.sh
+pytest --basetemp=pytest-cache
 ```
 
-This will create `demo` branch and tags. Please don't push them back to this repo :)
+This will create `pytest-cache` folder with some fixtures that can serve as examples.
+
+Notably, check out this folder:
+```
+cd pytest-cache/test_api0/
+gto show -v
+```
+The code that generates this folder could be found [in this fixture](https://github.com/iterative/gto/blob/main/tests/conftest.py#L58).
+
 To continue experimenting, call
 ```bash
 gto --help
 ```
-to see functionality and read through demo example.
-For this to work, you need to be locally in this repo.
-Working with remote repo isn't supported yet.

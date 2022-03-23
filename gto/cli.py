@@ -1,13 +1,22 @@
 import logging
+import sys
 from functools import wraps
+from typing import Sequence
 
 import click
-import pandas as pd
 from tabulate import tabulate_formats
 
 import gto
 from gto.constants import LABEL, NAME, PATH, REF, TYPE, VERSION
 from gto.utils import format_echo, serialize
+
+TABLE = "table"
+
+
+class ALIAS:
+    REGISTER = ["register", "reg", "registration", "registrations"]
+    PROMOTE = ["promote", "prom", "promotion", "promotions"]
+
 
 arg_name = click.argument(NAME)
 arg_version = click.argument(VERSION)
@@ -27,9 +36,9 @@ option_format = click.option(
 option_format_df = click.option(
     "--format",
     "-f",
-    default="dataframe",
+    default=TABLE,
     help="Output format",
-    type=click.Choice(["dataframe", "json", "yaml"], case_sensitive=False),
+    type=click.Choice([TABLE, "json", "yaml"], case_sensitive=False),
     show_default=True,
 )
 option_name = click.option(
@@ -50,13 +59,6 @@ option_format_table = click.option(
     show_default=True,
 )
 
-MISSING_VALUE = "-"
-
-
-class ALIAS:
-    REGISTER = ["reg", "registration", "registrations", "register"]
-    PROMOTE = ["prom", "promote", "promotion", "promotions"]
-
 
 @click.group()
 def cli():
@@ -67,11 +69,10 @@ def cli():
     * Promote artifacts to environments
     * Act on new versions and promotions in CI
     """
-    pd.set_option("expand_frame_repr", False)
 
 
 def _set_log_level(ctx, param, value):  # pylint: disable=unused-argument
-    if value:
+    if value or gto.CONFIG.DEBUG:
         logger = logging.getLogger("gto")
         logger.handlers[0].setLevel(logging.DEBUG)
         logger.setLevel(logging.DEBUG)
@@ -79,6 +80,8 @@ def _set_log_level(ctx, param, value):  # pylint: disable=unused-argument
 
         click.echo(CONFIG.__repr_str__("\n"))
         click.echo()
+    else:
+        sys.tracebacklimit = 0
 
 
 verbose_option = click.option(
@@ -104,10 +107,15 @@ def gto_command(*args, **kwargs):
 @click.argument(TYPE)
 @arg_name
 @click.argument(PATH)
-@click.option("-e", "--external", is_flag=True, default=False, help="External artifact")
-def add(repo: str, type: str, name: str, path: str, external: bool):
+@click.option(
+    "--virtual",
+    is_flag=True,
+    default=False,
+    help="Virtual artifact that wasn't committed to Git",
+)
+def add(repo: str, type: str, name: str, path: str, virtual: bool):
     """Register new artifact (add it to the Index)"""
-    gto.api.add(repo, type, name, path, external)
+    gto.api.add(repo, type, name, path, virtual)
 
 
 @cli.command("rm")
@@ -127,7 +135,7 @@ def remove(repo: str, name: str):
     "--bump", "-b", default=None, help="The exact part to use when bumping a version"
 )
 def register(repo: str, name: str, ref: str, version: str, bump: str):
-    """Register new artifact version"""
+    """Tag the object with a version (git tags)"""
     registered_version = gto.api.register(
         repo=repo, name=name, ref=ref, version=version, bump=bump
     )
@@ -153,7 +161,7 @@ def deprecate(repo: str, name: str, version: str):
 @click.option(
     "--version",
     default=None,
-    help="If you provide --commit, this will be used to name new version",
+    help="If you provide --ref, this will be used to name new version",
 )
 @click.option("--ref", default=None)
 def promote(repo: str, name: str, label: str, version: str, ref: str):
@@ -168,14 +176,14 @@ def promote(repo: str, name: str, label: str, version: str, ref: str):
     click.echo(f"Promoted {name} version {label_.version} to label {label}")
 
 
-@gto_command(hidden=True)
-@option_repo
-@arg_name
-@arg_label
-def demote(repo: str, name: str, label: str):
-    """De-promote artifact from given label"""
-    gto.api.demote(repo, name, label)
-    click.echo(f"Demoted {name} from label {label}")
+# @gto_command()
+# @option_repo
+# @arg_name
+# @arg_label
+# def demote(repo: str, name: str, label: str):
+#     """De-promote artifact from given label"""
+#     gto.api.demote(repo, name, label)
+#     click.echo(f"Demoted {name} from label {label}")
 
 
 @gto_command()
@@ -213,7 +221,7 @@ def which(repo: str, name: str, label: str):
         click.echo(f"No version of '{name}' with label '{label}' active")
 
 
-@gto_command()
+@gto_command(hidden=True)
 @arg_name
 @click.option("--key", default=None, help="Which key to return")
 @option_format
@@ -241,39 +249,37 @@ def check_ref(repo: str, ref: str, format: str):
 @option_format_table
 def show(repo: str, format: str, format_table: str):
     """Show current registry state"""
-    if format == "dataframe":
+    if format == TABLE:
         format_echo(
-            gto.api.show(repo, dataframe=True),
+            gto.api.show(repo, table=True),
             format=format,
             format_table=format_table,
             if_empty="No tracked artifacts detected in the current workspace",
         )
     else:
-        format_echo(gto.api.show(repo, dataframe=False), format=format)
+        format_echo(gto.api.show(repo, table=False), format=format)
 
 
 @gto_command()
 @option_repo
-@click.option(
-    "-a",
-    "--action",
-    default=["register", "promote"],
-    multiple=True,
-    help="What actions to audit",
+@click.argument(
+    "action",
+    required=False,
     type=click.Choice(ALIAS.REGISTER + ALIAS.PROMOTE),
-    show_default=True,
+    nargs=-1,
 )
 @option_name
 @option_sort
 @option_format_table
-def audit(repo: str, action: str, name: str, sort: str, format_table: str):
-    """Audit actions made in registry"""
-
+def audit(repo: str, action: Sequence[str], name: str, sort: str, format_table: str):
+    """Shows a journal of actions made in registry"""
+    if not action:
+        action = ALIAS.REGISTER[:1] + ALIAS.PROMOTE[:1]
     if any(a in ALIAS.REGISTER for a in action):
         click.echo("\n=== Registration audit trail ===")
         format_echo(
-            gto.api.audit_registration(repo, name, sort, dataframe=True),
-            format="dataframe",
+            gto.api.audit_registration(repo, name, sort, table=True),
+            format=TABLE,
             format_table=format_table,
             if_empty="No registered versions detected in the current workspace",
         )
@@ -281,8 +287,8 @@ def audit(repo: str, action: str, name: str, sort: str, format_table: str):
     if any(a in ALIAS.PROMOTE for a in action):
         click.echo("\n=== Promotion audit trail ===")
         format_echo(
-            gto.api.audit_promotion(repo, name, sort, dataframe=True),
-            format="dataframe",
+            gto.api.audit_promotion(repo, name, sort, table=True),
+            format=TABLE,
             format_table=format_table,
             if_empty="No promotions detected in the current workspace",
         )
@@ -296,15 +302,15 @@ def audit(repo: str, action: str, name: str, sort: str, format_table: str):
 @option_sort
 def history(repo: str, name: str, format: str, format_table: str, sort: str):
     """Show history of artifact"""
-    if format == "dataframe":
+    if format == TABLE:
         format_echo(
-            gto.api.history(repo, name, sort, dataframe=True),
+            gto.api.history(repo, name, sort, table=True),
             format=format,
             format_table=format_table,
             if_empty="No history found",
         )
     else:
-        format_echo(gto.api.history(repo, name, sort, dataframe=False), format=format)
+        format_echo(gto.api.history(repo, name, sort, table=False), format=format)
 
 
 @gto_command()

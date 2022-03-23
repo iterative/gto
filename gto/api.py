@@ -1,7 +1,7 @@
+from collections import OrderedDict
 from datetime import datetime
 from typing import Union
 
-import pandas as pd
 from git import Repo
 
 from gto.index import FileIndexManager, RepoIndexManager, init_index_manager
@@ -27,11 +27,9 @@ def get_envs(repo: Union[str, Repo], in_use: bool = False):
     return GitRegistry.from_repo(repo).get_envs(in_use=in_use)
 
 
-def add(
-    repo: Union[str, Repo], type: str, name: str, path: str, external: bool = False
-):
+def add(repo: Union[str, Repo], type: str, name: str, path: str, virtual: bool = False):
     """Add an artifact to the Index"""
-    return init_index_manager(path=repo).add(type, name, path, external)
+    return init_index_manager(path=repo).add(type, name, path, virtual)
 
 
 def remove(repo: Union[str, Repo], name: str):
@@ -67,9 +65,9 @@ def promote(
     )
 
 
-def demote(repo: Union[str, Repo], name: str, label: str):
-    """De-promote artifact from given label"""
-    return GitRegistry.from_repo(repo).demote(name, label)
+# def demote(repo: Union[str, Repo], name: str, label: str):
+#     """De-promote artifact from given label"""
+#     return GitRegistry.from_repo(repo).demote(name, label)
 
 
 def parse_tag(name: str):
@@ -103,70 +101,61 @@ def check_ref(repo: Union[str, Repo], ref: str):
     }
 
 
-def show(repo: Union[str, Repo], dataframe: bool = False):
+def show(repo: Union[str, Repo], table: bool = False):
     """Show current registry state"""
 
     reg = GitRegistry.from_repo(repo)
+    envs = list(reg.get_envs(in_use=False))
     models_state = {
         o.name: {
             "version": o.get_latest_version().name if o.get_latest_version() else None,
             "env": {
                 name: o.latest_labels[name].version if name in o.latest_labels else None
-                for name in reg.get_envs(in_use=False)
+                for name in envs
             },
         }
         for o in reg.state.artifacts.values()
     }
-    if dataframe:
-        result = {
-            ("", "latest"): {name: d["version"] for name, d in models_state.items()}
-        }
-        for name, details in models_state.items():
-            for env, ver in details["env"].items():
-                result[("env", env)] = {
-                    **result.get(("env", env), {}),
-                    **{name: ver},
-                }
-        result_df = pd.DataFrame(result)
-        result_df.index.name = "name"
-        result_df.columns = pd.MultiIndex.from_tuples(result_df.columns)
-        return result_df
-    return models_state
+    if not table:
+        return models_state
+
+    result = [
+        [name, d["version"]] + [d["env"][name] for name in envs]
+        for name, d in models_state.items()
+    ]
+    headers = ["name", "version"] + [f"env/{e}" for e in envs]
+    return result, headers
 
 
 def audit_registration(
     repo: Union[str, Repo],
     artifact: str = None,
     sort: str = "desc",
-    dataframe: bool = False,
+    table: bool = False,
 ):
     """Audit registry state"""
     reg = GitRegistry.from_repo(repo)
 
     audit_trail = [
-        {
-            "name": o.name,
-            "version": v.name,
-            "timestamp": v.creation_date,
-            "author": v.author,
-            "commit": v.commit_hexsha,
-            "deprecated": v.deprecated_date,
-        }
+        OrderedDict(
+            timestamp=v.creation_date,
+            name=o.name,
+            version=v.name,
+            deprecated=v.deprecated_date,
+            commit=v.commit_hexsha[:7],
+            author=v.author,
+        )
         for o in reg.state.artifacts.values()
         for v in o.versions
     ]
     if artifact:
         audit_trail = [event for event in audit_trail if event["name"] == artifact]
-    if not dataframe:
+    audit_trail.sort(key=lambda x: x["timestamp"])
+    if _is_ascending(sort):
+        audit_trail.reverse()
+    if not table:
         return audit_trail
-
-    df = pd.DataFrame(audit_trail)
-    if len(df):
-        df.sort_values("timestamp", ascending=_is_ascending(sort), inplace=True)
-        df.set_index(["timestamp", "name"], inplace=True)
-        df = df[["version", "deprecated", "commit", "author"]]
-        df["commit"] = df["commit"].str[:7]
-    return df
+    return audit_trail, "keys"
 
 
 def _is_ascending(sort):
@@ -177,58 +166,53 @@ def audit_promotion(
     repo: Union[str, Repo],
     artifact: str = None,
     sort: str = "desc",
-    dataframe: bool = False,
+    table: bool = False,
 ):
     """Audit registry state"""
     reg = GitRegistry.from_repo(repo)
     audit_trail = [
-        {
-            "name": o.name,
-            "label": l.name,
-            "version": l.version,
-            "timestamp": l.creation_date,
-            "author": l.author,
-            "commit": l.commit_hexsha,
-            "deprecated": l.deprecated_date,
-        }
+        OrderedDict(
+            timestamp=l.creation_date,
+            name=o.name,
+            label=l.name,
+            version=l.version,
+            deprecated=l.deprecated_date,
+            commit=l.commit_hexsha[:7],
+            author=l.author,
+        )
         for o in reg.state.artifacts.values()
         for l in o.labels
     ]
     if artifact:
         audit_trail = [event for event in audit_trail if event["name"] == artifact]
-    if not dataframe:
+    audit_trail.sort(key=lambda x: x["timestamp"])
+    if _is_ascending(sort):
+        audit_trail.reverse()
+    if not table:
         return audit_trail
-
-    df = pd.DataFrame(audit_trail)
-    if len(df):
-        df.sort_values("timestamp", ascending=_is_ascending(sort), inplace=True)
-        df.set_index(["timestamp", "name"], inplace=True)
-        df = df[["label", "version", "deprecated", "commit", "author"]]
-        df["commit"] = df["commit"].str[:7]
-    return df
+    return audit_trail, "keys"
 
 
-def history(
-    repo: str, artifact: str = None, sort: str = "desc", dataframe: bool = False
-):
+def history(repo: str, artifact: str = None, sort: str = "desc", table: bool = False):
     def add_event(event_list, event_name):
         return [{**event, "event": event_name} for event in event_list]
 
     reg = GitRegistry.from_repo(repo)
     commits = [
-        {
-            "name": name_,
-            "commit": commit,
-            "timestamp": datetime.fromtimestamp(reg.repo.commit(commit).committed_date),
-            "author": reg.repo.commit(commit).author.name,
-        }
+        dict(
+            timestamp=datetime.fromtimestamp(reg.repo.commit(commit).committed_date),
+            name=name_,
+            event="commit",
+            commit=commit[:7],
+            author=reg.repo.commit(commit).author.name,
+        )
         for name_, commit_list in get_index(repo)
         .artifact_centric_representation()
         .items()
         for commit in commit_list
     ]
-    registration = audit_registration(repo, dataframe=False)
-    promotion = audit_promotion(repo, dataframe=False)
+    registration = audit_registration(repo, table=False)
+    promotion = audit_promotion(repo, table=False)
     events_order = {"commit": 0, "registration": 1, "promotion": 2}
     events = sorted(
         add_event(commits, "commit")
@@ -240,13 +224,20 @@ def history(
         events.reverse()
     if artifact:
         events = [event for event in events if event["name"] == artifact]
-    if not dataframe:
+    if not table:
         return events
-    df = pd.DataFrame(events)
-    if len(df):
-        # df.sort_values("timestamp", ascending=is_ascending(sort), inplace=True)
-        df.set_index(["timestamp", "name"], inplace=True)
-        cols_order = ["event", "version", "label", "deprecated", "commit", "author"]
-        df = df[[c for c in cols_order if c in df]]
-        df["commit"] = df["commit"].str[:7]
-    return df
+    keys_order = [
+        "timestamp",
+        "name",
+        "event",
+        "version",
+        "label",
+        "deprecated",
+        "commit",
+        "author",
+    ]
+    keys_order = [c for c in keys_order if any(c in event for event in events)]
+    events = [
+        OrderedDict((key, event.get(key)) for key in keys_order) for event in events
+    ]
+    return events, "keys"

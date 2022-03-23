@@ -273,13 +273,13 @@ class TagEnvManager(TagManager):
             message=message,
         )
 
-    def demote(self, name, label, message):
-        create_tag(
-            self.repo,
-            name_tag(Action.DEMOTE, name, label=label.name, repo=self.repo),
-            ref=label.commit_hexsha,
-            message=message,
-        )
+    # def demote(self, name, label, message):
+    #     create_tag(
+    #         self.repo,
+    #         name_tag(Action.DEMOTE, name, label=label.name, repo=self.repo),
+    #         ref=label.commit_hexsha,
+    #         message=message,
+    #     )
 
     def check_ref(self, ref: str, state: BaseRegistryState):
         try:
