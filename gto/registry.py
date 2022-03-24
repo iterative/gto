@@ -27,7 +27,7 @@ class GitRegistry(BaseModel):
         arbitrary_types_allowed = True
 
     @classmethod
-    def from_repo(cls, repo=Union[str, Repo], config=None):
+    def from_repo(cls, repo=Union[str, Repo], config: RegistryConfig = None):
         if isinstance(repo, str):
             try:
                 repo = git.Repo(repo, search_parent_directories=True)
@@ -49,7 +49,7 @@ class GitRegistry(BaseModel):
 
     @property
     def index(self):
-        return RepoIndexManager(repo=self.repo)
+        return RepoIndexManager.from_repo(self.repo)
 
     @property
     def state(self):
@@ -84,7 +84,6 @@ class GitRegistry(BaseModel):
                 is not None
             ):
                 raise VersionAlreadyRegistered(version)
-            print(found_artifact.versions)
             if found_artifact.versions:
                 latest_ver = found_artifact.get_latest_version(
                     include_deprecated=True

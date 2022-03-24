@@ -8,7 +8,7 @@ from typing import IO, Dict, Generator, List, Optional, Union
 import git
 from pydantic import BaseModel, parse_obj_as
 
-from .config import CONFIG, yaml
+from .config import CONFIG_FILE, RegistryConfig, yaml
 from .exceptions import ArtifactExists, ArtifactNotFound, NoFile, NoRepo, PathIsUsed
 
 
@@ -107,6 +107,7 @@ class Index(BaseModel):
 
 class BaseIndexManager(BaseModel, ABC):
     current: Optional[Index]
+    config: RegistryConfig
 
     @abstractmethod
     def get_index(self) -> Index:
@@ -121,11 +122,12 @@ class BaseIndexManager(BaseModel, ABC):
         raise NotImplementedError
 
     def add(self, type, name, path, virtual=False):
-        index = self.get_index()
+        self.config.assert_type(type)
         if not virtual and not check_if_path_exists(
             path, self.repo if hasattr(self, "repo") else None
         ):
             raise NoFile(path)
+        index = self.get_index()
         index.add(type, name, path, virtual)
         self.update()
 
@@ -138,8 +140,14 @@ class BaseIndexManager(BaseModel, ABC):
 class FileIndexManager(BaseIndexManager):
     path: str = ""
 
+    @classmethod
+    def from_path(cls, path: str, config: RegistryConfig = None):
+        if config is None:
+            config = RegistryConfig(CONFIG_FILE=os.path.join(path, CONFIG_FILE))
+        return cls(path=path, config=config)
+
     def index_path(self):
-        return str(Path(self.path) / CONFIG.INDEX)
+        return str(Path(self.path) / self.config.INDEX)
 
     def get_index(self) -> Index:
         if os.path.exists(self.index_path()):
@@ -163,24 +171,28 @@ class RepoIndexManager(FileIndexManager):
     repo: git.Repo
 
     @classmethod
-    def from_repo(cls, repo: Union[str, git.Repo]):
+    def from_repo(cls, repo: Union[str, git.Repo], config: RegistryConfig = None):
         if isinstance(repo, str):
             try:
                 repo = git.Repo(repo, search_parent_directories=True)
             except git.InvalidGitRepositoryError as e:
                 raise NoRepo(repo) from e
-        return cls(repo=repo)
+        if config is None:
+            config = RegistryConfig(
+                CONFIG_FILE=os.path.join(repo.working_dir, CONFIG_FILE)
+            )
+        return cls(repo=repo, config=config)
 
     def index_path(self):
         # TODO: config should be loaded from repo too
-        return os.path.join(os.path.dirname(self.repo.git_dir), CONFIG.INDEX)
+        return os.path.join(os.path.dirname(self.repo.git_dir), self.config.INDEX)
 
     class Config:
         arbitrary_types_allowed = True
 
     def get_commit_index(self, ref: str) -> Index:
         return Index.read(
-            (self.repo.commit(ref).tree / CONFIG.INDEX).data_stream, frozen=True
+            (self.repo.commit(ref).tree / self.config.INDEX).data_stream, frozen=True
         )
 
     def get_history(self) -> Dict[str, Index]:
@@ -192,7 +204,7 @@ class RepoIndexManager(FileIndexManager):
         return {
             commit.hexsha: self.get_commit_index(commit.hexsha)
             for commit in commits
-            if CONFIG.INDEX in commit.tree
+            if self.config.INDEX in commit.tree
         }
 
     def artifact_centric_representation(self) -> ArtifactCommits:
@@ -214,4 +226,4 @@ def init_index_manager(path):
     try:
         return RepoIndexManager.from_repo(path)
     except NoRepo:
-        return FileIndexManager(path)
+        return FileIndexManager.from_path(path)

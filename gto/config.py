@@ -2,14 +2,13 @@
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseSettings, validator
+from pydantic import BaseSettings
 from pydantic.env_settings import InitSettingsSource
 from ruamel.yaml import YAML
 
+from gto.constants import BRANCH, COMMIT, TAG
+from gto.exceptions import UnknownEnvironment, UnknownType
 from gto.versions import AbstractVersion
-
-from .constants import BRANCH, COMMIT, TAG
-from .exceptions import UnknownEnvironment
 
 yaml = YAML(typ="safe", pure=True)
 yaml.default_flow_style = False
@@ -44,15 +43,23 @@ def config_settings_source(settings: "RegistryConfig") -> Dict[str, Any]:
 
 class RegistryConfig(BaseSettings):
     INDEX: str = "artifacts.yaml"
+    TYPE_ALLOWED: List[str] = []
     VERSION_BASE: str = TAG
     VERSION_CONVENTION: str = "NumberedVersion"
     VERSION_REQUIRED_FOR_ENV: bool = True
     ENV_BASE: str = TAG
-    ENV_WHITELIST: List[str] = []
+    ENV_ALLOWED: List[str] = []
     ENV_BRANCH_MAPPING: Dict[str, str] = {}
     LOG_LEVEL: str = "INFO"
     DEBUG: bool = False
     CONFIG_FILE: Optional[str] = CONFIG_FILE
+
+    def assert_type(self, name):
+        if not self.check_type(name):
+            raise UnknownType(name, self.TYPE_ALLOWED)
+
+    def check_type(self, name):
+        return name in self.TYPE_ALLOWED or not self.TYPE_ALLOWED
 
     @property
     def VERSION_SYSTEM_MAPPING(self):
@@ -76,7 +83,7 @@ class RegistryConfig(BaseSettings):
 
     def assert_env(self, name):
         if not self.check_env(name):
-            raise UnknownEnvironment(name)
+            raise UnknownEnvironment(name, self.envs)
 
     def check_env(self, name):
         return name in self.envs or not self.envs
@@ -84,7 +91,7 @@ class RegistryConfig(BaseSettings):
     @property
     def envs(self) -> List[str]:
         if self.ENV_BASE == TAG:
-            return self.ENV_WHITELIST
+            return self.ENV_ALLOWED
         if self.ENV_BASE == BRANCH:
             return list(self.ENV_BRANCH_MAPPING)
         raise NotImplementedError("Unknown ENV_BASE")
@@ -132,30 +139,30 @@ class RegistryConfig(BaseSettings):
     #         raise ValueError(f"ENV_BASE must be one of: {cls.ENV_MANAGERS_MAPPING.keys()}")
     #     return value
 
-    @validator("ENV_WHITELIST", always=True)
-    def validate_env_whitelist(cls, value, values):
-        if values["ENV_BASE"] == BRANCH:
-            # logging.warning("ENV_WHITELIST is ignored when ENV_BASE is BRANCH")
-            pass
-        return value
+    # @validator("ENV_WHITELIST", always=True)
+    # def validate_env_whitelist(cls, value, values):
+    #     if values["ENV_BASE"] == BRANCH:
+    #         # logging.warning("ENV_WHITELIST is ignored when ENV_BASE is BRANCH")
+    #         pass
+    #     return value
 
-    @validator("ENV_BRANCH_MAPPING", always=True)
-    def validate_env_branch_mapping(
-        cls, value: Dict[str, str], values
-    ) -> Dict[str, str]:
-        if values["ENV_BASE"] != BRANCH:
-            # logging.warning("ENV_BRANCH_MAPPING is ignored when ENV_BASE is not BRANCH")
-            return value
-        if not isinstance(value, dict):
-            raise ValueError(
-                f"ENV_BRANCH_MAPPING must be a dict, got {type(value)}",
-                "ENV_BRANCH_MAPPING",
-            )
-        if not all(isinstance(k, str) and isinstance(v, str) for k, v in value.items()):
-            raise ValueError(
-                "ENV_BRANCH_MAPPING must be a dict of str:str", "ENV_BRANCH_MAPPING"
-            )
-        return value
+    # @validator("ENV_BRANCH_MAPPING", always=True)
+    # def validate_env_branch_mapping(
+    #     cls, value: Dict[str, str], values
+    # ) -> Dict[str, str]:
+    #     if values["ENV_BASE"] != BRANCH:
+    #         # logging.warning("ENV_BRANCH_MAPPING is ignored when ENV_BASE is not BRANCH")
+    #         return value
+    #     if not isinstance(value, dict):
+    #         raise ValueError(
+    #             f"ENV_BRANCH_MAPPING must be a dict, got {type(value)}",
+    #             "ENV_BRANCH_MAPPING",
+    #         )
+    #     if not all(isinstance(k, str) and isinstance(v, str) for k, v in value.items()):
+    #         raise ValueError(
+    #             "ENV_BRANCH_MAPPING must be a dict of str:str", "ENV_BRANCH_MAPPING"
+    #         )
+    #     return value
 
     @property
     def versions_class(self) -> AbstractVersion:
