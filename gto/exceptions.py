@@ -23,6 +23,16 @@ class NoFile(GTOException):
         super().__init__(self.message)
 
 
+class UnknownType(GTOException):
+    _message = (
+        "Type '{type}' is not present in your config file. Allowed values are: {types}."
+    )
+
+    def __init__(self, type, types) -> None:
+        self.message = self._message.format(type=type, types=types)
+        super().__init__(self.message)
+
+
 class ArtifactExists(GTOException):
     _message = "Artifact '{name}' is already exists in Index"
 
@@ -97,11 +107,8 @@ class VersionIsOld(GTOException):
 class UnknownEnvironment(GTOException):
     _message = "Environment '{env}' is not present in your config file. Allowed envs are: {envs}."
 
-    def __init__(self, env) -> None:
-        # to avoid circular import
-        from .config import CONFIG  # pylint: disable=import-outside-toplevel
-
-        self.message = self._message.format(env=env, envs=CONFIG.ENV_WHITELIST)
+    def __init__(self, env, envs) -> None:
+        self.message = self._message.format(env=env, envs=envs)
         super().__init__(self.message)
 
 
