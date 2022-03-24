@@ -1,27 +1,49 @@
 # GTO
 
 Great Tool Ops. Turn your Git Repo into Artifact Registry:
-* Index your artifacts and add enrichments
-* Register artifact versions
-* Promote artifacts to environments
+* Index files in repo as artifacts to make them visible for others
+* Register new versions of artifacts marking significant changes to them
+* Promote versions to environments to signal downstream systems to act
 * Act on new versions and promotions in CI
+* [WIP] Add enrichments that will add more information about the artifacts
 
-**See example repo**
+## Configuration
+
+You can write configuration in `.gto` file in the root of your repo or use environment variables like this (note the `GTO_` prefix):
+```shell
+GTO_VERSION_BASE=tag gto show
+```
+
+The default config written to `.gto` file will look like this (comments are there to help clarify the settings meaning and valid values):
+```
+index: artifacts.yaml
+type_allowed: []  # list of allowed types
+version_base: tag  # or commit
+version_convention: numbers  # or semver
+version_required_for_env: true  # if false, registering a version isn't required to promote to an environment
+env_base: tag  # or branch
+env_allowed: []  # list of allowed environments to promote to. Make sense for env_base=tag only.
+env_branch_mapping: {}  # map of branch names to environment names. Makes sense for env_base=branch only.
+```
+
+If some list/dict should allow something but it's empty, that means that all values are allowed.
+
+## See example repo**
 
 Check out the example repo:
 https://github.com/iterative/gto-example
 read README in it and try it out
 
-# To try out the latest version
+## To try out the latest version
 
-**1. Clone this repository**
+### 1. Clone this repository
 
 ```bash
 git clone git@github.com:iterative/gto.git
 cd gto
 ```
 
-**2. Create virtual environment named `venv`**
+### 2. Create virtual environment named `venv`
 ```bash
 python3 -m venv venv
 source venv/bin/activate
@@ -32,7 +54,7 @@ Install python libraries
 pip install --upgrade pip setuptools wheel ".[tests]"
 ```
 
-**3. Run**
+### 3. Run
 
 ```bash
 pytest --basetemp=pytest-cache
