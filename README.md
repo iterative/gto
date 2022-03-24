@@ -28,6 +28,25 @@ env_branch_mapping: {}  # map of branch names to environment names. Makes sense 
 
 If some list/dict should allow something but it's empty, that means that all values are allowed.
 
+Some example configs (skipping default values):
+
+```
+type_allowed: [model, dataset]
+version_convention: semver
+version_required_for_env: false
+env_allowed: [dev, test, prod]
+```
+
+```
+version_base: commit
+version_required_for_env: true
+env_base: branch
+env_branch_mapping:
+    master: prod
+    develop: dev
+```
+
+
 ## See example repo**
 
 Check out the example repo:
