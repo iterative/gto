@@ -9,7 +9,7 @@ Great Tool Ops. Turn your Git Repo into Artifact Registry:
 
 To turn your repo into an artifact registry, you only need to `pip install` this package. Indexing, versioning and promoting are done with Git using files, commits, tags and branches. To use the artifact registry, you also need this package only (but to download artifacts that are stored with DVC or outside of repo, e.g. in `s3://` or in DVC cache, you'll need DVC or aws CLI).
 
-GTO is created to be used in CLI, as well as in Python. The README will cover CLI part, but for all commands there are Python API counterparts in `gto.api` module.
+The tool is created to be used both in CLI and in Python. The README will cover CLI part, but for all commands there are Python API counterparts in `gto.api` module.
 
 ## Artifacts
 
