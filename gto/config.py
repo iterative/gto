@@ -45,7 +45,7 @@ class RegistryConfig(BaseSettings):
     INDEX: str = "artifacts.yaml"
     TYPE_ALLOWED: List[str] = []
     VERSION_BASE: str = TAG
-    VERSION_CONVENTION: str = "NumberedVersion"
+    VERSION_CONVENTION: str = "numbers"
     VERSION_REQUIRED_FOR_ENV: bool = True
     ENV_BASE: str = TAG
     ENV_ALLOWED: List[str] = []
