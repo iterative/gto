@@ -57,7 +57,7 @@ def format_echo(result, format, format_table=None, if_empty="", missing_value="-
                 showindex=False,
                 missingval=missing_value,
             )
-            if len(result)
+            if len(result[0])
             else if_empty
         )
     else:
