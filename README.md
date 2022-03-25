@@ -7,7 +7,7 @@ Great Tool Ops. Turn your Git Repo into Artifact Registry:
 * Act on new versions and promotions in CI
 * [WIP] Add enrichments that will add more information about the artifacts
 
-To turn your repo into an artifact registry, you only need to `pip install` this package. Indexing, versioning and promoting are done with Git using files, commits, tags and branches. To use the artifact registry, you also need this package only (but to download artifacts that are stored with DVC or outside of repo, e.g. in `s3://` or in DVC cache, you'll need DVC or aws CLI).
+To turn your repo into an artifact registry, you only need to `pip install` this package. Indexing, versioning and promoting are done with Git using files, commits, tags and branches. To use the artifact registry, you also need this package only.
 
 The tool is created to be used both in CLI and in Python. The README will cover CLI part, but for all commands there are Python API counterparts in `gto.api` module.
 
@@ -166,6 +166,24 @@ version:
     deprecated_date: null
     name: v1.0.1
 ```
+
+### [WIP] Getting right versions in downstream systems
+
+To get the latest artifact version, run:
+
+```
+$ gto latest rf
+v1.0.1
+```
+
+To get the version that is currently promoted to environment, run:
+
+```
+$ gto which rf production
+v1.0.0
+```
+
+To download artifacts that are stored with DVC or outside of repo, e.g. in `s3://` or in DVC cache, you'll need DVC or aws CLI.
 
 ## Configuration
 
