@@ -9,6 +9,8 @@ Great Tool Ops. Turn your Git Repo into Artifact Registry:
 
 To turn your repo into an artifact registry, you only need to `pip install` this package. Indexing, versioning and promoting are done with Git using files, commits, tags and branches. To use the artifact registry, you also need this package only (but to download artifacts that are stored with DVC or outside of repo, e.g. in `s3://` or in DVC cache, you'll need DVC or aws CLI).
 
+GTO is created to be used in CLI, as well as in Python. The README will cover CLI part, but for all commands there are Python API counterparts in `gto.api` module.
+
 ## Artifacts
 
 To add new artifact or remove the existing ones, run `gto add` or `gto rm`:
@@ -145,6 +147,24 @@ $ gto history --name rf
 │ 2022-03-18 12:14:33 │ rf     │ promotion    │ v1.0.1    │ production │ -            │ 9fbb866  │ Alexander Guschin │
 │ 2022-03-18 12:15:37 │ rf     │ promotion    │ v1.0.0    │ production │ -            │ 5eaf15a  │ Alexander Guschin │
 ╘═════════════════════╧════════╧══════════════╧═══════════╧════════════╧══════════════╧══════════╧═══════════════════╛
+```
+
+## Act on new versions and promotions in CI
+
+When CI is triggered, you can use the triggering git reference to determine the version of the artifact that was registered or promoted. In GH Actions you can use the `GITHUB_REF` environment variable to determine the version (check out GH Actions workflow in the example repo). You can also do that locally:
+
+```
+$ gto check-ref rf@v1.0.1
+WARNING:root:Provided ref doesn't exist or it is not a tag that promotes to an environment
+env: {}
+version:
+  rf:
+    artifact: rf
+    author: Alexander Guschin
+    commit_hexsha: 9fbb8664a4a48575ee5d422e177174f20e460b94
+    creation_date: '2022-03-18T12:11:21'
+    deprecated_date: null
+    name: v1.0.1
 ```
 
 ## Configuration
