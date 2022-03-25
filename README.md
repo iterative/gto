@@ -9,11 +9,143 @@ Great Tool Ops. Turn your Git Repo into Artifact Registry:
 
 To turn your repo into an artifact registry, you only need to `pip install` this package. Indexing, versioning and promoting are done with Git using files, commits, tags and branches. To use the artifact registry, you also need this package only (but to download artifacts that are stored with DVC or outside of repo, e.g. in `s3://` or in DVC cache, you'll need DVC or aws CLI).
 
+## Artifacts
+
+To add new artifact or remove the existing ones, run `gto add` or `gto rm`:
+
+```
+$ gto add --help
+Usage: gto add [OPTIONS] TYPE NAME PATH
+
+  Register new artifact (add it to the Index)
+
+Options:
+  -v, --verbose
+  -r, --repo TEXT  Repository to use  [default: .]
+  --virtual        Virtual artifact that wasn't committed to Git
+  --help           Show this message and exit.
+
+$ gto add model simple-nn models/neural-network.pkl --virtual
+```
+
+You could also modify `artifacts.yaml` file directly.
+
 There are two types of artifacts in GTO:
-1. Files/folders that are committed to the repo. When you register a new version or promote it to env, Git guarantees that it's immutable. You can return to your repo a year later and be able to get 100% the same artifact by providing the same version.
+1. Files/folders committed to the repo. When you register a new version or promote it to env, Git guarantees that it's immutable. You can return to your repo a year later and be able to get 100% the same artifact by providing the same version.
 2. `Virtual` artifacts. This could be an external path, e.g. `s3://mybucket/myfile` or a local path if the file wasn't committed (as in case with DVC). In this case GTO can't pin the current physical state of the artifact and guarantee it's immutability. If `s3://mybucket/myfile` changes, you won't have any way neither retrieve, nor understand it's different now than it was before when you registered that artifact version.
 
 In future versions, we will add enrichments (useful information other tools like DVC and MLEM can provide about the artifacts). This will allow treating files versioned with DVC and DVC PL outputs as usual artifacts instead `virtual` ones.
+
+## Versioning
+
+After adding an artifact and committing modified `artifacts.yaml`, you can start creating new versions of it. You usually use those to mark significant changes to the artifact.
+
+```
+$ gto register --help
+Usage: gto register [OPTIONS] NAME REF
+
+  Tag the object with a version (git tags)
+
+Options:
+  -v, --verbose
+  -r, --repo TEXT        Repository to use  [default: .]
+  --version, --ver TEXT  Version to promote
+  -b, --bump TEXT        The exact part to use when bumping a version
+  --help                 Show this message and exit.
+
+$ gto register simple-nn HEAD --version v1.0.0
+```
+
+If you want to deprecate specific version, use `gto deprecate`.
+
+## Promoting
+
+You could also promote a specific artifact version to an environment. You can use that to signal downstream systems to act - for example, redeploy a ML model (your artifact) or update the config file (your artifact).
+
+```
+$ gto promote --help
+Usage: gto promote [OPTIONS] NAME LABEL
+
+  Assign label to specific artifact version
+
+Options:
+  -v, --verbose
+  -r, --repo TEXT  Repository to use  [default: .]
+  --version TEXT   If you provide --ref, this will be used to name new version
+  --ref TEXT
+  --help           Show this message and exit.
+
+$ gto promote simple-nn prod
+```
+
+## Using the registry
+
+Let's see what are the commands that help us use the registry. Let's clone the example repo first:
+```
+$ git clone git@github.com:iterative/gto-example.git
+$ cd gto-example
+```
+
+### Show the actual state
+
+This is the actual state of the registry: all artifacts, their latest versions, and what is promoted to envs right now.
+
+```
+$ gto show
+╒══════════════╤═══════════╤══════════════════╤═══════════════╕
+│ name         │ version   │ env/production   │ env/staging   │
+╞══════════════╪═══════════╪══════════════════╪═══════════════╡
+│ nn           │ v0.0.1    │ -                │ v0.0.1        │
+│ rf           │ v1.0.1    │ v1.0.0           │ v1.0.1        │
+│ features-dvc │ -         │ -                │ -             │
+╘══════════════╧═══════════╧══════════════════╧═══════════════╛
+```
+
+### Audit the registration and promotion
+
+`gto audit` will print all registered versions of the artifact and all versions promoted to environments. This will help you to understand what was happening with the artifact.
+
+```
+$ gto audit --name rf
+
+=== Registration audit trail ===
+╒═════════════════════╤════════╤═══════════╤══════════════╤══════════╤═══════════════════╕
+│ timestamp           │ name   │ version   │ deprecated   │ commit   │ author            │
+╞═════════════════════╪════════╪═══════════╪══════════════╪══════════╪═══════════════════╡
+│ 2022-03-18 12:10:15 │ rf     │ v1.0.0    │ -            │ 5eaf15a  │ Alexander Guschin │
+│ 2022-03-18 12:11:21 │ rf     │ v1.0.1    │ -            │ 9fbb866  │ Alexander Guschin │
+╘═════════════════════╧════════╧═══════════╧══════════════╧══════════╧═══════════════════╛
+
+=== Promotion audit trail ===
+╒═════════════════════╤════════╤════════════╤═══════════╤══════════════╤══════════╤═══════════════════╕
+│ timestamp           │ name   │ label      │ version   │ deprecated   │ commit   │ author            │
+╞═════════════════════╪════════╪════════════╪═══════════╪══════════════╪══════════╪═══════════════════╡
+│ 2022-03-18 12:12:27 │ rf     │ production │ v1.0.0    │ -            │ 5eaf15a  │ Alexander Guschin │
+│ 2022-03-18 12:13:30 │ rf     │ staging    │ v1.0.1    │ -            │ 9fbb866  │ Alexander Guschin │
+│ 2022-03-18 12:14:33 │ rf     │ production │ v1.0.1    │ -            │ 9fbb866  │ Alexander Guschin │
+│ 2022-03-18 12:15:37 │ rf     │ production │ v1.0.0    │ -            │ 5eaf15a  │ Alexander Guschin │
+╘═════════════════════╧════════╧════════════╧═══════════╧══════════════╧══════════╧═══════════════════╛
+```
+
+### See the history of an artifact
+
+Another way to achieve the same is by using `gto history` command:
+
+```
+$ gto history --name rf
+╒═════════════════════╤════════╤══════════════╤═══════════╤════════════╤══════════════╤══════════╤═══════════════════╕
+│ timestamp           │ name   │ event        │ version   │ label      │ deprecated   │ commit   │ author            │
+╞═════════════════════╪════════╪══════════════╪═══════════╪════════════╪══════════════╪══════════╪═══════════════════╡
+│ 2022-03-18 12:10:12 │ rf     │ commit       │ -         │ -          │ -            │ 5eaf15a  │ Alexander Guschin │
+│ 2022-03-18 12:10:15 │ rf     │ registration │ v1.0.0    │ -          │ -            │ 5eaf15a  │ Alexander Guschin │
+│ 2022-03-18 12:11:18 │ rf     │ commit       │ -         │ -          │ -            │ 9fbb866  │ Alexander Guschin │
+│ 2022-03-18 12:11:21 │ rf     │ registration │ v1.0.1    │ -          │ -            │ 9fbb866  │ Alexander Guschin │
+│ 2022-03-18 12:12:27 │ rf     │ promotion    │ v1.0.0    │ production │ -            │ 5eaf15a  │ Alexander Guschin │
+│ 2022-03-18 12:13:30 │ rf     │ promotion    │ v1.0.1    │ staging    │ -            │ 9fbb866  │ Alexander Guschin │
+│ 2022-03-18 12:14:33 │ rf     │ promotion    │ v1.0.1    │ production │ -            │ 9fbb866  │ Alexander Guschin │
+│ 2022-03-18 12:15:37 │ rf     │ promotion    │ v1.0.0    │ production │ -            │ 5eaf15a  │ Alexander Guschin │
+╘═════════════════════╧════════╧══════════════╧═══════════╧════════════╧══════════════╧══════════╧═══════════════════╛
+```
 
 ## Configuration
 
