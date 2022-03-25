@@ -28,7 +28,15 @@ env_branch_mapping: {}  # map of branch names to environment names. Makes sense 
 
 If some list/dict should allow something but it's empty, that means that all values are allowed.
 
-Some example configs (skipping default values):
+### Some example configs (skipping default values)
+
+```
+type_allowed: [model, dataset]
+version_convention: semver
+env_allowed: [dev, test, prod]
+```
+
+In this setup you create versions and promote them with git tags (those are defaults). This would be a typical setup when you need both to register versions and promote them to envs, and your requirement is to create a version first before promoting the artifact from specific commit to the env (`gto promote` will automatically create a version for you in that case). It limits allowed types and envs and requires you to version your models with SemVer (v1.2.3 as opposed to v1 that is called Numbers in settings).
 
 ```
 type_allowed: [model, dataset]
@@ -37,17 +45,35 @@ version_required_for_env: false
 env_allowed: [dev, test, prod]
 ```
 
+This setup has a single difference from the previous one. To promote a model to the environment, it doesn't require you to create a SemVer version. To indicate, which version was promoted, GTO will use a commit hexsha. That effectively means that registering and promoting are decoupled - you can do them independently. `gto show`, `gto audit`, `gto history` showcasing promotions will show SemVer when it's available, and commit hexsha when it's not.
+
 ```
 version_base: commit
-version_required_for_env: true
+env_allowed: [dev, test, prod]
+```
+
+In this setup each commit counts as a version for artifact (it's only required for that artifact to exist in `artifacts.yaml` in those commits). You cannot create versions explicitly with `gto register` right now, because this requires to actually create PR/make a commit to the selected branch and it's not implemented yet. As for versions, you have a whitelist of allowed values. Because each commit is a version, you don't need to create a version before promoting. In fact it is similar to specifying `version_required_for_env: false`.
+
+```
 env_base: branch
 env_branch_mapping:
     master: prod
     develop: dev
 ```
 
+In this setup artifact version is assumed to be promoted in `prod` if it's committed in `master` and is the latest version in that branch. Because the default is `version_base: tag`, running `gto promote` will register new artifact version - and this at the same time will promote the artifact to the environment from `env_branch_mapping`.
 
-## See example repo**
+```
+version_base: commit
+env_base: branch
+env_branch_mapping:
+    master: prod
+    develop: dev
+```
+
+In this setup you cannot create versions explicitly with `gto register`, because each commit counts as a version for artifact (it's only required for that artifact to exist in `artifacts.yaml` in those commits) and you would need to actually create PR/make a commit to the selected branch. Likewise, you cannot promote to envs with `gto promote` because it's not implemented yet and exact way to do that is unclear - e.g. this would require to create a PR or direct commit that updates the artifact. I guess we should implement all of these in the future. For now this setup allows you to manage artifacts with `gto add` / `gto rm` and see the state of your repo `gto show`, `gto audit`, `gto history`.
+
+## See example repo
 
 Check out the example repo:
 https://github.com/iterative/gto-example
