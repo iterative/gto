@@ -61,17 +61,14 @@ env_branch_mapping:
     develop: dev
 ```
 
-In this setup artifact version is assumed to be promoted in `prod` if it's committed in `master` and is the latest version in that branch. Because the default is `version_base: tag`, running `gto promote` will register new artifact version - and this at the same time will promote the artifact to the environment from `env_branch_mapping`.
+In this setup artifact version is assumed to be promoted in `prod` if it's committed in `master` and is the latest version in that branch. Because the default is `version_base: tag`, running `gto promote` will register new artifact version - and this at the same time will promote the artifact to the environment from `env_branch_mapping`. If you register a version in a branch that doesn't exist in `env_branch_mapping`, the promotion won't happen.
 
 ```
 version_base: commit
 env_base: branch
-env_branch_mapping:
-    master: prod
-    develop: dev
 ```
 
-In this setup you cannot create versions explicitly with `gto register`, because each commit counts as a version for artifact (it's only required for that artifact to exist in `artifacts.yaml` in those commits) and you would need to actually create PR/make a commit to the selected branch. Likewise, you cannot promote to envs with `gto promote` because it's not implemented yet and exact way to do that is unclear - e.g. this would require to create a PR or direct commit that updates the artifact. I guess we should implement all of these in the future. For now this setup allows you to manage artifacts with `gto add` / `gto rm` and see the state of your repo `gto show`, `gto audit`, `gto history`.
+In this setup you cannot create versions explicitly with `gto register`, because each commit counts as a version for artifact (it's only required for that artifact to exist in `artifacts.yaml` in those commits) and you would need to actually create PR/make a commit to the selected branch. Likewise, you cannot promote to envs with `gto promote` because it's not implemented yet and exact way to do that is unclear - e.g. this would require to create a PR or direct commit that updates the artifact. I guess we should implement all of these in the future. For now this setup allows you to manage artifacts with `gto add` / `gto rm` and see the state of your repo `gto show`, `gto audit`, `gto history`. Finally, because `env_branch_mapping` is not specified, GTO will take into account all branches that have `artifacts.yaml` in them.
 
 ## See example repo
 
