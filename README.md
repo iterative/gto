@@ -7,7 +7,7 @@ Great Tool Ops. Turn your Git Repo into Artifact Registry:
 * Act on new versions and promotions in CI
 * [WIP] Add enrichments that will add more information about the artifacts
 
-To turn your repo into an artifact registry, you only need to `pip install` this package. Indexing, versioning and promoting are done with Git using files, commits, tags and branches. To use the artifact registry, you also need this package only (but if your artifacts are stored somewhere outside the repo or with DVC, e.g. in `s3://` or in DVC cache, you'll need DVC or aws CLI).
+To turn your repo into an artifact registry, you only need to `pip install` this package. Indexing, versioning and promoting are done with Git using files, commits, tags and branches. To use the artifact registry, you also need this package only (but to download artifacts that are stored with DVC or outside of repo, e.g. in `s3://` or in DVC cache, you'll need DVC or aws CLI).
 
 There are two types of artifacts in GTO:
 1. Files/folders that are committed to the repo. When you register a new version or promote it to env, Git guarantees that it's immutable. You can return to your repo a year later and be able to get 100% the same artifact by providing the same version.
