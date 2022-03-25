@@ -8,6 +8,7 @@ from tabulate import tabulate_formats
 
 import gto
 from gto.constants import LABEL, NAME, PATH, REF, TYPE, VERSION
+from gto.exceptions import NotFound
 from gto.utils import format_echo, serialize
 
 TABLE = "table"
@@ -56,6 +57,14 @@ option_format_table = click.option(
     "--format-table",
     type=click.Choice(tabulate_formats),
     default="fancy_outline",
+    show_default=True,
+)
+option_expected = click.option(
+    "-e",
+    "--expected",
+    is_flag=True,
+    default=False,
+    help="Return exit code 1 if no result",
     show_default=True,
 )
 
@@ -197,13 +206,20 @@ def promote(repo: str, name: str, label: str, version: str, ref: str):
     help="Include deprecated versions",
     show_default=True,
 )
-def latest(repo: str, name: str, include_deprecated: bool):
+# @click.option(
+#     "--path", is_flag=True, default=False, help="Show path", show_default=True
+# )
+# @click.option("--ref", is_flag=True, default=False, help="Show ref", show_default=True)
+@option_expected
+def latest(repo: str, name: str, deprecated: bool, expected: bool):
     """Return latest version of artifact"""
     latest_version = gto.api.find_latest_version(
-        repo, name, include_deprecated=include_deprecated
+        repo, name, include_deprecated=deprecated
     )
     if latest_version:
         click.echo(latest_version.name)
+    elif expected:
+        raise NotFound("No version found")
     else:
         click.echo("No versions found")
 
@@ -212,11 +228,14 @@ def latest(repo: str, name: str, include_deprecated: bool):
 @option_repo
 @arg_name
 @arg_label
-def which(repo: str, name: str, label: str):
+@option_expected
+def which(repo: str, name: str, label: str, expected: bool):
     """Return version of artifact with specific label active"""
     version = gto.api.find_active_label(repo, name, label)
     if version:
         click.echo(version.version)
+    elif expected:
+        raise NotFound("Nothing is promoted to this env right now")
     else:
         click.echo(f"No version of '{name}' with label '{label}' active")
 
