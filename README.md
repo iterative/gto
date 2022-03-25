@@ -70,22 +70,24 @@ env_base: branch
 
 In this setup you cannot create versions explicitly with `gto register`, because each commit counts as a version for artifact (it's only required for that artifact to exist in `artifacts.yaml` in those commits) and you would need to actually create PR/make a commit to the selected branch. Likewise, you cannot promote to envs with `gto promote` because it's not implemented yet and exact way to do that is unclear - e.g. this would require to create a PR or direct commit that updates the artifact. I guess we should implement all of these in the future. For now this setup allows you to manage artifacts with `gto add` / `gto rm` and see the state of your repo `gto show`, `gto audit`, `gto history`. Finally, because `env_branch_mapping` is not specified, GTO will take into account all branches that have `artifacts.yaml` in them.
 
-## See example repo
+## Trying it out
+
+### See example repo
 
 Check out the example repo:
 https://github.com/iterative/gto-example
 read README in it and try it out
 
-## To try out the latest version
+### To try out the latest version
 
-### 1. Clone this repository
+#### 1. Clone this repository
 
 ```bash
 git clone git@github.com:iterative/gto.git
 cd gto
 ```
 
-### 2. Create virtual environment named `venv`
+#### 2. Create virtual environment named `venv`
 ```bash
 python3 -m venv venv
 source venv/bin/activate
@@ -96,7 +98,7 @@ Install python libraries
 pip install --upgrade pip setuptools wheel ".[tests]"
 ```
 
-### 3. Run
+#### 3. Run
 
 ```bash
 pytest --basetemp=pytest-cache
