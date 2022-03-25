@@ -14,6 +14,8 @@ To turn your repo into an artifact registry, you only need to `pip install` this
 To add new artifact or remove the existing ones, run `gto add` or `gto rm`:
 
 ```
+$ gto add model simple-nn models/neural-network.pkl --virtual
+
 $ gto add --help
 Usage: gto add [OPTIONS] TYPE NAME PATH
 
@@ -24,8 +26,6 @@ Options:
   -r, --repo TEXT  Repository to use  [default: .]
   --virtual        Virtual artifact that wasn't committed to Git
   --help           Show this message and exit.
-
-$ gto add model simple-nn models/neural-network.pkl --virtual
 ```
 
 You could also modify `artifacts.yaml` file directly.
@@ -41,6 +41,8 @@ In future versions, we will add enrichments (useful information other tools like
 After adding an artifact and committing modified `artifacts.yaml`, you can start creating new versions of it. You usually use those to mark significant changes to the artifact.
 
 ```
+$ gto register simple-nn HEAD --version v1.0.0
+
 $ gto register --help
 Usage: gto register [OPTIONS] NAME REF
 
@@ -52,8 +54,6 @@ Options:
   --version, --ver TEXT  Version to promote
   -b, --bump TEXT        The exact part to use when bumping a version
   --help                 Show this message and exit.
-
-$ gto register simple-nn HEAD --version v1.0.0
 ```
 
 If you want to deprecate specific version, use `gto deprecate`.
@@ -63,6 +63,8 @@ If you want to deprecate specific version, use `gto deprecate`.
 You could also promote a specific artifact version to an environment. You can use that to signal downstream systems to act - for example, redeploy a ML model (your artifact) or update the config file (your artifact).
 
 ```
+$ gto promote simple-nn prod
+
 $ gto promote --help
 Usage: gto promote [OPTIONS] NAME LABEL
 
@@ -74,8 +76,6 @@ Options:
   --version TEXT   If you provide --ref, this will be used to name new version
   --ref TEXT
   --help           Show this message and exit.
-
-$ gto promote simple-nn prod
 ```
 
 ## Using the registry
