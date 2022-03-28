@@ -4,7 +4,7 @@ from typing import Dict, FrozenSet, List
 
 import git
 
-from gto.index import ArtifactCommits
+from gto.index import ArtifactsCommits
 
 from .base import BaseLabel, BaseManager, BaseRegistryState
 from .config import CONFIG  # need to pass this when you initialize BranchEnvManager
@@ -29,7 +29,7 @@ class BranchEnvManager(BaseManager):
     actions: FrozenSet[Action] = frozenset((Action.PROMOTE, Action.DEMOTE))
 
     def update_state(
-        self, state: BaseRegistryState, index: ArtifactCommits
+        self, state: BaseRegistryState, index: ArtifactsCommits
     ) -> BaseRegistryState:
         if CONFIG.VERSION_REQUIRED_FOR_ENV:
             # we assume that the model is promoted the same moment it is registered

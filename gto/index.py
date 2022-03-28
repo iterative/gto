@@ -164,7 +164,8 @@ class FileIndexManager(BaseIndexManager):
         raise NotImplementedError("Not a git repo: history is not available")
 
 
-ArtifactCommits = Dict[str, List[str]]
+ArtifactCommits = Dict[str, Artifact]
+ArtifactsCommits = Dict[str, ArtifactCommits]
 
 
 class RepoIndexManager(FileIndexManager):
@@ -207,11 +208,11 @@ class RepoIndexManager(FileIndexManager):
             if self.config.INDEX in commit.tree
         }
 
-    def artifact_centric_representation(self) -> ArtifactCommits:
-        representation = defaultdict(list)
+    def artifact_centric_representation(self) -> ArtifactsCommits:
+        representation = defaultdict(dict)  # type: ArtifactsCommits
         for commit, index in self.get_history().items():
             for art in index.state:
-                representation[art].append(commit)
+                representation[art][commit] = index.state[art]
         return representation
 
     def check_existence(self, name, commit):

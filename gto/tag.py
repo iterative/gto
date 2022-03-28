@@ -9,7 +9,7 @@ from pydantic import BaseModel
 from .base import BaseArtifact, BaseLabel, BaseManager, BaseRegistryState, BaseVersion
 from .constants import ACTION, LABEL, NAME, NUMBER, VERSION, Action
 from .exceptions import MissingArg, RefNotFound, UnknownAction
-from .index import ArtifactCommits
+from .index import ArtifactsCommits
 
 ActionSign = {
     Action.REGISTER: "@",
@@ -201,16 +201,12 @@ def index_tag(art: BaseArtifact, tag: git.Tag) -> BaseArtifact:
 
 class TagManager(BaseManager):  # pylint: disable=abstract-method
     def update_state(
-        self, state: BaseRegistryState, index: ArtifactCommits
+        self, state: BaseRegistryState, index: ArtifactsCommits
     ) -> BaseRegistryState:
         # tags are sorted and then indexed by timestamp
         # this is important to check that history is not broken
         tags = [parse_tag(t) for t in find(repo=self.repo, action=self.actions)]
         for tag in tags:
-            if tag.name not in state.artifacts:
-                state.artifacts[tag.name] = BaseArtifact(
-                    name=tag.name, versions=[], labels=[]
-                )
             state.artifacts[tag.name] = index_tag(state.artifacts[tag.name], tag.tag)
         return state
 

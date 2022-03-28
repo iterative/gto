@@ -206,9 +206,7 @@ def history(repo: str, artifact: str = None, sort: str = "desc", table: bool = F
             commit=commit[:7],
             author=reg.repo.commit(commit).author.name,
         )
-        for name_, commit_list in get_index(repo)
-        .artifact_centric_representation()
-        .items()
+        for name_, commit_list in reg.index.artifact_centric_representation().items()
         for commit in commit_list
     ]
     registration = audit_registration(repo, table=False)

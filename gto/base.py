@@ -5,7 +5,7 @@ import git
 from pydantic import BaseModel
 
 from gto.constants import Action
-from gto.index import ArtifactCommits
+from gto.index import ArtifactCommits, ArtifactsCommits
 
 from .exceptions import ArtifactNotFound, ManyVersions, VersionRequired
 
@@ -47,6 +47,7 @@ class BaseVersion(BaseModel):
 
 class BaseArtifact(BaseModel):
     name: str
+    commits: ArtifactCommits
     versions: List[BaseVersion]
     labels: List[BaseLabel]
 
@@ -158,7 +159,7 @@ class BaseManager(BaseModel):
         arbitrary_types_allowed = True
 
     def update_state(
-        self, state: BaseRegistryState, index: ArtifactCommits
+        self, state: BaseRegistryState, index: ArtifactsCommits
     ) -> BaseRegistryState:  # pylint: disable=no-self-use
         raise NotImplementedError
 

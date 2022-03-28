@@ -1,7 +1,7 @@
 """TODO: break this file into multiple test/files"""
 import gto
 from gto.base import BaseArtifact, BaseLabel, BaseVersion
-from tests.utils import _check_dict
+from tests.utils import _check_obj
 
 
 def test_api(showcase):  # pylint: disable=too-many-locals, too-many-statements
@@ -25,7 +25,7 @@ def test_api(showcase):  # pylint: disable=too-many-locals, too-many-statements
     nn_version = nn_artifact.versions[0]
     assert isinstance(nn_version, BaseVersion)
     author = repo.commit().author.name
-    _check_dict(
+    _check_obj(
         nn_version,
         dict(
             artifact="nn",
@@ -39,7 +39,7 @@ def test_api(showcase):  # pylint: disable=too-many-locals, too-many-statements
     assert len(nn_artifact.labels) == 1
     nn_label = nn_artifact.labels[0]
     assert isinstance(nn_label, BaseLabel)
-    _check_dict(
+    _check_obj(
         nn_label,
         dict(
             artifact="nn",
@@ -59,7 +59,7 @@ def test_api(showcase):  # pylint: disable=too-many-locals, too-many-statements
     assert len(rf_artifact.versions) == 2
     assert all(isinstance(v, BaseVersion) for v in rf_artifact.versions)
     rf_ver1, rf_ver2 = rf_artifact.versions
-    _check_dict(
+    _check_obj(
         rf_ver1,
         dict(
             artifact="rf",
@@ -70,7 +70,7 @@ def test_api(showcase):  # pylint: disable=too-many-locals, too-many-statements
         ),
         {"creation_date"},
     )
-    _check_dict(
+    _check_obj(
         rf_ver2,
         dict(
             artifact="rf",
@@ -86,7 +86,7 @@ def test_api(showcase):  # pylint: disable=too-many-locals, too-many-statements
     assert all(isinstance(l, BaseLabel) for l in rf_artifact.labels)
     rf_l1, rf_l2, rf_l3, _ = rf_artifact.labels
 
-    _check_dict(
+    _check_obj(
         rf_l1,
         dict(
             artifact="rf",
@@ -98,7 +98,7 @@ def test_api(showcase):  # pylint: disable=too-many-locals, too-many-statements
         ),
         {"creation_date"},
     )
-    _check_dict(
+    _check_obj(
         rf_l3,
         dict(
             artifact="rf",
@@ -110,7 +110,7 @@ def test_api(showcase):  # pylint: disable=too-many-locals, too-many-statements
         ),
         {"creation_date"},
     )
-    _check_dict(
+    _check_obj(
         rf_l2,
         dict(
             artifact="rf",

@@ -52,11 +52,14 @@ class GitRegistry(BaseModel):
         return RepoIndexManager.from_repo(self.repo)
 
     @property
-    def state(self):
+    def state(self) -> BaseRegistryState:
         index = self.index.artifact_centric_representation()
         state = BaseRegistryState(
             artifacts={
-                name: BaseArtifact(name=name, versions=[], labels=[]) for name in index
+                name: BaseArtifact(
+                    name=name, commits=index[name], versions=[], labels=[]
+                )
+                for name in index
             }
         )
         state = self.version_manager.update_state(state, index)
