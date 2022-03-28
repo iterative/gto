@@ -5,14 +5,13 @@ import git
 from pydantic import BaseModel
 
 from gto.constants import Action
-from gto.index import ArtifactCommits
+from gto.index import Artifact, ArtifactCommits
 
 from .exceptions import ArtifactNotFound, ManyVersions, VersionRequired
 
 
 class BaseLabel(BaseModel):  # pylint: disable=too-many-instance-attributes
-    # category: str
-    artifact: str
+    artifact: Artifact
     version: str
     name: str
     creation_date: datetime
@@ -20,25 +19,18 @@ class BaseLabel(BaseModel):  # pylint: disable=too-many-instance-attributes
     commit_hexsha: str
     deprecated_date: Optional[datetime] = None
 
-    def __repr__(self) -> str:
-        return f"Label('{self.artifact}', '{self.version}', '{self.name}')"
-
     @property
     def is_registered(self):
         return self.deprecated_date is None
 
 
 class BaseVersion(BaseModel):
-    # category: str
-    artifact: str
+    artifact: Artifact
     name: str
     creation_date: datetime
     author: str
     commit_hexsha: str
     deprecated_date: Optional[datetime] = None
-
-    def __repr__(self) -> str:
-        return f"Version('{self.artifact}', '{self.name}')"
 
     @property
     def is_registered(self):
@@ -47,6 +39,7 @@ class BaseVersion(BaseModel):
 
 class BaseArtifact(BaseModel):
     name: str
+    commits: ArtifactCommits
     versions: List[BaseVersion]
     labels: List[BaseLabel]
 
@@ -158,7 +151,7 @@ class BaseManager(BaseModel):
         arbitrary_types_allowed = True
 
     def update_state(
-        self, state: BaseRegistryState, index: ArtifactCommits
+        self, state: BaseRegistryState
     ) -> BaseRegistryState:  # pylint: disable=no-self-use
         raise NotImplementedError
 

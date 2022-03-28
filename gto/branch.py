@@ -4,7 +4,7 @@ from typing import Dict, FrozenSet, List
 
 import git
 
-from gto.index import ArtifactCommits
+from gto.index import ArtifactsCommits
 
 from .base import BaseLabel, BaseManager, BaseRegistryState
 from .config import CONFIG  # need to pass this when you initialize BranchEnvManager
@@ -26,11 +26,9 @@ def find_branches(repo: git.Repo, desired: str) -> List[git.Head]:
 
 
 class BranchEnvManager(BaseManager):
-    actions: FrozenSet[Action] = frozenset((Action.PROMOTE, Action.DEMOTE))
+    actions: FrozenSet[Action] = frozenset((Action.PROMOTE,))  # Action.DEMOTE
 
-    def update_state(
-        self, state: BaseRegistryState, index: ArtifactCommits
-    ) -> BaseRegistryState:
+    def update_state(self, state: BaseRegistryState) -> BaseRegistryState:
         if CONFIG.VERSION_REQUIRED_FOR_ENV:
             # we assume that the model is promoted the same moment it is registered
             for name in state.artifacts:
@@ -57,8 +55,8 @@ class BranchEnvManager(BaseManager):
         else:
             # we assume each commit in a branch is a promotion to branch env
             # if artifact was indexed
-            for name, commits in index.items():
-                for hexsha in commits:
+            for name, artifact in state.artifacts.items():
+                for hexsha, index_artifact in artifact.commits.items():
                     commit = self.repo.commit(hexsha)
                     version = state.artifacts[name].find_version(commit_hexsha=hexsha)  # type: ignore
                     version = version.name if version else hexsha  # type: ignore
@@ -68,7 +66,7 @@ class BranchEnvManager(BaseManager):
                             continue
                         state.artifacts[name].labels.append(
                             BaseLabel(
-                                artifact=name,
+                                artifact=index_artifact,
                                 version=version,
                                 name=env,
                                 creation_date=commit.committed_date,

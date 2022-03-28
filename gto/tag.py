@@ -1,21 +1,21 @@
 import logging
-import warnings
 from datetime import datetime
 from typing import FrozenSet, Iterable, Optional, Union
 
 import git
 from pydantic import BaseModel
 
+from gto.index import Artifact
+
 from .base import BaseArtifact, BaseLabel, BaseManager, BaseRegistryState, BaseVersion
 from .constants import ACTION, LABEL, NAME, NUMBER, VERSION, Action
 from .exceptions import MissingArg, RefNotFound, UnknownAction
-from .index import ArtifactCommits
 
 ActionSign = {
     Action.REGISTER: "@",
     Action.DEPRECATE: "@!",
     Action.PROMOTE: "#",
-    Action.DEMOTE: "#!",
+    # Action.DEMOTE: "#!",
 }
 
 
@@ -29,13 +29,13 @@ def name_tag(
     if action in (Action.REGISTER, Action.DEPRECATE):
         return f"{name}{ActionSign[action]}{version}"
 
-    if action in (Action.PROMOTE, Action.DEMOTE):
+    if action in (Action.PROMOTE,):  # Action.DEMOTE
         if repo is None:
             raise MissingArg(arg="repo")
         numbers = []
         for tag in repo.tags:
             parsed = parse_name(tag.name)
-            if parsed[ACTION] in (Action.PROMOTE, Action.DEMOTE):
+            if parsed[ACTION] in (Action.PROMOTE,):  # Action.DEMOTE
                 numbers.append(parsed[NUMBER])
         new_number = max(numbers) + 1 if numbers else 1
         return f"{name}{ActionSign[action]}{label}-{new_number}"
@@ -55,7 +55,8 @@ def parse_name(name: str, raise_on_fail: bool = True):
             }
 
     # order does matter if you take into account ActionSign values
-    for action in (Action.DEMOTE, Action.PROMOTE):
+    # for action in (Action.DEMOTE, Action.PROMOTE):
+    for action in (Action.PROMOTE,):
         if ActionSign[action] in name:
             name, label = name.split(ActionSign[action])
             label, number = label.split("-")
@@ -131,10 +132,10 @@ def create_tag(repo, name, ref, message):
     )
 
 
-def version_from_tag(tag: git.Tag) -> BaseVersion:
+def version_from_tag(artifact: Artifact, tag: git.Tag) -> BaseVersion:
     mtag = parse_tag(tag)
     return BaseVersion(
-        artifact=mtag.name,
+        artifact=artifact,
         name=mtag.version,
         creation_date=mtag.creation_date,
         author=tag.tag.tagger.name,
@@ -142,15 +143,15 @@ def version_from_tag(tag: git.Tag) -> BaseVersion:
     )
 
 
-def label_from_tag(tag: git.Tag, art: BaseArtifact) -> BaseLabel:
+def label_from_tag(artifact: BaseArtifact, tag: git.Tag) -> BaseLabel:
     mtag = parse_tag(tag)
-    registered_version = art.find_version(commit_hexsha=tag.commit.hexsha)
+    registered_version = artifact.find_version(commit_hexsha=tag.commit.hexsha)
     if registered_version:
         version = None
         deprecated_date = None
         version_name = registered_version.name  # type: ignore
     else:
-        deprecated_versions = art.find_version(
+        deprecated_versions = artifact.find_version(
             commit_hexsha=tag.commit.hexsha,
             skip_deprecated=False,
             raise_if_not_found=True,
@@ -163,7 +164,7 @@ def label_from_tag(tag: git.Tag, art: BaseArtifact) -> BaseLabel:
         version_name = version.name  # type: ignore
         deprecated_date = version.creation_date  # type: ignore
     return BaseLabel(
-        artifact=mtag.name,
+        artifact=artifact.commits[tag.commit.hexsha],
         version=version_name,
         name=mtag.label,
         creation_date=mtag.creation_date,
@@ -173,44 +174,41 @@ def label_from_tag(tag: git.Tag, art: BaseArtifact) -> BaseLabel:
     )
 
 
-def index_tag(art: BaseArtifact, tag: git.Tag) -> BaseArtifact:
+def index_tag(artifact: BaseArtifact, tag: git.Tag) -> BaseArtifact:
     mtag = parse_tag(tag)
+    hexsha = mtag.tag.commit.hexsha
+    if hexsha not in artifact.commits:
+        # issue a warning that we're ignoring a tag,
+        # because artifact wasn't registered in that commit?
+        return artifact
     if mtag.action == Action.REGISTER:
-        art.versions.append(version_from_tag(tag))
+        artifact.versions.append(version_from_tag(artifact.commits[hexsha], tag))
     if mtag.action == Action.DEPRECATE:
-        art.find_version(mtag.version).deprecated_date = mtag.creation_date  # type: ignore
-    if (
-        mtag.action == Action.PROMOTE
-    ):  # and obj.find_version(commit_hexsha=tag.commit.hexsha) is not None:
-        art.labels.append(label_from_tag(tag, art))
-    if (
-        mtag.action == Action.DEMOTE
-    ):  # and obj.find_version(commit_hexsha=tag.commit.hexsha) is not None:
-        # this may "deprecate" incorrect version
-        # if you deprecated correct version after demotion
-        # TODO: now you can promote artifact to some env multiple times
-        # Then, if you'll try to `demote`, you should demote all promotions.
-        if mtag.label in art.latest_labels:
-            art.latest_labels[mtag.label].deprecated_date = mtag.creation_date  # type: ignore
-        else:
-            # this may be result of deprecated version
-            # or incorrect demotion tag
-            warnings.warn(f"Active label '{mtag.label}' not found")
-    return art
+        artifact.find_version(mtag.version).deprecated_date = mtag.creation_date  # type: ignore
+    if mtag.action == Action.PROMOTE:
+        artifact.labels.append(label_from_tag(artifact, tag))
+    # if (
+    #     mtag.action == Action.DEMOTE
+    # ):  # and obj.find_version(commit_hexsha=tag.commit.hexsha) is not None:
+    #     # this may "deprecate" incorrect version
+    #     # if you deprecated correct version after demotion
+    #     # TODO: now you can promote artifact to some env multiple times
+    #     # Then, if you'll try to `demote`, you should demote all promotions.
+    #     if mtag.label in artifact.latest_labels:
+    #         artifact.latest_labels[mtag.label].deprecated_date = mtag.creation_date  # type: ignore
+    #     else:
+    #         # this may be result of deprecated version
+    #         # or incorrect demotion tag
+    #         warnings.warn(f"Active label '{mtag.label}' not found")
+    return artifact
 
 
 class TagManager(BaseManager):  # pylint: disable=abstract-method
-    def update_state(
-        self, state: BaseRegistryState, index: ArtifactCommits
-    ) -> BaseRegistryState:
+    def update_state(self, state: BaseRegistryState) -> BaseRegistryState:
         # tags are sorted and then indexed by timestamp
         # this is important to check that history is not broken
         tags = [parse_tag(t) for t in find(repo=self.repo, action=self.actions)]
         for tag in tags:
-            if tag.name not in state.artifacts:
-                state.artifacts[tag.name] = BaseArtifact(
-                    name=tag.name, versions=[], labels=[]
-                )
             state.artifacts[tag.name] = index_tag(state.artifacts[tag.name], tag.tag)
         return state
 
@@ -263,7 +261,7 @@ class TagVersionManager(TagManager):
 
 
 class TagEnvManager(TagManager):
-    actions: FrozenSet[Action] = frozenset((Action.PROMOTE, Action.DEMOTE))
+    actions: FrozenSet[Action] = frozenset((Action.PROMOTE,))  # Action.DEMOTE
 
     def promote(self, name, label, ref, message):
         create_tag(

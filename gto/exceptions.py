@@ -7,6 +7,10 @@ class GTOException(Exception):
         super().__init__(msg, *args)
 
 
+class NotFound(GTOException):
+    """Raised when a requested resource is not found."""
+
+
 class NoRepo(GTOException):
     _message = "No Git repo found in '{path}'"
 
