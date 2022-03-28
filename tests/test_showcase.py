@@ -15,8 +15,11 @@ def test_api(showcase):  # pylint: disable=too-many-locals, too-many-statements
 
     artifacts = gto.api._get_state(path).artifacts  # pylint: disable=protected-access
     assert set(artifacts.keys()) == {"features", "nn", "rf"}
-    assert artifacts["features"] == BaseArtifact(
-        name="features", versions=[], labels=[]
+    assert isinstance(artifacts["features"], BaseArtifact)
+    _check_obj(
+        artifacts["features"],
+        dict(name="features", versions=[], labels=[]),
+        ["commits"],
     )
     nn_artifact = artifacts["nn"]
     assert isinstance(nn_artifact, BaseArtifact)

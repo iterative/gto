@@ -28,9 +28,7 @@ def find_branches(repo: git.Repo, desired: str) -> List[git.Head]:
 class BranchEnvManager(BaseManager):
     actions: FrozenSet[Action] = frozenset((Action.PROMOTE, Action.DEMOTE))
 
-    def update_state(
-        self, state: BaseRegistryState, index: ArtifactsCommits
-    ) -> BaseRegistryState:
+    def update_state(self, state: BaseRegistryState) -> BaseRegistryState:
         if CONFIG.VERSION_REQUIRED_FOR_ENV:
             # we assume that the model is promoted the same moment it is registered
             for name in state.artifacts:
@@ -57,8 +55,8 @@ class BranchEnvManager(BaseManager):
         else:
             # we assume each commit in a branch is a promotion to branch env
             # if artifact was indexed
-            for name, commits in index.items():
-                for hexsha in commits:
+            for name, artifact in state.artifacts.items():
+                for hexsha in artifact.commits:
                     commit = self.repo.commit(hexsha)
                     version = state.artifacts[name].find_version(commit_hexsha=hexsha)  # type: ignore
                     version = version.name if version else hexsha  # type: ignore
