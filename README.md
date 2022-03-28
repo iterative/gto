@@ -167,7 +167,7 @@ version:
     name: v1.0.1
 ```
 
-### [WIP] Getting right versions in downstream systems
+### Getting right versions in downstream systems
 
 To get the latest artifact version, it's path and git reference, run:
 
