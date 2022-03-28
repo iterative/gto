@@ -19,7 +19,7 @@ class Action(Enum):
     REGISTER = "register"
     DEPRECATE = "deprecate"
     PROMOTE = "promote"
-    DEMOTE = "demote"
+    # DEMOTE = "demote"
 
 
 class VersionPart(Enum):

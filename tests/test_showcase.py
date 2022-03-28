@@ -31,7 +31,9 @@ def test_api(showcase):  # pylint: disable=too-many-locals, too-many-statements
     _check_obj(
         nn_version,
         dict(
-            artifact="nn",
+            artifact=dict(
+                type="model", name="nn", path="models/neural-network.pkl", virtual=False
+            ),
             name="v0.0.1",
             author=author,
             commit_hexsha=first_commit.hexsha,
@@ -45,7 +47,9 @@ def test_api(showcase):  # pylint: disable=too-many-locals, too-many-statements
     _check_obj(
         nn_label,
         dict(
-            artifact="nn",
+            artifact=dict(
+                type="model", name="nn", path="models/neural-network.pkl", virtual=False
+            ),
             version="v0.0.1",
             name="staging",
             author=author,
@@ -65,7 +69,9 @@ def test_api(showcase):  # pylint: disable=too-many-locals, too-many-statements
     _check_obj(
         rf_ver1,
         dict(
-            artifact="rf",
+            artifact=dict(
+                type="model", name="rf", path="models/random-forest.pkl", virtual=False
+            ),
             name="v1.2.3",
             author=author,
             commit_hexsha=first_commit.hexsha,
@@ -76,7 +82,9 @@ def test_api(showcase):  # pylint: disable=too-many-locals, too-many-statements
     _check_obj(
         rf_ver2,
         dict(
-            artifact="rf",
+            artifact=dict(
+                type="model", name="rf", path="models/random-forest.pkl", virtual=False
+            ),
             name="v1.2.4",
             author=author,
             commit_hexsha=second_commit.hexsha,
@@ -92,7 +100,9 @@ def test_api(showcase):  # pylint: disable=too-many-locals, too-many-statements
     _check_obj(
         rf_l1,
         dict(
-            artifact="rf",
+            artifact=dict(
+                type="model", name="rf", path="models/random-forest.pkl", virtual=False
+            ),
             version="v1.2.3",
             name="production",
             author=author,
@@ -104,7 +114,9 @@ def test_api(showcase):  # pylint: disable=too-many-locals, too-many-statements
     _check_obj(
         rf_l3,
         dict(
-            artifact="rf",
+            artifact=dict(
+                type="model", name="rf", path="models/random-forest.pkl", virtual=False
+            ),
             version="v1.2.4",
             name="production",
             author=author,
@@ -116,7 +128,9 @@ def test_api(showcase):  # pylint: disable=too-many-locals, too-many-statements
     _check_obj(
         rf_l2,
         dict(
-            artifact="rf",
+            artifact=dict(
+                type="model", name="rf", path="models/random-forest.pkl", virtual=False
+            ),
             version="v1.2.4",
             name="staging",
             author=author,

@@ -8,16 +8,16 @@ from .constants import Action
 
 
 class CommitVersionManager(BaseManager):
-    actions: FrozenSet[Action] = frozenset((Action.PROMOTE, Action.DEMOTE))
+    actions: FrozenSet[Action] = frozenset((Action.PROMOTE,))  # Action.DEMOTE
 
     def update_state(self, state: BaseRegistryState) -> BaseRegistryState:
         # each commit is a version if artifact is indexed in that commit
         for name, artifact in state.artifacts.items():
-            for hexsha in artifact.commits:
+            for hexsha, index_artifact in artifact.commits.items():
                 commit = self.repo.commit(hexsha)
                 state.artifacts[name].versions.append(
                     BaseVersion(
-                        artifact=name,
+                        artifact=index_artifact,
                         name=hexsha,
                         creation_date=commit.committed_datetime,
                         author=commit.author.name,

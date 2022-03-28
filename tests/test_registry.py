@@ -10,13 +10,13 @@ EXPECTED_REGISTRY_TAG_TAG_STATE = {
         "features": {
             "name": "features",
             "commits": {
-                "7891d6833470aff9fbbc0c1ceab7d7553c963883": {
+                "3508dc2c848f1ea46f6d0f02c298db95ee7a84fd": {
                     "type": "dataset",
                     "name": "features",
                     "path": "datasets/features.csv",
                     "virtual": True,
                 },
-                "8e258886c5a182c96ef040b74cf944160b8e7357": {
+                "12b413c033ffc49b6bc8dc782999563504c9767e": {
                     "type": "dataset",
                     "name": "features",
                     "path": "datasets/features.csv",
@@ -29,13 +29,13 @@ EXPECTED_REGISTRY_TAG_TAG_STATE = {
         "nn": {
             "name": "nn",
             "commits": {
-                "7891d6833470aff9fbbc0c1ceab7d7553c963883": {
+                "3508dc2c848f1ea46f6d0f02c298db95ee7a84fd": {
                     "type": "model",
                     "name": "nn",
                     "path": "models/neural-network.pkl",
                     "virtual": False,
                 },
-                "8e258886c5a182c96ef040b74cf944160b8e7357": {
+                "12b413c033ffc49b6bc8dc782999563504c9767e": {
                     "type": "model",
                     "name": "nn",
                     "path": "models/neural-network.pkl",
@@ -44,22 +44,32 @@ EXPECTED_REGISTRY_TAG_TAG_STATE = {
             },
             "versions": [
                 {
-                    "artifact": "nn",
+                    "artifact": {
+                        "type": "model",
+                        "name": "nn",
+                        "path": "models/neural-network.pkl",
+                        "virtual": False,
+                    },
                     "name": "v0.0.1",
-                    "creation_date": datetime.datetime(2022, 3, 25, 20, 9, 37),
+                    "creation_date": datetime.datetime(2022, 3, 28, 18, 54, 48),
                     "author": "Alexander Guschin",
-                    "commit_hexsha": "8e258886c5a182c96ef040b74cf944160b8e7357",
+                    "commit_hexsha": "3508dc2c848f1ea46f6d0f02c298db95ee7a84fd",
                     "deprecated_date": None,
                 }
             ],
             "labels": [
                 {
-                    "artifact": "nn",
+                    "artifact": {
+                        "type": "model",
+                        "name": "nn",
+                        "path": "models/neural-network.pkl",
+                        "virtual": False,
+                    },
                     "version": "v0.0.1",
                     "name": "staging",
-                    "creation_date": datetime.datetime(2022, 3, 25, 20, 9, 38),
+                    "creation_date": datetime.datetime(2022, 3, 28, 18, 54, 49),
                     "author": "Alexander Guschin",
-                    "commit_hexsha": "8e258886c5a182c96ef040b74cf944160b8e7357",
+                    "commit_hexsha": "3508dc2c848f1ea46f6d0f02c298db95ee7a84fd",
                     "deprecated_date": None,
                 }
             ],
@@ -67,13 +77,13 @@ EXPECTED_REGISTRY_TAG_TAG_STATE = {
         "rf": {
             "name": "rf",
             "commits": {
-                "7891d6833470aff9fbbc0c1ceab7d7553c963883": {
+                "3508dc2c848f1ea46f6d0f02c298db95ee7a84fd": {
                     "type": "model",
                     "name": "rf",
                     "path": "models/random-forest.pkl",
                     "virtual": False,
                 },
-                "8e258886c5a182c96ef040b74cf944160b8e7357": {
+                "12b413c033ffc49b6bc8dc782999563504c9767e": {
                     "type": "model",
                     "name": "rf",
                     "path": "models/random-forest.pkl",
@@ -82,57 +92,87 @@ EXPECTED_REGISTRY_TAG_TAG_STATE = {
             },
             "versions": [
                 {
-                    "artifact": "rf",
+                    "artifact": {
+                        "type": "model",
+                        "name": "rf",
+                        "path": "models/random-forest.pkl",
+                        "virtual": False,
+                    },
                     "name": "v1.2.3",
-                    "creation_date": datetime.datetime(2022, 3, 25, 20, 9, 37),
+                    "creation_date": datetime.datetime(2022, 3, 28, 18, 54, 48),
                     "author": "Alexander Guschin",
-                    "commit_hexsha": "8e258886c5a182c96ef040b74cf944160b8e7357",
+                    "commit_hexsha": "3508dc2c848f1ea46f6d0f02c298db95ee7a84fd",
                     "deprecated_date": None,
                 },
                 {
-                    "artifact": "rf",
+                    "artifact": {
+                        "type": "model",
+                        "name": "rf",
+                        "path": "models/random-forest.pkl",
+                        "virtual": False,
+                    },
                     "name": "v1.2.4",
-                    "creation_date": datetime.datetime(2022, 3, 25, 20, 9, 38),
+                    "creation_date": datetime.datetime(2022, 3, 28, 18, 54, 49),
                     "author": "Alexander Guschin",
-                    "commit_hexsha": "7891d6833470aff9fbbc0c1ceab7d7553c963883",
+                    "commit_hexsha": "12b413c033ffc49b6bc8dc782999563504c9767e",
                     "deprecated_date": None,
                 },
             ],
             "labels": [
                 {
-                    "artifact": "rf",
+                    "artifact": {
+                        "type": "model",
+                        "name": "rf",
+                        "path": "models/random-forest.pkl",
+                        "virtual": False,
+                    },
                     "version": "v1.2.3",
                     "name": "production",
-                    "creation_date": datetime.datetime(2022, 3, 25, 20, 9, 38),
+                    "creation_date": datetime.datetime(2022, 3, 28, 18, 54, 49),
                     "author": "Alexander Guschin",
-                    "commit_hexsha": "8e258886c5a182c96ef040b74cf944160b8e7357",
+                    "commit_hexsha": "3508dc2c848f1ea46f6d0f02c298db95ee7a84fd",
                     "deprecated_date": None,
                 },
                 {
-                    "artifact": "rf",
+                    "artifact": {
+                        "type": "model",
+                        "name": "rf",
+                        "path": "models/random-forest.pkl",
+                        "virtual": False,
+                    },
                     "version": "v1.2.4",
                     "name": "staging",
-                    "creation_date": datetime.datetime(2022, 3, 25, 20, 9, 39),
+                    "creation_date": datetime.datetime(2022, 3, 28, 18, 54, 50),
                     "author": "Alexander Guschin",
-                    "commit_hexsha": "7891d6833470aff9fbbc0c1ceab7d7553c963883",
+                    "commit_hexsha": "12b413c033ffc49b6bc8dc782999563504c9767e",
                     "deprecated_date": None,
                 },
                 {
-                    "artifact": "rf",
+                    "artifact": {
+                        "type": "model",
+                        "name": "rf",
+                        "path": "models/random-forest.pkl",
+                        "virtual": False,
+                    },
                     "version": "v1.2.4",
                     "name": "production",
-                    "creation_date": datetime.datetime(2022, 3, 25, 20, 9, 40),
+                    "creation_date": datetime.datetime(2022, 3, 28, 18, 54, 52),
                     "author": "Alexander Guschin",
-                    "commit_hexsha": "7891d6833470aff9fbbc0c1ceab7d7553c963883",
+                    "commit_hexsha": "12b413c033ffc49b6bc8dc782999563504c9767e",
                     "deprecated_date": None,
                 },
                 {
-                    "artifact": "rf",
+                    "artifact": {
+                        "type": "model",
+                        "name": "rf",
+                        "path": "models/random-forest.pkl",
+                        "virtual": False,
+                    },
                     "version": "v1.2.3",
                     "name": "production",
-                    "creation_date": datetime.datetime(2022, 3, 25, 20, 9, 41),
+                    "creation_date": datetime.datetime(2022, 3, 28, 18, 54, 53),
                     "author": "Alexander Guschin",
-                    "commit_hexsha": "8e258886c5a182c96ef040b74cf944160b8e7357",
+                    "commit_hexsha": "3508dc2c848f1ea46f6d0f02c298db95ee7a84fd",
                     "deprecated_date": None,
                 },
             ],
@@ -175,13 +215,13 @@ EXPECTED_REGISTRY_COMMIT_BRANCH_STATE = {
         "features": {
             "name": "features",
             "commits": {
-                "7891d6833470aff9fbbc0c1ceab7d7553c963883": {
+                "3508dc2c848f1ea46f6d0f02c298db95ee7a84fd": {
                     "type": "dataset",
                     "name": "features",
                     "path": "datasets/features.csv",
                     "virtual": True,
                 },
-                "8e258886c5a182c96ef040b74cf944160b8e7357": {
+                "12b413c033ffc49b6bc8dc782999563504c9767e": {
                     "type": "dataset",
                     "name": "features",
                     "path": "datasets/features.csv",
@@ -190,39 +230,59 @@ EXPECTED_REGISTRY_COMMIT_BRANCH_STATE = {
             },
             "versions": [
                 {
-                    "artifact": "features",
-                    "name": "8e258886c5a182c96ef040b74cf944160b8e7357",
-                    "creation_date": datetime.datetime(2022, 3, 25, 20, 9, 37),
+                    "artifact": {
+                        "type": "dataset",
+                        "name": "features",
+                        "path": "datasets/features.csv",
+                        "virtual": True,
+                    },
+                    "name": "3508dc2c848f1ea46f6d0f02c298db95ee7a84fd",
+                    "creation_date": datetime.datetime(2022, 3, 28, 18, 54, 48),
                     "author": "Alexander Guschin",
-                    "commit_hexsha": "8e258886c5a182c96ef040b74cf944160b8e7357",
+                    "commit_hexsha": "3508dc2c848f1ea46f6d0f02c298db95ee7a84fd",
                     "deprecated_date": None,
                 },
                 {
-                    "artifact": "features",
-                    "name": "7891d6833470aff9fbbc0c1ceab7d7553c963883",
-                    "creation_date": datetime.datetime(2022, 3, 25, 20, 9, 38),
+                    "artifact": {
+                        "type": "dataset",
+                        "name": "features",
+                        "path": "datasets/features.csv",
+                        "virtual": True,
+                    },
+                    "name": "12b413c033ffc49b6bc8dc782999563504c9767e",
+                    "creation_date": datetime.datetime(2022, 3, 28, 18, 54, 49),
                     "author": "Alexander Guschin",
-                    "commit_hexsha": "7891d6833470aff9fbbc0c1ceab7d7553c963883",
+                    "commit_hexsha": "12b413c033ffc49b6bc8dc782999563504c9767e",
                     "deprecated_date": None,
                 },
             ],
             "labels": [
                 {
-                    "artifact": "features",
-                    "version": "8e258886c5a182c96ef040b74cf944160b8e7357",
+                    "artifact": {
+                        "type": "dataset",
+                        "name": "features",
+                        "path": "datasets/features.csv",
+                        "virtual": True,
+                    },
+                    "version": "3508dc2c848f1ea46f6d0f02c298db95ee7a84fd",
                     "name": "master",
-                    "creation_date": datetime.datetime(2022, 3, 25, 20, 9, 37),
+                    "creation_date": datetime.datetime(2022, 3, 28, 18, 54, 48),
                     "author": "Alexander Guschin",
-                    "commit_hexsha": "8e258886c5a182c96ef040b74cf944160b8e7357",
+                    "commit_hexsha": "3508dc2c848f1ea46f6d0f02c298db95ee7a84fd",
                     "deprecated_date": None,
                 },
                 {
-                    "artifact": "features",
-                    "version": "7891d6833470aff9fbbc0c1ceab7d7553c963883",
+                    "artifact": {
+                        "type": "dataset",
+                        "name": "features",
+                        "path": "datasets/features.csv",
+                        "virtual": True,
+                    },
+                    "version": "12b413c033ffc49b6bc8dc782999563504c9767e",
                     "name": "master",
-                    "creation_date": datetime.datetime(2022, 3, 25, 20, 9, 38),
+                    "creation_date": datetime.datetime(2022, 3, 28, 18, 54, 49),
                     "author": "Alexander Guschin",
-                    "commit_hexsha": "7891d6833470aff9fbbc0c1ceab7d7553c963883",
+                    "commit_hexsha": "12b413c033ffc49b6bc8dc782999563504c9767e",
                     "deprecated_date": None,
                 },
             ],
@@ -230,13 +290,13 @@ EXPECTED_REGISTRY_COMMIT_BRANCH_STATE = {
         "nn": {
             "name": "nn",
             "commits": {
-                "7891d6833470aff9fbbc0c1ceab7d7553c963883": {
+                "3508dc2c848f1ea46f6d0f02c298db95ee7a84fd": {
                     "type": "model",
                     "name": "nn",
                     "path": "models/neural-network.pkl",
                     "virtual": False,
                 },
-                "8e258886c5a182c96ef040b74cf944160b8e7357": {
+                "12b413c033ffc49b6bc8dc782999563504c9767e": {
                     "type": "model",
                     "name": "nn",
                     "path": "models/neural-network.pkl",
@@ -245,39 +305,59 @@ EXPECTED_REGISTRY_COMMIT_BRANCH_STATE = {
             },
             "versions": [
                 {
-                    "artifact": "nn",
-                    "name": "8e258886c5a182c96ef040b74cf944160b8e7357",
-                    "creation_date": datetime.datetime(2022, 3, 25, 20, 9, 37),
+                    "artifact": {
+                        "type": "model",
+                        "name": "nn",
+                        "path": "models/neural-network.pkl",
+                        "virtual": False,
+                    },
+                    "name": "3508dc2c848f1ea46f6d0f02c298db95ee7a84fd",
+                    "creation_date": datetime.datetime(2022, 3, 28, 18, 54, 48),
                     "author": "Alexander Guschin",
-                    "commit_hexsha": "8e258886c5a182c96ef040b74cf944160b8e7357",
+                    "commit_hexsha": "3508dc2c848f1ea46f6d0f02c298db95ee7a84fd",
                     "deprecated_date": None,
                 },
                 {
-                    "artifact": "nn",
-                    "name": "7891d6833470aff9fbbc0c1ceab7d7553c963883",
-                    "creation_date": datetime.datetime(2022, 3, 25, 20, 9, 38),
+                    "artifact": {
+                        "type": "model",
+                        "name": "nn",
+                        "path": "models/neural-network.pkl",
+                        "virtual": False,
+                    },
+                    "name": "12b413c033ffc49b6bc8dc782999563504c9767e",
+                    "creation_date": datetime.datetime(2022, 3, 28, 18, 54, 49),
                     "author": "Alexander Guschin",
-                    "commit_hexsha": "7891d6833470aff9fbbc0c1ceab7d7553c963883",
+                    "commit_hexsha": "12b413c033ffc49b6bc8dc782999563504c9767e",
                     "deprecated_date": None,
                 },
             ],
             "labels": [
                 {
-                    "artifact": "nn",
-                    "version": "8e258886c5a182c96ef040b74cf944160b8e7357",
+                    "artifact": {
+                        "type": "model",
+                        "name": "nn",
+                        "path": "models/neural-network.pkl",
+                        "virtual": False,
+                    },
+                    "version": "3508dc2c848f1ea46f6d0f02c298db95ee7a84fd",
                     "name": "master",
-                    "creation_date": datetime.datetime(2022, 3, 25, 20, 9, 37),
+                    "creation_date": datetime.datetime(2022, 3, 28, 18, 54, 48),
                     "author": "Alexander Guschin",
-                    "commit_hexsha": "8e258886c5a182c96ef040b74cf944160b8e7357",
+                    "commit_hexsha": "3508dc2c848f1ea46f6d0f02c298db95ee7a84fd",
                     "deprecated_date": None,
                 },
                 {
-                    "artifact": "nn",
-                    "version": "7891d6833470aff9fbbc0c1ceab7d7553c963883",
+                    "artifact": {
+                        "type": "model",
+                        "name": "nn",
+                        "path": "models/neural-network.pkl",
+                        "virtual": False,
+                    },
+                    "version": "12b413c033ffc49b6bc8dc782999563504c9767e",
                     "name": "master",
-                    "creation_date": datetime.datetime(2022, 3, 25, 20, 9, 38),
+                    "creation_date": datetime.datetime(2022, 3, 28, 18, 54, 49),
                     "author": "Alexander Guschin",
-                    "commit_hexsha": "7891d6833470aff9fbbc0c1ceab7d7553c963883",
+                    "commit_hexsha": "12b413c033ffc49b6bc8dc782999563504c9767e",
                     "deprecated_date": None,
                 },
             ],
@@ -285,13 +365,13 @@ EXPECTED_REGISTRY_COMMIT_BRANCH_STATE = {
         "rf": {
             "name": "rf",
             "commits": {
-                "7891d6833470aff9fbbc0c1ceab7d7553c963883": {
+                "3508dc2c848f1ea46f6d0f02c298db95ee7a84fd": {
                     "type": "model",
                     "name": "rf",
                     "path": "models/random-forest.pkl",
                     "virtual": False,
                 },
-                "8e258886c5a182c96ef040b74cf944160b8e7357": {
+                "12b413c033ffc49b6bc8dc782999563504c9767e": {
                     "type": "model",
                     "name": "rf",
                     "path": "models/random-forest.pkl",
@@ -300,39 +380,59 @@ EXPECTED_REGISTRY_COMMIT_BRANCH_STATE = {
             },
             "versions": [
                 {
-                    "artifact": "rf",
-                    "name": "8e258886c5a182c96ef040b74cf944160b8e7357",
-                    "creation_date": datetime.datetime(2022, 3, 25, 20, 9, 37),
+                    "artifact": {
+                        "type": "model",
+                        "name": "rf",
+                        "path": "models/random-forest.pkl",
+                        "virtual": False,
+                    },
+                    "name": "3508dc2c848f1ea46f6d0f02c298db95ee7a84fd",
+                    "creation_date": datetime.datetime(2022, 3, 28, 18, 54, 48),
                     "author": "Alexander Guschin",
-                    "commit_hexsha": "8e258886c5a182c96ef040b74cf944160b8e7357",
+                    "commit_hexsha": "3508dc2c848f1ea46f6d0f02c298db95ee7a84fd",
                     "deprecated_date": None,
                 },
                 {
-                    "artifact": "rf",
-                    "name": "7891d6833470aff9fbbc0c1ceab7d7553c963883",
-                    "creation_date": datetime.datetime(2022, 3, 25, 20, 9, 38),
+                    "artifact": {
+                        "type": "model",
+                        "name": "rf",
+                        "path": "models/random-forest.pkl",
+                        "virtual": False,
+                    },
+                    "name": "12b413c033ffc49b6bc8dc782999563504c9767e",
+                    "creation_date": datetime.datetime(2022, 3, 28, 18, 54, 49),
                     "author": "Alexander Guschin",
-                    "commit_hexsha": "7891d6833470aff9fbbc0c1ceab7d7553c963883",
+                    "commit_hexsha": "12b413c033ffc49b6bc8dc782999563504c9767e",
                     "deprecated_date": None,
                 },
             ],
             "labels": [
                 {
-                    "artifact": "rf",
-                    "version": "8e258886c5a182c96ef040b74cf944160b8e7357",
+                    "artifact": {
+                        "type": "model",
+                        "name": "rf",
+                        "path": "models/random-forest.pkl",
+                        "virtual": False,
+                    },
+                    "version": "3508dc2c848f1ea46f6d0f02c298db95ee7a84fd",
                     "name": "master",
-                    "creation_date": datetime.datetime(2022, 3, 25, 20, 9, 37),
+                    "creation_date": datetime.datetime(2022, 3, 28, 18, 54, 48),
                     "author": "Alexander Guschin",
-                    "commit_hexsha": "8e258886c5a182c96ef040b74cf944160b8e7357",
+                    "commit_hexsha": "3508dc2c848f1ea46f6d0f02c298db95ee7a84fd",
                     "deprecated_date": None,
                 },
                 {
-                    "artifact": "rf",
-                    "version": "7891d6833470aff9fbbc0c1ceab7d7553c963883",
+                    "artifact": {
+                        "type": "model",
+                        "name": "rf",
+                        "path": "models/random-forest.pkl",
+                        "virtual": False,
+                    },
+                    "version": "12b413c033ffc49b6bc8dc782999563504c9767e",
                     "name": "master",
-                    "creation_date": datetime.datetime(2022, 3, 25, 20, 9, 38),
+                    "creation_date": datetime.datetime(2022, 3, 28, 18, 54, 49),
                     "author": "Alexander Guschin",
-                    "commit_hexsha": "7891d6833470aff9fbbc0c1ceab7d7553c963883",
+                    "commit_hexsha": "12b413c033ffc49b6bc8dc782999563504c9767e",
                     "deprecated_date": None,
                 },
             ],
