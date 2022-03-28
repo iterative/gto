@@ -1,14 +1,15 @@
 """TODO: break this file into multiple test/files"""
+# pylint: disable=unused-variable, too-many-locals, too-many-statements
 import gto
 from gto.base import BaseArtifact, BaseLabel, BaseVersion
 from tests.utils import _check_obj
 
 
-def test_api(showcase):  # pylint: disable=too-many-locals, too-many-statements
+def test_api(showcase):
     (
         path,
         repo,
-        write_file,  # pylint: disable=unused-variable
+        write_file,
         first_commit,
         second_commit,
     ) = showcase

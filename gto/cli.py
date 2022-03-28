@@ -67,6 +67,12 @@ option_expected = click.option(
     help="Return exit code 1 if no result",
     show_default=True,
 )
+option_path = click.option(
+    "--path", is_flag=True, default=False, help="Show path", show_default=True
+)
+option_ref = click.option(
+    "--ref", is_flag=True, default=False, help="Show ref", show_default=True
+)
 
 
 @click.group()
@@ -206,18 +212,24 @@ def promote(repo: str, name: str, label: str, version: str, ref: str):
     help="Include deprecated versions",
     show_default=True,
 )
-# @click.option(
-#     "--path", is_flag=True, default=False, help="Show path", show_default=True
-# )
-# @click.option("--ref", is_flag=True, default=False, help="Show ref", show_default=True)
+@option_path
+@option_ref
 @option_expected
-def latest(repo: str, name: str, deprecated: bool, expected: bool):
+def latest(
+    repo: str, name: str, deprecated: bool, path: bool, ref: bool, expected: bool
+):
     """Return latest version of artifact"""
+    assert not (path and ref), "--path and --ref are mutually exclusive"
     latest_version = gto.api.find_latest_version(
         repo, name, include_deprecated=deprecated
     )
     if latest_version:
-        click.echo(latest_version.name)
+        if path:
+            click.echo(latest_version.artifact.path)
+        elif ref:
+            click.echo(latest_version.commit_hexsha)
+        else:
+            click.echo(latest_version.name)
     elif expected:
         raise NotFound("No version found")
     else:
@@ -228,12 +240,20 @@ def latest(repo: str, name: str, deprecated: bool, expected: bool):
 @option_repo
 @arg_name
 @arg_label
+@option_path
+@option_ref
 @option_expected
-def which(repo: str, name: str, label: str, expected: bool):
+def which(repo: str, name: str, label: str, path: bool, ref: bool, expected: bool):
     """Return version of artifact with specific label active"""
+    assert not (path and ref), "--path and --ref are mutually exclusive"
     version = gto.api.find_active_label(repo, name, label)
     if version:
-        click.echo(version.version)
+        if path:
+            click.echo(version.artifact.path)
+        elif ref:
+            click.echo(version.commit_hexsha)
+        else:
+            click.echo(version.version)
     elif expected:
         raise NotFound("Nothing is promoted to this env right now")
     else:
