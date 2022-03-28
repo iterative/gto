@@ -169,11 +169,15 @@ version:
 
 ### [WIP] Getting right versions in downstream systems
 
-To get the latest artifact version, run:
+To get the latest artifact version, it's path and git reference, run:
 
 ```
 $ gto latest rf
 v1.0.1
+$ gto latest rf --path
+models/random-forest.pkl
+$ gto latest rf --ref
+9fbb8664a4a48575ee5d422e177174f20e460b94
 ```
 
 To get the version that is currently promoted to environment, run:
@@ -181,6 +185,10 @@ To get the version that is currently promoted to environment, run:
 ```
 $ gto which rf production
 v1.0.0
+$ gto which rf production --path
+models/random-forest.pkl
+$ gto which rf production --ref
+5eaf15a9fbb8664a4a48575ee5d422e177174f20e460b94
 ```
 
 To download artifacts that are stored with DVC or outside of repo, e.g. in `s3://` or in DVC cache, you'll need DVC or aws CLI.
