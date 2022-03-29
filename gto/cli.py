@@ -191,16 +191,6 @@ def promote(repo: str, name: str, label: str, version: str, ref: str):
     click.echo(f"Promoted {name} version {label_.version} to label {label}")
 
 
-# @gto_command()
-# @option_repo
-# @arg_name
-# @arg_label
-# def demote(repo: str, name: str, label: str):
-#     """De-promote artifact from given label"""
-#     gto.api.demote(repo, name, label)
-#     click.echo(f"Demoted {name} from label {label}")
-
-
 @gto_command()
 @option_repo
 @arg_name

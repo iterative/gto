@@ -65,7 +65,7 @@ class BaseArtifact(BaseModel):
     def latest_labels(self) -> Dict[str, BaseLabel]:
         labels: Dict[str, BaseLabel] = {}
         for label in self.labels:
-            # TODO: check that version exists and wasn't demoted???
+            # TODO: check that version exists and wasn't deprecated???
             # probably this check should be done during State construction
             # as the rules to know it are all there
             if not label.is_registered:
@@ -164,9 +164,6 @@ class BaseManager(BaseModel):
     #     raise NotImplementedError
 
     # def promote(self, name, label, ref, message):
-    #     raise NotImplementedError
-
-    # def demote(self, name, label, message):
     #     raise NotImplementedError
 
     def check_ref(self, ref: str, state: BaseRegistryState):

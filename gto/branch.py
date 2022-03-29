@@ -26,7 +26,7 @@ def find_branches(repo: git.Repo, desired: str) -> List[git.Head]:
 
 
 class BranchEnvManager(BaseManager):
-    actions: FrozenSet[Action] = frozenset((Action.PROMOTE,))  # Action.DEMOTE
+    actions: FrozenSet[Action] = frozenset((Action.PROMOTE,))
 
     def update_state(self, state: BaseRegistryState) -> BaseRegistryState:
         if CONFIG.VERSION_REQUIRED_FOR_ENV:
@@ -107,20 +107,6 @@ class BranchEnvManager(BaseManager):
             "you need to create a new commit to that branch "
             "or move HEAD of it to the REF you want to promote"
         )
-
-    # def demote(self, name, label, message=None):
-    #     if CONFIG.VERSION_REQUIRED_FOR_ENV:
-    #         # can be done by deprecating a version. Need something like --deprecate_version flag for CLI
-    #         # to acknowledge the actor understands the implication
-    #         raise NotImplementedError("To demote, you need to deprecate a version")
-
-    #     # can be done by reversing commit. Need something like --reverse_commit flag for CLI?
-    #     # that will generate a commit with the model from the previous commit
-    #     raise NotImplementedError(
-    #         "To demote, you need to reverse a commit, "
-    #         "move HEAD of the branch to the previous commit, "
-    #         "or create a new commit with the model from the previous commit"
-    #     )
 
     def check_ref(self, ref: str, state: BaseRegistryState) -> Dict[str, BaseLabel]:
         # we assume ref is a commit. If it's a tag then we don't need to return anything

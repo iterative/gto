@@ -65,11 +65,6 @@ def promote(
     )
 
 
-# def demote(repo: Union[str, Repo], name: str, label: str):
-#     """De-promote artifact from given label"""
-#     return GitRegistry.from_repo(repo).demote(name, label)
-
-
 def parse_tag(name: str):
     return parse_name(name)
 

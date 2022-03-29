@@ -157,19 +157,6 @@ class GitRegistry(BaseModel):
         )
         return self.state.find_artifact(name).latest_labels[label]
 
-    # def demote(self, name, label):
-    #     """De-promote artifact from given label"""
-    #     # TODO: now you can promote artifact to some env multiple times
-    #     # Then, if you'll try to `demote`, you should demote all promotions.
-    #     label_ = self.state.find_artifact(name).latest_labels.get(label)
-    #     if label_ is None:
-    #         raise NoActiveLabel(label=label, name=name)
-    #     return self.env_manager.demote(
-    #         name,
-    #         label_,
-    #         message=f"Demoting {name} from label {label}",
-    #     )
-
     def check_ref(self, ref: str):
         "Find out what was registered/promoted in this ref"
         return {

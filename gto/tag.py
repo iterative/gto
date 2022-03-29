@@ -15,7 +15,6 @@ ActionSign = {
     Action.REGISTER: "@",
     Action.DEPRECATE: "@!",
     Action.PROMOTE: "#",
-    # Action.DEMOTE: "#!",
 }
 
 
@@ -29,13 +28,13 @@ def name_tag(
     if action in (Action.REGISTER, Action.DEPRECATE):
         return f"{name}{ActionSign[action]}{version}"
 
-    if action in (Action.PROMOTE,):  # Action.DEMOTE
+    if action in (Action.PROMOTE,):
         if repo is None:
             raise MissingArg(arg="repo")
         numbers = []
         for tag in repo.tags:
             parsed = parse_name(tag.name)
-            if parsed[ACTION] in (Action.PROMOTE,):  # Action.DEMOTE
+            if parsed[ACTION] in (Action.PROMOTE,):
                 numbers.append(parsed[NUMBER])
         new_number = max(numbers) + 1 if numbers else 1
         return f"{name}{ActionSign[action]}{label}-{new_number}"
@@ -55,7 +54,6 @@ def parse_name(name: str, raise_on_fail: bool = True):
             }
 
     # order does matter if you take into account ActionSign values
-    # for action in (Action.DEMOTE, Action.PROMOTE):
     for action in (Action.PROMOTE,):
         if ActionSign[action] in name:
             name, label = name.split(ActionSign[action])
@@ -187,19 +185,6 @@ def index_tag(artifact: BaseArtifact, tag: git.Tag) -> BaseArtifact:
         artifact.find_version(mtag.version).deprecated_date = mtag.creation_date  # type: ignore
     if mtag.action == Action.PROMOTE:
         artifact.labels.append(label_from_tag(artifact, tag))
-    # if (
-    #     mtag.action == Action.DEMOTE
-    # ):  # and obj.find_version(commit_hexsha=tag.commit.hexsha) is not None:
-    #     # this may "deprecate" incorrect version
-    #     # if you deprecated correct version after demotion
-    #     # TODO: now you can promote artifact to some env multiple times
-    #     # Then, if you'll try to `demote`, you should demote all promotions.
-    #     if mtag.label in artifact.latest_labels:
-    #         artifact.latest_labels[mtag.label].deprecated_date = mtag.creation_date  # type: ignore
-    #     else:
-    #         # this may be result of deprecated version
-    #         # or incorrect demotion tag
-    #         warnings.warn(f"Active label '{mtag.label}' not found")
     return artifact
 
 
@@ -261,7 +246,7 @@ class TagVersionManager(TagManager):
 
 
 class TagEnvManager(TagManager):
-    actions: FrozenSet[Action] = frozenset((Action.PROMOTE,))  # Action.DEMOTE
+    actions: FrozenSet[Action] = frozenset((Action.PROMOTE,))
 
     def promote(self, name, label, ref, message):
         create_tag(
@@ -270,14 +255,6 @@ class TagEnvManager(TagManager):
             ref=ref,
             message=message,
         )
-
-    # def demote(self, name, label, message):
-    #     create_tag(
-    #         self.repo,
-    #         name_tag(Action.DEMOTE, name, label=label.name, repo=self.repo),
-    #         ref=label.commit_hexsha,
-    #         message=message,
-    #     )
 
     def check_ref(self, ref: str, state: BaseRegistryState):
         try:

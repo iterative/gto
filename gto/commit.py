@@ -8,7 +8,7 @@ from .constants import Action
 
 
 class CommitVersionManager(BaseManager):
-    actions: FrozenSet[Action] = frozenset((Action.PROMOTE,))  # Action.DEMOTE
+    actions: FrozenSet[Action] = frozenset((Action.PROMOTE,))
 
     def update_state(self, state: BaseRegistryState) -> BaseRegistryState:
         # each commit is a version if artifact is indexed in that commit
