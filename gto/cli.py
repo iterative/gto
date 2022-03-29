@@ -42,6 +42,13 @@ option_format_df = click.option(
     type=click.Choice([TABLE, "json", "yaml"], case_sensitive=False),
     show_default=True,
 )
+option_format_table = click.option(
+    "-ft",
+    "--format-table",
+    type=click.Choice(tabulate_formats),
+    default="fancy_outline",
+    show_default=True,
+)
 option_name = click.option(
     "--name", "-n", default=None, help="Artifact name", show_default=True
 )
@@ -50,13 +57,6 @@ option_sort = click.option(
     "-s",
     default="desc",
     help="Desc for recent first, Asc for older first",
-    show_default=True,
-)
-option_format_table = click.option(
-    "-ft",
-    "--format-table",
-    type=click.Choice(tabulate_formats),
-    default="fancy_outline",
     show_default=True,
 )
 option_expected = click.option(
@@ -115,6 +115,29 @@ def gto_command(*args, **kwargs):
         return cli.command(*args, **kwargs)(verbose_option(func))
 
     return decorator
+
+
+@gto_command()
+@option_repo
+@click.option("--ref", default=None, help="Git reference to use", show_default=True)
+@click.option("--type", default=None, help="Artifact type to list", show_default=True)
+@option_format_df
+@option_format_table
+def ls(repo, ref, type, format, format_table):
+    """\b
+    List all artifacts in the repository
+    """
+    if format == TABLE:
+        click.echo(
+            format_echo(
+                gto.api.ls(repo, ref, type, table=True),
+                "table",
+                format_table,
+                if_empty="No artifacts found",
+            )
+        )
+    else:
+        click.echo(format_echo(gto.api.ls(repo, ref, type), format))
 
 
 @gto_command()

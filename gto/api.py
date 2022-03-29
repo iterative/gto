@@ -27,6 +27,24 @@ def get_envs(repo: Union[str, Repo], in_use: bool = False):
     return GitRegistry.from_repo(repo).get_envs(in_use=in_use)
 
 
+def ls(repo: Union[str, Repo], ref: str = None, type: str = None, table: bool = False):
+    """List artifacts of given type"""
+    if ref:
+        index = RepoIndexManager.from_repo(repo).get_commit_index(ref)
+    else:
+        index = FileIndexManager.from_path(repo).get_index()
+    artifacts = index.dict()["state"]
+    if type:
+        artifacts = {
+            name: artifact
+            for name, artifact in artifacts.items()
+            if artifact["type"] == type
+        }
+    if not table:
+        return artifacts
+    return list(artifacts.values()), "keys"
+
+
 def add(repo: Union[str, Repo], type: str, name: str, path: str, virtual: bool = False):
     """Add an artifact to the Index"""
     return init_index_manager(path=repo).add(type, name, path, virtual)
@@ -105,7 +123,7 @@ def show(repo: Union[str, Repo], table: bool = False):
     """Show current registry state"""
 
     reg = GitRegistry.from_repo(repo)
-    envs = list(reg.get_envs(in_use=False))
+    envs = ls(reg.get_envs(in_use=False))
     models_state = {
         o.name: {
             "version": o.get_latest_version().name if o.get_latest_version() else None,
