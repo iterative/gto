@@ -121,13 +121,16 @@ def gto_command(*args, **kwargs):
 @option_repo
 @click.option("--ref", default=None, help="Git reference to use", show_default=True)
 @click.option("--type", default=None, help="Artifact type to list", show_default=True)
+@click.option("-l", "--long", help="Long format", is_flag=True, default=False)
 @option_format_df
 @option_format_table
-def ls(repo, ref, type, format, format_table):
+def ls(repo, ref, type, long, format, format_table):
     """\b
     List all artifacts in the repository
     """
-    if format == TABLE:
+    if not long:
+        click.echo(format_echo(list(gto.api.ls(repo, ref, type)), "lines"))
+    elif format == TABLE:
         click.echo(
             format_echo(
                 gto.api.ls(repo, ref, type, table=True),
