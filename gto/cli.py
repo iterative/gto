@@ -118,29 +118,46 @@ def gto_command(*args, **kwargs):
 
 
 @gto_command()
-@option_repo
-@click.option("--ref", default=None, help="Git reference to use", show_default=True)
+@click.argument("repo", default=".")
+@click.option("--rev", default=None, help="Repo revision", show_default=True)
 @click.option("--type", default=None, help="Artifact type to list", show_default=True)
-@click.option("-l", "--long", help="Long format", is_flag=True, default=False)
-@option_format_df
+@click.option(
+    "--json",
+    is_flag=True,
+    default=False,
+    help="Print output in json format",
+    show_default=True,
+)
+@click.option(
+    "--table",
+    is_flag=True,
+    default=False,
+    help="Print output in table format",
+    show_default=True,
+)
 @option_format_table
-def ls(repo, ref, type, long, format, format_table):
+def ls(repo, rev, type, json, table, format_table):
     """\b
     List all artifacts in the repository
     """
-    if not long:
-        click.echo(format_echo(list(gto.api.ls(repo, ref, type)), "lines"))
-    elif format == TABLE:
+    assert not (json and table), "Only one of --json and --table can be used"
+    if json:
+        click.echo(format_echo(gto.api.ls(repo, rev, type), "json"))
+    elif table:
         click.echo(
             format_echo(
-                gto.api.ls(repo, ref, type, table=True),
+                [gto.api.ls(repo, rev, type), "keys"],
                 "table",
                 format_table,
                 if_empty="No artifacts found",
             )
         )
     else:
-        click.echo(format_echo(gto.api.ls(repo, ref, type), format))
+        click.echo(
+            format_echo(
+                [artifact["name"] for artifact in gto.api.ls(repo, rev, type)], "lines"
+            )
+        )
 
 
 @gto_command()

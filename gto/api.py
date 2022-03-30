@@ -27,7 +27,7 @@ def get_envs(repo: Union[str, Repo], in_use: bool = False):
     return GitRegistry.from_repo(repo).get_envs(in_use=in_use)
 
 
-def ls(repo: Union[str, Repo], ref: str = None, type: str = None, table: bool = False):
+def ls(repo: Union[str, Repo], ref: str = None, type: str = None):
     """List artifacts of given type"""
     if ref:
         index = RepoIndexManager.from_repo(repo).get_commit_index(ref)
@@ -40,9 +40,7 @@ def ls(repo: Union[str, Repo], ref: str = None, type: str = None, table: bool = 
             for name, artifact in artifacts.items()
             if artifact["type"] == type
         }
-    if not table:
-        return artifacts
-    return list(artifacts.values()), "keys"
+    return list(artifacts.values())
 
 
 def add(repo: Union[str, Repo], type: str, name: str, path: str, virtual: bool = False):

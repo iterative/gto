@@ -47,7 +47,7 @@ def format_echo(result, format, format_table=None, if_empty="", missing_value="-
         # or another way
         # https://stackoverflow.com/questions/61722242/dump-the-yaml-to-a-variable-instead-of-streaming-it-in-stdout-using-ruamel-yaml
     elif format == "json":
-        click.echo(json.dumps(serialize(result)))
+        click.echo(json.dumps(serialize(result), indent=4))
     elif format == "table":
         click.echo(
             tabulate(
