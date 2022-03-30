@@ -108,11 +108,11 @@ class VersionIsOld(GTOException):
         super().__init__(self.message)
 
 
-class UnknownEnvironment(GTOException):
-    _message = "Environment '{env}' is not present in your config file. Allowed envs are: {envs}."
+class UnknownStage(GTOException):
+    _message = "Environment '{stage}' is not present in your config file. Allowed stages are: {stages}."
 
-    def __init__(self, env, envs) -> None:
-        self.message = self._message.format(env=env, envs=envs)
+    def __init__(self, stage, stages) -> None:
+        self.message = self._message.format(stage=stage, stages=stages)
         super().__init__(self.message)
 
 

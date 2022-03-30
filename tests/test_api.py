@@ -86,11 +86,11 @@ def test_promote(repo_with_artifact):
         dict(
             artifact=dict(type="new-type", name=name, path="new/path", virtual=True),
             version="v1",
-            name=env,
+            stage=env,
             author=author,
             commit_hexsha=repo.commit().hexsha,
         ),
-        {"creation_date", "deprecated_date"},
+        {"creation_date", "deprecated_date", "promotions"},
     )
 
 

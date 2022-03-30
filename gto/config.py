@@ -7,7 +7,7 @@ from pydantic.env_settings import InitSettingsSource
 from ruamel.yaml import YAML
 
 from gto.constants import BRANCH, COMMIT, TAG
-from gto.exceptions import UnknownEnvironment, UnknownType
+from gto.exceptions import UnknownStage, UnknownType
 from gto.versions import AbstractVersion
 
 yaml = YAML(typ="safe", pure=True)
@@ -83,13 +83,13 @@ class RegistryConfig(BaseSettings):
 
     def assert_env(self, name):
         if not self.check_env(name):
-            raise UnknownEnvironment(name, self.envs)
+            raise UnknownStage(name, self.stages)
 
     def check_env(self, name):
-        return name in self.envs or not self.envs
+        return name in self.stages or not self.stages
 
     @property
-    def envs(self) -> List[str]:
+    def stages(self) -> List[str]:
         if self.ENV_BASE == TAG:
             return self.ENV_ALLOWED
         if self.ENV_BASE == BRANCH:

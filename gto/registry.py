@@ -6,7 +6,7 @@ import git
 from git import InvalidGitRepositoryError, Repo
 from pydantic import BaseModel
 
-from gto.base import BaseArtifact, BaseLabel, BaseManager, BaseRegistryState
+from gto.base import BaseArtifact, BaseManager, BasePromotion, BaseRegistryState
 from gto.config import CONFIG_FILE, RegistryConfig
 from gto.exceptions import (
     NoRepo,
@@ -127,7 +127,7 @@ class GitRegistry(BaseModel):
         promote_version=None,
         promote_ref=None,
         name_version=None,
-    ) -> BaseLabel:
+    ) -> BasePromotion:
         """Assign label to specific artifact version"""
         self.config.assert_env(label)
         if not (promote_version is None) ^ (promote_ref is None):
@@ -177,8 +177,8 @@ class GitRegistry(BaseModel):
             include_deprecated=include_deprecated
         )
 
-    def get_envs(self, in_use: bool = False):
-        """Return list of envs in the registry.
+    def get_stages(self, in_use: bool = False):
+        """Return list of stages in the registry.
         If "in_use", return only those which are in use (skip deprecated).
         If not, return all available: either all allowed or all ever used.
         """
@@ -188,6 +188,6 @@ class GitRegistry(BaseModel):
                 for o in self.state.artifacts.values()
                 for label in o.latest_labels
             }
-        return self.config.envs or {
+        return self.config.stages or {
             label for o in self.state.artifacts.values() for label in o.unique_labels
         }

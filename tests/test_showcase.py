@@ -1,7 +1,7 @@
 """TODO: break this file into multiple test/files"""
 # pylint: disable=unused-variable, too-many-locals, too-many-statements
 import gto
-from gto.base import BaseArtifact, BaseLabel, BaseVersion
+from gto.base import BaseArtifact, BasePromotion, BaseVersion
 from tests.utils import _check_obj
 
 
@@ -44,7 +44,7 @@ def test_api(showcase):
     )
     assert len(nn_artifact.labels) == 1
     nn_label = nn_artifact.labels[0]
-    assert isinstance(nn_label, BaseLabel)
+    assert isinstance(nn_label, BasePromotion)
     _check_obj(
         nn_label,
         dict(
@@ -95,7 +95,7 @@ def test_api(showcase):
     )
 
     assert len(rf_artifact.labels) == 4
-    assert all(isinstance(l, BaseLabel) for l in rf_artifact.labels)
+    assert all(isinstance(l, BasePromotion) for l in rf_artifact.labels)
     rf_l1, rf_l2, rf_l3, _ = rf_artifact.labels
 
     _check_obj(

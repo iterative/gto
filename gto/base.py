@@ -6,14 +6,15 @@ from pydantic import BaseModel
 
 from gto.constants import Action
 from gto.index import Artifact, ArtifactCommits
+from gto.versions import NumberedVersion, SemVer
 
 from .exceptions import ArtifactNotFound, ManyVersions, VersionRequired
 
 
-class BaseLabel(BaseModel):  # pylint: disable=too-many-instance-attributes
+class BasePromotion(BaseModel):  # pylint: disable=too-many-instance-attributes
     artifact: Artifact
     version: str
-    name: str
+    stage: str
     creation_date: datetime
     author: str
     commit_hexsha: str
@@ -31,21 +32,38 @@ class BaseVersion(BaseModel):
     author: str
     commit_hexsha: str
     deprecated_date: Optional[datetime] = None
+    promotions: List[BasePromotion] = []
+
+    @property
+    def version(self):
+        # TODO: this should be read from config, how to pass it down here?
+        try:
+            return NumberedVersion(self.name)
+        except:  # pylint: disable=bare-except
+            return SemVer(self.name)
 
     @property
     def is_registered(self):
         return self.deprecated_date is None
+
+    @property
+    def stage(self):
+        promotions = sorted(self.promotions, key=lambda p: p.creation_date)
+        return promotions[-1] if promotions else None
 
 
 class BaseArtifact(BaseModel):
     name: str
     commits: ArtifactCommits
     versions: List[BaseVersion]
-    labels: List[BaseLabel]
+
+    @property
+    def labels(self):
+        return [l for v in self.versions for l in v.promotions]
 
     @property
     def unique_labels(self):
-        return {l.name for l in self.labels}
+        return {l.stage for l in self.labels}
 
     def __repr__(self) -> str:
         versions = ", ".join(f"'{v.name}'" for v in self.versions)
@@ -62,19 +80,12 @@ class BaseArtifact(BaseModel):
         return None
 
     @property
-    def latest_labels(self) -> Dict[str, BaseLabel]:
-        labels: Dict[str, BaseLabel] = {}
-        for label in self.labels:
-            # TODO: check that version exists and wasn't deprecated???
-            # probably this check should be done during State construction
-            # as the rules to know it are all there
-            if not label.is_registered:
-                continue
-            if (
-                label.name not in labels
-                or labels[label.name].creation_date < label.creation_date
-            ):
-                labels[label.name] = label
+    def latest_labels(self) -> Dict[str, BasePromotion]:
+        labels: Dict[str, BasePromotion] = {}
+        for version in sorted(self.versions, key=lambda x: x.version, reverse=True):
+            label = version.stage
+            if label:
+                labels[label.stage] = labels.get(label.stage) or label
         return labels
 
     def find_version(
@@ -95,10 +106,14 @@ class BaseArtifact(BaseModel):
         if allow_multiple:
             return versions
         if raise_if_not_found and not versions:
+            for v in self.versions:
+                print(v)
             raise VersionRequired(name=self.name, skip_deprecated=skip_deprecated)
         if len(versions) > 1:
             raise ManyVersions(
-                name=self.name, versions=len(versions), skip_deprecated=skip_deprecated
+                name=self.name,
+                versions=[v.name for v in versions],
+                skip_deprecated=skip_deprecated,
             )
         return versions[0] if versions else None
 
@@ -139,7 +154,7 @@ class BaseRegistryState(BaseModel):
         for name in self.artifacts:
             self.artifacts[name].versions.sort(key=lambda x: (x.creation_date, x.name))
             self.artifacts[name].labels.sort(
-                key=lambda x: (x.creation_date, x.version, x.name)
+                key=lambda x: (x.creation_date, x.version, x.stage)
             )
 
 

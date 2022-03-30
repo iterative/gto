@@ -351,12 +351,12 @@ def history(repo: str, name: str, format: str, format_table: str, sort: str):
     help="Show only in-use labels",
     show_default=True,
 )
-def print_envs(repo: str, in_use: bool):
-    """Return list of envs in the registry.
+def print_stages(repo: str, in_use: bool):
+    """Return list of stages in the registry.
     If "in_use", return only those which are in use (skip deprecated).
     If not, return all available: either all allowed or all ever used.
     """
-    click.echo(gto.api.get_envs(repo, in_use=in_use))
+    click.echo(gto.api.get_stages(repo, in_use=in_use))
 
 
 @gto_command(hidden=True)

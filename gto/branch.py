@@ -6,7 +6,7 @@ import git
 
 from gto.index import ArtifactsCommits
 
-from .base import BaseLabel, BaseManager, BaseRegistryState
+from .base import BaseManager, BasePromotion, BaseRegistryState
 from .config import CONFIG  # need to pass this when you initialize BranchEnvManager
 from .constants import Action
 
@@ -42,10 +42,10 @@ class BranchEnvManager(BaseManager):
                         if env is None:
                             continue
                         state.artifacts[name].labels.append(
-                            BaseLabel(
+                            BasePromotion(
                                 artifact=version.artifact,
                                 version=version.name,
-                                name=env,
+                                stage=env,
                                 creation_date=version.creation_date,
                                 author=version.author,
                                 commit_hexsha=version.commit_hexsha,
@@ -65,10 +65,10 @@ class BranchEnvManager(BaseManager):
                         if env is None:
                             continue
                         state.artifacts[name].labels.append(
-                            BaseLabel(
+                            BasePromotion(
                                 artifact=index_artifact,
                                 version=version,
-                                name=env,
+                                stage=env,
                                 creation_date=commit.committed_date,
                                 author=commit.author.name,
                                 commit_hexsha=commit.hexsha,
@@ -108,7 +108,7 @@ class BranchEnvManager(BaseManager):
             "or move HEAD of it to the REF you want to promote"
         )
 
-    def check_ref(self, ref: str, state: BaseRegistryState) -> Dict[str, BaseLabel]:
+    def check_ref(self, ref: str, state: BaseRegistryState) -> Dict[str, BasePromotion]:
         # we assume ref is a commit. If it's a tag then we don't need to return anything
         # this is my assumption that should be discussed
         # it's based on case when CI will be triggered twice - for registration tag and promotion commit

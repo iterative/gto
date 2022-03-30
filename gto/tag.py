@@ -7,7 +7,13 @@ from pydantic import BaseModel
 
 from gto.index import Artifact
 
-from .base import BaseArtifact, BaseLabel, BaseManager, BaseRegistryState, BaseVersion
+from .base import (
+    BaseArtifact,
+    BaseManager,
+    BasePromotion,
+    BaseRegistryState,
+    BaseVersion,
+)
 from .constants import ACTION, LABEL, NAME, NUMBER, VERSION, Action
 from .exceptions import MissingArg, RefNotFound, UnknownAction
 
@@ -141,7 +147,7 @@ def version_from_tag(artifact: Artifact, tag: git.Tag) -> BaseVersion:
     )
 
 
-def label_from_tag(artifact: BaseArtifact, tag: git.Tag) -> BaseLabel:
+def label_from_tag(artifact: BaseArtifact, tag: git.Tag) -> BasePromotion:
     mtag = parse_tag(tag)
     registered_version = artifact.find_version(commit_hexsha=tag.commit.hexsha)
     if registered_version:
@@ -161,10 +167,10 @@ def label_from_tag(artifact: BaseArtifact, tag: git.Tag) -> BaseLabel:
         )[-1]
         version_name = version.name  # type: ignore
         deprecated_date = version.creation_date  # type: ignore
-    return BaseLabel(
+    return BasePromotion(
         artifact=artifact.commits[tag.commit.hexsha],
         version=version_name,
-        name=mtag.label,
+        stage=mtag.label,
         creation_date=mtag.creation_date,
         author=tag.tag.tagger.name,
         commit_hexsha=tag.commit.hexsha,
@@ -184,7 +190,11 @@ def index_tag(artifact: BaseArtifact, tag: git.Tag) -> BaseArtifact:
     if mtag.action == Action.DEPRECATE:
         artifact.find_version(mtag.version).deprecated_date = mtag.creation_date  # type: ignore
     if mtag.action == Action.PROMOTE:
-        artifact.labels.append(label_from_tag(artifact, tag))
+        (
+            artifact.find_version(  # type: ignore
+                commit_hexsha=mtag.tag.commit.hexsha, raise_if_not_found=True
+            ).promotions.append(label_from_tag(artifact, tag))
+        )
     return artifact
 
 

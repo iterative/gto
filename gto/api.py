@@ -23,8 +23,8 @@ def _get_state(repo: Union[str, Repo]):
     return GitRegistry.from_repo(repo).state
 
 
-def get_envs(repo: Union[str, Repo], in_use: bool = False):
-    return GitRegistry.from_repo(repo).get_envs(in_use=in_use)
+def get_stages(repo: Union[str, Repo], in_use: bool = False):
+    return GitRegistry.from_repo(repo).get_stages(in_use=in_use)
 
 
 def add(repo: Union[str, Repo], type: str, name: str, path: str, virtual: bool = False):
@@ -100,13 +100,13 @@ def show(repo: Union[str, Repo], table: bool = False):
     """Show current registry state"""
 
     reg = GitRegistry.from_repo(repo)
-    envs = list(reg.get_envs(in_use=False))
+    stages = list(reg.get_stages(in_use=False))
     models_state = {
         o.name: {
             "version": o.get_latest_version().name if o.get_latest_version() else None,
-            "env": {
+            "stage": {
                 name: o.latest_labels[name].version if name in o.latest_labels else None
-                for name in envs
+                for name in stages
             },
         }
         for o in reg.state.artifacts.values()
@@ -115,10 +115,10 @@ def show(repo: Union[str, Repo], table: bool = False):
         return models_state
 
     result = [
-        [name, d["version"]] + [d["env"][name] for name in envs]
+        [name, d["version"]] + [d["stage"][name] for name in stages]
         for name, d in models_state.items()
     ]
-    headers = ["name", "version"] + [f"env/{e}" for e in envs]
+    headers = ["name", "version"] + [f"stage/{e}" for e in stages]
     return result, headers
 
 
@@ -169,8 +169,8 @@ def audit_promotion(
         OrderedDict(
             timestamp=l.creation_date,
             name=o.name,
-            label=l.name,
             version=l.version,
+            label=l.stage,
             deprecated=l.deprecated_date,
             commit=l.commit_hexsha[:7],
             author=l.author,
