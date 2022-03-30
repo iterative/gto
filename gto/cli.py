@@ -9,7 +9,7 @@ from tabulate import tabulate_formats
 import gto
 from gto.constants import LABEL, NAME, PATH, REF, TYPE, VERSION
 from gto.exceptions import NotFound
-from gto.utils import format_echo, serialize
+from gto.utils import format_echo, make_ready_to_serialize
 
 TABLE = "table"
 
@@ -158,6 +158,57 @@ def ls(repo, rev, type, json, table, format_table):
                 [artifact["name"] for artifact in gto.api.ls(repo, rev, type)], "lines"
             )
         )
+
+
+@gto_command()
+@click.argument("repo", default=".")
+@click.argument("name")
+@click.option(
+    "--json",
+    is_flag=True,
+    default=False,
+    help="Print output in json format",
+    show_default=True,
+)
+@click.option(
+    "--table",
+    is_flag=True,
+    default=False,
+    help="Print output in table format",
+    show_default=True,
+)
+@option_format_table
+def ls_versions(repo, name, json, table, format_table):
+    """\b
+    List all artifact versions in the repository
+    """
+    assert not (json and table), "Only one of --json and --table can be used"
+    versions = [v.dict() for v in gto.api.ls_versions(repo, name)]
+    if json:
+        click.echo(format_echo(versions, "json"))
+    elif table:
+        for v in versions:
+            v["artifact"] = v["artifact"]["name"]
+        # versions_flatten = []
+        # for v in versions:
+        #     v_ = {}
+        #     for key, value in v.items():
+        #         if isinstance(value, dict):
+        #             for k, v in value.items():
+        #                 v_[f"{key}.{k}"] = v
+        #         else:
+        #             v_[key] = value
+        #     versions_flatten.append(v_)
+        click.echo(
+            format_echo(
+                [versions, "keys"],
+                "table",
+                format_table,
+                if_empty="No versions found",
+            )
+        )
+    else:
+        click.echo(format_echo([v["name"] for v in versions], "lines"))
 
 
 @gto_command()
@@ -417,7 +468,7 @@ def print_envs(repo: str, in_use: bool):
 @option_format
 def print_state(repo: str, format: str):
     """Technical cmd: Print current registry state"""
-    state = serialize(
+    state = make_ready_to_serialize(
         gto.api._get_state(repo).dict()  # pylint: disable=protected-access
     )
     format_echo(state, format)

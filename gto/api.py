@@ -43,6 +43,13 @@ def ls(repo: Union[str, Repo], ref: str = None, type: str = None):
     return list(artifacts.values())
 
 
+def ls_versions(repo: Union[str, Repo], name: str):
+    """List versions of artifact"""
+    reg = GitRegistry.from_repo(repo)
+    versions = reg.state.artifacts[name].versions
+    return sorted(versions, key=lambda v: v.name)
+
+
 def add(repo: Union[str, Repo], type: str, name: str, path: str, virtual: bool = False):
     """Add an artifact to the Index"""
     return init_index_manager(path=repo).add(type, name, path, virtual)
