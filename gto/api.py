@@ -46,8 +46,7 @@ def ls(repo: Union[str, Repo], ref: str = None, type: str = None):
 def ls_versions(repo: Union[str, Repo], name: str):
     """List versions of artifact"""
     reg = GitRegistry.from_repo(repo)
-    versions = reg.state.artifacts[name].versions
-    return sorted(versions, key=lambda v: v.name)
+    return reg.state.artifacts[name].versions
 
 
 def add(repo: Union[str, Repo], type: str, name: str, path: str, virtual: bool = False):

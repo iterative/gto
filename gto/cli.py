@@ -182,6 +182,8 @@ def ls_versions(repo, name, json, table, format_table):
     """\b
     List all artifact versions in the repository
     """
+    # TODO: add --deprecated flag?
+    # TODO: add sort?
     assert not (json and table), "Only one of --json and --table can be used"
     versions = [v.dict() for v in gto.api.ls_versions(repo, name)]
     if json:
