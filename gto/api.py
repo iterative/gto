@@ -121,7 +121,7 @@ def show(repo: Union[str, Repo], table: bool = False):
     """Show current registry state"""
 
     reg = GitRegistry.from_repo(repo)
-    envs = ls(reg.get_envs(in_use=False))
+    envs = list(reg.get_envs(in_use=False))
     models_state = {
         o.name: {
             "version": o.get_latest_version().name if o.get_latest_version() else None,
