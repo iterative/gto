@@ -1,7 +1,7 @@
 import logging
 import sys
 from functools import wraps
-from typing import Sequence
+from typing import OrderedDict, Sequence
 
 import click
 from tabulate import tabulate_formats
@@ -185,12 +185,21 @@ def ls_versions(repo, name, json, table, format_table):
     # TODO: add --deprecated flag?
     # TODO: add sort?
     assert not (json and table), "Only one of --json and --table can be used"
-    versions = [v.dict() for v in gto.api.ls_versions(repo, name)]
+    versions = gto.api.ls_versions(repo, name)
     if json:
         click.echo(format_echo(versions, "json"))
     elif table:
+        first_keys = ["artifact", "name", "stage"]
+        versions_ = []
         for v in versions:
             v["artifact"] = v["artifact"]["name"]
+            v["stage"] = v["stage"]["stage"]
+            v = OrderedDict(
+                [(key, v[key]) for key in first_keys]
+                + [(key, v[key]) for key in v if key not in first_keys]
+            )
+            v["commit_hexsha"] = v["commit_hexsha"][:7]
+            versions_.append(v)
         # versions_flatten = []
         # for v in versions:
         #     v_ = {}
@@ -203,7 +212,7 @@ def ls_versions(repo, name, json, table, format_table):
         #     versions_flatten.append(v_)
         click.echo(
             format_echo(
-                [versions, "keys"],
+                [versions_, "keys"],
                 "table",
                 format_table,
                 if_empty="No versions found",

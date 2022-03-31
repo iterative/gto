@@ -52,6 +52,11 @@ class BaseVersion(BaseModel):
         promotions = sorted(self.promotions, key=lambda p: p.creation_date)
         return promotions[-1] if promotions else None
 
+    def dict_status(self):
+        version = self.dict(exclude={"promotions"})
+        version["stage"] = self.stage.dict() if self.stage else None
+        return version
+
 
 class BaseArtifact(BaseModel):
     name: str

@@ -44,10 +44,12 @@ def ls(repo: Union[str, Repo], ref: str = None, type: str = None):
     return list(artifacts.values())
 
 
-def ls_versions(repo: Union[str, Repo], name: str):
+def ls_versions(repo: Union[str, Repo], name: str, raw: bool = False):
     """List versions of artifact"""
     reg = GitRegistry.from_repo(repo)
-    return reg.state.artifacts[name].versions
+    if raw:
+        return reg.state.artifacts[name].versions
+    return [v.dict_status() for v in reg.state.artifacts[name].versions]
 
 
 def add(repo: Union[str, Repo], type: str, name: str, path: str, virtual: bool = False):
