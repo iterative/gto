@@ -35,5 +35,5 @@ def test_commands(showcase):
     _check_successful_cmd(
         which,
         ["-r", path, "rf", "production"],
-        "v1.2.3\n",
+        "v1.2.4\n",
     )

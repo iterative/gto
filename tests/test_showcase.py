@@ -1,7 +1,7 @@
 """TODO: break this file into multiple test/files"""
 # pylint: disable=unused-variable, too-many-locals, too-many-statements
 import gto
-from gto.base import BaseArtifact, BaseLabel, BaseVersion
+from gto.base import BaseArtifact, BasePromotion, BaseVersion
 from tests.utils import _check_obj
 
 
@@ -19,7 +19,7 @@ def test_api(showcase):
     assert isinstance(artifacts["features"], BaseArtifact)
     _check_obj(
         artifacts["features"],
-        dict(name="features", versions=[], labels=[]),
+        dict(name="features", versions=[]),
         ["commits"],
     )
     nn_artifact = artifacts["nn"]
@@ -40,19 +40,19 @@ def test_api(showcase):
             commit_hexsha=first_commit.hexsha,
             deprecated_date=None,
         ),
-        {"creation_date"},
+        {"creation_date", "promotions"},
     )
-    assert len(nn_artifact.labels) == 1
-    nn_label = nn_artifact.labels[0]
-    assert isinstance(nn_label, BaseLabel)
+    assert len(nn_artifact.stages) == 1
+    nn_promotion = nn_artifact.stages[0]
+    assert isinstance(nn_promotion, BasePromotion)
     _check_obj(
-        nn_label,
+        nn_promotion,
         dict(
             artifact=dict(
                 type="model", name="nn", path="models/neural-network.pkl", virtual=False
             ),
             version="v0.0.1",
-            name="staging",
+            stage="staging",
             author=author,
             commit_hexsha=first_commit.hexsha,
             deprecated_date=None,
@@ -78,7 +78,7 @@ def test_api(showcase):
             commit_hexsha=first_commit.hexsha,
             deprecated_date=None,
         ),
-        {"creation_date"},
+        {"creation_date", "promotions"},
     )
     _check_obj(
         rf_ver2,
@@ -91,12 +91,13 @@ def test_api(showcase):
             commit_hexsha=second_commit.hexsha,
             deprecated_date=None,
         ),
-        {"creation_date"},
+        {"creation_date", "promotions"},
     )
 
-    assert len(rf_artifact.labels) == 4
-    assert all(isinstance(l, BaseLabel) for l in rf_artifact.labels)
-    rf_l1, rf_l2, rf_l3, _ = rf_artifact.labels
+    assert len(rf_artifact.stages) == 4
+    assert all(isinstance(l, BasePromotion) for l in rf_artifact.stages)
+    rf_l1, _ = rf_ver1.promotions
+    rf_l3, rf_l4 = rf_ver2.promotions
 
     _check_obj(
         rf_l1,
@@ -105,9 +106,23 @@ def test_api(showcase):
                 type="model", name="rf", path="models/random-forest.pkl", virtual=False
             ),
             version="v1.2.3",
-            name="production",
+            stage="production",
             author=author,
             commit_hexsha=first_commit.hexsha,
+            deprecated_date=None,
+        ),
+        {"creation_date"},
+    )
+    _check_obj(
+        rf_l4,
+        dict(
+            artifact=dict(
+                type="model", name="rf", path="models/random-forest.pkl", virtual=False
+            ),
+            version="v1.2.4",
+            stage="production",
+            author=author,
+            commit_hexsha=second_commit.hexsha,
             deprecated_date=None,
         ),
         {"creation_date"},
@@ -119,21 +134,7 @@ def test_api(showcase):
                 type="model", name="rf", path="models/random-forest.pkl", virtual=False
             ),
             version="v1.2.4",
-            name="production",
-            author=author,
-            commit_hexsha=second_commit.hexsha,
-            deprecated_date=None,
-        ),
-        {"creation_date"},
-    )
-    _check_obj(
-        rf_l2,
-        dict(
-            artifact=dict(
-                type="model", name="rf", path="models/random-forest.pkl", virtual=False
-            ),
-            version="v1.2.4",
-            name="staging",
+            stage="staging",
             author=author,
             commit_hexsha=second_commit.hexsha,
             deprecated_date=None,

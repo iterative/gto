@@ -7,15 +7,20 @@ from pydantic import BaseModel
 
 from gto.index import Artifact
 
-from .base import BaseArtifact, BaseLabel, BaseManager, BaseRegistryState, BaseVersion
-from .constants import ACTION, LABEL, NAME, NUMBER, VERSION, Action
+from .base import (
+    BaseArtifact,
+    BaseManager,
+    BasePromotion,
+    BaseRegistryState,
+    BaseVersion,
+)
+from .constants import ACTION, NAME, NUMBER, STAGE, VERSION, Action
 from .exceptions import MissingArg, RefNotFound, UnknownAction
 
 ActionSign = {
     Action.REGISTER: "@",
     Action.DEPRECATE: "@!",
     Action.PROMOTE: "#",
-    # Action.DEMOTE: "#!",
 }
 
 
@@ -23,22 +28,22 @@ def name_tag(
     action: Action,
     name: str,
     version: Optional[str] = None,
-    label: Optional[str] = None,
+    stage: Optional[str] = None,
     repo: Optional[git.Repo] = None,
 ):
     if action in (Action.REGISTER, Action.DEPRECATE):
         return f"{name}{ActionSign[action]}{version}"
 
-    if action in (Action.PROMOTE,):  # Action.DEMOTE
+    if action in (Action.PROMOTE,):
         if repo is None:
             raise MissingArg(arg="repo")
         numbers = []
         for tag in repo.tags:
             parsed = parse_name(tag.name)
-            if parsed[ACTION] in (Action.PROMOTE,):  # Action.DEMOTE
+            if parsed[ACTION] in (Action.PROMOTE,):
                 numbers.append(parsed[NUMBER])
         new_number = max(numbers) + 1 if numbers else 1
-        return f"{name}{ActionSign[action]}{label}-{new_number}"
+        return f"{name}{ActionSign[action]}{stage}-{new_number}"
     raise UnknownAction(action=action)
 
 
@@ -55,15 +60,14 @@ def parse_name(name: str, raise_on_fail: bool = True):
             }
 
     # order does matter if you take into account ActionSign values
-    # for action in (Action.DEMOTE, Action.PROMOTE):
     for action in (Action.PROMOTE,):
         if ActionSign[action] in name:
-            name, label = name.split(ActionSign[action])
-            label, number = label.split("-")
+            name, stage = name.split(ActionSign[action])
+            stage, number = stage.split("-")
             return {
                 ACTION: action,
                 NAME: name,
-                LABEL: label,
+                STAGE: stage,
                 NUMBER: int(number),
             }
     if raise_on_fail:
@@ -75,7 +79,7 @@ class Tag(BaseModel):
     action: Action
     name: str
     version: Optional[str]
-    label: Optional[str]
+    stage: Optional[str]
     creation_date: datetime
     tag: git.Tag
 
@@ -95,7 +99,7 @@ def find(
     action: Union[Action, FrozenSet[Action]] = None,
     name: Optional[str] = None,
     version: Optional[str] = None,
-    label: Optional[str] = None,
+    stage: Optional[str] = None,
     repo: Optional[git.Repo] = None,
     sort: str = "by_time",
     tags: Optional[Iterable[git.Tag]] = None,
@@ -112,8 +116,8 @@ def find(
         tags = [t for t in tags if parse_name(t.name).get(NAME) == name]
     if version:
         tags = [t for t in tags if parse_name(t.name).get(VERSION) == version]
-    if label:
-        tags = [t for t in tags if parse_name(t.name).get(LABEL) == label]
+    if stage:
+        tags = [t for t in tags if parse_name(t.name).get(STAGE) == stage]
     if sort == "by_time":
         tags = sorted(tags, key=lambda t: t.tag.tagged_date)
     else:
@@ -143,7 +147,7 @@ def version_from_tag(artifact: Artifact, tag: git.Tag) -> BaseVersion:
     )
 
 
-def label_from_tag(artifact: BaseArtifact, tag: git.Tag) -> BaseLabel:
+def promotion_from_tag(artifact: BaseArtifact, tag: git.Tag) -> BasePromotion:
     mtag = parse_tag(tag)
     registered_version = artifact.find_version(commit_hexsha=tag.commit.hexsha)
     if registered_version:
@@ -163,10 +167,10 @@ def label_from_tag(artifact: BaseArtifact, tag: git.Tag) -> BaseLabel:
         )[-1]
         version_name = version.name  # type: ignore
         deprecated_date = version.creation_date  # type: ignore
-    return BaseLabel(
+    return BasePromotion(
         artifact=artifact.commits[tag.commit.hexsha],
         version=version_name,
-        name=mtag.label,
+        stage=mtag.stage,
         creation_date=mtag.creation_date,
         author=tag.tag.tagger.name,
         commit_hexsha=tag.commit.hexsha,
@@ -186,20 +190,7 @@ def index_tag(artifact: BaseArtifact, tag: git.Tag) -> BaseArtifact:
     if mtag.action == Action.DEPRECATE:
         artifact.find_version(mtag.version).deprecated_date = mtag.creation_date  # type: ignore
     if mtag.action == Action.PROMOTE:
-        artifact.labels.append(label_from_tag(artifact, tag))
-    # if (
-    #     mtag.action == Action.DEMOTE
-    # ):  # and obj.find_version(commit_hexsha=tag.commit.hexsha) is not None:
-    #     # this may "deprecate" incorrect version
-    #     # if you deprecated correct version after demotion
-    #     # TODO: now you can promote artifact to some env multiple times
-    #     # Then, if you'll try to `demote`, you should demote all promotions.
-    #     if mtag.label in artifact.latest_labels:
-    #         artifact.latest_labels[mtag.label].deprecated_date = mtag.creation_date  # type: ignore
-    #     else:
-    #         # this may be result of deprecated version
-    #         # or incorrect demotion tag
-    #         warnings.warn(f"Active label '{mtag.label}' not found")
+        artifact.add_promotion(promotion_from_tag(artifact, tag))
     return artifact
 
 
@@ -260,40 +251,32 @@ class TagVersionManager(TagManager):
         }
 
 
-class TagEnvManager(TagManager):
-    actions: FrozenSet[Action] = frozenset((Action.PROMOTE,))  # Action.DEMOTE
+class TagStageManager(TagManager):
+    actions: FrozenSet[Action] = frozenset((Action.PROMOTE,))
 
-    def promote(self, name, label, ref, message):
+    def promote(self, name, stage, ref, message):
         create_tag(
             self.repo,
-            name_tag(Action.PROMOTE, name, label=label, repo=self.repo),
+            name_tag(Action.PROMOTE, name, stage=stage, repo=self.repo),
             ref=ref,
             message=message,
         )
 
-    # def demote(self, name, label, message):
-    #     create_tag(
-    #         self.repo,
-    #         name_tag(Action.DEMOTE, name, label=label.name, repo=self.repo),
-    #         ref=label.commit_hexsha,
-    #         message=message,
-    #     )
-
     def check_ref(self, ref: str, state: BaseRegistryState):
         try:
             tag = self.repo.tags[ref]
-            _ = parse_name(ref)[LABEL]
+            _ = parse_name(ref)[STAGE]
             art_name = parse_name(ref)[NAME]
         except (KeyError, ValueError, IndexError):
             logging.warning(
-                "Provided ref doesn't exist or it is not a tag that promotes to an environment"
+                "Provided ref doesn't exist or it is not a tag that promotes to an stage"
             )
             return {}
         return {
-            name: label
+            name: promotion
             for name in state.artifacts
-            for label in state.artifacts[name].labels
+            for promotion in state.artifacts[name].stages
             if name == art_name
-            and label.commit_hexsha == tag.commit.hexsha
-            and label.creation_date == datetime.fromtimestamp(tag.tag.tagged_date)
+            and promotion.commit_hexsha == tag.commit.hexsha
+            and promotion.creation_date == datetime.fromtimestamp(tag.tag.tagged_date)
         }
