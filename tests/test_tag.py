@@ -21,5 +21,5 @@ def test_parse_name():
         name="path", version="v1", action=Action.DEPRECATE
     )
     assert parse_name(f"path{ActionSign[Action.PROMOTE]}stage-1") == dict(
-        name="path", action=Action.PROMOTE, label="stage", number=1
+        name="path", action=Action.PROMOTE, stage="stage", number=1
     )

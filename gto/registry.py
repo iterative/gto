@@ -20,7 +20,7 @@ from gto.index import RepoIndexManager
 class GitRegistry(BaseModel):
     repo: git.Repo
     version_manager: BaseManager
-    env_manager: BaseManager
+    stage_manager: BaseManager
     config: RegistryConfig
 
     class Config:
@@ -40,11 +40,9 @@ class GitRegistry(BaseModel):
 
         return cls(
             repo=repo,
-            version_manager=config.VERSION_MANAGERS_MAPPING[config.VERSION_BASE](
-                repo=repo
-            ),
-            env_manager=config.STAGE_MANAGERS_MAPPING[config.ENV_BASE](repo=repo),
             config=config,
+            version_manager=config.VERSION_MANAGER_CLS(repo=repo, config=config),
+            stage_manager=config.STAGE_MANAGER_CLS(repo=repo, config=config),
         )
 
     @property
@@ -57,13 +55,13 @@ class GitRegistry(BaseModel):
         state = BaseRegistryState(
             artifacts={
                 name: BaseArtifact(
-                    name=name, commits=index[name], versions=[], labels=[]
+                    name=name, commits=index[name], versions=[], stages=[]
                 )
                 for name in index
             }
         )
         state = self.version_manager.update_state(state)
-        state = self.env_manager.update_state(state)
+        state = self.stage_manager.update_state(state)
         state.sort()
         return state
 
@@ -123,13 +121,13 @@ class GitRegistry(BaseModel):
     def promote(
         self,
         name,
-        label,
+        stage,
         promote_version=None,
         promote_ref=None,
         name_version=None,
     ) -> BasePromotion:
-        """Assign label to specific artifact version"""
-        self.config.assert_env(label)
+        """Assign stage to specific artifact version"""
+        self.config.assert_stage(stage)
         if not (promote_version is None) ^ (promote_ref is None):
             raise ValueError("One and only one of (version, ref) must be specified.")
         if promote_ref:
@@ -149,27 +147,27 @@ class GitRegistry(BaseModel):
                 click.echo(
                     f"Registered new version '{version.name}' of '{name}' at commit '{promote_ref}'"
                 )
-        self.env_manager.promote(  # type: ignore
+        self.stage_manager.promote(  # type: ignore
             name,
-            label,
+            stage,
             ref=promote_ref,
-            message=f"Promoting {name} version {promote_version} to label {label}",
+            message=f"Promoting {name} version {promote_version} to stage {stage}",
         )
-        return self.state.find_artifact(name).latest_labels[label]
+        return self.state.find_artifact(name).promoted[stage]
 
     def check_ref(self, ref: str):
         "Find out what was registered/promoted in this ref"
         return {
             "version": self.version_manager.check_ref(ref, self.state),
-            "env": self.env_manager.check_ref(ref, self.state),
+            "stage": self.stage_manager.check_ref(ref, self.state),
         }
 
     def find_commit(self, name, version):
         return self.state.find_commit(name, version)
 
-    def which(self, name, label, raise_if_not_found=True):
-        """Return label active in specific env"""
-        return self.state.which(name, label, raise_if_not_found)
+    def which(self, name, stage, raise_if_not_found=True):
+        """Return stage active in specific stage"""
+        return self.state.which(name, stage, raise_if_not_found)
 
     def latest(self, name: str, include_deprecated: bool):
         """Return latest active version for artifact"""
@@ -184,10 +182,8 @@ class GitRegistry(BaseModel):
         """
         if in_use:
             return {
-                label
-                for o in self.state.artifacts.values()
-                for label in o.latest_labels
+                stage for o in self.state.artifacts.values() for stage in o.promoted
             }
         return self.config.stages or {
-            label for o in self.state.artifacts.values() for label in o.unique_labels
+            stage for o in self.state.artifacts.values() for stage in o.unique_stages
         }

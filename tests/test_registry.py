@@ -462,7 +462,7 @@ def test_registry_state_commit_branch(showcase):
     from gto.config import CONFIG  # pylint: disable=import-outside-toplevel
 
     CONFIG.VERSION_BASE = "commit"
-    CONFIG.ENV_BASE = "branch"
+    CONFIG.STAGE_BASE = "branch"
 
     path, repo, write_file, first_commit, second_commit = showcase
     reg = GitRegistry.from_repo(repo, CONFIG)

@@ -42,11 +42,11 @@ def test_api(showcase):
         ),
         {"creation_date", "promotions"},
     )
-    assert len(nn_artifact.labels) == 1
-    nn_label = nn_artifact.labels[0]
-    assert isinstance(nn_label, BasePromotion)
+    assert len(nn_artifact.stages) == 1
+    nn_promotion = nn_artifact.stages[0]
+    assert isinstance(nn_promotion, BasePromotion)
     _check_obj(
-        nn_label,
+        nn_promotion,
         dict(
             artifact=dict(
                 type="model", name="nn", path="models/neural-network.pkl", virtual=False
@@ -94,8 +94,8 @@ def test_api(showcase):
         {"creation_date", "promotions"},
     )
 
-    assert len(rf_artifact.labels) == 4
-    assert all(isinstance(l, BasePromotion) for l in rf_artifact.labels)
+    assert len(rf_artifact.stages) == 4
+    assert all(isinstance(l, BasePromotion) for l in rf_artifact.stages)
     rf_l1, _ = rf_ver1.promotions
     rf_l3, rf_l4 = rf_ver2.promotions
 

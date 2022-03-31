@@ -46,10 +46,10 @@ class RegistryConfig(BaseSettings):
     TYPE_ALLOWED: List[str] = []
     VERSION_BASE: str = TAG
     VERSION_CONVENTION: str = "numbers"
-    VERSION_REQUIRED_FOR_ENV: bool = True
-    ENV_BASE: str = TAG
-    ENV_ALLOWED: List[str] = []
-    ENV_BRANCH_MAPPING: Dict[str, str] = {}
+    VERSION_REQUIRED_FOR_STAGE: bool = True
+    STAGE_BASE: str = TAG
+    STAGE_ALLOWED: List[str] = []
+    STAGE_BRANCH_MAPPING: Dict[str, str] = {}
     LOG_LEVEL: str = "INFO"
     DEBUG: bool = False
     CONFIG_FILE: Optional[str] = CONFIG_FILE
@@ -68,43 +68,43 @@ class RegistryConfig(BaseSettings):
         return {"numbers": NumberedVersion, "semver": SemVer}
 
     @property
-    def VERSION_MANAGERS_MAPPING(self):
+    def VERSION_MANAGER_CLS(self):
         from .commit import CommitVersionManager
         from .tag import TagVersionManager
 
-        return {COMMIT: CommitVersionManager, TAG: TagVersionManager}
+        return {COMMIT: CommitVersionManager, TAG: TagVersionManager}[self.VERSION_BASE]
 
     @property
-    def STAGE_MANAGERS_MAPPING(self):
-        from .branch import BranchEnvManager
-        from .tag import TagEnvManager
+    def STAGE_MANAGER_CLS(self):
+        from .branch import BranchStageManager
+        from .tag import TagStageManager
 
-        return {TAG: TagEnvManager, BRANCH: BranchEnvManager}
+        return {TAG: TagStageManager, BRANCH: BranchStageManager}[self.STAGE_BASE]
 
-    def assert_env(self, name):
-        if not self.check_env(name):
+    def assert_stage(self, name):
+        if not self.check_stage(name):
             raise UnknownStage(name, self.stages)
 
-    def check_env(self, name):
+    def check_stage(self, name):
         return name in self.stages or not self.stages
 
     @property
     def stages(self) -> List[str]:
-        if self.ENV_BASE == TAG:
-            return self.ENV_ALLOWED
-        if self.ENV_BASE == BRANCH:
-            return list(self.ENV_BRANCH_MAPPING)
-        raise NotImplementedError("Unknown ENV_BASE")
+        if self.STAGE_BASE == TAG:
+            return self.STAGE_ALLOWED
+        if self.STAGE_BASE == BRANCH:
+            return list(self.STAGE_BRANCH_MAPPING)
+        raise NotImplementedError("Unknown STAGE_BASE")
 
-    def branch_to_env(self, branch_name):
-        if self.ENV_BRANCH_MAPPING:
-            return self.ENV_BRANCH_MAPPING[branch_name]
+    def branch_to_stage(self, branch_name):
+        if self.STAGE_BRANCH_MAPPING:
+            return self.STAGE_BRANCH_MAPPING[branch_name]
         return branch_name
 
-    def env_to_branch(self, env_name):
-        if self.ENV_BRANCH_MAPPING:
-            return {value: key for key, value in self.ENV_BRANCH_MAPPING.items()}[
-                env_name
+    def stage_to_branch(self, stage_name):
+        if self.STAGE_BRANCH_MAPPING:
+            return {value: key for key, value in self.STAGE_BRANCH_MAPPING.items()}[
+                stage_name
             ]
 
     class Config:

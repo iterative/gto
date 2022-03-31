@@ -4,6 +4,7 @@ from typing import Dict, FrozenSet, List, Optional, Union
 import git
 from pydantic import BaseModel
 
+from gto.config import RegistryConfig
 from gto.constants import Action
 from gto.index import Artifact, ArtifactCommits
 from gto.versions import NumberedVersion, SemVer
@@ -58,17 +59,17 @@ class BaseArtifact(BaseModel):
     versions: List[BaseVersion]
 
     @property
-    def labels(self):
+    def stages(self):
         return [l for v in self.versions for l in v.promotions]
 
     @property
-    def unique_labels(self):
-        return {l.stage for l in self.labels}
+    def unique_stages(self):
+        return {l.stage for l in self.stages}
 
     def __repr__(self) -> str:
         versions = ", ".join(f"'{v.name}'" for v in self.versions)
-        labels = ", ".join(f"'{l}'" for l in self.unique_labels)
-        return f"Artifact(versions=[{versions}], labels=[{labels}])"
+        stages = ", ".join(f"'{l}'" for l in self.unique_stages)
+        return f"Artifact(versions=[{versions}], stages=[{stages}])"
 
     def get_latest_version(self, include_deprecated=False) -> Optional[BaseVersion]:
         versions = sorted(
@@ -80,13 +81,13 @@ class BaseArtifact(BaseModel):
         return None
 
     @property
-    def latest_labels(self) -> Dict[str, BasePromotion]:
-        labels: Dict[str, BasePromotion] = {}
+    def promoted(self) -> Dict[str, BasePromotion]:
+        stages: Dict[str, BasePromotion] = {}
         for version in sorted(self.versions, key=lambda x: x.version, reverse=True):
-            label = version.stage
-            if label:
-                labels[label.stage] = labels.get(label.stage) or label
-        return labels
+            promotion = version.stage
+            if promotion:
+                stages[promotion.stage] = stages.get(promotion.stage) or promotion
+        return stages
 
     def add_promotion(self, promotion: BasePromotion):
         self.find_version(  # type: ignore
@@ -149,8 +150,8 @@ class BaseRegistryState(BaseModel):
         return art
 
     @property
-    def unique_labels(self):
-        return sorted({l for o in self.artifacts.values() for l in o.unique_labels})
+    def unique_stages(self):
+        return sorted({l for o in self.artifacts.values() for l in o.unique_stages})
 
     def find_commit(self, name, version):
         return (
@@ -159,19 +160,19 @@ class BaseRegistryState(BaseModel):
             .commit_hexsha
         )
 
-    def which(self, name, label, raise_if_not_found=True):
-        """Return label active in specific env"""
-        latest_labels = self.find_artifact(name).latest_labels
-        if label in latest_labels:
-            return latest_labels[label]
+    def which(self, name, stage, raise_if_not_found=True):
+        """Return stage active in specific stage"""
+        promoted = self.find_artifact(name).promoted
+        if stage in promoted:
+            return promoted[stage]
         if raise_if_not_found:
-            raise ValueError(f"Label {label} not found for {name}")
+            raise ValueError(f"Stage {stage} not found for {name}")
         return None
 
     def sort(self):
         for name in self.artifacts:
             self.artifacts[name].versions.sort(key=lambda x: (x.creation_date, x.name))
-            self.artifacts[name].labels.sort(
+            self.artifacts[name].stages.sort(
                 key=lambda x: (x.creation_date, x.version, x.stage)
             )
 
@@ -179,6 +180,7 @@ class BaseRegistryState(BaseModel):
 class BaseManager(BaseModel):
     repo: git.Repo
     actions: FrozenSet[Action]
+    config: RegistryConfig
 
     class Config:
         arbitrary_types_allowed = True
@@ -196,7 +198,7 @@ class BaseManager(BaseModel):
     # def deprecate(self, name, version):
     #     raise NotImplementedError
 
-    # def promote(self, name, label, ref, message):
+    # def promote(self, name, stage, ref, message):
     #     raise NotImplementedError
 
     def check_ref(self, ref: str, state: BaseRegistryState):

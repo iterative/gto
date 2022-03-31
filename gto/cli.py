@@ -7,7 +7,7 @@ import click
 from tabulate import tabulate_formats
 
 import gto
-from gto.constants import LABEL, NAME, PATH, REF, TYPE, VERSION
+from gto.constants import NAME, PATH, REF, STAGE, TYPE, VERSION
 from gto.exceptions import NotFound
 from gto.utils import format_echo, serialize
 
@@ -21,7 +21,7 @@ class ALIAS:
 
 arg_name = click.argument(NAME)
 arg_version = click.argument(VERSION)
-arg_label = click.argument(LABEL)
+arg_stage = click.argument(STAGE)
 arg_ref = click.argument(REF)
 option_repo = click.option(
     "-r", "--repo", default=".", help="Repository to use", show_default=True
@@ -79,9 +79,9 @@ option_ref = click.option(
 def cli():
     """\b
     Great Tool Ops. Turn your Git Repo into Artifact Registry:
-    * Index your artifacts and add enrichments
-    * Register artifact versions
-    * Promote artifacts to environments
+    * Index files in repo as artifacts to make them visible for others
+    * Register new versions of artifacts marking significant changes to them
+    * Promote versions to signal downstream systems to act
     * Act on new versions and promotions in CI
     """
 
@@ -172,23 +172,23 @@ def deprecate(repo: str, name: str, version: str):
 @gto_command()
 @option_repo
 @arg_name
-@arg_label
+@arg_stage
 @click.option(
     "--version",
     default=None,
     help="If you provide --ref, this will be used to name new version",
 )
 @click.option("--ref", default=None)
-def promote(repo: str, name: str, label: str, version: str, ref: str):
-    """Assign label to specific artifact version"""
+def promote(repo: str, name: str, stage: str, version: str, ref: str):
+    """Assign stage to specific artifact version"""
     if ref is not None:
         name_version = version
         promote_version = None
     else:
         name_version = None
         promote_version = version
-    label_ = gto.api.promote(repo, name, label, promote_version, ref, name_version)
-    click.echo(f"Promoted {name} version {label_.version} to label {label}")
+    promotion = gto.api.promote(repo, name, stage, promote_version, ref, name_version)
+    click.echo(f"Promoted {name} version {promotion.version} to stage {stage}")
 
 
 @gto_command()
@@ -229,14 +229,14 @@ def latest(
 @gto_command()
 @option_repo
 @arg_name
-@arg_label
+@arg_stage
 @option_path
 @option_ref
 @option_expected
-def which(repo: str, name: str, label: str, path: bool, ref: bool, expected: bool):
-    """Return version of artifact with specific label active"""
+def which(repo: str, name: str, stage: str, path: bool, ref: bool, expected: bool):
+    """Return version of artifact with specific stage active"""
     assert not (path and ref), "--path and --ref are mutually exclusive"
-    version = gto.api.find_active_label(repo, name, label)
+    version = gto.api.find_promotion(repo, name, stage)
     if version:
         if path:
             click.echo(version.artifact.path)
@@ -245,9 +245,9 @@ def which(repo: str, name: str, label: str, path: bool, ref: bool, expected: boo
         else:
             click.echo(version.version)
     elif expected:
-        raise NotFound("Nothing is promoted to this env right now")
+        raise NotFound("Nothing is promoted to this stage right now")
     else:
-        click.echo(f"No version of '{name}' with label '{label}' active")
+        click.echo(f"No version of '{name}' with stage '{stage}' active")
 
 
 @gto_command(hidden=True)
@@ -348,7 +348,7 @@ def history(repo: str, name: str, format: str, format_table: str, sort: str):
     "--in-use",
     is_flag=True,
     default=False,
-    help="Show only in-use labels",
+    help="Show only in-use stages",
     show_default=True,
 )
 def print_stages(repo: str, in_use: bool):

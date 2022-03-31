@@ -11,7 +11,7 @@ TYPE = "type"
 NAME = "name"
 PATH = "path"
 VERSION = "version"
-LABEL = "label"
+STAGE = "stage"
 NUMBER = "number"
 
 

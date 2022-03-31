@@ -77,16 +77,18 @@ def test_register(repo_with_artifact):
 
 def test_promote(repo_with_artifact):
     repo, name = repo_with_artifact
-    env = "staging"
-    gto.api.promote(repo.working_dir, name, env, promote_ref="HEAD", name_version="v1")
-    label = gto.api.find_active_label(repo.working_dir, name, env)
+    stage = "staging"
+    gto.api.promote(
+        repo.working_dir, name, stage, promote_ref="HEAD", name_version="v1"
+    )
+    promotion = gto.api.find_promotion(repo.working_dir, name, stage)
     author = repo.commit().author.name
     _check_obj(
-        label,
+        promotion,
         dict(
             artifact=dict(type="new-type", name=name, path="new/path", virtual=True),
             version="v1",
-            stage=env,
+            stage=stage,
             author=author,
             commit_hexsha=repo.commit().hexsha,
         ),
