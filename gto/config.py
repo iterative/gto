@@ -75,7 +75,7 @@ class RegistryConfig(BaseSettings):
         return {COMMIT: CommitVersionManager, TAG: TagVersionManager}
 
     @property
-    def ENV_MANAGERS_MAPPING(self):
+    def STAGE_MANAGERS_MAPPING(self):
         from .branch import BranchEnvManager
         from .tag import TagEnvManager
 

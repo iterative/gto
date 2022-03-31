@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 from typing import Dict, FrozenSet
 
 from git import BadName
@@ -19,7 +20,7 @@ class CommitVersionManager(BaseManager):
                     BaseVersion(
                         artifact=index_artifact,
                         name=hexsha,
-                        creation_date=commit.committed_datetime,
+                        creation_date=datetime.fromtimestamp(commit.committed_date),
                         author=commit.author.name,
                         commit_hexsha=hexsha,
                     )

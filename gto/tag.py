@@ -190,11 +190,7 @@ def index_tag(artifact: BaseArtifact, tag: git.Tag) -> BaseArtifact:
     if mtag.action == Action.DEPRECATE:
         artifact.find_version(mtag.version).deprecated_date = mtag.creation_date  # type: ignore
     if mtag.action == Action.PROMOTE:
-        (
-            artifact.find_version(  # type: ignore
-                commit_hexsha=mtag.tag.commit.hexsha, raise_if_not_found=True
-            ).promotions.append(label_from_tag(artifact, tag))
-        )
+        artifact.add_promotion(label_from_tag(artifact, tag))
     return artifact
 
 

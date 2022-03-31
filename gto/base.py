@@ -88,6 +88,11 @@ class BaseArtifact(BaseModel):
                 labels[label.stage] = labels.get(label.stage) or label
         return labels
 
+    def add_promotion(self, promotion: BasePromotion):
+        self.find_version(  # type: ignore
+            name=promotion.version, skip_deprecated=False
+        ).promotions.append(promotion)
+
     def find_version(
         self,
         name: str = None,
@@ -116,6 +121,19 @@ class BaseArtifact(BaseModel):
                 skip_deprecated=skip_deprecated,
             )
         return versions[0] if versions else None
+
+    def find_version_at_commit(
+        self, commit_hexsha: str, latest_datetime: datetime = None
+    ):
+        return [
+            v
+            for v in self.find_version(  # type: ignore
+                commit_hexsha=commit_hexsha,
+                raise_if_not_found=True,
+                allow_multiple=True,
+            )
+            if (v.creation_date <= latest_datetime if latest_datetime else True)  # type: ignore
+        ][-1]
 
 
 class BaseRegistryState(BaseModel):

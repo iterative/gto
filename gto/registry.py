@@ -43,7 +43,7 @@ class GitRegistry(BaseModel):
             version_manager=config.VERSION_MANAGERS_MAPPING[config.VERSION_BASE](
                 repo=repo
             ),
-            env_manager=config.ENV_MANAGERS_MAPPING[config.ENV_BASE](repo=repo),
+            env_manager=config.STAGE_MANAGERS_MAPPING[config.ENV_BASE](repo=repo),
             config=config,
         )
 

@@ -1,5 +1,6 @@
 # pylint: disable=no-self-argument, no-else-return, unused-argument, no-self-use, unused-import
 import logging
+from datetime import datetime
 from typing import Dict, FrozenSet, List
 
 import git
@@ -41,7 +42,7 @@ class BranchEnvManager(BaseManager):
                         env = CONFIG.branch_to_env(branch.name)
                         if env is None:
                             continue
-                        state.artifacts[name].labels.append(
+                        state.artifacts[name].add_promotion(
                             BasePromotion(
                                 artifact=version.artifact,
                                 version=version.name,
@@ -64,12 +65,14 @@ class BranchEnvManager(BaseManager):
                         env = CONFIG.branch_to_env(branch.name)
                         if env is None:
                             continue
-                        state.artifacts[name].labels.append(
+                        state.artifacts[name].add_promotion(
                             BasePromotion(
                                 artifact=index_artifact,
                                 version=version,
                                 stage=env,
-                                creation_date=commit.committed_date,
+                                creation_date=datetime.fromtimestamp(
+                                    commit.committed_date
+                                ),
                                 author=commit.author.name,
                                 commit_hexsha=commit.hexsha,
                                 deprecated_date=None,
