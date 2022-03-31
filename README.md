@@ -3,7 +3,7 @@
 Great Tool Ops. Turn your Git Repo into Artifact Registry:
 * Index files in repo as artifacts to make them visible for others
 * Register new versions of artifacts marking significant changes to them
-* Promote versions to environments to signal downstream systems to act
+* Promote versions to signal downstream systems to act
 * Act on new versions and promotions in CI
 * [WIP] Add enrichments that will add more information about the artifacts
 
@@ -33,7 +33,7 @@ Options:
 You could also modify `artifacts.yaml` file directly.
 
 There are two types of artifacts in GTO:
-1. Files/folders committed to the repo. When you register a new version or promote it to env, Git guarantees that it's immutable. You can return to your repo a year later and be able to get 100% the same artifact by providing the same version.
+1. Files/folders committed to the repo. When you register a new version or promote it to stage, Git guarantees that it's immutable. You can return to your repo a year later and be able to get 100% the same artifact by providing the same version.
 2. `Virtual` artifacts. This could be an external path, e.g. `s3://mybucket/myfile` or a local path if the file wasn't committed (as in case with DVC). In this case GTO can't pin the current physical state of the artifact and guarantee it's immutability. If `s3://mybucket/myfile` changes, you won't have any way neither retrieve, nor understand it's different now than it was before when you registered that artifact version.
 
 In future versions, we will add enrichments (useful information other tools like DVC and MLEM can provide about the artifacts). This will allow treating files versioned with DVC and DVC PL outputs as usual artifacts instead `virtual` ones.
@@ -62,13 +62,13 @@ If you want to deprecate specific version, use `gto deprecate`.
 
 ## Promoting
 
-You could also promote a specific artifact version to an environment. You can use that to signal downstream systems to act - for example, redeploy a ML model (your artifact) or update the config file (your artifact).
+You could also promote a specific artifact version to stage. You can use that to signal downstream systems to act - for example, redeploy a ML model (your artifact) or update the config file (your artifact).
 
 ```
 $ gto promote simple-nn prod
 
 $ gto promote --help
-Usage: gto promote [OPTIONS] NAME LABEL
+Usage: gto promote [OPTIONS] NAME STAGE
 
   Assign label to specific artifact version
 
@@ -90,7 +90,7 @@ $ cd gto-example
 
 ### Show the actual state
 
-This is the actual state of the registry: all artifacts, their latest versions, and what is promoted to envs right now.
+This is the actual state of the registry: all artifacts, their latest versions, and what is promoted to stages right now.
 
 ```
 $ gto show

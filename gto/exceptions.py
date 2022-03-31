@@ -108,19 +108,19 @@ class VersionIsOld(GTOException):
         super().__init__(self.message)
 
 
-class UnknownEnvironment(GTOException):
-    _message = "Environment '{env}' is not present in your config file. Allowed envs are: {envs}."
+class UnknownStage(GTOException):
+    _message = "Stage '{stage}' is not present in your config file. Allowed stages are: {stages}."
 
-    def __init__(self, env, envs) -> None:
-        self.message = self._message.format(env=env, envs=envs)
+    def __init__(self, stage, stages) -> None:
+        self.message = self._message.format(stage=stage, stages=stages)
         super().__init__(self.message)
 
 
-class NoActiveLabel(GTOException):
-    _message = "No active label '{label}' was found for '{name}'"
+class NoActivePromotion(GTOException):
+    _message = "No version in stage '{stage}' was found for '{name}'"
 
-    def __init__(self, label, name) -> None:
-        self.message = self._message.format(label=label, name=name)
+    def __init__(self, stage, name) -> None:
+        self.message = self._message.format(stage=stage, name=name)
         super().__init__(self.message)
 
 

@@ -30,7 +30,7 @@ def init_showcase_numbers(empty_git_repo: Tuple[git.Repo, Callable]):
         CONFIG_FILE,
         """
         version_base: tag
-        env_base: tag
+        stage_base: tag
         version_convention: numbers
         """,
     )
@@ -46,7 +46,7 @@ def init_showcase_semver(empty_git_repo: Tuple[git.Repo, Callable]):
         CONFIG_FILE,
         """
         version_base: tag
-        env_base: tag
+        stage_base: tag
         version_convention: semver
         """,
     )
@@ -89,7 +89,7 @@ def showcase(
 
     gto.api.promote(path, "nn", "staging", promote_version=nn_vname)
     gto.api.promote(path, "rf", "production", promote_version=rf_vname)
-    sleep(1)  # this is needed to ensure right order of labels in later checks
+    sleep(1)  # this is needed to ensure right order of promotions in later checks
     # the problem is git tags doesn't have miliseconds precision, so we need to wait a bit
     gto.api.promote(path, "rf", "staging", promote_ref="HEAD")
     sleep(1)

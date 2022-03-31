@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 from typing import Dict, FrozenSet
 
 from git import BadName
@@ -8,7 +9,7 @@ from .constants import Action
 
 
 class CommitVersionManager(BaseManager):
-    actions: FrozenSet[Action] = frozenset((Action.PROMOTE,))  # Action.DEMOTE
+    actions: FrozenSet[Action] = frozenset((Action.PROMOTE,))
 
     def update_state(self, state: BaseRegistryState) -> BaseRegistryState:
         # each commit is a version if artifact is indexed in that commit
@@ -19,7 +20,7 @@ class CommitVersionManager(BaseManager):
                     BaseVersion(
                         artifact=index_artifact,
                         name=hexsha,
-                        creation_date=commit.committed_datetime,
+                        creation_date=datetime.fromtimestamp(commit.committed_date),
                         author=commit.author.name,
                         commit_hexsha=hexsha,
                     )

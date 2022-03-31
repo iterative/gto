@@ -11,7 +11,7 @@ TYPE = "type"
 NAME = "name"
 PATH = "path"
 VERSION = "version"
-LABEL = "label"
+STAGE = "stage"
 NUMBER = "number"
 
 
@@ -19,7 +19,6 @@ class Action(Enum):
     REGISTER = "register"
     DEPRECATE = "deprecate"
     PROMOTE = "promote"
-    # DEMOTE = "demote"
 
 
 class VersionPart(Enum):
