@@ -151,8 +151,8 @@ def _show_versions(
     """List versions of artifact"""
     reg = GitRegistry.from_repo(repo)
     if raw:
-        return reg.state.artifacts[name].versions
-    versions = [v.dict_status() for v in reg.state.artifacts[name].versions]
+        return reg.state.find_artifact(name).versions
+    versions = [v.dict_status() for v in reg.state.find_artifact(name).versions]
     if not table:
         return versions
 
