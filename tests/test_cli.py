@@ -4,7 +4,7 @@ from typing import Callable, Tuple
 import git
 from click.testing import CliRunner
 
-from gto.cli import latest, show, which
+from gto.cli import latest, show_registry, which
 
 
 def _check_successful_cmd(cmd: Callable, args: list, expected_stdout: str):
@@ -18,7 +18,7 @@ def _check_successful_cmd(cmd: Callable, args: list, expected_stdout: str):
 def test_show(empty_git_repo: Tuple[git.Repo, Callable]):
     repo, write_file = empty_git_repo
     _check_successful_cmd(
-        show,
+        show_registry,
         ["-r", repo.working_dir],
         "No tracked artifacts detected in the current workspace\n",
     )

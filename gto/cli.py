@@ -9,7 +9,7 @@ from tabulate import tabulate_formats
 import gto
 from gto.constants import NAME, PATH, REF, STAGE, TYPE, VERSION
 from gto.exceptions import NotFound
-from gto.utils import format_echo, serialize
+from gto.utils import format_echo, make_ready_to_serialize
 
 TABLE = "table"
 
@@ -42,6 +42,13 @@ option_format_df = click.option(
     type=click.Choice([TABLE, "json", "yaml"], case_sensitive=False),
     show_default=True,
 )
+option_format_table = click.option(
+    "-ft",
+    "--format-table",
+    type=click.Choice(tabulate_formats),
+    default="fancy_outline",
+    show_default=True,
+)
 option_name = click.option(
     "--name", "-n", default=None, help="Artifact name", show_default=True
 )
@@ -50,13 +57,6 @@ option_sort = click.option(
     "-s",
     default="desc",
     help="Desc for recent first, Asc for older first",
-    show_default=True,
-)
-option_format_table = click.option(
-    "-ft",
-    "--format-table",
-    type=click.Choice(tabulate_formats),
-    default="fancy_outline",
     show_default=True,
 )
 option_expected = click.option(
@@ -115,6 +115,49 @@ def gto_command(*args, **kwargs):
         return cli.command(*args, **kwargs)(verbose_option(func))
 
     return decorator
+
+
+@gto_command()
+@click.argument("repo", default=".")
+@click.option("--rev", default=None, help="Repo revision", show_default=True)
+@click.option("--type", default=None, help="Artifact type to list", show_default=True)
+@click.option(
+    "--json",
+    is_flag=True,
+    default=False,
+    help="Print output in json format",
+    show_default=True,
+)
+@click.option(
+    "--table",
+    is_flag=True,
+    default=False,
+    help="Print output in table format",
+    show_default=True,
+)
+@option_format_table
+def ls(repo, rev, type, json, table, format_table):
+    """\b
+    List all artifacts in the repository
+    """
+    assert not (json and table), "Only one of --json and --table can be used"
+    if json:
+        click.echo(format_echo(gto.api.ls(repo, rev, type), "json"))
+    elif table:
+        click.echo(
+            format_echo(
+                [gto.api.ls(repo, rev, type), "keys"],
+                "table",
+                format_table,
+                if_empty="No artifacts found",
+            )
+        )
+    else:
+        click.echo(
+            format_echo(
+                [artifact["name"] for artifact in gto.api.ls(repo, rev, type)], "lines"
+            )
+        )
 
 
 @gto_command()
@@ -274,9 +317,29 @@ def check_ref(repo: str, ref: str, format: str):
 
 @gto_command()
 @option_repo
+@click.argument("object", default="registry")
 @option_format_df
 @option_format_table
-def show(repo: str, format: str, format_table: str):
+def show(repo: str, object: str, format: str, format_table: str):
+    """Show current registry state or specific artifact"""
+    # TODO: make proper name resolving?
+    # e.g. querying artifact named "registry" with artifact/registry
+    if format == TABLE:
+        format_echo(
+            gto.api.show(repo, object=object, table=True),
+            format=format,
+            format_table=format_table,
+            if_empty="Nothing found in the current workspace",
+        )
+    else:
+        format_echo(gto.api.show(repo, object=object, table=False), format=format)
+
+
+@gto_command(hidden=True)
+@option_repo
+@option_format_df
+@option_format_table
+def show_registry(repo: str, format: str, format_table: str):
     """Show current registry state"""
     if format == TABLE:
         format_echo(
@@ -287,6 +350,46 @@ def show(repo: str, format: str, format_table: str):
         )
     else:
         format_echo(gto.api.show(repo, table=False), format=format)
+
+
+@gto_command(hidden=True)
+@option_repo
+@click.argument("name")
+@click.option(
+    "--json",
+    is_flag=True,
+    default=False,
+    help="Print output in json format",
+    show_default=True,
+)
+@click.option(
+    "--table",
+    is_flag=True,
+    default=False,
+    help="Print output in table format",
+    show_default=True,
+)
+@option_format_table
+def show_versions(repo, name, json, table, format_table):
+    """\b
+    List all artifact versions in the repository
+    """
+    # TODO: add sort?
+    assert not (json and table), "Only one of --json and --table can be used"
+    versions = gto.api._show_versions(repo, name)  # pylint: disable=protected-access
+    if json:
+        click.echo(format_echo(versions, "json"))
+    elif table:
+        click.echo(
+            format_echo(
+                versions,
+                "table",
+                format_table,
+                if_empty="No versions found",
+            )
+        )
+    else:
+        click.echo(format_echo([v["name"] for v in versions], "lines"))
 
 
 @gto_command()
@@ -364,7 +467,7 @@ def print_stages(repo: str, in_use: bool):
 @option_format
 def print_state(repo: str, format: str):
     """Technical cmd: Print current registry state"""
-    state = serialize(
+    state = make_ready_to_serialize(
         gto.api._get_state(repo).dict()  # pylint: disable=protected-access
     )
     format_echo(state, format)

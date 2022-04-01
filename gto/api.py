@@ -28,6 +28,22 @@ def get_stages(repo: Union[str, Repo], in_use: bool = False):
     return GitRegistry.from_repo(repo).get_stages(in_use=in_use)
 
 
+def ls(repo: Union[str, Repo], ref: str = None, type: str = None):
+    """List artifacts of given type"""
+    if ref:
+        index = RepoIndexManager.from_repo(repo).get_commit_index(ref)
+    else:
+        index = FileIndexManager.from_path(repo).get_index()
+    artifacts = index.dict()["state"]
+    if type:
+        artifacts = {
+            name: artifact
+            for name, artifact in artifacts.items()
+            if artifact["type"] == type
+        }
+    return list(artifacts.values())
+
+
 def add(repo: Union[str, Repo], type: str, name: str, path: str, virtual: bool = False):
     """Add an artifact to the Index"""
     return init_index_manager(path=repo).add(type, name, path, virtual)
@@ -97,7 +113,13 @@ def check_ref(repo: Union[str, Repo], ref: str):
     }
 
 
-def show(repo: Union[str, Repo], table: bool = False):
+def show(repo: Union[str, Repo], object: str = "registry", table: bool = False):
+    if object == "registry":
+        return _show_registry(repo, table=table)
+    return _show_versions(repo, name=object, table=table)
+
+
+def _show_registry(repo: Union[str, Repo], table: bool = False):
     """Show current registry state"""
 
     reg = GitRegistry.from_repo(repo)
@@ -121,6 +143,31 @@ def show(repo: Union[str, Repo], table: bool = False):
     ]
     headers = ["name", "version"] + [f"stage/{e}" for e in stages]
     return result, headers
+
+
+def _show_versions(
+    repo: Union[str, Repo], name: str, raw: bool = False, table: bool = False
+):
+    """List versions of artifact"""
+    reg = GitRegistry.from_repo(repo)
+    if raw:
+        return reg.state.find_artifact(name).versions
+    versions = [v.dict_status() for v in reg.state.find_artifact(name).versions]
+    if not table:
+        return versions
+
+    first_keys = ["artifact", "name", "stage"]
+    versions_ = []
+    for v in versions:
+        v["artifact"] = v["artifact"]["name"]
+        v["stage"] = v["stage"]["stage"]
+        v = OrderedDict(
+            [(key, v[key]) for key in first_keys]
+            + [(key, v[key]) for key in v if key not in first_keys]
+        )
+        v["commit_hexsha"] = v["commit_hexsha"][:7]
+        versions_.append(v)
+    return versions_, "keys"
 
 
 def audit_registration(
