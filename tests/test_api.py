@@ -1,5 +1,4 @@
 """TODO: add more tests for API"""
-from time import sleep
 from typing import Callable, Tuple
 
 import git
@@ -92,53 +91,5 @@ def test_promote(repo_with_artifact):
             author=author,
             commit_hexsha=repo.commit().hexsha,
         ),
-        {"creation_date", "deprecated_date", "promotions"},
+        {"creation_date", "promotions"},
     )
-
-
-def test_deprecate_show_audit(showcase):
-    """Test that show/audit don't break after deprecating"""
-    (
-        path,
-        repo,
-        write_file,  # pylint: disable=unused-variable
-        first_commit,  # pylint: disable=unused-variable
-        second_commit,  # pylint: disable=unused-variable
-    ) = showcase
-
-    gto.api.show(path)
-    gto.api.audit_registration(path)
-    gto.api.audit_promotion(path)
-
-    gto.api.deprecate(path, "rf", "v1.2.3")
-    gto.api.show(path)
-    gto.api.audit_registration(path)
-    gto.api.audit_promotion(path)
-
-    gto.api.deprecate(repo, "nn", "v0.0.1")
-    gto.api.show(repo)
-    gto.api.audit_registration(repo)
-    gto.api.audit_promotion(repo)
-
-    gto.api.deprecate(repo, "rf", "v1.2.4")
-    gto.api.show(repo)
-    gto.api.audit_registration(repo)
-    gto.api.audit_promotion(repo)
-
-    assert gto.api.find_latest_version(repo, "nn") is None
-    assert (
-        gto.api.find_latest_version(repo, "nn", include_deprecated=True).name
-        == "v0.0.1"
-    )
-
-
-def test_twice_deprecated(repo_with_artifact):
-    repo, name = repo_with_artifact
-    gto.api.promote(repo, name, "prod", promote_ref="HEAD")
-    sleep(1)
-    gto.api.deprecate(repo, name, "v1")
-    sleep(1)
-    gto.api.promote(repo, name, "prod", promote_ref="HEAD")
-    sleep(1)
-    gto.api.deprecate(repo, name, "v2")
-    gto.api.show(repo)

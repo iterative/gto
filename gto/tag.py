@@ -19,7 +19,6 @@ from .exceptions import MissingArg, RefNotFound, UnknownAction
 
 ActionSign = {
     Action.REGISTER: "@",
-    Action.DEPRECATE: "@!",
     Action.PROMOTE: "#",
 }
 
@@ -31,10 +30,10 @@ def name_tag(
     stage: Optional[str] = None,
     repo: Optional[git.Repo] = None,
 ):
-    if action in (Action.REGISTER, Action.DEPRECATE):
+    if action == Action.REGISTER:
         return f"{name}{ActionSign[action]}{version}"
 
-    if action in (Action.PROMOTE,):
+    if action == Action.PROMOTE:
         if repo is None:
             raise MissingArg(arg="repo")
         numbers = []
@@ -49,27 +48,23 @@ def name_tag(
 
 def parse_name(name: str, raise_on_fail: bool = True):
 
-    # order does matter if you take into account ActionSign values
-    for action in (Action.DEPRECATE, Action.REGISTER):
-        if ActionSign[action] in name:
-            name, version = name.split(ActionSign[action])
-            return {
-                ACTION: action,
-                NAME: name,
-                VERSION: version,
-            }
+    if ActionSign[Action.REGISTER] in name:
+        name, version = name.split(ActionSign[Action.REGISTER])
+        return {
+            ACTION: Action.REGISTER,
+            NAME: name,
+            VERSION: version,
+        }
 
-    # order does matter if you take into account ActionSign values
-    for action in (Action.PROMOTE,):
-        if ActionSign[action] in name:
-            name, stage = name.split(ActionSign[action])
-            stage, number = stage.split("-")
-            return {
-                ACTION: action,
-                NAME: name,
-                STAGE: stage,
-                NUMBER: int(number),
-            }
+    if ActionSign[Action.PROMOTE] in name:
+        name, stage = name.split(ActionSign[Action.PROMOTE])
+        stage, number = stage.split("-")
+        return {
+            ACTION: Action.PROMOTE,
+            NAME: name,
+            STAGE: stage,
+            NUMBER: int(number),
+        }
     if raise_on_fail:
         raise ValueError(f"Unknown tag name: {name}")
     return {}
@@ -149,32 +144,16 @@ def version_from_tag(artifact: Artifact, tag: git.Tag) -> BaseVersion:
 
 def promotion_from_tag(artifact: BaseArtifact, tag: git.Tag) -> BasePromotion:
     mtag = parse_tag(tag)
-    registered_version = artifact.find_version(commit_hexsha=tag.commit.hexsha)
-    if registered_version:
-        version = None
-        deprecated_date = None
-        version_name = registered_version.name  # type: ignore
-    else:
-        deprecated_versions = artifact.find_version(
-            commit_hexsha=tag.commit.hexsha,
-            skip_deprecated=False,
-            raise_if_not_found=True,
-            allow_multiple=True,
-        )
-        version = sorted(
-            [v for v in deprecated_versions if v.creation_date <= mtag.creation_date],  # type: ignore
-            key=lambda v: v.creation_date,  # type: ignore
-        )[-1]
-        version_name = version.name  # type: ignore
-        deprecated_date = version.creation_date  # type: ignore
+    version = artifact.find_version(
+        commit_hexsha=tag.commit.hexsha, raise_if_not_found=True
+    )
     return BasePromotion(
         artifact=artifact.commits[tag.commit.hexsha],
-        version=version_name,
+        version=version.name,  # type: ignore
         stage=mtag.stage,
         creation_date=mtag.creation_date,
         author=tag.tag.tagger.name,
         commit_hexsha=tag.commit.hexsha,
-        deprecated_date=deprecated_date,
     )
 
 
@@ -187,8 +166,6 @@ def index_tag(artifact: BaseArtifact, tag: git.Tag) -> BaseArtifact:
         return artifact
     if mtag.action == Action.REGISTER:
         artifact.versions.append(version_from_tag(artifact.commits[hexsha], tag))
-    if mtag.action == Action.DEPRECATE:
-        artifact.find_version(mtag.version).deprecated_date = mtag.creation_date  # type: ignore
     if mtag.action == Action.PROMOTE:
         artifact.add_promotion(promotion_from_tag(artifact, tag))
     return artifact
@@ -205,7 +182,7 @@ class TagManager(BaseManager):  # pylint: disable=abstract-method
 
 
 class TagVersionManager(TagManager):
-    actions: FrozenSet[Action] = frozenset((Action.REGISTER, Action.DEPRECATE))
+    actions: FrozenSet[Action] = frozenset((Action.REGISTER,))
 
     def register(self, name, version, ref, message):
         create_tag(
@@ -213,24 +190,6 @@ class TagVersionManager(TagManager):
             name_tag(Action.REGISTER, name, version=version, repo=self.repo),
             ref=ref,
             message=message,
-        )
-
-    def deprecate(self, name, version):
-        """Unregister artifact version"""
-        # TODO: search in self, move to base
-        tags = find(
-            action=Action.REGISTER,
-            name=name,
-            version=version,
-            repo=self.repo,
-        )
-        if len(tags) != 1:
-            raise ValueError(f"Found {len(tags)} git tags for {name} version {version}")
-        create_tag(
-            self.repo,
-            name_tag(Action.DEPRECATE, name, version=version, repo=self.repo),
-            ref=tags[0].commit.hexsha,
-            message=f"Unregistering {name} version {version}",
         )
 
     def check_ref(self, ref: str, state: BaseRegistryState):

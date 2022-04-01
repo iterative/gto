@@ -73,31 +73,22 @@ class GitRegistry(BaseModel):
         self.index.assert_existence(name, ref)
         found_artifact = self.state.find_artifact(name)
         # check that this commit don't have a version already
-        found_version = found_artifact.find_version(
-            commit_hexsha=ref, skip_deprecated=True
-        )
+        found_version = found_artifact.find_version(commit_hexsha=ref)
         if found_version is not None:
             raise VersionExistsForCommit(name, found_version.name)
         # if version name is provided, use it
         if version:
-            if (
-                found_artifact.find_version(name=version, skip_deprecated=False)
-                is not None
-            ):
+            if found_artifact.find_version(name=version) is not None:
                 raise VersionAlreadyRegistered(version)
             if found_artifact.versions:
-                latest_ver = found_artifact.get_latest_version(
-                    include_deprecated=True
-                ).name
+                latest_ver = found_artifact.get_latest_version().name
                 if self.config.versions_class(version) < latest_ver:
                     raise VersionIsOld(latest=latest_ver, suggested=version)
         # if version name wasn't provided but there were some, bump the last one
         elif found_artifact.versions:
             version = (
                 self.config.versions_class(
-                    self.state.find_artifact(name)
-                    .get_latest_version(include_deprecated=True)
-                    .name
+                    self.state.find_artifact(name).get_latest_version().name
                 )
                 .bump(**({"part": bump} if bump else {}))
                 .version
@@ -114,9 +105,6 @@ class GitRegistry(BaseModel):
         return self.state.find_artifact(name).find_version(
             name=version, raise_if_not_found=True
         )
-
-    def deprecate(self, name, version):
-        return self.version_manager.deprecate(name, version)
 
     def promote(
         self,
@@ -169,15 +157,13 @@ class GitRegistry(BaseModel):
         """Return stage active in specific stage"""
         return self.state.which(name, stage, raise_if_not_found)
 
-    def latest(self, name: str, include_deprecated: bool):
+    def latest(self, name: str):
         """Return latest active version for artifact"""
-        return self.state.find_artifact(name).get_latest_version(
-            include_deprecated=include_deprecated
-        )
+        return self.state.find_artifact(name).get_latest_version()
 
     def get_stages(self, in_use: bool = False):
         """Return list of stages in the registry.
-        If "in_use", return only those which are in use (skip deprecated).
+        If "in_use", return only those which are in use for non-deprecated artifacts.
         If not, return all available: either all allowed or all ever used.
         """
         if in_use:

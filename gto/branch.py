@@ -47,7 +47,6 @@ class BranchStageManager(BaseManager):
                                 creation_date=version.creation_date,
                                 author=version.author,
                                 commit_hexsha=version.commit_hexsha,
-                                deprecated_date=version.deprecated_date,
                             )
                         )
         else:
@@ -72,7 +71,6 @@ class BranchStageManager(BaseManager):
                                 ),
                                 author=commit.author.name,
                                 commit_hexsha=commit.hexsha,
-                                deprecated_date=None,
                             )
                         )
         return state

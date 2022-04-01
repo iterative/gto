@@ -58,8 +58,6 @@ Options:
   --help                 Show this message and exit.
 ```
 
-If you want to deprecate specific version, use `gto deprecate`.
-
 ## Promoting
 
 You could also promote a specific artifact version to stage. You can use that to signal downstream systems to act - for example, redeploy a ML model (your artifact) or update the config file (your artifact).

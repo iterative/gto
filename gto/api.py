@@ -63,11 +63,6 @@ def register(
     )
 
 
-def deprecate(repo: Union[str, Repo], name: str, version: str):
-    """Unregister artifact version"""
-    return GitRegistry.from_repo(repo).deprecate(name, version)
-
-
 def promote(
     repo: Union[str, Repo],
     name: str,
@@ -87,12 +82,11 @@ def parse_tag(name: str):
 
 
 def find_latest_version(
-    repo: Union[str, Repo], name: str, include_deprecated: bool = False
+    repo: Union[str, Repo],
+    name: str,
 ):
     """Return latest version for artifact"""
-    return GitRegistry.from_repo(repo).latest(
-        name, include_deprecated=include_deprecated
-    )
+    return GitRegistry.from_repo(repo).latest(name)
 
 
 def find_promotion(repo: Union[str, Repo], name: str, stage: str):
@@ -184,7 +178,6 @@ def audit_registration(
             timestamp=v.creation_date,
             name=o.name,
             version=v.name,
-            deprecated=v.deprecated_date,
             commit=v.commit_hexsha[:7],
             author=v.author,
         )
@@ -219,7 +212,6 @@ def audit_promotion(
             name=o.name,
             version=l.version,
             stage=l.stage,
-            deprecated=l.deprecated_date,
             commit=l.commit_hexsha[:7],
             author=l.author,
         )
@@ -273,7 +265,6 @@ def history(repo: str, artifact: str = None, sort: str = "desc", table: bool = F
         "event",
         VERSION,
         STAGE,
-        "deprecated",
         "commit",
         "author",
     ]

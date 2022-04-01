@@ -205,16 +205,6 @@ def register(repo: str, name: str, ref: str, version: str, bump: str):
 @gto_command()
 @option_repo
 @arg_name
-@arg_version
-def deprecate(repo: str, name: str, version: str):
-    """Deprecate artifact version"""
-    gto.api.deprecate(repo, name, version)
-    click.echo(f"Deprecated {name} version {version}")
-
-
-@gto_command()
-@option_repo
-@arg_name
 @arg_stage
 @click.option(
     "--version",
@@ -237,25 +227,13 @@ def promote(repo: str, name: str, stage: str, version: str, ref: str):
 @gto_command()
 @option_repo
 @arg_name
-@click.option(
-    "-d",
-    "--deprecated",
-    is_flag=True,
-    default=False,
-    help="Include deprecated versions",
-    show_default=True,
-)
 @option_path
 @option_ref
 @option_expected
-def latest(
-    repo: str, name: str, deprecated: bool, path: bool, ref: bool, expected: bool
-):
+def latest(repo: str, name: str, path: bool, ref: bool, expected: bool):
     """Return latest version of artifact"""
     assert not (path and ref), "--path and --ref are mutually exclusive"
-    latest_version = gto.api.find_latest_version(
-        repo, name, include_deprecated=deprecated
-    )
+    latest_version = gto.api.find_latest_version(repo, name)
     if latest_version:
         if path:
             click.echo(latest_version.artifact.path)
@@ -456,7 +434,7 @@ def history(repo: str, name: str, format: str, format_table: str, sort: str):
 )
 def print_stages(repo: str, in_use: bool):
     """Return list of stages in the registry.
-    If "in_use", return only those which are in use (skip deprecated).
+    If "in_use", return only those which are in use (among non-deprecated artifacts).
     If not, return all available: either all allowed or all ever used.
     """
     click.echo(gto.api.get_stages(repo, in_use=in_use))

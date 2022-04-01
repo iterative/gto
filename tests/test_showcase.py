@@ -38,7 +38,6 @@ def test_api(showcase):
             name="v0.0.1",
             author=author,
             commit_hexsha=first_commit.hexsha,
-            deprecated_date=None,
         ),
         {"creation_date", "promotions"},
     )
@@ -55,7 +54,6 @@ def test_api(showcase):
             stage="staging",
             author=author,
             commit_hexsha=first_commit.hexsha,
-            deprecated_date=None,
         ),
         {"creation_date"},
     )
@@ -76,7 +74,6 @@ def test_api(showcase):
             name="v1.2.3",
             author=author,
             commit_hexsha=first_commit.hexsha,
-            deprecated_date=None,
         ),
         {"creation_date", "promotions"},
     )
@@ -89,7 +86,6 @@ def test_api(showcase):
             name="v1.2.4",
             author=author,
             commit_hexsha=second_commit.hexsha,
-            deprecated_date=None,
         ),
         {"creation_date", "promotions"},
     )
@@ -109,7 +105,6 @@ def test_api(showcase):
             stage="production",
             author=author,
             commit_hexsha=first_commit.hexsha,
-            deprecated_date=None,
         ),
         {"creation_date"},
     )
@@ -123,7 +118,6 @@ def test_api(showcase):
             stage="production",
             author=author,
             commit_hexsha=second_commit.hexsha,
-            deprecated_date=None,
         ),
         {"creation_date"},
     )
@@ -137,7 +131,6 @@ def test_api(showcase):
             stage="staging",
             author=author,
             commit_hexsha=second_commit.hexsha,
-            deprecated_date=None,
         ),
         {"creation_date"},
     )

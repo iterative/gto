@@ -19,11 +19,6 @@ class BasePromotion(BaseModel):  # pylint: disable=too-many-instance-attributes
     creation_date: datetime
     author: str
     commit_hexsha: str
-    deprecated_date: Optional[datetime] = None
-
-    @property
-    def is_registered(self):
-        return self.deprecated_date is None
 
 
 class BaseVersion(BaseModel):
@@ -32,7 +27,6 @@ class BaseVersion(BaseModel):
     creation_date: datetime
     author: str
     commit_hexsha: str
-    deprecated_date: Optional[datetime] = None
     promotions: List[BasePromotion] = []
 
     @property
@@ -42,10 +36,6 @@ class BaseVersion(BaseModel):
             return NumberedVersion(self.name)
         except:  # pylint: disable=bare-except
             return SemVer(self.name)
-
-    @property
-    def is_registered(self):
-        return self.deprecated_date is None
 
     @property
     def stage(self):
@@ -76,9 +66,9 @@ class BaseArtifact(BaseModel):
         stages = ", ".join(f"'{l}'" for l in self.unique_stages)
         return f"Artifact(versions=[{versions}], stages=[{stages}])"
 
-    def get_latest_version(self, include_deprecated=False) -> Optional[BaseVersion]:
+    def get_latest_version(self) -> Optional[BaseVersion]:
         versions = sorted(
-            (v for v in self.versions if include_deprecated or v.is_registered),
+            self.versions,
             key=lambda x: x.creation_date,
         )
         if versions:
@@ -95,16 +85,15 @@ class BaseArtifact(BaseModel):
         return stages
 
     def add_promotion(self, promotion: BasePromotion):
-        self.find_version(  # type: ignore
-            name=promotion.version, skip_deprecated=False
-        ).promotions.append(promotion)
+        self.find_version(name=promotion.version).promotions.append(  # type: ignore
+            promotion
+        )
 
     def find_version(
         self,
         name: str = None,
         commit_hexsha: str = None,
         raise_if_not_found=False,
-        skip_deprecated=True,
         allow_multiple=False,
     ) -> Union[None, BaseVersion, List[BaseVersion]]:
         versions = [
@@ -112,19 +101,17 @@ class BaseArtifact(BaseModel):
             for v in self.versions
             if (v.name == name if name else True)
             and (v.commit_hexsha == commit_hexsha if commit_hexsha else True)
-            and (v.deprecated_date is None if skip_deprecated else True)
         ]
         if allow_multiple:
             return versions
         if raise_if_not_found and not versions:
             for v in self.versions:
                 print(v)
-            raise VersionRequired(name=self.name, skip_deprecated=skip_deprecated)
+            raise VersionRequired(name=self.name)
         if len(versions) > 1:
             raise ManyVersions(
                 name=self.name,
                 versions=[v.name for v in versions],
-                skip_deprecated=skip_deprecated,
             )
         return versions[0] if versions else None
 
@@ -161,7 +148,7 @@ class BaseRegistryState(BaseModel):
     def find_commit(self, name, version):
         return (
             self.find_artifact(name)
-            .find_version(name=version, raise_if_not_found=True, skip_deprecated=False)
+            .find_version(name=version, raise_if_not_found=True)
             .commit_hexsha
         )
 
@@ -198,9 +185,6 @@ class BaseManager(BaseModel):
     # better to uncomment this for typing, but it breaks the pylint
 
     # def register(self, name, version, ref, message):
-    #     raise NotImplementedError
-
-    # def deprecate(self, name, version):
     #     raise NotImplementedError
 
     # def promote(self, name, stage, ref, message):

@@ -64,28 +64,21 @@ class PathIsUsed(GTOException):
 class VersionRequired(GTOException):
     _message = "No versions found for '{name}'"
 
-    def __init__(self, name, skip_deprecated=True) -> None:
-        self.message = self._message.format(name=name) + (
-            ", skipping deprecated" if skip_deprecated else ""
-        )
+    def __init__(self, name) -> None:
+        self.message = self._message.format(name=name)
         super().__init__(self.message)
 
 
 class ManyVersions(GTOException):
     _message = "{versions} versions of artifact {name} found"
 
-    def __init__(self, name, versions, skip_deprecated) -> None:
-        self.message = self._message.format(
-            name=name, versions=versions, skip_deprecated=skip_deprecated
-        ) + (", skipping deprecated" if skip_deprecated else "")
+    def __init__(self, name, versions) -> None:
+        self.message = self._message.format(name=name, versions=versions)
         super().__init__(self.message)
 
 
 class VersionAlreadyRegistered(GTOException):
-    _message = (
-        "Version '{version}' already was registered.\n"
-        "Even if it was deprecated, you must use another name to avoid confusion."
-    )
+    _message = "Version '{version}' already was registered.\n"
 
     def __init__(self, version) -> None:
         self.message = self._message.format(version=version)
