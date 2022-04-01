@@ -36,7 +36,7 @@ def test_add_remove(empty_git_repo: Tuple[git.Repo, Callable]):
     assert name in index
     _check_obj(
         index.state[name],
-        dict(name=name, type=type, path=path, virtual=virtual),
+        dict(name=name, type=type, path=path, virtual=virtual, tags=[], description=""),
         [],
     )
     gto.api.remove(repo.working_dir, name)
@@ -85,7 +85,14 @@ def test_promote(repo_with_artifact):
     _check_obj(
         promotion,
         dict(
-            artifact=dict(type="new-type", name=name, path="new/path", virtual=True),
+            artifact=dict(
+                type="new-type",
+                name=name,
+                path="new/path",
+                virtual=True,
+                tags=[],
+                description="",
+            ),
             version="v1",
             stage=stage,
             author=author,

@@ -17,6 +17,8 @@ class Artifact(BaseModel):
     name: str
     path: str
     virtual: bool = False
+    tags: List[str] = []  # TODO: allow key:value labels
+    description: str = ""
 
 
 State = Dict[str, Artifact]
@@ -91,12 +93,19 @@ class Index(BaseModel):
                 yaml.dump(self.dict()["state"], file)
 
     @not_frozen
-    def add(self, type, name, path, virtual):
+    def add(self, type, name, path, virtual, tags, description):
         if name in self:
             raise ArtifactExists(name)
         if find_repeated_path(path, [a.path for a in self.state.values()]) is not None:
             raise PathIsUsed(type=type, name=name, path=path)
-        self.state[name] = Artifact(type=type, name=name, path=path, virtual=virtual)
+        self.state[name] = Artifact(
+            type=type,
+            name=name,
+            path=path,
+            virtual=virtual,
+            tags=tags,
+            description=description,
+        )
 
     @not_frozen
     def remove(self, name):
@@ -121,14 +130,16 @@ class BaseIndexManager(BaseModel, ABC):
     def get_history(self) -> Dict[str, Index]:
         raise NotImplementedError
 
-    def add(self, type, name, path, virtual=False):
+    def add(self, type, name, path, virtual, tags, description):
+        if tags is None:
+            tags = []
         self.config.assert_type(type)
         if not virtual and not check_if_path_exists(
             path, self.repo if hasattr(self, "repo") else None
         ):
             raise NoFile(path)
         index = self.get_index()
-        index.add(type, name, path, virtual)
+        index.add(type, name, path, virtual, tags=tags, description=description)
         self.update()
 
     def remove(self, name):

@@ -1,6 +1,6 @@
 from collections import OrderedDict
 from datetime import datetime
-from typing import Union
+from typing import List, Union
 
 from git import Repo
 
@@ -13,7 +13,7 @@ from gto.tag import parse_name
 def get_index(repo: Union[str, Repo], file=False):
     """Get index state"""
     if file:
-        return FileIndexManager(
+        return FileIndexManager.from_path(
             path=repo if isinstance(repo, str) else repo.working_dir
         )
     return RepoIndexManager.from_repo(repo)
@@ -44,9 +44,19 @@ def ls(repo: Union[str, Repo], ref: str = None, type: str = None):
     return list(artifacts.values())
 
 
-def add(repo: Union[str, Repo], type: str, name: str, path: str, virtual: bool = False):
+def add(
+    repo: Union[str, Repo],
+    type: str,
+    name: str,
+    path: str,
+    virtual: bool = False,
+    tags: List[str] = None,
+    description: str = "",
+):
     """Add an artifact to the Index"""
-    return init_index_manager(path=repo).add(type, name, path, virtual)
+    return init_index_manager(path=repo).add(
+        type, name, path, virtual, tags=tags, description=description
+    )
 
 
 def remove(repo: Union[str, Repo], name: str):
