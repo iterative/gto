@@ -17,7 +17,6 @@ NUMBER = "number"
 
 class Action(Enum):
     REGISTER = "register"
-    DEPRECATE = "deprecate"
     PROMOTE = "promote"
 
 

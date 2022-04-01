@@ -53,7 +53,6 @@ EXPECTED_REGISTRY_TAG_TAG_STATE = {
                     "creation_date": datetime.datetime(2022, 3, 31, 13, 33, 33),
                     "author": "Alexander Guschin",
                     "commit_hexsha": "ebd7f363cc0a012d9fe9bd22289051a0d9383204",
-                    "deprecated_date": None,
                     "promotions": [
                         {
                             "artifact": {
@@ -67,7 +66,6 @@ EXPECTED_REGISTRY_TAG_TAG_STATE = {
                             "creation_date": datetime.datetime(2022, 3, 31, 13, 33, 34),
                             "author": "Alexander Guschin",
                             "commit_hexsha": "ebd7f363cc0a012d9fe9bd22289051a0d9383204",
-                            "deprecated_date": None,
                         }
                     ],
                 }
@@ -101,7 +99,6 @@ EXPECTED_REGISTRY_TAG_TAG_STATE = {
                     "creation_date": datetime.datetime(2022, 3, 31, 13, 33, 33),
                     "author": "Alexander Guschin",
                     "commit_hexsha": "ebd7f363cc0a012d9fe9bd22289051a0d9383204",
-                    "deprecated_date": None,
                     "promotions": [
                         {
                             "artifact": {
@@ -115,7 +112,6 @@ EXPECTED_REGISTRY_TAG_TAG_STATE = {
                             "creation_date": datetime.datetime(2022, 3, 31, 13, 33, 34),
                             "author": "Alexander Guschin",
                             "commit_hexsha": "ebd7f363cc0a012d9fe9bd22289051a0d9383204",
-                            "deprecated_date": None,
                         },
                         {
                             "artifact": {
@@ -129,7 +125,6 @@ EXPECTED_REGISTRY_TAG_TAG_STATE = {
                             "creation_date": datetime.datetime(2022, 3, 31, 13, 33, 38),
                             "author": "Alexander Guschin",
                             "commit_hexsha": "ebd7f363cc0a012d9fe9bd22289051a0d9383204",
-                            "deprecated_date": None,
                         },
                     ],
                 },
@@ -144,7 +139,6 @@ EXPECTED_REGISTRY_TAG_TAG_STATE = {
                     "creation_date": datetime.datetime(2022, 3, 31, 13, 33, 34),
                     "author": "Alexander Guschin",
                     "commit_hexsha": "4015b096b8cb7c4d820bb5346922957a1ec8ff06",
-                    "deprecated_date": None,
                     "promotions": [
                         {
                             "artifact": {
@@ -158,7 +152,6 @@ EXPECTED_REGISTRY_TAG_TAG_STATE = {
                             "creation_date": datetime.datetime(2022, 3, 31, 13, 33, 35),
                             "author": "Alexander Guschin",
                             "commit_hexsha": "4015b096b8cb7c4d820bb5346922957a1ec8ff06",
-                            "deprecated_date": None,
                         },
                         {
                             "artifact": {
@@ -172,7 +165,6 @@ EXPECTED_REGISTRY_TAG_TAG_STATE = {
                             "creation_date": datetime.datetime(2022, 3, 31, 13, 33, 36),
                             "author": "Alexander Guschin",
                             "commit_hexsha": "4015b096b8cb7c4d820bb5346922957a1ec8ff06",
-                            "deprecated_date": None,
                         },
                     ],
                 },
@@ -251,7 +243,6 @@ EXPECTED_REGISTRY_COMMIT_BRANCH_STATE = {
                     "creation_date": datetime.datetime(2022, 3, 31, 14, 31, 10),
                     "author": "Alexander Guschin",
                     "commit_hexsha": "958010f569f53bf61fdef9eeffd8c89c33352177",
-                    "deprecated_date": None,
                     "promotions": [
                         {
                             "artifact": {
@@ -265,7 +256,6 @@ EXPECTED_REGISTRY_COMMIT_BRANCH_STATE = {
                             "creation_date": datetime.datetime(2022, 3, 31, 14, 31, 10),
                             "author": "Alexander Guschin",
                             "commit_hexsha": "958010f569f53bf61fdef9eeffd8c89c33352177",
-                            "deprecated_date": None,
                         }
                     ],
                 },
@@ -280,7 +270,6 @@ EXPECTED_REGISTRY_COMMIT_BRANCH_STATE = {
                     "creation_date": datetime.datetime(2022, 3, 31, 14, 31, 11),
                     "author": "Alexander Guschin",
                     "commit_hexsha": "98ef927423e1630f56d9fd2563a75c49db7092e7",
-                    "deprecated_date": None,
                     "promotions": [
                         {
                             "artifact": {
@@ -294,7 +283,6 @@ EXPECTED_REGISTRY_COMMIT_BRANCH_STATE = {
                             "creation_date": datetime.datetime(2022, 3, 31, 14, 31, 11),
                             "author": "Alexander Guschin",
                             "commit_hexsha": "98ef927423e1630f56d9fd2563a75c49db7092e7",
-                            "deprecated_date": None,
                         }
                     ],
                 },
@@ -328,7 +316,6 @@ EXPECTED_REGISTRY_COMMIT_BRANCH_STATE = {
                     "creation_date": datetime.datetime(2022, 3, 31, 14, 31, 10),
                     "author": "Alexander Guschin",
                     "commit_hexsha": "958010f569f53bf61fdef9eeffd8c89c33352177",
-                    "deprecated_date": None,
                     "promotions": [
                         {
                             "artifact": {
@@ -342,7 +329,6 @@ EXPECTED_REGISTRY_COMMIT_BRANCH_STATE = {
                             "creation_date": datetime.datetime(2022, 3, 31, 14, 31, 10),
                             "author": "Alexander Guschin",
                             "commit_hexsha": "958010f569f53bf61fdef9eeffd8c89c33352177",
-                            "deprecated_date": None,
                         }
                     ],
                 },
@@ -357,7 +343,6 @@ EXPECTED_REGISTRY_COMMIT_BRANCH_STATE = {
                     "creation_date": datetime.datetime(2022, 3, 31, 14, 31, 11),
                     "author": "Alexander Guschin",
                     "commit_hexsha": "98ef927423e1630f56d9fd2563a75c49db7092e7",
-                    "deprecated_date": None,
                     "promotions": [
                         {
                             "artifact": {
@@ -371,7 +356,6 @@ EXPECTED_REGISTRY_COMMIT_BRANCH_STATE = {
                             "creation_date": datetime.datetime(2022, 3, 31, 14, 31, 11),
                             "author": "Alexander Guschin",
                             "commit_hexsha": "98ef927423e1630f56d9fd2563a75c49db7092e7",
-                            "deprecated_date": None,
                         }
                     ],
                 },
@@ -405,7 +389,6 @@ EXPECTED_REGISTRY_COMMIT_BRANCH_STATE = {
                     "creation_date": datetime.datetime(2022, 3, 31, 14, 31, 10),
                     "author": "Alexander Guschin",
                     "commit_hexsha": "958010f569f53bf61fdef9eeffd8c89c33352177",
-                    "deprecated_date": None,
                     "promotions": [
                         {
                             "artifact": {
@@ -419,7 +402,6 @@ EXPECTED_REGISTRY_COMMIT_BRANCH_STATE = {
                             "creation_date": datetime.datetime(2022, 3, 31, 14, 31, 10),
                             "author": "Alexander Guschin",
                             "commit_hexsha": "958010f569f53bf61fdef9eeffd8c89c33352177",
-                            "deprecated_date": None,
                         }
                     ],
                 },
@@ -434,7 +416,6 @@ EXPECTED_REGISTRY_COMMIT_BRANCH_STATE = {
                     "creation_date": datetime.datetime(2022, 3, 31, 14, 31, 11),
                     "author": "Alexander Guschin",
                     "commit_hexsha": "98ef927423e1630f56d9fd2563a75c49db7092e7",
-                    "deprecated_date": None,
                     "promotions": [
                         {
                             "artifact": {
@@ -448,7 +429,6 @@ EXPECTED_REGISTRY_COMMIT_BRANCH_STATE = {
                             "creation_date": datetime.datetime(2022, 3, 31, 14, 31, 11),
                             "author": "Alexander Guschin",
                             "commit_hexsha": "98ef927423e1630f56d9fd2563a75c49db7092e7",
-                            "deprecated_date": None,
                         }
                     ],
                 },
