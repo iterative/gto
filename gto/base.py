@@ -12,7 +12,7 @@ from gto.versions import NumberedVersion, SemVer
 from .exceptions import ArtifactNotFound, ManyVersions, VersionRequired
 
 
-class BasePromotion(BaseModel):  # pylint: disable=too-many-instance-attributes
+class BasePromotion(BaseModel):
     artifact: Artifact
     version: str
     stage: str

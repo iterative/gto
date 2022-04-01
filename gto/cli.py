@@ -171,9 +171,11 @@ def ls(repo, rev, type, json, table, format_table):
     default=False,
     help="Virtual artifact that wasn't committed to Git",
 )
-def add(repo: str, type: str, name: str, path: str, virtual: bool):
+@click.option("--tag", multiple=True, default=[], help="Tags to add to artifact")
+@click.option("-d", "--description", default="", help="Artifact description")
+def add(repo: str, type: str, name: str, path: str, virtual: bool, tag, description):
     """Register new artifact (add it to the Index)"""
-    gto.api.add(repo, type, name, path, virtual)
+    gto.api.add(repo, type, name, path, virtual, tags=tag, description=description)
 
 
 @cli.command("rm")

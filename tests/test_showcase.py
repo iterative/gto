@@ -33,7 +33,12 @@ def test_api(showcase):
         nn_version,
         dict(
             artifact=dict(
-                type="model", name="nn", path="models/neural-network.pkl", virtual=False
+                type="model",
+                name="nn",
+                path="models/neural-network.pkl",
+                virtual=False,
+                tags=[],
+                description="",
             ),
             name="v0.0.1",
             author=author,
@@ -48,7 +53,12 @@ def test_api(showcase):
         nn_promotion,
         dict(
             artifact=dict(
-                type="model", name="nn", path="models/neural-network.pkl", virtual=False
+                type="model",
+                name="nn",
+                path="models/neural-network.pkl",
+                virtual=False,
+                tags=[],
+                description="",
             ),
             version="v0.0.1",
             stage="staging",
@@ -69,7 +79,12 @@ def test_api(showcase):
         rf_ver1,
         dict(
             artifact=dict(
-                type="model", name="rf", path="models/random-forest.pkl", virtual=False
+                type="model",
+                name="rf",
+                path="models/random-forest.pkl",
+                virtual=False,
+                tags=[],
+                description="",
             ),
             name="v1.2.3",
             author=author,
@@ -81,7 +96,12 @@ def test_api(showcase):
         rf_ver2,
         dict(
             artifact=dict(
-                type="model", name="rf", path="models/random-forest.pkl", virtual=False
+                type="model",
+                name="rf",
+                path="models/random-forest.pkl",
+                virtual=False,
+                tags=[],
+                description="",
             ),
             name="v1.2.4",
             author=author,
@@ -99,7 +119,12 @@ def test_api(showcase):
         rf_l1,
         dict(
             artifact=dict(
-                type="model", name="rf", path="models/random-forest.pkl", virtual=False
+                type="model",
+                name="rf",
+                path="models/random-forest.pkl",
+                virtual=False,
+                tags=[],
+                description="",
             ),
             version="v1.2.3",
             stage="production",
@@ -112,7 +137,12 @@ def test_api(showcase):
         rf_l4,
         dict(
             artifact=dict(
-                type="model", name="rf", path="models/random-forest.pkl", virtual=False
+                type="model",
+                name="rf",
+                path="models/random-forest.pkl",
+                virtual=False,
+                tags=[],
+                description="",
             ),
             version="v1.2.4",
             stage="production",
@@ -125,7 +155,12 @@ def test_api(showcase):
         rf_l3,
         dict(
             artifact=dict(
-                type="model", name="rf", path="models/random-forest.pkl", virtual=False
+                type="model",
+                name="rf",
+                path="models/random-forest.pkl",
+                virtual=False,
+                tags=[],
+                description="",
             ),
             version="v1.2.4",
             stage="staging",
