@@ -1,7 +1,7 @@
 import logging
 import sys
 from functools import wraps
-from typing import OrderedDict, Sequence
+from typing import Sequence
 
 import click
 from tabulate import tabulate_formats
@@ -161,68 +161,6 @@ def ls(repo, rev, type, json, table, format_table):
 
 
 @gto_command()
-@click.argument("repo", default=".")
-@click.argument("name")
-@click.option(
-    "--json",
-    is_flag=True,
-    default=False,
-    help="Print output in json format",
-    show_default=True,
-)
-@click.option(
-    "--table",
-    is_flag=True,
-    default=False,
-    help="Print output in table format",
-    show_default=True,
-)
-@option_format_table
-def ls_versions(repo, name, json, table, format_table):
-    """\b
-    List all artifact versions in the repository
-    """
-    # TODO: add --deprecated flag?
-    # TODO: add sort?
-    assert not (json and table), "Only one of --json and --table can be used"
-    versions = gto.api.ls_versions(repo, name)
-    if json:
-        click.echo(format_echo(versions, "json"))
-    elif table:
-        first_keys = ["artifact", "name", "stage"]
-        versions_ = []
-        for v in versions:
-            v["artifact"] = v["artifact"]["name"]
-            v["stage"] = v["stage"]["stage"]
-            v = OrderedDict(
-                [(key, v[key]) for key in first_keys]
-                + [(key, v[key]) for key in v if key not in first_keys]
-            )
-            v["commit_hexsha"] = v["commit_hexsha"][:7]
-            versions_.append(v)
-        # versions_flatten = []
-        # for v in versions:
-        #     v_ = {}
-        #     for key, value in v.items():
-        #         if isinstance(value, dict):
-        #             for k, v in value.items():
-        #                 v_[f"{key}.{k}"] = v
-        #         else:
-        #             v_[key] = value
-        #     versions_flatten.append(v_)
-        click.echo(
-            format_echo(
-                [versions_, "keys"],
-                "table",
-                format_table,
-                if_empty="No versions found",
-            )
-        )
-    else:
-        click.echo(format_echo([v["name"] for v in versions], "lines"))
-
-
-@gto_command()
 @option_repo
 @click.argument(TYPE)
 @arg_name
@@ -379,9 +317,29 @@ def check_ref(repo: str, ref: str, format: str):
 
 @gto_command()
 @option_repo
+@click.argument("object", default="registry")
 @option_format_df
 @option_format_table
-def show(repo: str, format: str, format_table: str):
+def show(repo: str, object: str, format: str, format_table: str):
+    """Show current registry state or specific artifact"""
+    # TODO: make proper name resolving?
+    # e.g. querying artifact named "registry" with artifact/registry
+    if format == TABLE:
+        format_echo(
+            gto.api.show(repo, object=object, table=True),
+            format=format,
+            format_table=format_table,
+            if_empty="Nothing found in the current workspace",
+        )
+    else:
+        format_echo(gto.api.show(repo, object=object, table=False), format=format)
+
+
+@gto_command(hidden=True)
+@option_repo
+@option_format_df
+@option_format_table
+def show_registry(repo: str, format: str, format_table: str):
     """Show current registry state"""
     if format == TABLE:
         format_echo(
@@ -392,6 +350,46 @@ def show(repo: str, format: str, format_table: str):
         )
     else:
         format_echo(gto.api.show(repo, table=False), format=format)
+
+
+@gto_command(hidden=True)
+@option_repo
+@click.argument("name")
+@click.option(
+    "--json",
+    is_flag=True,
+    default=False,
+    help="Print output in json format",
+    show_default=True,
+)
+@click.option(
+    "--table",
+    is_flag=True,
+    default=False,
+    help="Print output in table format",
+    show_default=True,
+)
+@option_format_table
+def show_versions(repo, name, json, table, format_table):
+    """\b
+    List all artifact versions in the repository
+    """
+    # TODO: add sort?
+    assert not (json and table), "Only one of --json and --table can be used"
+    versions = gto.api._show_versions(repo, name)  # pylint: disable=protected-access
+    if json:
+        click.echo(format_echo(versions, "json"))
+    elif table:
+        click.echo(
+            format_echo(
+                versions,
+                "table",
+                format_table,
+                if_empty="No versions found",
+            )
+        )
+    else:
+        click.echo(format_echo([v["name"] for v in versions], "lines"))
 
 
 @gto_command()
