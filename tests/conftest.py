@@ -23,32 +23,12 @@ def empty_git_repo(tmp_path):
 
 
 @pytest.fixture
-def init_showcase_numbers(empty_git_repo: Tuple[git.Repo, Callable]):
-    repo, write_file = empty_git_repo
-
-    write_file(
-        CONFIG_FILE,
-        """
-        version_base: tag
-        stage_base: tag
-        version_convention: numbers
-        """,
-    )
-
-    return repo, write_file
-
-
-@pytest.fixture
 def init_showcase_semver(empty_git_repo: Tuple[git.Repo, Callable]):
     repo, write_file = empty_git_repo
 
     write_file(
         CONFIG_FILE,
-        """
-        version_base: tag
-        stage_base: tag
-        version_convention: semver
-        """,
+        "",
     )
 
     return repo, write_file

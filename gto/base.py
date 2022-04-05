@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from gto.config import RegistryConfig
 from gto.constants import Action
 from gto.index import Artifact, ArtifactCommits
-from gto.versions import NumberedVersion, SemVer
+from gto.versions import SemVer
 
 from .exceptions import ArtifactNotFound, ManyVersions, VersionRequired
 
@@ -32,10 +32,7 @@ class BaseVersion(BaseModel):
     @property
     def version(self):
         # TODO: this should be read from config, how to pass it down here?
-        try:
-            return NumberedVersion(self.name)
-        except:  # pylint: disable=bare-except
-            return SemVer(self.name)
+        return SemVer(self.name)
 
     @property
     def stage(self):

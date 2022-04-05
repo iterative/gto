@@ -4,7 +4,7 @@ from typing import Union
 import semver
 
 from gto.constants import VersionPart
-from gto.exceptions import GTOException, IncomparableVersions, InvalidVersion
+from gto.exceptions import IncomparableVersions, InvalidVersion
 
 
 class AbstractVersion:
@@ -31,42 +31,6 @@ class AbstractVersion:
     @classmethod
     def get_minimal(cls):
         raise NotImplementedError
-
-
-@total_ordering
-class NumberedVersion(AbstractVersion):
-    @classmethod
-    def is_valid(cls, version):
-        if not isinstance(version, str):
-            return False
-        return version.startswith("v") and version[1:].isdigit()
-
-    def to_number(self):
-        return int(self.version[1:])
-
-    def __eq__(self, other):
-        if isinstance(other, str):
-            other = self.__class__(other)
-        if not isinstance(other, self.__class__):
-            raise IncomparableVersions(self, other)
-        return self.version == other.version
-
-    def __lt__(self, other):
-        if isinstance(other, str):
-            other = self.__class__(other)
-        if not isinstance(other, self.__class__):
-            raise IncomparableVersions(self, other)
-        return self.to_number() < other.to_number()
-
-    def bump(self, part: Union[VersionPart, str] = VersionPart.MAJOR):
-        part = VersionPart(part)
-        if part != VersionPart.MAJOR:
-            raise GTOException(f"With {self.__class__} you can only bump MAJOR part")
-        return self.__class__(f"v{self.to_number() + 1}")
-
-    @classmethod
-    def get_minimal(cls):
-        return cls("v1")
 
 
 @total_ordering

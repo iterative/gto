@@ -6,9 +6,8 @@ from pydantic import BaseSettings
 from pydantic.env_settings import InitSettingsSource
 from ruamel.yaml import YAML
 
-from gto.constants import BRANCH, COMMIT, TAG
+from gto.constants import TAG
 from gto.exceptions import UnknownStage, UnknownType
-from gto.versions import AbstractVersion
 
 yaml = YAML(typ="safe", pure=True)
 yaml.default_flow_style = False
@@ -44,12 +43,8 @@ def config_settings_source(settings: "RegistryConfig") -> Dict[str, Any]:
 class RegistryConfig(BaseSettings):
     INDEX: str = "artifacts.yaml"
     TYPE_ALLOWED: List[str] = []
-    VERSION_BASE: str = TAG
-    VERSION_CONVENTION: str = "numbers"
     VERSION_REQUIRED_FOR_STAGE: bool = True
-    STAGE_BASE: str = TAG
     STAGE_ALLOWED: List[str] = []
-    STAGE_BRANCH_MAPPING: Dict[str, str] = {}
     LOG_LEVEL: str = "INFO"
     DEBUG: bool = False
     CONFIG_FILE: Optional[str] = CONFIG_FILE
@@ -62,24 +57,34 @@ class RegistryConfig(BaseSettings):
         return name in self.TYPE_ALLOWED or not self.TYPE_ALLOWED
 
     @property
-    def VERSION_SYSTEM_MAPPING(self):
-        from .versions import NumberedVersion, SemVer
+    def VERSION_BASE(self):
+        return TAG
 
-        return {"numbers": NumberedVersion, "semver": SemVer}
+    @property
+    def STAGE_BASE(self):
+        return TAG
+
+    @property
+    def VERSION_CLS(self):
+        from .versions import SemVer
+
+        return SemVer
 
     @property
     def VERSION_MANAGER_CLS(self):
-        from .commit import CommitVersionManager
+        # from .commit import CommitVersionManager
         from .tag import TagVersionManager
 
-        return {COMMIT: CommitVersionManager, TAG: TagVersionManager}[self.VERSION_BASE]
+        return {TAG: TagVersionManager}[self.VERSION_BASE]
 
     @property
     def STAGE_MANAGER_CLS(self):
-        from .branch import BranchStageManager
+        # from .branch import BranchStageManager
         from .tag import TagStageManager
 
-        return {TAG: TagStageManager, BRANCH: BranchStageManager}[self.STAGE_BASE]
+        return {
+            TAG: TagStageManager,
+        }[self.STAGE_BASE]
 
     def assert_stage(self, name):
         if not self.check_stage(name):
@@ -90,22 +95,7 @@ class RegistryConfig(BaseSettings):
 
     @property
     def stages(self) -> List[str]:
-        if self.STAGE_BASE == TAG:
-            return self.STAGE_ALLOWED
-        if self.STAGE_BASE == BRANCH:
-            return list(self.STAGE_BRANCH_MAPPING)
-        raise NotImplementedError("Unknown STAGE_BASE")
-
-    def branch_to_stage(self, branch_name):
-        if self.STAGE_BRANCH_MAPPING:
-            return self.STAGE_BRANCH_MAPPING[branch_name]
-        return branch_name
-
-    def stage_to_branch(self, stage_name):
-        if self.STAGE_BRANCH_MAPPING:
-            return {value: key for key, value in self.STAGE_BRANCH_MAPPING.items()}[
-                stage_name
-            ]
+        return self.STAGE_ALLOWED
 
     class Config:
         env_prefix = "gto_"
@@ -163,12 +153,6 @@ class RegistryConfig(BaseSettings):
     #             "ENV_BRANCH_MAPPING must be a dict of str:str", "ENV_BRANCH_MAPPING"
     #         )
     #     return value
-
-    @property
-    def versions_class(self) -> AbstractVersion:
-        if self.VERSION_CONVENTION not in self.VERSION_SYSTEM_MAPPING:
-            raise ValueError(f"Unknown versioning system {self.VERSION_CONVENTION}")
-        return self.VERSION_SYSTEM_MAPPING[self.VERSION_CONVENTION]
 
 
 CONFIG = RegistryConfig()

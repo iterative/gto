@@ -82,12 +82,12 @@ class GitRegistry(BaseModel):
                 raise VersionAlreadyRegistered(version)
             if found_artifact.versions:
                 latest_ver = found_artifact.get_latest_version().name
-                if self.config.versions_class(version) < latest_ver:
+                if self.config.VERSION_CLS(version) < latest_ver:
                     raise VersionIsOld(latest=latest_ver, suggested=version)
         # if version name wasn't provided but there were some, bump the last one
         elif found_artifact.versions:
             version = (
-                self.config.versions_class(
+                self.config.VERSION_CLS(
                     self.state.find_artifact(name).get_latest_version().name
                 )
                 .bump(**({"part": bump} if bump else {}))
@@ -95,7 +95,7 @@ class GitRegistry(BaseModel):
             )
         # if no versions exist, use the minimal version possible
         else:
-            version = self.config.versions_class.get_minimal().version
+            version = self.config.VERSION_CLS.get_minimal().version
         self.version_manager.register(
             name,
             version,
