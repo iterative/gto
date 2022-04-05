@@ -6,7 +6,7 @@ import git
 from git import InvalidGitRepositoryError, Repo
 from pydantic import BaseModel
 
-from gto.base import BaseArtifact, BaseManager, BasePromotion, BaseRegistryState
+from gto.base import BaseManager, BasePromotion, BaseRegistryState
 from gto.config import CONFIG_FILE, RegistryConfig
 from gto.exceptions import (
     NoRepo,
@@ -51,15 +51,7 @@ class GitRegistry(BaseModel):
 
     @property
     def state(self) -> BaseRegistryState:
-        index = self.index.artifact_centric_representation()
-        state = BaseRegistryState(
-            artifacts={
-                name: BaseArtifact(
-                    name=name, commits=index[name], versions=[], stages=[]
-                )
-                for name in index
-            }
-        )
+        state = BaseRegistryState()
         state = self.version_manager.update_state(state)
         state = self.stage_manager.update_state(state)
         state.sort()
@@ -71,7 +63,7 @@ class GitRegistry(BaseModel):
         # TODO: add the same check for other actions, to promote and etc
         # also we need to check integrity of the index+state
         self.index.assert_existence(name, ref)
-        found_artifact = self.state.find_artifact(name)
+        found_artifact = self.state.find_artifact(name, create_new=True)
         # check that this commit don't have a version already
         found_version = found_artifact.find_version(commit_hexsha=ref)
         if found_version is not None:
@@ -122,7 +114,7 @@ class GitRegistry(BaseModel):
             promote_ref = self.repo.commit(promote_ref).hexsha
         if promote_ref:
             self.index.assert_existence(name, promote_ref)
-        found_artifact = self.state.find_artifact(name)
+        found_artifact = self.state.find_artifact(name, create_new=True)
         if promote_version is not None:
             found_version = found_artifact.find_version(
                 name=promote_version, raise_if_not_found=True

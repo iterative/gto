@@ -15,13 +15,13 @@ def test_api(showcase):
     ) = showcase
 
     artifacts = gto.api._get_state(path).artifacts  # pylint: disable=protected-access
-    assert set(artifacts.keys()) == {"features", "nn", "rf"}
-    assert isinstance(artifacts["features"], BaseArtifact)
-    _check_obj(
-        artifacts["features"],
-        dict(name="features", versions=[]),
-        ["commits"],
-    )
+    assert set(artifacts.keys()) == {"nn", "rf"}  # "features"
+    # assert isinstance(artifacts["features"], BaseArtifact)
+    # _check_obj(
+    #     artifacts["features"],
+    #     dict(name="features", versions=[]),
+    #     ["commits"],
+    # )
     nn_artifact = artifacts["nn"]
     assert isinstance(nn_artifact, BaseArtifact)
     assert nn_artifact.name == "nn"
@@ -32,14 +32,7 @@ def test_api(showcase):
     _check_obj(
         nn_version,
         dict(
-            artifact=dict(
-                type="model",
-                name="nn",
-                path="models/neural-network.pkl",
-                virtual=False,
-                tags=[],
-                description="",
-            ),
+            artifact="nn",
             name="v0.0.1",
             author=author,
             commit_hexsha=first_commit.hexsha,
@@ -52,14 +45,7 @@ def test_api(showcase):
     _check_obj(
         nn_promotion,
         dict(
-            artifact=dict(
-                type="model",
-                name="nn",
-                path="models/neural-network.pkl",
-                virtual=False,
-                tags=[],
-                description="",
-            ),
+            artifact="nn",
             version="v0.0.1",
             stage="staging",
             author=author,
@@ -78,14 +64,7 @@ def test_api(showcase):
     _check_obj(
         rf_ver1,
         dict(
-            artifact=dict(
-                type="model",
-                name="rf",
-                path="models/random-forest.pkl",
-                virtual=False,
-                tags=[],
-                description="",
-            ),
+            artifact="rf",
             name="v1.2.3",
             author=author,
             commit_hexsha=first_commit.hexsha,
@@ -95,14 +74,7 @@ def test_api(showcase):
     _check_obj(
         rf_ver2,
         dict(
-            artifact=dict(
-                type="model",
-                name="rf",
-                path="models/random-forest.pkl",
-                virtual=False,
-                tags=[],
-                description="",
-            ),
+            artifact="rf",
             name="v1.2.4",
             author=author,
             commit_hexsha=second_commit.hexsha,
@@ -118,14 +90,7 @@ def test_api(showcase):
     _check_obj(
         rf_l1,
         dict(
-            artifact=dict(
-                type="model",
-                name="rf",
-                path="models/random-forest.pkl",
-                virtual=False,
-                tags=[],
-                description="",
-            ),
+            artifact="rf",
             version="v1.2.3",
             stage="production",
             author=author,
@@ -136,14 +101,7 @@ def test_api(showcase):
     _check_obj(
         rf_l4,
         dict(
-            artifact=dict(
-                type="model",
-                name="rf",
-                path="models/random-forest.pkl",
-                virtual=False,
-                tags=[],
-                description="",
-            ),
+            artifact="rf",
             version="v1.2.4",
             stage="production",
             author=author,
@@ -154,14 +112,7 @@ def test_api(showcase):
     _check_obj(
         rf_l3,
         dict(
-            artifact=dict(
-                type="model",
-                name="rf",
-                path="models/random-forest.pkl",
-                virtual=False,
-                tags=[],
-                description="",
-            ),
+            artifact="rf",
             version="v1.2.4",
             stage="staging",
             author=author,

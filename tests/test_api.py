@@ -85,14 +85,7 @@ def test_promote(repo_with_artifact):
     _check_obj(
         promotion,
         dict(
-            artifact=dict(
-                type="new-type",
-                name=name,
-                path="new/path",
-                virtual=True,
-                tags=[],
-                description="",
-            ),
+            artifact=name,
             version="v0.0.1",
             stage=stage,
             author=author,

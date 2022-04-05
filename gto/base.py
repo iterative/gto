@@ -6,14 +6,13 @@ from pydantic import BaseModel
 
 from gto.config import RegistryConfig
 from gto.constants import Action
-from gto.index import Artifact, ArtifactCommits
 from gto.versions import SemVer
 
 from .exceptions import ArtifactNotFound, ManyVersions, VersionRequired
 
 
 class BasePromotion(BaseModel):
-    artifact: Artifact
+    artifact: str
     version: str
     stage: str
     creation_date: datetime
@@ -22,7 +21,7 @@ class BasePromotion(BaseModel):
 
 
 class BaseVersion(BaseModel):
-    artifact: Artifact
+    artifact: str
     name: str
     creation_date: datetime
     author: str
@@ -47,7 +46,6 @@ class BaseVersion(BaseModel):
 
 class BaseArtifact(BaseModel):
     name: str
-    commits: ArtifactCommits
     versions: List[BaseVersion]
 
     @property
@@ -81,6 +79,9 @@ class BaseArtifact(BaseModel):
                 stages[promotion.stage] = stages.get(promotion.stage) or promotion
         return stages
 
+    def add_version(self, version: BaseVersion):
+        self.versions.append(version)
+
     def add_promotion(self, promotion: BasePromotion):
         self.find_version(name=promotion.version).promotions.append(  # type: ignore
             promotion
@@ -102,8 +103,6 @@ class BaseArtifact(BaseModel):
         if allow_multiple:
             return versions
         if raise_if_not_found and not versions:
-            for v in self.versions:
-                print(v)
             raise VersionRequired(name=self.name)
         if len(versions) > 1:
             raise ManyVersions(
@@ -127,16 +126,24 @@ class BaseArtifact(BaseModel):
 
 
 class BaseRegistryState(BaseModel):
-    artifacts: Dict[str, BaseArtifact]
+    artifacts: Dict[str, BaseArtifact] = {}
 
     class Config:
         arbitrary_types_allowed = True
 
-    def find_artifact(self, name):
-        art = self.artifacts.get(name)
-        if not art:
-            raise ArtifactNotFound(name)
-        return art
+    def add_artifact(self, name):
+        self.artifacts[name] = BaseArtifact(name=name, versions=[])
+
+    def update_artifact(self, artifact: BaseArtifact):
+        self.artifacts[artifact.name] = artifact
+
+    def find_artifact(self, name, create_new=False):
+        if name not in self.artifacts:
+            if create_new:
+                self.artifacts[name] = BaseArtifact(name=name, versions=[])
+            else:
+                raise ArtifactNotFound(name)
+        return self.artifacts.get(name)
 
     @property
     def unique_stages(self):
@@ -159,7 +166,7 @@ class BaseRegistryState(BaseModel):
         return None
 
     def sort(self):
-        for name in self.artifacts:
+        for name in self.artifacts:  # pylint: disable=consider-using-dict-items
             self.artifacts[name].versions.sort(key=lambda x: (x.creation_date, x.name))
             self.artifacts[name].stages.sort(
                 key=lambda x: (x.creation_date, x.version, x.stage)
