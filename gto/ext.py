@@ -94,8 +94,10 @@ def _find_enrichments():
 def find_enrichments() -> List[Enrichment]:
     enrichments = _find_enrichments()
     res = []
-    for e in enrichments:
-        if isinstance(e, type) and issubclass(e, Enrichment) and not e.__fields_set__:
+    for e in enrichments.values():
+        print(e)
+        # if isinstance(e, type) and issubclass(e, Enrichment) and not e.__fields_set__:
+        if isinstance(e, type) and issubclass(e, Enrichment):
             res.append(e())
         if isinstance(e, Enrichment):
             res.append(e)

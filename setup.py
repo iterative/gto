@@ -57,7 +57,7 @@ setup_args = dict(  # noqa: C408
         "gto.enrichment": [
             "mlem = gto.ext_mlem:MlemEnrichment",
             "dvc = gto.ext_dvc:DVCEnrichment",
-            "cli = gto.ext:CLIEnrichment",
+            # "cli = gto.ext:CLIEnrichment",
         ],
     },
     cmdclass={"build_py": build_py},
