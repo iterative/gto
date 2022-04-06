@@ -241,16 +241,29 @@ def audit_promotion(
     return audit_trail, "keys"
 
 
-def describe(name: str) -> List[EnrichmentInfo]:
+def describe(
+    repo: Union[str, Repo], name: str, rev: str = None
+) -> List[EnrichmentInfo]:
+    enrichments = CONFIG.enrichments
     res = []
-    for enrichment in CONFIG.enrichments:
-        enrichment_data = enrichment.describe(name)
-        if enrichment_data is not None:
-            res.append(enrichment_data)
+    gto_enrichment = enrichments.pop("gto")
+    gto_info = gto_enrichment.describe(repo, name, rev)
+    if gto_info:
+        res.append(gto_info)
+        path = gto_info.get_path()  # type: ignore
+        for enrichment in enrichments.values():
+            enrichment_data = enrichment.describe(repo, path, rev)
+            if enrichment_data is not None:
+                res.append(enrichment_data)
     return res
 
 
-def history(repo: str, artifact: str = None, sort: str = "desc", table: bool = False):
+def history(
+    repo: Union[str, Repo],
+    artifact: str = None,
+    sort: str = "desc",
+    table: bool = False,
+):
     def add_event(event_list, event_name):
         return [{**event, "event": event_name} for event in event_list]
 

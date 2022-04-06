@@ -8,6 +8,8 @@ from typing import IO, Dict, Generator, List, Optional, Union
 import git
 from pydantic import BaseModel, parse_obj_as
 
+from gto.ext import Enrichment, EnrichmentInfo
+
 from .config import CONFIG_FILE_NAME, RegistryConfig, yaml
 from .exceptions import ArtifactExists, ArtifactNotFound, NoFile, NoRepo, PathIsUsed
 
@@ -241,3 +243,28 @@ def init_index_manager(path):
         return RepoIndexManager.from_repo(path)
     except NoRepo:
         return FileIndexManager.from_path(path)
+
+
+class GTOInfo(EnrichmentInfo):
+    source = "gto"
+    artifact: Artifact
+
+    def get_object(self) -> BaseModel:
+        return self.artifact
+
+    def get_human_readable(self) -> str:
+        description = f"""GTO artifact: {self.artifact}"""
+        return description
+
+    def get_path(self):
+        return self.artifact.path
+
+
+class GTOEnrichment(Enrichment):
+    source = "gto"
+
+    def describe(self, repo, obj: str, rev: Optional[str]) -> Optional[GTOInfo]:
+        index = RepoIndexManager.from_repo(repo).get_commit_index(rev)
+        if obj in index.state:
+            return GTOInfo(artifact=index.state[obj])
+        return None

@@ -27,8 +27,10 @@ class MlemInfo(EnrichmentInfo):
 
 
 class MlemEnrichment(Enrichment):
-    def describe(self, obj: str) -> Optional[MlemInfo]:
+    source = "mlem"
+
+    def describe(self, repo, obj: str, rev: Optional[str]) -> Optional[MlemInfo]:
         try:
-            return MlemInfo(meta=load_meta(obj))
+            return MlemInfo(meta=load_meta(obj, repo=repo, rev=rev))
         except MlemObjectNotFound:
             return None

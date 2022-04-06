@@ -102,10 +102,10 @@ class RegistryConfig(BaseSettings):
         }[self.STAGE_BASE]
 
     @property
-    def enrichments(self) -> List[Enrichment]:
-        res = [e.load() for e in self.ENRICHMENTS]
+    def enrichments(self) -> Dict[str, Enrichment]:
+        res = {e.source: e for e in (e.load() for e in self.ENRICHMENTS)}
         if self.AUTOLOAD_ENRICHMENTS:
-            return find_enrichments() + res
+            return {**find_enrichments(), **res}
         return res
 
     def assert_stage(self, name):

@@ -1,12 +1,10 @@
-import subprocess
 from abc import ABC, abstractmethod
 from functools import lru_cache
 from importlib import import_module
-from json import loads
-from typing import Dict, List, Optional, Type, Union
+from typing import Dict, Optional, Type
 
 import entrypoints
-from pydantic import BaseModel, parse_obj_as, validator
+from pydantic import BaseModel
 
 ENRICHMENT_ENRTYPOINT = "gto.enrichment"
 
@@ -37,51 +35,55 @@ class EnrichmentInfo(BaseModel, ABC):
 
 
 class Enrichment(BaseModel, ABC):
+    source: str
+
     @abstractmethod
-    def describe(self, obj: str) -> Optional[EnrichmentInfo]:
+    def describe(
+        self, repo: str, obj: str, rev: Optional[str]
+    ) -> Optional[EnrichmentInfo]:
         raise NotImplementedError
 
 
-class CLIEnrichmentInfo(EnrichmentInfo):
-    data: Dict
-    repr: str
+# class CLIEnrichmentInfo(EnrichmentInfo):
+#     data: Dict
+#     repr: str
 
-    def get_object(self) -> BaseModel:
-        return self
+#     def get_object(self) -> BaseModel:
+#         return self
 
-    def get_human_readable(self) -> str:
-        return self.repr
+#     def get_human_readable(self) -> str:
+#         return self.repr
 
 
-class CLIEnrichment(Enrichment):
-    cmd: str
-    info_type: Union[str, Type[EnrichmentInfo]] = CLIEnrichmentInfo
+# class CLIEnrichment(Enrichment):
+#     cmd: str
+#     info_type: Union[str, Type[EnrichmentInfo]] = CLIEnrichmentInfo
 
-    @validator("info_type")
-    def info_class_validator(
-        cls, value
-    ):  # pylint: disable=no-self-argument,no-self-use  # noqa: B902
-        if isinstance(value, type):
-            return value
-        info_class = import_string(value)
-        if not isinstance(info_class, type) or not issubclass(
-            info_class, EnrichmentInfo
-        ):
-            raise ValueError(
-                "Wrong value for info_type: should be class or string path to class (e.g. `package.module.ClassName`)"
-            )
-        return info_class
+#     @validator("info_type")
+#     def info_class_validator(
+#         cls, value
+#     ):  # pylint: disable=no-self-argument,no-self-use  # noqa: B902
+#         if isinstance(value, type):
+#             return value
+#         info_class = import_string(value)
+#         if not isinstance(info_class, type) or not issubclass(
+#             info_class, EnrichmentInfo
+#         ):
+#             raise ValueError(
+#                 "Wrong value for info_type: should be class or string path to class (e.g. `package.module.ClassName`)"
+#             )
+#         return info_class
 
-    @property
-    def info_class(self) -> Type[EnrichmentInfo]:
-        return self.info_class_validator(self.info_type)
+#     @property
+#     def info_class(self) -> Type[EnrichmentInfo]:
+#         return self.info_class_validator(self.info_type)
 
-    def describe(self, obj: str) -> Optional[EnrichmentInfo]:
-        try:
-            data = loads(subprocess.check_output(self.cmd.split() + [obj]))
-            return parse_obj_as(self.info_class, data)
-        except subprocess.SubprocessError:
-            return None
+#     def describe(self, obj: str) -> Optional[EnrichmentInfo]:
+#         try:
+#             data = loads(subprocess.check_output(self.cmd.split() + [obj]))
+#             return parse_obj_as(self.info_class, data)
+#         except subprocess.SubprocessError:
+#             return None
 
 
 @lru_cache()
@@ -91,16 +93,15 @@ def _find_enrichments():
 
 
 @lru_cache()
-def find_enrichments() -> List[Enrichment]:
+def find_enrichments() -> Dict[str, Enrichment]:
     enrichments = _find_enrichments()
-    res = []
-    for e in enrichments.values():
-        print(e)
+    res = {}
+    for name, e in enrichments.items():
         # if isinstance(e, type) and issubclass(e, Enrichment) and not e.__fields_set__:
         if isinstance(e, type) and issubclass(e, Enrichment):
-            res.append(e())
+            res[name] = e()
         if isinstance(e, Enrichment):
-            res.append(e)
+            res[name] = e
     return res
 
 

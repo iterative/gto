@@ -26,6 +26,9 @@ arg_ref = click.argument(REF)
 option_repo = click.option(
     "-r", "--repo", default=".", help="Repository to use", show_default=True
 )
+option_rev = click.option(
+    "--rev", default=None, help="Repo revision", show_default=True
+)
 option_format = click.option(
     "--format",
     "-f",
@@ -119,7 +122,7 @@ def gto_command(*args, **kwargs):
 
 @gto_command()
 @click.argument("repo", default=".")
-@click.option("--rev", default=None, help="Repo revision", show_default=True)
+@option_rev
 @click.option("--type", default=None, help="Artifact type to list", show_default=True)
 @click.option(
     "--json",
@@ -463,9 +466,11 @@ def print_index(repo: str, format: str):
 
 
 @gto_command()
+@option_repo
 @arg_name
-def describe(name: str):
-    infos = gto.api.describe(name)
+@option_rev
+def describe(repo, name: str, rev):
+    infos = gto.api.describe(repo=repo, name=name, rev=rev)
     for info in infos:
         click.echo(info.get_human_readable())
 
