@@ -8,14 +8,17 @@ from typing import IO, Dict, Generator, List, Optional, Union
 import git
 from pydantic import BaseModel, parse_obj_as
 
-from .config import CONFIG, yaml
-from .exceptions import GTOException, ObjectNotFound
+from .config import CONFIG_FILE_NAME, RegistryConfig, yaml
+from .exceptions import ArtifactExists, ArtifactNotFound, NoFile, NoRepo, PathIsUsed
 
 
 class Artifact(BaseModel):
+    type: str
     name: str
     path: str
-    type: str
+    virtual: bool = False
+    tags: List[str] = []  # TODO: allow key:value labels
+    description: str = ""
 
 
 State = Dict[str, Artifact]
@@ -29,6 +32,39 @@ def not_frozen(func):
         return func(self, *args, **kwargs)
 
     return inner
+
+
+def find_repeated_path(
+    path: Union[str, Path], paths: List[Union[str, Path]]
+) -> Optional[Path]:
+    """Return the path from "paths" that conflicts with "path":
+    is equal to it or is a subpath (in both directions).
+    """
+    path = Path(path).resolve()
+    for p in paths:
+        p = Path(p).resolve()
+        if p == path or p in path.parents or path in p.parents:
+            return p
+    return None
+
+
+def check_if_path_exists(path: str, repo: git.Repo = None, ref: str = None):
+    """Check if path was committed to repo
+    or it just exists in case the repo is not provided.
+    """
+    if repo is None:
+        return Path(path).exists()
+    try:
+        _ = (repo.commit(ref).tree / path).data_stream
+        return True
+    except KeyError:
+        return False
+
+
+def traverse_commit(commit: git.Commit) -> Generator[git.Commit, None, None]:
+    yield commit
+    for parent in commit.parents:
+        yield from traverse_commit(parent)
 
 
 class Index(BaseModel):
@@ -57,20 +93,30 @@ class Index(BaseModel):
                 yaml.dump(self.dict()["state"], file)
 
     @not_frozen
-    def add(self, name, type, path):
+    def add(self, type, name, path, virtual, tags, description):
         if name in self:
-            raise GTOException(f"Artifact {name} already exists")
-        self.state[name] = Artifact(name=name, type=type, path=path)
+            raise ArtifactExists(name)
+        if find_repeated_path(path, [a.path for a in self.state.values()]) is not None:
+            raise PathIsUsed(type=type, name=name, path=path)
+        self.state[name] = Artifact(
+            type=type,
+            name=name,
+            path=path,
+            virtual=virtual,
+            tags=tags,
+            description=description,
+        )
 
     @not_frozen
     def remove(self, name):
         if name not in self:
-            raise GTOException(f"Artifact {name} does not exist")
+            raise ArtifactNotFound(name)
         del self.state[name]
 
 
 class BaseIndexManager(BaseModel, ABC):
     current: Optional[Index]
+    config: RegistryConfig
 
     @abstractmethod
     def get_index(self) -> Index:
@@ -84,9 +130,16 @@ class BaseIndexManager(BaseModel, ABC):
     def get_history(self) -> Dict[str, Index]:
         raise NotImplementedError
 
-    def add(self, name, type, path):
+    def add(self, type, name, path, virtual, tags, description):
+        if tags is None:
+            tags = []
+        self.config.assert_type(type)
+        if not virtual and not check_if_path_exists(
+            path, self.repo if hasattr(self, "repo") else None
+        ):
+            raise NoFile(path)
         index = self.get_index()
-        index.add(name, type, path)
+        index.add(type, name, path, virtual, tags=tags, description=description)
         self.update()
 
     def remove(self, name):
@@ -98,8 +151,16 @@ class BaseIndexManager(BaseModel, ABC):
 class FileIndexManager(BaseIndexManager):
     path: str = ""
 
+    @classmethod
+    def from_path(cls, path: str, config: RegistryConfig = None):
+        if config is None:
+            config = RegistryConfig(
+                CONFIG_FILE_NAME=os.path.join(path, CONFIG_FILE_NAME)
+            )
+        return cls(path=path, config=config)
+
     def index_path(self):
-        return str(Path(self.path) / CONFIG.INDEX)
+        return str(Path(self.path) / self.config.INDEX)
 
     def get_index(self) -> Index:
         if os.path.exists(self.index_path()):
@@ -116,28 +177,36 @@ class FileIndexManager(BaseIndexManager):
         raise NotImplementedError("Not a git repo: history is not available")
 
 
-ObjectCommits = Dict[str, List[str]]
+ArtifactCommits = Dict[str, Artifact]
+ArtifactsCommits = Dict[str, ArtifactCommits]
 
 
 class RepoIndexManager(FileIndexManager):
     repo: git.Repo
 
     @classmethod
-    def from_repo(cls, repo: Union[str, git.Repo]):
+    def from_repo(cls, repo: Union[str, git.Repo], config: RegistryConfig = None):
         if isinstance(repo, str):
-            repo = git.Repo(repo)
-        return cls(repo=repo)
+            try:
+                repo = git.Repo(repo, search_parent_directories=True)
+            except git.InvalidGitRepositoryError as e:
+                raise NoRepo(repo) from e
+        if config is None:
+            config = RegistryConfig(
+                CONFIG_FILE_NAME=os.path.join(repo.working_dir, CONFIG_FILE_NAME)
+            )
+        return cls(repo=repo, config=config)
 
     def index_path(self):
         # TODO: config should be loaded from repo too
-        return os.path.join(os.path.dirname(self.repo.git_dir), CONFIG.INDEX)
+        return os.path.join(os.path.dirname(self.repo.git_dir), self.config.INDEX)
 
     class Config:
         arbitrary_types_allowed = True
 
     def get_commit_index(self, ref: str) -> Index:
         return Index.read(
-            (self.repo.commit(ref).tree / CONFIG.INDEX).data_stream, frozen=True
+            (self.repo.commit(ref).tree / self.config.INDEX).data_stream, frozen=True
         )
 
     def get_history(self) -> Dict[str, Index]:
@@ -149,14 +218,14 @@ class RepoIndexManager(FileIndexManager):
         return {
             commit.hexsha: self.get_commit_index(commit.hexsha)
             for commit in commits
-            if CONFIG.INDEX in commit.tree
+            if self.config.INDEX in commit.tree
         }
 
-    def object_centric_representation(self) -> ObjectCommits:
-        representation = defaultdict(list)
+    def artifact_centric_representation(self) -> ArtifactsCommits:
+        representation = defaultdict(dict)  # type: ArtifactsCommits
         for commit, index in self.get_history().items():
-            for obj in index.state:
-                representation[obj].append(commit)
+            for art in index.state:
+                representation[art][commit] = index.state[art]
         return representation
 
     def check_existence(self, name, commit):
@@ -164,10 +233,11 @@ class RepoIndexManager(FileIndexManager):
 
     def assert_existence(self, name, commit):
         if not self.check_existence(name, commit):
-            raise ObjectNotFound(name)
+            raise ArtifactNotFound(name)
 
 
-def traverse_commit(commit: git.Commit) -> Generator[git.Commit, None, None]:
-    yield commit
-    for parent in commit.parents:
-        yield from traverse_commit(parent)
+def init_index_manager(path):
+    try:
+        return RepoIndexManager.from_repo(path)
+    except NoRepo:
+        return FileIndexManager.from_path(path)

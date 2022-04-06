@@ -6,12 +6,11 @@ from setuptools.command.build_py import build_py
 install_requires = [
     "gitpython",
     "click",
-    "pandas",
-    "numpy",
     "pydantic",
     "ruamel.yaml",
     "semver==3.0.0-dev.3",
     "entrypoints",
+    "tabulate==0.8.9",
 ]
 
 
@@ -30,8 +29,8 @@ tests = [
 
 
 setup_args = dict(  # noqa: C408
-    name="great-tool-ops",
-    version="0.0.6",
+    name="gto",
+    version="0.0.9",
     description="Version and deploy your models following GitOps principles",
     long_description=(Path(__file__).parent / "README.md").read_text(encoding="utf8"),
     long_description_content_type="text/markdown",
@@ -41,7 +40,7 @@ setup_args = dict(  # noqa: C408
     license="Apache License 2.0",
     install_requires=install_requires,
     extras_require={"tests": tests},
-    keywords="git gto mlops object registry developer-tools collaboration",
+    keywords="git gto mlops artifact registry developer-tools collaboration",
     python_requires=">=3.6",
     classifiers=[
         "Development Status :: 2 - Pre-Alpha",

@@ -7,27 +7,78 @@ class GTOException(Exception):
         super().__init__(msg, *args)
 
 
-class ObjectNotFound(GTOException):
-    _message = "Requested '{name}' wasn't found in registry"
+class NotFound(GTOException):
+    """Raised when a requested resource is not found."""
+
+
+class NoRepo(GTOException):
+    _message = "No Git repo found in '{path}'"
+
+    def __init__(self, path) -> None:
+        self.message = self._message.format(path=path)
+        super().__init__(self.message)
+
+
+class NoFile(GTOException):
+    _message = "No file/folder found in '{path}' for checkouted commit"
+
+    def __init__(self, path) -> None:
+        self.message = self._message.format(path=path)
+        super().__init__(self.message)
+
+
+class UnknownType(GTOException):
+    _message = (
+        "Type '{type}' is not present in your config file. Allowed values are: {types}."
+    )
+
+    def __init__(self, type, types) -> None:
+        self.message = self._message.format(type=type, types=types)
+        super().__init__(self.message)
+
+
+class ArtifactExists(GTOException):
+    _message = "Artifact '{name}' is already exists in Index"
 
     def __init__(self, name) -> None:
         self.message = self._message.format(name=name)
         super().__init__(self.message)
 
 
-class VersionRequired(GTOException):
-    _message = "No versions found for '{name}'"
+class ArtifactNotFound(GTOException):
+    _message = "Artifact '{name}' doesn't exist in Index"
 
-    def __init__(self, name):
+    def __init__(self, name) -> None:
         self.message = self._message.format(name=name)
         super().__init__(self.message)
 
 
+class PathIsUsed(GTOException):
+    _message = "Provided path conflicts with {path} ({type} {name})"
+
+    def __init__(self, type, name, path) -> None:
+        self.message = self._message.format(type=type, name=name, path=path)
+        super().__init__(self.message)
+
+
+class VersionRequired(GTOException):
+    _message = "No versions found for '{name}'"
+
+    def __init__(self, name) -> None:
+        self.message = self._message.format(name=name)
+        super().__init__(self.message)
+
+
+class ManyVersions(GTOException):
+    _message = "{versions} versions of artifact {name} found"
+
+    def __init__(self, name, versions) -> None:
+        self.message = self._message.format(name=name, versions=versions)
+        super().__init__(self.message)
+
+
 class VersionAlreadyRegistered(GTOException):
-    _message = (
-        "Version '{version}' already was registered.\n"
-        "Even if it was unregistered, you must use another name to avoid confusion."
-    )
+    _message = "Version '{version}' already was registered.\n"
 
     def __init__(self, version) -> None:
         self.message = self._message.format(version=version)
@@ -50,22 +101,19 @@ class VersionIsOld(GTOException):
         super().__init__(self.message)
 
 
-class UnknownEnvironment(GTOException):
-    _message = "Environment '{env}' is not present in your config file. Allowed envs are: {envs}."
+class UnknownStage(GTOException):
+    _message = "Stage '{stage}' is not present in your config file. Allowed stages are: {stages}."
 
-    def __init__(self, env) -> None:
-        # to avoid circular import
-        from .config import CONFIG  # pylint: disable=import-outside-toplevel
-
-        self.message = self._message.format(env=env, envs=CONFIG.ENV_WHITELIST)
+    def __init__(self, stage, stages) -> None:
+        self.message = self._message.format(stage=stage, stages=stages)
         super().__init__(self.message)
 
 
-class NoActiveLabel(GTOException):
-    _message = "No active label '{label}' was found for '{name}'"
+class NoActivePromotion(GTOException):
+    _message = "No version in stage '{stage}' was found for '{name}'"
 
-    def __init__(self, label, name) -> None:
-        self.message = self._message.format(label=label, name=name)
+    def __init__(self, stage, name) -> None:
+        self.message = self._message.format(stage=stage, name=name)
         super().__init__(self.message)
 
 

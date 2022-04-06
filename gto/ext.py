@@ -1,14 +1,24 @@
 import subprocess
 from abc import ABC, abstractmethod
 from functools import lru_cache
+from importlib import import_module
 from json import loads
 from typing import Dict, List, Optional, Type, Union
 
 import entrypoints
-from mlem.utils.importing import import_string
 from pydantic import BaseModel, parse_obj_as, validator
 
 ENRICHMENT_ENRTYPOINT = "gto.enrichment"
+
+
+def import_string(path):
+    split = path.split(".")
+    module_name, object_name = ".".join(split[:-1]), split[-1]
+    mod = import_module(module_name)
+    try:
+        return getattr(mod, object_name)
+    except AttributeError as e:
+        raise ImportError(f"No object {object_name} in module {module_name}") from e
 
 
 class EnrichmentInfo(BaseModel, ABC):

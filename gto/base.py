@@ -1,195 +1,218 @@
 from datetime import datetime
-from typing import Dict, FrozenSet, List, Optional, overload
+from typing import Dict, FrozenSet, List, Optional, Union
 
 import git
 from pydantic import BaseModel
-from typing_extensions import Literal
 
+from gto.config import RegistryConfig
 from gto.constants import Action
-from gto.index import ObjectCommits
+from gto.versions import SemVer
 
-from .exceptions import GTOException, ObjectNotFound
+from .exceptions import ArtifactNotFound, ManyVersions, VersionRequired
 
 
-class BaseLabel(BaseModel):  # pylint: disable=too-many-instance-attributes
-    # category: str
-    object: str
+class BasePromotion(BaseModel):
+    artifact: str
     version: str
-    name: str
+    stage: str
     creation_date: datetime
     author: str
     commit_hexsha: str
-    unregistered_date: Optional[datetime] = None
-
-    def __repr__(self) -> str:
-        return f"Label('{self.object}', '{self.version}', '{self.name}')"
-
-    @property
-    def is_registered(self):
-        return self.unregistered_date is None
 
 
 class BaseVersion(BaseModel):
-    # category: str
-    object: str
+    artifact: str
     name: str
     creation_date: datetime
     author: str
     commit_hexsha: str
-    unregistered_date: Optional[datetime] = None
-
-    def __repr__(self) -> str:
-        return f"Version('{self.object}', '{self.name}')"
+    promotions: List[BasePromotion] = []
 
     @property
-    def is_registered(self):
-        return self.unregistered_date is None
+    def version(self):
+        # TODO: this should be read from config, how to pass it down here?
+        return SemVer(self.name)
+
+    @property
+    def stage(self):
+        promotions = sorted(self.promotions, key=lambda p: p.creation_date)
+        return promotions[-1] if promotions else None
+
+    def dict_status(self):
+        version = self.dict(exclude={"promotions"})
+        version["stage"] = self.stage.dict() if self.stage else None
+        return version
 
 
-class BaseObject(BaseModel):
+class BaseArtifact(BaseModel):
     name: str
     versions: List[BaseVersion]
-    labels: List[BaseLabel]
 
     @property
-    def unique_labels(self):
-        return {l.name for l in self.labels}
+    def stages(self):
+        return [l for v in self.versions for l in v.promotions]
+
+    @property
+    def unique_stages(self):
+        return {l.stage for l in self.stages}
 
     def __repr__(self) -> str:
         versions = ", ".join(f"'{v.name}'" for v in self.versions)
-        labels = ", ".join(f"'{l}'" for l in self.unique_labels)
-        return f"Object(versions=[{versions}], labels=[{labels}])"
+        stages = ", ".join(f"'{l}'" for l in self.unique_stages)
+        return f"Artifact(versions=[{versions}], stages=[{stages}])"
 
-    @property
-    def latest_version(self) -> Optional[BaseVersion]:
-        if self.versions:
-            return sorted(
-                (v for v in self.versions if v.is_registered),
-                key=lambda x: x.creation_date,
-            )[-1]
+    def get_latest_version(self) -> Optional[BaseVersion]:
+        versions = sorted(
+            self.versions,
+            key=lambda x: x.creation_date,
+        )
+        if versions:
+            return versions[-1]
         return None
 
     @property
-    def latest_labels(self) -> Dict[str, BaseLabel]:
-        labels: Dict[str, BaseLabel] = {}
-        for label in self.labels:
-            # TODO: check that version exists and wasn't demoted???
-            # probably this check should be done during State construction
-            # as the rules to know it are all there
-            if not label.is_registered:
-                continue
-            if (
-                label.name not in labels
-                or labels[label.name].creation_date < label.creation_date
-            ):
-                labels[label.name] = label
-        return labels
+    def promoted(self) -> Dict[str, BasePromotion]:
+        stages: Dict[str, BasePromotion] = {}
+        for version in sorted(self.versions, key=lambda x: x.version, reverse=True):
+            promotion = version.stage
+            if promotion:
+                stages[promotion.stage] = stages.get(promotion.stage) or promotion
+        return stages
 
-    @overload
-    def find_version(
-        self,
-        name: str = None,
-        commit_hexsha: str = None,
-        raise_if_not_found: Literal[True] = ...,
-        skip_unregistered=True,
-    ) -> BaseVersion:
-        ...
+    def add_version(self, version: BaseVersion):
+        self.versions.append(version)
 
-    @overload
-    def find_version(
-        self,
-        name: str = None,
-        commit_hexsha: str = None,
-        raise_if_not_found: Literal[False] = ...,
-        skip_unregistered=True,
-    ) -> Optional[BaseVersion]:
-        ...
+    def add_promotion(self, promotion: BasePromotion):
+        self.find_version(name=promotion.version).promotions.append(  # type: ignore
+            promotion
+        )
+
+    # @overload
+    # def find_version(
+    #     self,
+    #     name: str = None,
+    #     commit_hexsha: str = None,
+    #     raise_if_not_found: Literal[True] = ...,
+    #     allow_multiple: Literal[False] = ...,
+    # ) -> BaseVersion:
+    #     ...
+
+    # @overload
+    # def find_version(
+    #     self,
+    #     name: str = None,
+    #     commit_hexsha: str = None,
+    #     raise_if_not_found: Literal[False] = ...,
+    #     allow_multiple: Literal[False] = ...,
+    # ) -> Optional[BaseVersion]:
+    #     ...
+
+    # @overload
+    # def find_version(
+    #     self,
+    #     name: str = None,
+    #     commit_hexsha: str = None,
+    #     raise_if_not_found: Literal[False] = ...,
+    #     allow_multiple: Literal[True] = ...,
+    # ) -> List[BaseVersion]:
+    #     ...
 
     def find_version(
         self,
         name: str = None,
         commit_hexsha: str = None,
         raise_if_not_found: bool = False,
-        skip_unregistered=True,
-    ) -> Optional[BaseVersion]:
+        allow_multiple=False,
+    ) -> Union[None, BaseVersion, List[BaseVersion]]:
         versions = [
             v
             for v in self.versions
             if (v.name == name if name else True)
             and (v.commit_hexsha == commit_hexsha if commit_hexsha else True)
-            and (v.unregistered_date is None if skip_unregistered else True)
         ]
-        if raise_if_not_found:
-            if len(versions) != 1:
-                raise GTOException(
-                    f"{len(versions)} versions of object {self.name} found"
-                    + ", skipping unregistered"
-                    if skip_unregistered
-                    else ""
-                )
-            return versions[0]
-
+        if allow_multiple:
+            return versions
+        if raise_if_not_found and not versions:
+            raise VersionRequired(name=self.name)
         if len(versions) > 1:
-            raise GTOException(
-                f"{len(versions)} versions of object {self.name} found"
-                + ", skipping unregistered"
-                if skip_unregistered
-                else ""
+            raise ManyVersions(
+                name=self.name,
+                versions=[v.name for v in versions],
             )
         return versions[0] if versions else None
 
+    def find_version_at_commit(
+        self, commit_hexsha: str, latest_datetime: datetime = None
+    ):
+        return [
+            v
+            for v in self.find_version(  # type: ignore
+                commit_hexsha=commit_hexsha,
+                raise_if_not_found=True,
+                allow_multiple=True,
+            )
+            if (v.creation_date <= latest_datetime if latest_datetime else True)  # type: ignore
+        ][-1]
+
 
 class BaseRegistryState(BaseModel):
-    objects: Dict[str, BaseObject]
+    artifacts: Dict[str, BaseArtifact] = {}
 
     class Config:
         arbitrary_types_allowed = True
 
-    def find_object(self, name):
-        obj = self.objects.get(name)
-        if not obj:
-            raise ObjectNotFound(name)
-        return obj
+    def add_artifact(self, name):
+        self.artifacts[name] = BaseArtifact(name=name, versions=[])
+
+    def update_artifact(self, artifact: BaseArtifact):
+        self.artifacts[artifact.name] = artifact
+
+    def find_artifact(self, name, create_new=False):
+        if name not in self.artifacts:
+            if create_new:
+                self.artifacts[name] = BaseArtifact(name=name, versions=[])
+            else:
+                raise ArtifactNotFound(name)
+        return self.artifacts.get(name)
 
     @property
-    def unique_labels(self):
-        return sorted({l for o in self.objects.values() for l in o.unique_labels})
+    def unique_stages(self):
+        return sorted({l for o in self.artifacts.values() for l in o.unique_stages})
 
     def find_commit(self, name, version):
         return (
-            self.find_object(name)
-            .find_version(
-                name=version, raise_if_not_found=True, skip_unregistered=False
-            )
+            self.find_artifact(name)
+            .find_version(name=version, raise_if_not_found=True)
             .commit_hexsha
         )
 
-    def which(self, name, label, raise_if_not_found=True):
-        """Return label active in specific env"""
-        latest_labels = self.find_object(name).latest_labels
-        if label in latest_labels:
-            return latest_labels[label]
+    def which(self, name, stage, raise_if_not_found=True):
+        """Return stage active in specific stage"""
+        promoted = self.find_artifact(name).promoted
+        if stage in promoted:
+            return promoted[stage]
         if raise_if_not_found:
-            raise ValueError(f"Label {label} not found for {name}")
+            raise ValueError(f"Stage {stage} not found for {name}")
         return None
 
     def sort(self):
-        for name in self.objects:
-            self.objects[name].versions.sort(key=lambda x: (x.creation_date, x.name))
-            self.objects[name].labels.sort(
-                key=lambda x: (x.creation_date, x.version, x.name)
+        for name in self.artifacts:  # pylint: disable=consider-using-dict-items
+            self.artifacts[name].versions.sort(key=lambda x: (x.creation_date, x.name))
+            self.artifacts[name].stages.sort(
+                key=lambda x: (x.creation_date, x.version, x.stage)
             )
 
 
 class BaseManager(BaseModel):
     repo: git.Repo
     actions: FrozenSet[Action]
+    config: RegistryConfig
 
     class Config:
         arbitrary_types_allowed = True
 
     def update_state(
-        self, state: BaseRegistryState, index: ObjectCommits
+        self, state: BaseRegistryState
     ) -> BaseRegistryState:  # pylint: disable=no-self-use
         raise NotImplementedError
 
@@ -198,13 +221,7 @@ class BaseManager(BaseModel):
     # def register(self, name, version, ref, message):
     #     raise NotImplementedError
 
-    # def unregister(self, name, version):
-    #     raise NotImplementedError
-
-    # def promote(self, name, label, ref, message):
-    #     raise NotImplementedError
-
-    # def demote(self, name, label, message):
+    # def promote(self, name, stage, ref, message):
     #     raise NotImplementedError
 
     def check_ref(self, ref: str, state: BaseRegistryState):
