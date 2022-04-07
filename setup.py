@@ -5,7 +5,8 @@ from setuptools.command.build_py import build_py
 
 install_requires = [
     "gitpython",
-    "click",
+    "typer",
+    "rich",
     "pydantic",
     "ruamel.yaml",
     "semver==3.0.0-dev.3",
@@ -52,7 +53,7 @@ setup_args = dict(  # noqa: C408
     packages=find_packages(exclude=["tests"]),
     include_package_data=True,
     entry_points={
-        "console_scripts": ["gto = gto.cli:cli"],
+        "console_scripts": ["gto = gto.cli:app"],
     },
     cmdclass={"build_py": build_py},
     zip_safe=False,

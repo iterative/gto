@@ -1,14 +1,23 @@
 import logging
 import sys
-from functools import wraps
-from typing import Sequence
+from collections import defaultdict
+from enum import Enum, EnumMeta, _EnumDict
+from functools import partial, wraps
+from gettext import gettext
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
 import click
+import typer
+from click import Abort, ClickException, Command, Context, HelpFormatter
+from click.exceptions import Exit
 from tabulate import tabulate_formats
+from typer import Argument, Option, Typer
+from typer.core import TyperCommand, TyperGroup
 
 import gto
 from gto.constants import NAME, PATH, REF, STAGE, TYPE, VERSION
-from gto.exceptions import NotFound
+from gto.exceptions import GTOException, NotFound
+from gto.ui import EMOJI_FAIL, EMOJI_MLEM, bold, cli_echo, color, echo
 from gto.utils import format_echo, make_ready_to_serialize
 
 TABLE = "table"
@@ -19,132 +28,335 @@ class ALIAS:
     PROMOTE = ["promote", "prom", "promotion", "promotions"]
 
 
-arg_name = click.argument(NAME)
-arg_version = click.argument(VERSION)
-arg_stage = click.argument(STAGE)
-arg_ref = click.argument(REF)
-option_repo = click.option(
-    "-r", "--repo", default=".", help="Repository to use", show_default=True
-)
-option_format = click.option(
+class GtoFormatter(click.HelpFormatter):
+    def write_heading(self, heading: str) -> None:
+        super().write_heading(bold(heading))
+
+
+class GtoCliMixin(Command):
+    def __init__(
+        self,
+        name: Optional[str],
+        examples: Optional[str],
+        section: str = "other",
+        aliases: List[str] = None,
+        **kwargs,
+    ):
+        super().__init__(name, **kwargs)
+        self.examples = examples
+        self.section = section
+        self.aliases = aliases
+
+    def get_help(self, ctx: Context) -> str:
+        """Formats the help into a string and returns it.
+
+        Calls :meth:`format_help` internally.
+        """
+        formatter = GtoFormatter(
+            width=ctx.terminal_width, max_width=ctx.max_content_width
+        )
+        self.format_help(ctx, formatter)
+        return formatter.getvalue().rstrip("\n")
+
+    def format_epilog(self, ctx: Context, formatter: HelpFormatter) -> None:
+        super().format_epilog(ctx, formatter)
+        if self.examples:
+            with formatter.section("Examples"):
+                formatter.write(self.examples)
+
+
+def _extract_examples(
+    help_str: Optional[str],
+) -> Tuple[Optional[str], Optional[str]]:
+    if help_str is None:
+        return None, None
+    try:
+        examples = help_str.index("Examples:")
+    except ValueError:
+        return None, help_str
+    return help_str[examples + len("Examples:") + 1 :], help_str[:examples]
+
+
+class GtoCommand(TyperCommand, GtoCliMixin):
+    def __init__(
+        self,
+        name: Optional[str],
+        section: str = "other",
+        aliases: List[str] = None,
+        help: Optional[str] = None,
+        **kwargs,
+    ):
+        examples, help = _extract_examples(help)
+        super().__init__(
+            name,
+            section=section,
+            aliases=aliases,
+            examples=examples,
+            help=help,
+            **kwargs,
+        )
+
+
+class GtoGroup(TyperGroup, GtoCliMixin):
+    order = ["common", "object", "runtime", "section1", "section2", "other"]
+
+    def __init__(
+        self,
+        name: Optional[str] = None,
+        commands: Optional[Union[Dict[str, Command], Sequence[Command]]] = None,
+        section: str = "other",
+        aliases: List[str] = None,
+        help: str = None,
+        **attrs: Any,
+    ) -> None:
+        examples, help = _extract_examples(help)
+        super().__init__(
+            name,
+            help=help,
+            examples=examples,
+            aliases=aliases,
+            section=section,
+            commands=commands,
+            **attrs,
+        )
+
+    def format_commands(self, ctx: Context, formatter: HelpFormatter) -> None:
+        commands = []
+        for subcommand in self.list_commands(ctx):
+            cmd = self.get_command(ctx, subcommand)
+            # What is this, the tool lied about a command.  Ignore it
+            if cmd is None:
+                continue
+            if cmd.hidden:
+                continue
+
+            commands.append((subcommand, cmd))
+
+        # allow for 3 times the default spacing
+        if len(commands) > 0:
+            limit = formatter.width - 6 - max(len(cmd[0]) for cmd in commands)
+
+            sections = defaultdict(list)
+            for subcommand, cmd in commands:
+                help = cmd.get_short_help_str(limit)
+                if isinstance(cmd, (GtoCommand, GtoGroup)):
+                    section = cmd.section
+                    aliases = f" ({','.join(cmd.aliases)})" if cmd.aliases else ""
+                else:
+                    section = "other"
+                    aliases = ""
+
+                sections[section].append((subcommand + aliases, help))
+
+            for section in self.order:
+                if sections[section]:
+                    with formatter.section(gettext(f"{section} commands".capitalize())):
+                        formatter.write_dl(sections[section])
+
+    def get_command(self, ctx: Context, cmd_name: str) -> Optional[Command]:
+        cmd = super().get_command(ctx, cmd_name)
+        if cmd is not None:
+            return cmd
+        for name in self.list_commands(ctx):
+            cmd = self.get_command(ctx, name)
+            if (
+                isinstance(cmd, (GtoCommand, GtoGroup))
+                and cmd.aliases
+                and cmd_name in cmd.aliases
+            ):
+                return cmd
+        return None
+
+
+def MlemGroupSection(section):
+    return partial(GtoGroup, section=section)
+
+
+app = Typer(cls=GtoGroup, context_settings={"help_option_names": ["-h", "--help"]})
+
+arg_name = Argument(..., help="")
+arg_version = Argument(..., help="")
+arg_stage = Argument(..., help="")
+arg_ref = Argument(..., help="")
+option_repo = Option(".", "-r", "--repo", help="Repository to use", show_default=True)
+
+
+class Format(str, Enum):
+    json = "json"
+    yaml = "yaml"
+
+
+class FormatDF(str, Enum):
+    json = "json"
+    yaml = "yaml"
+    table = "table"
+
+
+option_format = Option(
+    Format.yaml,
     "--format",
     "-f",
-    default="yaml",
     help="Output format",
-    type=click.Choice(["json", "yaml"], case_sensitive=False),
     show_default=True,
 )
-option_format_df = click.option(
+option_format_df = Option(
+    FormatDF.table,
     "--format",
     "-f",
-    default=TABLE,
     help="Output format",
-    type=click.Choice([TABLE, "json", "yaml"], case_sensitive=False),
     show_default=True,
 )
-option_format_table = click.option(
+
+
+class StrEnum(str, Enum):
+    def _generate_next_value_(name, start, count, last_values):
+        return name
+
+
+FormatTable = StrEnum("FormatTable", tabulate_formats, module=__name__, type=str)  # type: ignore
+option_format_table = Option(
+    "fancy_outline",
     "-ft",
     "--format-table",
-    type=click.Choice(tabulate_formats),
-    default="fancy_outline",
     show_default=True,
 )
-option_name = click.option(
-    "--name", "-n", default=None, help="Artifact name", show_default=True
-)
-option_sort = click.option(
+option_name = Option(None, "--name", "-n", help="Artifact name", show_default=True)
+option_sort = Option(
+    "desc",
     "--sort",
     "-s",
-    default="desc",
     help="Desc for recent first, Asc for older first",
     show_default=True,
 )
-option_expected = click.option(
+option_expected = Option(
+    False,
     "-e",
     "--expected",
     is_flag=True,
-    default=False,
     help="Return exit code 1 if no result",
     show_default=True,
 )
-option_path = click.option(
-    "--path", is_flag=True, default=False, help="Show path", show_default=True
-)
-option_ref = click.option(
-    "--ref", is_flag=True, default=False, help="Show ref", show_default=True
-)
+option_path = Option(False, "--path", is_flag=True, help="Show path", show_default=True)
+option_ref = Option(False, "--ref", is_flag=True, help="Show ref", show_default=True)
 
 
-@click.group()
-def cli():
+@app.callback("gto", invoke_without_command=True, no_args_is_help=True)
+def gto_callback(
+    ctx: Context,
+    show_version: bool = Option(False, "--version", help="Show version and exit"),
+    verbose: bool = Option(False, "--verbose", "-v", help="Print debug messages"),
+    traceback: bool = Option(False, "--traceback", "--tb", hidden=True),
+):
     """\b
     Great Tool Ops. Turn your Git Repo into Artifact Registry:
     * Index files in repo as artifacts to make them visible for others
     * Register new versions of artifacts marking significant changes to them
     * Promote versions to signal downstream systems to act
     * Act on new versions and promotions in CI
+
+    Examples:
+        TODO
     """
-
-
-def _set_log_level(ctx, param, value):  # pylint: disable=unused-argument
-    if value or gto.CONFIG.DEBUG:
+    if ctx.invoked_subcommand is None and show_version:
+        with cli_echo():
+            echo(EMOJI_MLEM + f"GTO Version: {gto.__version__}")
+    if verbose:
         logger = logging.getLogger("gto")
         logger.handlers[0].setLevel(logging.DEBUG)
         logger.setLevel(logging.DEBUG)
         from gto.config import CONFIG  # pylint: disable=import-outside-toplevel
 
-        click.echo(CONFIG.__repr_str__("\n"))
-        click.echo()
+        echo(CONFIG.__repr_str__("\n"))
+        echo()
     else:
         sys.tracebacklimit = 0
 
-
-verbose_option = click.option(
-    "-v",
-    "--verbose",
-    callback=_set_log_level,
-    expose_value=False,
-    is_eager=True,
-    is_flag=True,
-)
+    ctx.obj = {"traceback": traceback}
 
 
-@wraps(cli.command)
-def gto_command(*args, **kwargs):
-    def decorator(func):
-        return cli.command(*args, **kwargs)(verbose_option(func))
+def gto_command(*args, section="other", aliases=None, parent=app, **kwargs):
+    def decorator(f):
+        if len(args) > 0:
+            cmd_name = args[0]
+        else:
+            cmd_name = kwargs.get("name", f.__name__)
+
+        @parent.command(
+            *args,
+            **kwargs,
+            cls=partial(GtoCommand, section=section, aliases=aliases),
+        )
+        @wraps(f)
+        @click.pass_context
+        def inner(ctx, *iargs, **ikwargs):
+            res = {}
+            error = None
+            try:
+                with cli_echo():
+                    res = f(*iargs, **ikwargs) or {}
+                res = {f"cmd_{cmd_name}_{k}": v for k, v in res.items()}
+            except (ClickException, Exit, Abort) as e:
+                # error = str(type(e))
+                raise
+            except GTOException as e:
+                # error = str(type(e))
+                if ctx.obj["traceback"]:
+                    raise
+                with cli_echo():
+                    echo(EMOJI_FAIL + color(str(e), col=typer.colors.RED))
+                raise typer.Exit(1)
+            except Exception as e:  # pylint: disable=broad-except
+                # error = str(type(e))
+                if ctx.obj["traceback"]:
+                    raise
+                with cli_echo():
+                    echo(
+                        EMOJI_FAIL
+                        + color("Unexpected error: " + str(e), col=typer.colors.RED)
+                    )
+                    echo(
+                        "Please report it here: <https://github.com/iterative/mlem/issues>"
+                    )
+            finally:
+                """TODO: analytics"""
+                # send_cli_call(cmd_name, error_msg=error, **res)
+
+        return inner
 
     return decorator
 
 
-@gto_command()
-@click.argument("repo", default=".")
-@click.option("--rev", default=None, help="Repo revision", show_default=True)
-@click.option("--type", default=None, help="Artifact type to list", show_default=True)
-@click.option(
-    "--json",
-    is_flag=True,
-    default=False,
-    help="Print output in json format",
-    show_default=True,
-)
-@click.option(
-    "--table",
-    is_flag=True,
-    default=False,
-    help="Print output in table format",
-    show_default=True,
-)
-@option_format_table
-def ls(repo, rev, type, json, table, format_table):
+@gto_command(section="section1")
+def ls(
+    repo: str = Argument(".", help="TODO"),
+    rev: Optional[str] = Option(..., "--rev", help="Repo revision", show_default=True),
+    type: Optional[str] = Option(
+        ..., "--type", help="Artifact type to list", show_default=True
+    ),
+    json: bool = Option(
+        False,
+        "--json",
+        is_flag=True,
+        help="Print output in json format",
+        show_default=True,
+    ),
+    table: bool = Option(
+        False,
+        "--table",
+        is_flag=True,
+        help="Print output in table format",
+        show_default=True,
+    ),
+    format_table: FormatTable = option_format_table,  # type: ignore
+):
     """\b
     List all artifacts in the repository
     """
     assert not (json and table), "Only one of --json and --table can be used"
     if json:
-        click.echo(format_echo(gto.api.ls(repo, rev, type), "json"))
+        echo(format_echo(gto.api.ls(repo, rev, type), "json"))
     elif table:
-        click.echo(
+        echo(
             format_echo(
                 [gto.api.ls(repo, rev, type), "keys"],
                 "table",
@@ -153,68 +365,77 @@ def ls(repo, rev, type, json, table, format_table):
             )
         )
     else:
-        click.echo(
+        echo(
             format_echo(
                 [artifact["name"] for artifact in gto.api.ls(repo, rev, type)], "lines"
             )
         )
 
 
-@gto_command()
-@option_repo
-@click.argument(TYPE)
-@arg_name
-@click.argument(PATH)
-@click.option(
-    "--virtual",
-    is_flag=True,
-    default=False,
-    help="Virtual artifact that wasn't committed to Git",
-)
-@click.option("--tag", multiple=True, default=[], help="Tags to add to artifact")
-@click.option("-d", "--description", default="", help="Artifact description")
-def add(repo: str, type: str, name: str, path: str, virtual: bool, tag, description):
-    """Register new artifact (add it to the Index)"""
+@gto_command(section="section2")
+def add(
+    repo: str = option_repo,
+    type: str = Argument(..., help="TODO"),
+    name: str = arg_name,
+    path: str = Argument(..., help="TODO"),
+    virtual: bool = Option(
+        False,
+        "--virtual",
+        is_flag=True,
+        help="Virtual artifact that wasn't committed to Git",
+    ),
+    tag: List[str] = Option(..., "--tag", help="Tags to add to artifact"),
+    description: str = Option("", "-d", "--description", help="Artifact description"),
+):
+    """Register new artifact (add it to the Index)
+
+    Examples:
+        TODO"""
     gto.api.add(repo, type, name, path, virtual, tags=tag, description=description)
 
 
-@cli.command("rm")
-@option_repo
-@arg_name
-def remove(repo: str, name: str):
-    """Deregister the artifact (remove it from the Index)"""
+@gto_command("rm")
+def remove(repo: str = option_repo, name: str = arg_name):
+    """Deregister the artifact (remove it from the Index)
+    Examples:
+        TODO"""
     gto.api.remove(repo, name)
 
 
 @gto_command()
-@option_repo
-@arg_name
-@arg_ref
-@click.option("--version", "--ver", default=None, help="Version to promote")
-@click.option(
-    "--bump", "-b", default=None, help="The exact part to use when bumping a version"
-)
-def register(repo: str, name: str, ref: str, version: str, bump: str):
-    """Tag the object with a version (git tags)"""
+def register(
+    repo: str = option_repo,
+    name: str = arg_name,
+    ref: str = arg_ref,
+    version: Optional[str] = Option(
+        None, "--version", "--ver", help="Version to promote"
+    ),
+    bump: Optional[str] = Option(
+        None, "--bump", "-b", help="The exact part to use when bumping a version"
+    ),
+):
+    """Tag the object with a version (git tags)
+
+    Examples:
+        TODO"""
     registered_version = gto.api.register(
         repo=repo, name=name, ref=ref, version=version, bump=bump
     )
-    click.echo(
-        f"Registered {registered_version.artifact} version {registered_version.name}"
-    )
+    echo(f"Registered {registered_version.artifact} version {registered_version.name}")
 
 
 @gto_command()
-@option_repo
-@arg_name
-@arg_stage
-@click.option(
-    "--version",
-    default=None,
-    help="If you provide --ref, this will be used to name new version",
-)
-@click.option("--ref", default=None)
-def promote(repo: str, name: str, stage: str, version: str, ref: str):
+def promote(
+    repo: str = option_repo,
+    name: str = arg_name,
+    stage: str = arg_stage,
+    version: Optional[str] = Option(
+        None,
+        "--version",
+        help="If you provide --ref, this will be used to name new version",
+    ),
+    ref: Optional[str] = Option(None, "--ref"),
+):
     """Assign stage to specific artifact version"""
     if ref is not None:
         name_version = version
@@ -227,12 +448,13 @@ def promote(repo: str, name: str, stage: str, version: str, ref: str):
 
 
 @gto_command()
-@option_repo
-@arg_name
-@option_path
-@option_ref
-@option_expected
-def latest(repo: str, name: str, path: bool, ref: bool, expected: bool):
+def latest(
+    repo: str = option_repo,
+    name: str = arg_name,
+    path: bool = option_path,
+    ref: bool = option_ref,
+    expected: bool = option_expected,
+):
     """Return latest version of artifact"""
     assert not (path and ref), "--path and --ref are mutually exclusive"
     latest_version = gto.api.find_latest_version(repo, name)
@@ -250,13 +472,14 @@ def latest(repo: str, name: str, path: bool, ref: bool, expected: bool):
 
 
 @gto_command()
-@option_repo
-@arg_name
-@arg_stage
-@option_path
-@option_ref
-@option_expected
-def which(repo: str, name: str, stage: str, path: bool, ref: bool, expected: bool):
+def which(
+    repo: str = option_repo,
+    name: str = arg_name,
+    stage: str = arg_stage,
+    path: bool = option_path,
+    ref: bool = option_ref,
+    expected: bool = option_expected,
+):
     """Return version of artifact with specific stage active"""
     assert not (path and ref), "--path and --ref are mutually exclusive"
     version = gto.api.find_promotion(repo, name, stage)
@@ -274,10 +497,11 @@ def which(repo: str, name: str, stage: str, path: bool, ref: bool, expected: boo
 
 
 @gto_command(hidden=True)
-@arg_name
-@click.option("--key", default=None, help="Which key to return")
-@option_format
-def parse_tag(name: str, key: str, format: str):
+def parse_tag(
+    name: str = arg_name,
+    key: Optional[str] = Option(None, "--key", help="Which key to return"),
+    format: Format = option_format,
+):
     """Given git tag name created by this tool, parse it and return it's parts"""
     parsed = gto.api.parse_tag(name)
     if key:
@@ -286,25 +510,27 @@ def parse_tag(name: str, key: str, format: str):
 
 
 @gto_command()
-@option_repo
-@click.argument("ref")
-@option_format
-def check_ref(repo: str, ref: str, format: str):
+def check_ref(
+    repo: str = option_repo,
+    ref: str = Argument(..., help="TODO"),
+    format: Format = option_format,
+):
     """Find out artifact & version registered/promoted with the provided ref"""
     result = gto.api.check_ref(repo, ref)
     format_echo(result, format)
 
 
 @gto_command()
-@option_repo
-@click.argument("object", default="registry")
-@option_format_df
-@option_format_table
-def show(repo: str, object: str, format: str, format_table: str):
+def show(
+    repo: str = option_repo,
+    object: str = Argument("registry"),
+    format: FormatDF = option_format_df,
+    format_table: FormatTable = option_format_table,  # type: ignore
+):
     """Show current registry state or specific artifact"""
     # TODO: make proper name resolving?
     # e.g. querying artifact named "registry" with artifact/registry
-    if format == TABLE:
+    if format == FormatDF.table:
         format_echo(
             gto.api.show(repo, object=object, table=True),
             format=format,
@@ -316,10 +542,11 @@ def show(repo: str, object: str, format: str, format_table: str):
 
 
 @gto_command(hidden=True)
-@option_repo
-@option_format_df
-@option_format_table
-def show_registry(repo: str, format: str, format_table: str):
+def show_registry(
+    repo: str = option_repo,
+    format: FormatDF = option_format_df,
+    format_table: FormatTable = option_format_table,  # type: ignore
+):
     """Show current registry state"""
     if format == TABLE:
         format_echo(
@@ -333,24 +560,25 @@ def show_registry(repo: str, format: str, format_table: str):
 
 
 @gto_command(hidden=True)
-@option_repo
-@click.argument("name")
-@click.option(
-    "--json",
-    is_flag=True,
-    default=False,
-    help="Print output in json format",
-    show_default=True,
-)
-@click.option(
-    "--table",
-    is_flag=True,
-    default=False,
-    help="Print output in table format",
-    show_default=True,
-)
-@option_format_table
-def show_versions(repo, name, json, table, format_table):
+def show_versions(
+    repo: str = option_repo,
+    name: str = Argument(...),
+    json: bool = Option(
+        False,
+        "--json",
+        is_flag=True,
+        help="Print output in json format",
+        show_default=True,
+    ),
+    table: bool = Option(
+        False,
+        "--table",
+        is_flag=True,
+        help="Print output in table format",
+        show_default=True,
+    ),
+    format_table: FormatTable = option_format_table,  # type: ignore
+):
     """\b
     List all artifact versions in the repository
     """
@@ -372,18 +600,17 @@ def show_versions(repo, name, json, table, format_table):
         click.echo(format_echo([v["name"] for v in versions], "lines"))
 
 
+Actions = StrEnum("Actions", ALIAS.REGISTER + ALIAS.PROMOTE, type=str)  # type: ignore
+
+
 @gto_command()
-@option_repo
-@click.argument(
-    "action",
-    required=False,
-    type=click.Choice(ALIAS.REGISTER + ALIAS.PROMOTE),
-    nargs=-1,
-)
-@option_name
-@option_sort
-@option_format_table
-def audit(repo: str, action: Sequence[str], name: str, sort: str, format_table: str):
+def audit(
+    repo: str = option_repo,
+    action: List[Actions] = Argument(None),  # type: ignore
+    name: str = arg_name,
+    sort: str = option_sort,
+    format_table: FormatTable = option_format_table,  # type: ignore
+):
     """Shows a journal of actions made in registry"""
     if not action:
         action = ALIAS.REGISTER[:1] + ALIAS.PROMOTE[:1]
@@ -407,12 +634,13 @@ def audit(repo: str, action: Sequence[str], name: str, sort: str, format_table: 
 
 
 @gto_command()
-@option_repo
-@option_name
-@option_format_df
-@option_format_table
-@option_sort
-def history(repo: str, name: str, format: str, format_table: str, sort: str):
+def history(
+    repo: str = option_repo,
+    name: str = arg_name,
+    format: FormatDF = option_format_df,
+    format_table: FormatTable = option_format_table,  # type: ignore
+    sort: str = option_sort,
+):
     """Show history of artifact"""
     if format == TABLE:
         format_echo(
@@ -426,15 +654,16 @@ def history(repo: str, name: str, format: str, format_table: str, sort: str):
 
 
 @gto_command()
-@option_repo
-@click.option(
-    "--in-use",
-    is_flag=True,
-    default=False,
-    help="Show only in-use stages",
-    show_default=True,
-)
-def print_stages(repo: str, in_use: bool):
+def print_stages(
+    repo: str = option_repo,
+    in_use: bool = Option(
+        False,
+        "--in-use",
+        is_flag=True,
+        help="Show only in-use stages",
+        show_default=True,
+    ),
+):
     """Return list of stages in the registry.
     If "in_use", return only those which are in use (among non-deprecated artifacts).
     If not, return all available: either all allowed or all ever used.
@@ -443,9 +672,7 @@ def print_stages(repo: str, in_use: bool):
 
 
 @gto_command(hidden=True)
-@option_repo
-@option_format
-def print_state(repo: str, format: str):
+def print_state(repo: str = option_repo, format: Format = option_format):
     """Technical cmd: Print current registry state"""
     state = make_ready_to_serialize(
         gto.api._get_state(repo).dict()  # pylint: disable=protected-access
@@ -454,13 +681,11 @@ def print_state(repo: str, format: str):
 
 
 @gto_command(hidden=True)
-@option_repo
-@option_format
-def print_index(repo: str, format: str):
+def print_index(repo: str = option_repo, format: Format = option_format):
     """Technical cmd: Print repo index"""
     index = gto.api.get_index(repo).artifact_centric_representation()
     format_echo(index, format)
 
 
 if __name__ == "__main__":
-    cli()
+    app()

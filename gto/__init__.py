@@ -5,3 +5,5 @@ from gto.index import RepoIndexManager
 from gto.registry import GitRegistry
 
 __all__ = ["api", "CONFIG", "RepoIndexManager", "GitRegistry"]
+
+__version__ = "0.0.0"
