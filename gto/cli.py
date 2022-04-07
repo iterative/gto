@@ -29,6 +29,9 @@ option_repo = click.option(
 option_rev = click.option(
     "--rev", default=None, help="Repo revision", show_default=True
 )
+option_discover = click.option(
+    "--discover", is_flag=True, default=False, help="Discover non-registered objects"
+)
 option_format = click.option(
     "--format",
     "-f",
@@ -301,21 +304,25 @@ def check_ref(repo: str, ref: str, format: str):
 @gto_command()
 @option_repo
 @click.argument("object", default="registry")
+@option_discover
 @option_format_df
 @option_format_table
-def show(repo: str, object: str, format: str, format_table: str):
+def show(repo: str, object: str, discover: bool, format: str, format_table: str):
     """Show current registry state or specific artifact"""
     # TODO: make proper name resolving?
     # e.g. querying artifact named "registry" with artifact/registry
     if format == TABLE:
         format_echo(
-            gto.api.show(repo, object=object, table=True),
+            gto.api.show(repo, object=object, discover=discover, table=True),
             format=format,
             format_table=format_table,
             if_empty="Nothing found in the current workspace",
         )
     else:
-        format_echo(gto.api.show(repo, object=object, table=False), format=format)
+        format_echo(
+            gto.api.show(repo, object=object, discover=discover, table=False),
+            format=format,
+        )
 
 
 @gto_command(hidden=True)
@@ -375,7 +382,7 @@ def show_versions(repo, name, json, table, format_table):
         click.echo(format_echo([v["name"] for v in versions], "lines"))
 
 
-@gto_command()
+@gto_command(hidden=True)
 @option_repo
 @click.argument(
     "action",
@@ -411,21 +418,25 @@ def audit(repo: str, action: Sequence[str], name: str, sort: str, format_table: 
 
 @gto_command()
 @option_repo
-@option_name
+@click.argument("name", required=False, default=None)
+@option_discover
 @option_format_df
 @option_format_table
 @option_sort
-def history(repo: str, name: str, format: str, format_table: str, sort: str):
+def history(repo: str, name: str, discover, format: str, format_table: str, sort: str):
     """Show history of artifact"""
     if format == TABLE:
         format_echo(
-            gto.api.history(repo, name, sort, table=True),
+            gto.api.history(repo, name, discover=discover, sort=sort, table=True),
             format=format,
             format_table=format_table,
             if_empty="No history found",
         )
     else:
-        format_echo(gto.api.history(repo, name, sort, table=False), format=format)
+        format_echo(
+            gto.api.history(repo, name, discover=discover, sort=sort, table=False),
+            format=format,
+        )
 
 
 @gto_command()

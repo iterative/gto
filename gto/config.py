@@ -56,7 +56,6 @@ class EnrichmentConfig(BaseModel):
 class RegistryConfig(BaseSettings):
     INDEX: str = "artifacts.yaml"
     TYPE_ALLOWED: List[str] = []
-    VERSION_REQUIRED_FOR_STAGE: bool = True
     STAGE_ALLOWED: List[str] = []
     LOG_LEVEL: str = "INFO"
     DEBUG: bool = False
@@ -100,6 +99,12 @@ class RegistryConfig(BaseSettings):
         return {
             TAG: TagStageManager,
         }[self.STAGE_BASE]
+
+    @property
+    def ENRICHMENT_MANAGER_CLS(self):
+        from .index import EnrichmentManager
+
+        return EnrichmentManager
 
     @property
     def enrichments(self) -> Dict[str, Enrichment]:

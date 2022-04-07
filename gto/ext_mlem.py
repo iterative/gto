@@ -1,6 +1,7 @@
 """This is temporary file that should be moved to mlem.gto module"""
 from typing import Optional
 
+from git import Repo
 from mlem.core.errors import MlemObjectNotFound
 from mlem.core.metadata import load_meta
 from mlem.core.objects import DatasetMeta, MlemMeta, ModelMeta
@@ -31,6 +32,8 @@ class MlemEnrichment(Enrichment):
 
     def describe(self, repo, obj: str, rev: Optional[str]) -> Optional[MlemInfo]:
         try:
-            return MlemInfo(meta=load_meta(obj, repo=repo, rev=rev))
+            if isinstance(repo, Repo):
+                repo = repo.working_dir
+            return MlemInfo(meta=load_meta(obj, repo=repo))  # rev=rev
         except MlemObjectNotFound:
             return None

@@ -4,10 +4,14 @@ from typing import List, Union
 
 from git import Repo
 
-from gto.config import CONFIG
 from gto.constants import NAME, STAGE, VERSION
 from gto.ext import EnrichmentInfo
-from gto.index import FileIndexManager, RepoIndexManager, init_index_manager
+from gto.index import (
+    EnrichmentManager,
+    FileIndexManager,
+    RepoIndexManager,
+    init_index_manager,
+)
 from gto.registry import GitRegistry
 from gto.tag import parse_name
 
@@ -120,13 +124,18 @@ def check_ref(repo: Union[str, Repo], ref: str):
     }
 
 
-def show(repo: Union[str, Repo], object: str = "registry", table: bool = False):
+def show(
+    repo: Union[str, Repo],
+    object: str = "registry",
+    discover: bool = False,
+    table: bool = False,
+):
     if object == "registry":
-        return _show_registry(repo, table=table)
-    return _show_versions(repo, name=object, table=table)
+        return _show_registry(repo, discover=discover, table=table)
+    return _show_versions(repo, name=object, discover=discover, table=table)
 
 
-def _show_registry(repo: Union[str, Repo], table: bool = False):
+def _show_registry(repo: Union[str, Repo], discover: bool = False, table: bool = False):
     """Show current registry state"""
 
     reg = GitRegistry.from_repo(repo)
@@ -140,6 +149,7 @@ def _show_registry(repo: Union[str, Repo], table: bool = False):
             },
         }
         for o in reg.state.artifacts.values()
+        if discover or o.is_real
     }
     if not table:
         return models_state
@@ -153,26 +163,35 @@ def _show_registry(repo: Union[str, Repo], table: bool = False):
 
 
 def _show_versions(
-    repo: Union[str, Repo], name: str, raw: bool = False, table: bool = False
+    repo: Union[str, Repo],
+    name: str,
+    raw: bool = False,
+    discover: bool = False,
+    table: bool = False,
 ):
     """List versions of artifact"""
     reg = GitRegistry.from_repo(repo)
     if raw:
         return reg.state.find_artifact(name).versions
-    versions = [v.dict_status() for v in reg.state.find_artifact(name).versions]
+    versions = [
+        v.dict_status()
+        for v in reg.state.find_artifact(name).versions
+        if discover or v.is_real
+    ]
     if not table:
         return versions
 
     first_keys = ["artifact", "name", "stage"]
     versions_ = []
     for v in versions:
-        v["artifact"] = v["artifact"]["name"]
-        v["stage"] = v["stage"]["stage"]
+        if v["stage"]:
+            v["stage"] = v["stage"]["stage"]
         v = OrderedDict(
             [(key, v[key]) for key in first_keys]
             + [(key, v[key]) for key in v if key not in first_keys]
         )
         v["commit_hexsha"] = v["commit_hexsha"][:7]
+        v["enrichments"] = [e["source"] for e in v["enrichments"]]
         versions_.append(v)
     return versions_, "keys"
 
@@ -196,6 +215,7 @@ def audit_registration(
         )
         for o in reg.state.artifacts.values()
         for v in o.versions
+        if v.is_real
     ]
     if artifact:
         audit_trail = [event for event in audit_trail if event["name"] == artifact]
@@ -244,26 +264,21 @@ def audit_promotion(
 def describe(
     repo: Union[str, Repo], name: str, rev: str = None
 ) -> List[EnrichmentInfo]:
-    enrichments = CONFIG.enrichments
-    res = []
-    gto_enrichment = enrichments.pop("gto")
-    gto_info = gto_enrichment.describe(repo, name, rev)
-    if gto_info:
-        res.append(gto_info)
-        path = gto_info.get_path()  # type: ignore
-        for enrichment in enrichments.values():
-            enrichment_data = enrichment.describe(repo, path, rev)
-            if enrichment_data is not None:
-                res.append(enrichment_data)
-    return res
+    return EnrichmentManager.from_repo(repo).describe(name=name, rev=rev)
 
 
 def history(
     repo: Union[str, Repo],
     artifact: str = None,
+    discover: bool = False,
     sort: str = "desc",
     table: bool = False,
 ):
+    # TODO: rework this.
+    # 1. commits should be gathered only --discover is supplied
+    # 2. we shouldn't use audit_something functions
+    # 3. commits should be got from EnrichmentManager, probably
+    # 4. should we show commits for reg/promoted versions without --discover?
     def add_event(event_list, event_name):
         return [{**event, "event": event_name} for event in event_list]
 
@@ -278,12 +293,13 @@ def history(
         )
         for name_, commit_list in reg.index.artifact_centric_representation().items()
         for commit in commit_list
+        if discover
     ]
     registration = audit_registration(repo, table=False)
     promotion = audit_promotion(repo, table=False)
-    events_order = {"commit": 0, "registration": 1, "promotion": 2}
+    events_order = {"commit [enrichment]": 0, "registration": 1, "promotion": 2}
     events = sorted(
-        add_event(commits, "commit")
+        add_event(commits, "commit [enrichment]")
         + add_event(registration, "registration")
         + add_event(promotion, "promotion"),
         key=lambda x: (x["timestamp"], events_order[x["event"]]),

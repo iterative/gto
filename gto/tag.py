@@ -194,7 +194,7 @@ class TagManager(BaseManager):  # pylint: disable=abstract-method
                 index_tag(
                     state.find_artifact(tag.name, create_new=True),
                     tag.tag,
-                    self.config.VERSION_REQUIRED_FOR_STAGE,
+                    version_required=False,
                 )
             )
         return state

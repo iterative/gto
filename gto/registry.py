@@ -21,6 +21,7 @@ class GitRegistry(BaseModel):
     repo: git.Repo
     version_manager: BaseManager
     stage_manager: BaseManager
+    enrichment_manager: BaseManager
     config: RegistryConfig
 
     class Config:
@@ -43,6 +44,7 @@ class GitRegistry(BaseModel):
             config=config,
             version_manager=config.VERSION_MANAGER_CLS(repo=repo, config=config),
             stage_manager=config.STAGE_MANAGER_CLS(repo=repo, config=config),
+            enrichment_manager=config.ENRICHMENT_MANAGER_CLS(repo=repo, config=config),
         )
 
     @property
@@ -54,6 +56,7 @@ class GitRegistry(BaseModel):
         state = BaseRegistryState()
         state = self.version_manager.update_state(state)
         state = self.stage_manager.update_state(state)
+        state = self.enrichment_manager.update_state(state)
         state.sort()
         return state
 

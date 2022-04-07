@@ -6,6 +6,7 @@ from pydantic import BaseModel
 
 from gto.config import RegistryConfig
 from gto.constants import Action
+from gto.ext import Enrichment
 from gto.versions import SemVer
 
 from .exceptions import ArtifactNotFound, ManyVersions, VersionRequired
@@ -27,6 +28,13 @@ class BaseVersion(BaseModel):
     author: str
     commit_hexsha: str
     promotions: List[BasePromotion] = []
+    enrichments: List[Enrichment] = []
+    is_real: bool = True
+
+    @property
+    def is_explicit(self):
+        """Tells if this is an explicit registered version"""
+        return SemVer.is_valid(self.name)
 
     @property
     def version(self):
@@ -63,7 +71,7 @@ class BaseArtifact(BaseModel):
 
     def get_latest_version(self) -> Optional[BaseVersion]:
         versions = sorted(
-            self.versions,
+            (v for v in self.versions if v.is_real),
             key=lambda x: x.creation_date,
         )
         if versions:
@@ -73,7 +81,23 @@ class BaseArtifact(BaseModel):
     @property
     def promoted(self) -> Dict[str, BasePromotion]:
         stages: Dict[str, BasePromotion] = {}
-        for version in sorted(self.versions, key=lambda x: x.version, reverse=True):
+        # semver
+        versions = sorted(
+            (v for v in self.versions if v.is_explicit),
+            key=lambda x: x.version,
+            reverse=True,
+        )
+        # TODO: regular commits - these should be sorted by stage tag creation maybe?
+        # E.g. when you created "rf#prod" tag, then you created a version.
+        # It's probably should be a flag on CLI that will tell how to sort promoted for return.
+        versions.extend(
+            sorted(
+                (v for v in self.versions if not v.is_explicit),
+                key=lambda x: x.creation_date,
+                reverse=True,
+            )
+        )
+        for version in versions:
             promotion = version.stage
             if promotion:
                 stages[promotion.stage] = stages.get(promotion.stage) or promotion
@@ -86,6 +110,13 @@ class BaseArtifact(BaseModel):
         self.find_version(name=promotion.version).promotions.append(  # type: ignore
             promotion
         )
+
+    def update_enrichments(self, version, enrichments):
+        self.find_version(name=version).enrichments = enrichments
+
+    @property
+    def is_real(self):
+        return any(v.is_real for v in self.versions)
 
     # @overload
     # def find_version(
