@@ -223,8 +223,8 @@ class TagVersionManager(TagManager):
             return {}
         return {
             name: version
-            for name in state.artifacts
-            for version in state.artifacts[name].versions
+            for name, artifact in state.get_artifacts().items()
+            for version in artifact.versions
             if name == art_name and version.name == version_name
         }
 
@@ -252,8 +252,8 @@ class TagStageManager(TagManager):
             return {}
         return {
             name: promotion
-            for name in state.artifacts
-            for promotion in state.artifacts[name].stages
+            for name, artifact in state.get_artifacts().items()
+            for promotion in artifact.stages
             if name == art_name
             and promotion.commit_hexsha == tag.commit.hexsha
             and promotion.creation_date == datetime.fromtimestamp(tag.tag.tagged_date)

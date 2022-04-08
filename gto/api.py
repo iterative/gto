@@ -27,7 +27,7 @@ def get_index(repo: Union[str, Repo], file=False):
 
 def _get_state(repo: Union[str, Repo]):
     """Show current registry state"""
-    return GitRegistry.from_repo(repo).state
+    return GitRegistry.from_repo(repo).get_state()
 
 
 def get_stages(repo: Union[str, Repo], in_use: bool = False):
@@ -129,13 +129,34 @@ def show(
     object: str = "registry",
     discover: bool = False,
     table: bool = False,
+    all_branches=False,
+    all_commits=False,
 ):
     if object == "registry":
-        return _show_registry(repo, discover=discover, table=table)
-    return _show_versions(repo, name=object, discover=discover, table=table)
+        return _show_registry(
+            repo,
+            discover=discover,
+            all_branches=all_branches,
+            all_commits=all_commits,
+            table=table,
+        )
+    return _show_versions(
+        repo,
+        name=object,
+        discover=discover,
+        all_branches=all_branches,
+        all_commits=all_commits,
+        table=table,
+    )
 
 
-def _show_registry(repo: Union[str, Repo], discover: bool = False, table: bool = False):
+def _show_registry(
+    repo: Union[str, Repo],
+    discover: bool = False,
+    all_branches=False,
+    all_commits=False,
+    table: bool = False,
+):
     """Show current registry state"""
 
     reg = GitRegistry.from_repo(repo)
@@ -148,8 +169,11 @@ def _show_registry(repo: Union[str, Repo], discover: bool = False, table: bool =
                 for name in stages
             },
         }
-        for o in reg.state.artifacts.values()
-        if discover or o.is_real
+        for o in reg.get_state(
+            discover=discover, all_branches=all_branches, all_commits=all_commits
+        )
+        .get_artifacts()
+        .values()
     }
     if not table:
         return models_state
@@ -167,16 +191,19 @@ def _show_versions(
     name: str,
     raw: bool = False,
     discover: bool = False,
+    all_branches=False,
+    all_commits=False,
     table: bool = False,
 ):
     """List versions of artifact"""
     reg = GitRegistry.from_repo(repo)
     if raw:
-        return reg.state.find_artifact(name).versions
+        return reg.find_artifact(name).versions
     versions = [
         v.dict_status()
-        for v in reg.state.find_artifact(name).versions
-        if discover or v.is_real
+        for v in reg.find_artifact(
+            name, discover=discover, all_branches=all_branches, all_commits=all_commits
+        ).get_versions(discover=discover)
     ]
     if not table:
         return versions
@@ -196,69 +223,8 @@ def _show_versions(
     return versions_, "keys"
 
 
-# def audit_registration(
-#     repo: Union[str, Repo],
-#     artifact: str = None,
-#     sort: str = "desc",
-#     table: bool = False,
-# ):
-#     """Audit registry state"""
-#     reg = GitRegistry.from_repo(repo)
-
-#     audit_trail = [
-#         OrderedDict(
-#             timestamp=v.creation_date,
-#             name=o.name,
-#             version=v.name,
-#             commit=v.commit_hexsha[:7],
-#             author=v.author,
-#         )
-#         for o in reg.state.artifacts.values()
-#         for v in o.versions
-#         if v.is_real
-#     ]
-#     if artifact:
-#         audit_trail = [event for event in audit_trail if event["name"] == artifact]
-#     audit_trail.sort(key=lambda x: x["timestamp"])
-#     if _is_ascending(sort):
-#         audit_trail.reverse()
-#     if not table:
-#         return audit_trail
-#     return audit_trail, "keys"
-
-
 def _is_ascending(sort):
     return sort in {"asc", "Asc", "ascending", "Ascending"}
-
-
-# def audit_promotion(
-#     repo: Union[str, Repo],
-#     artifact: str = None,
-#     sort: str = "desc",
-#     table: bool = False,
-# ):
-#     """Audit registry state"""
-#     reg = GitRegistry.from_repo(repo)
-#     audit_trail = [
-#         OrderedDict(
-#             timestamp=l.creation_date,
-#             name=o.name,
-#             version=l.version,
-#             stage=l.stage,
-#             commit=l.commit_hexsha[:7],
-#             author=l.author,
-#         )
-#         for o in reg.state.artifacts.values()
-#         for l in o.stages
-#     ]
-#     if artifact:
-#         audit_trail = [event for event in audit_trail if event["name"] == artifact]
-#     audit_trail.sort(key=lambda x: x["timestamp"])
-#     if _is_ascending(sort):
-#         audit_trail.reverse()
-#     if not table:
-#         return audit_trail
-#     return audit_trail, "keys"
 
 
 def describe(
@@ -272,6 +238,8 @@ def history(
     artifact: str = None,
     discover: bool = False,
     # action: str = None,
+    all_branches=False,
+    all_commits=False,
     sort: str = "desc",
     table: bool = False,
 ):
@@ -281,6 +249,9 @@ def history(
     # 3. commits should be got from EnrichmentManager, probably
 
     reg = GitRegistry.from_repo(repo)
+    artifacts = reg.get_artifacts(
+        discover=discover, all_branches=all_branches, all_commits=all_commits
+    )
 
     commits = [
         OrderedDict(
@@ -288,14 +259,12 @@ def history(
                 reg.repo.commit(v.commit_hexsha).committed_date
             ),
             name=o.name,
-            event="commit" if v.is_real else "commit [discovered]",
+            event="commit [discovered]" if v.discovered else "commit",
             commit=v.commit_hexsha[:7],
             author=reg.repo.commit(v.commit_hexsha).author.name,
-            # enrichments=[e.source for e in v.enrichments],
         )
-        for o in reg.state.artifacts.values()
-        for v in o.versions
-        if discover or v.is_real
+        for o in artifacts.values()
+        for v in o.get_versions(discover=discover)
     ]
 
     registration = [
@@ -308,9 +277,8 @@ def history(
             author=v.author,
             # enrichments=[e.source for e in v.enrichments],
         )
-        for o in reg.state.artifacts.values()
-        for v in o.versions
-        if v.is_real
+        for o in artifacts.values()
+        for v in o.get_versions()
     ]
 
     promotion = [
@@ -323,7 +291,7 @@ def history(
             commit=l.commit_hexsha[:7],
             author=l.author,
         )
-        for o in reg.state.artifacts.values()
+        for o in artifacts.values()
         for l in o.stages
     ]
 

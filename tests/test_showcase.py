@@ -36,8 +36,9 @@ def test_api(showcase):
             name="v0.0.1",
             author=author,
             commit_hexsha=first_commit.hexsha,
+            discovered=False,
         ),
-        {"creation_date", "promotions"},
+        {"creation_date", "promotions", "enrichments"},
     )
     assert len(nn_artifact.stages) == 1
     nn_promotion = nn_artifact.stages[0]
@@ -68,8 +69,9 @@ def test_api(showcase):
             name="v1.2.3",
             author=author,
             commit_hexsha=first_commit.hexsha,
+            discovered=False,
         ),
-        {"creation_date", "promotions"},
+        {"creation_date", "promotions", "enrichments"},
     )
     _check_obj(
         rf_ver2,
@@ -78,8 +80,9 @@ def test_api(showcase):
             name="v1.2.4",
             author=author,
             commit_hexsha=second_commit.hexsha,
+            discovered=False,
         ),
-        {"creation_date", "promotions"},
+        {"creation_date", "promotions", "enrichments"},
     )
 
     assert len(rf_artifact.stages) == 4

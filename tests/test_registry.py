@@ -173,11 +173,18 @@ def _check_state(appread_state, expected_state, exclude):
 def test_registry_state_tag_tag(showcase):
     path, repo, write_file, first_commit, second_commit = showcase
     reg = GitRegistry.from_repo(repo)
-    state = reg.state.dict()
+    state = reg.get_state().dict()
 
     exclude = {
         "commits": [],
-        "versions": ["author", "creation_date", "commit_hexsha", "promotions"],
+        "versions": [
+            "author",
+            "creation_date",
+            "commit_hexsha",
+            "promotions",
+            "enrichments",
+            "discovered",
+        ],
         "promotions": ["author", "creation_date", "commit_hexsha"],
     }
 

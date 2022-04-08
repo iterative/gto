@@ -279,40 +279,64 @@ class EnrichmentManager(BaseManager):
                     res.append(enrichment_data)
         return res
 
-    def get_commits(self, all_commits=True):
+    def get_commits(self, all_branches=False, all_commits=False):
         if all_commits:
             return {
                 commit
                 for branch in self.repo.heads
                 for commit in traverse_commit(branch.commit)
             }
-        raise NotImplementedError()
+        if all_branches:
+            return {branch.commit for branch in self.repo.heads}
+        return {self.repo.commit()}
 
-    def update_state(self, state: BaseRegistryState) -> BaseRegistryState:
-        for commit in self.get_commits():
-            for enrichment in GTOEnrichment().discover(self.repo, commit):
-                enrichments = self.describe(enrichment.artifact.name, rev=commit)
-                artifact = state.find_artifact(
-                    enrichment.artifact.name, create_new=True
+    def update_state(
+        self,
+        state: BaseRegistryState,
+        discover: bool = False,
+        all_branches=False,
+        all_commits=False,
+    ) -> BaseRegistryState:
+        # processing registered artifacts and versions first
+        for artifact in state.get_artifacts().values():
+            for version in artifact.versions:
+                enrichments = self.describe(artifact.name, rev=version.commit_hexsha)
+                artifact.update_enrichments(
+                    version=version.name, enrichments=enrichments
                 )
-                version = artifact.find_version(commit_hexsha=commit.hexsha)
-                # TODO: duplicated in tag.py
-                if version:
-                    version = version.name
-                else:
-                    artifact.add_version(
-                        BaseVersion(
-                            artifact=enrichment.artifact.name,
-                            name=commit.hexsha,
-                            creation_date=datetime.fromtimestamp(commit.committed_date),
-                            author=commit.author.name,
-                            commit_hexsha=commit.hexsha,
-                            is_real=False,
-                        )
-                    )
-                    version = commit.hexsha
-                artifact.update_enrichments(version=version, enrichments=enrichments)
                 state.update_artifact(artifact)
+        # do discovery if requested
+        if discover:
+            for commit in self.get_commits(
+                all_branches=all_branches, all_commits=all_commits
+            ):
+                for enrichment in GTOEnrichment().discover(self.repo, commit):
+                    enrichments = self.describe(enrichment.artifact.name, rev=commit)
+                    artifact = state.find_artifact(
+                        enrichment.artifact.name, create_new=True
+                    )
+                    version = artifact.find_version(commit_hexsha=commit.hexsha)
+                    # TODO: duplicated in tag.py
+                    if version:
+                        version = version.name
+                    else:
+                        artifact.add_version(
+                            BaseVersion(
+                                artifact=enrichment.artifact.name,
+                                name=commit.hexsha,
+                                creation_date=datetime.fromtimestamp(
+                                    commit.committed_date
+                                ),
+                                author=commit.author.name,
+                                commit_hexsha=commit.hexsha,
+                                discovered=True,
+                            )
+                        )
+                        version = commit.hexsha
+                    artifact.update_enrichments(
+                        version=version, enrichments=enrichments
+                    )
+                    state.update_artifact(artifact)
         return state
 
     def check_ref(self, ref: str, state: BaseRegistryState):
