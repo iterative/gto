@@ -196,69 +196,69 @@ def _show_versions(
     return versions_, "keys"
 
 
-def audit_registration(
-    repo: Union[str, Repo],
-    artifact: str = None,
-    sort: str = "desc",
-    table: bool = False,
-):
-    """Audit registry state"""
-    reg = GitRegistry.from_repo(repo)
+# def audit_registration(
+#     repo: Union[str, Repo],
+#     artifact: str = None,
+#     sort: str = "desc",
+#     table: bool = False,
+# ):
+#     """Audit registry state"""
+#     reg = GitRegistry.from_repo(repo)
 
-    audit_trail = [
-        OrderedDict(
-            timestamp=v.creation_date,
-            name=o.name,
-            version=v.name,
-            commit=v.commit_hexsha[:7],
-            author=v.author,
-        )
-        for o in reg.state.artifacts.values()
-        for v in o.versions
-        if v.is_real
-    ]
-    if artifact:
-        audit_trail = [event for event in audit_trail if event["name"] == artifact]
-    audit_trail.sort(key=lambda x: x["timestamp"])
-    if _is_ascending(sort):
-        audit_trail.reverse()
-    if not table:
-        return audit_trail
-    return audit_trail, "keys"
+#     audit_trail = [
+#         OrderedDict(
+#             timestamp=v.creation_date,
+#             name=o.name,
+#             version=v.name,
+#             commit=v.commit_hexsha[:7],
+#             author=v.author,
+#         )
+#         for o in reg.state.artifacts.values()
+#         for v in o.versions
+#         if v.is_real
+#     ]
+#     if artifact:
+#         audit_trail = [event for event in audit_trail if event["name"] == artifact]
+#     audit_trail.sort(key=lambda x: x["timestamp"])
+#     if _is_ascending(sort):
+#         audit_trail.reverse()
+#     if not table:
+#         return audit_trail
+#     return audit_trail, "keys"
 
 
 def _is_ascending(sort):
     return sort in {"asc", "Asc", "ascending", "Ascending"}
 
 
-def audit_promotion(
-    repo: Union[str, Repo],
-    artifact: str = None,
-    sort: str = "desc",
-    table: bool = False,
-):
-    """Audit registry state"""
-    reg = GitRegistry.from_repo(repo)
-    audit_trail = [
-        OrderedDict(
-            timestamp=l.creation_date,
-            name=o.name,
-            version=l.version,
-            stage=l.stage,
-            commit=l.commit_hexsha[:7],
-            author=l.author,
-        )
-        for o in reg.state.artifacts.values()
-        for l in o.stages
-    ]
-    if artifact:
-        audit_trail = [event for event in audit_trail if event["name"] == artifact]
-    audit_trail.sort(key=lambda x: x["timestamp"])
-    if _is_ascending(sort):
-        audit_trail.reverse()
-    if not table:
-        return audit_trail
-    return audit_trail, "keys"
+# def audit_promotion(
+#     repo: Union[str, Repo],
+#     artifact: str = None,
+#     sort: str = "desc",
+#     table: bool = False,
+# ):
+#     """Audit registry state"""
+#     reg = GitRegistry.from_repo(repo)
+#     audit_trail = [
+#         OrderedDict(
+#             timestamp=l.creation_date,
+#             name=o.name,
+#             version=l.version,
+#             stage=l.stage,
+#             commit=l.commit_hexsha[:7],
+#             author=l.author,
+#         )
+#         for o in reg.state.artifacts.values()
+#         for l in o.stages
+#     ]
+#     if artifact:
+#         audit_trail = [event for event in audit_trail if event["name"] == artifact]
+#     audit_trail.sort(key=lambda x: x["timestamp"])
+#     if _is_ascending(sort):
+#         audit_trail.reverse()
+#     if not table:
+#         return audit_trail
+#     return audit_trail, "keys"
 
 
 def describe(
@@ -271,6 +271,7 @@ def history(
     repo: Union[str, Repo],
     artifact: str = None,
     discover: bool = False,
+    # action: str = None,
     sort: str = "desc",
     table: bool = False,
 ):
@@ -278,30 +279,62 @@ def history(
     # 1. commits should be gathered only --discover is supplied
     # 2. we shouldn't use audit_something functions
     # 3. commits should be got from EnrichmentManager, probably
-    # 4. should we show commits for reg/promoted versions without --discover?
-    def add_event(event_list, event_name):
-        return [{**event, "event": event_name} for event in event_list]
 
     reg = GitRegistry.from_repo(repo)
+
     commits = [
-        dict(
-            timestamp=datetime.fromtimestamp(reg.repo.commit(commit).committed_date),
-            name=name_,
-            event="commit",
-            commit=commit[:7],
-            author=reg.repo.commit(commit).author.name,
+        OrderedDict(
+            timestamp=datetime.fromtimestamp(
+                reg.repo.commit(v.commit_hexsha).committed_date
+            ),
+            name=o.name,
+            event="commit" if v.is_real else "commit [discovered]",
+            commit=v.commit_hexsha[:7],
+            author=reg.repo.commit(v.commit_hexsha).author.name,
+            # enrichments=[e.source for e in v.enrichments],
         )
-        for name_, commit_list in reg.index.artifact_centric_representation().items()
-        for commit in commit_list
-        if discover
+        for o in reg.state.artifacts.values()
+        for v in o.versions
+        if discover or v.is_real
     ]
-    registration = audit_registration(repo, table=False)
-    promotion = audit_promotion(repo, table=False)
-    events_order = {"commit [enrichment]": 0, "registration": 1, "promotion": 2}
+
+    registration = [
+        OrderedDict(
+            timestamp=v.creation_date,
+            name=o.name,
+            event="registration",
+            version=v.name,
+            commit=v.commit_hexsha[:7],
+            author=v.author,
+            # enrichments=[e.source for e in v.enrichments],
+        )
+        for o in reg.state.artifacts.values()
+        for v in o.versions
+        if v.is_real
+    ]
+
+    promotion = [
+        OrderedDict(
+            timestamp=l.creation_date,
+            name=o.name,
+            event="promotion",
+            version=l.version,
+            stage=l.stage,
+            commit=l.commit_hexsha[:7],
+            author=l.author,
+        )
+        for o in reg.state.artifacts.values()
+        for l in o.stages
+    ]
+
+    events_order = {
+        "commit": 0,
+        "commit [discovered]": 1,
+        "registration": 2,
+        "promotion": 3,
+    }
     events = sorted(
-        add_event(commits, "commit [enrichment]")
-        + add_event(registration, "registration")
-        + add_event(promotion, "promotion"),
+        commits + registration + promotion,
         key=lambda x: (x["timestamp"], events_order[x["event"]]),
     )
     if _is_ascending(sort):
@@ -316,6 +349,7 @@ def history(
         "event",
         VERSION,
         STAGE,
+        # "enrichments",
         "commit",
         "author",
     ]

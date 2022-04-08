@@ -1,7 +1,6 @@
 import logging
 import sys
 from functools import wraps
-from typing import Sequence
 
 import click
 from tabulate import tabulate_formats
@@ -15,8 +14,9 @@ TABLE = "table"
 
 
 class ALIAS:
-    REGISTER = ["register", "reg", "registration", "registrations"]
-    PROMOTE = ["promote", "prom", "promotion", "promotions"]
+    COMMIT = ["commit", "c"]
+    REGISTER = ["register", "r", "reg", "registration", "registrations"]
+    PROMOTE = ["promote", "p", "prom", "promotion", "promotions"]
 
 
 arg_name = click.argument(NAME)
@@ -30,7 +30,11 @@ option_rev = click.option(
     "--rev", default=None, help="Repo revision", show_default=True
 )
 option_discover = click.option(
-    "--discover", is_flag=True, default=False, help="Discover non-registered objects"
+    "-d",
+    "--discover",
+    is_flag=True,
+    default=False,
+    help="Discover non-registered objects",
 )
 option_format = click.option(
     "--format",
@@ -382,44 +386,50 @@ def show_versions(repo, name, json, table, format_table):
         click.echo(format_echo([v["name"] for v in versions], "lines"))
 
 
-@gto_command(hidden=True)
-@option_repo
-@click.argument(
-    "action",
-    required=False,
-    type=click.Choice(ALIAS.REGISTER + ALIAS.PROMOTE),
-    nargs=-1,
-)
-@option_name
-@option_sort
-@option_format_table
-def audit(repo: str, action: Sequence[str], name: str, sort: str, format_table: str):
-    """Shows a journal of actions made in registry"""
-    if not action:
-        action = ALIAS.REGISTER[:1] + ALIAS.PROMOTE[:1]
-    if any(a in ALIAS.REGISTER for a in action):
-        click.echo("\n=== Registration audit trail ===")
-        format_echo(
-            gto.api.audit_registration(repo, name, sort, table=True),
-            format=TABLE,
-            format_table=format_table,
-            if_empty="No registered versions detected in the current workspace",
-        )
+# @gto_command()
+# @option_repo
+# @click.argument(
+#     "action",
+#     required=False,
+#     type=click.Choice(ALIAS.REGISTER + ALIAS.PROMOTE),
+#     nargs=-1,
+# )
+# @option_name
+# @option_sort
+# @option_format_table
+# def audit(repo: str, action: Sequence[str], name: str, sort: str, format_table: str):
+#     """Shows a journal of actions made in registry"""
+#     if not action:
+#         action = ALIAS.REGISTER[:1] + ALIAS.PROMOTE[:1]
+#     if any(a in ALIAS.REGISTER for a in action):
+#         click.echo("\n=== Registration audit trail ===")
+#         format_echo(
+#             gto.api.audit_registration(repo, name, sort, table=True),
+#             format=TABLE,
+#             format_table=format_table,
+#             if_empty="No registered versions detected in the current workspace",
+#         )
 
-    if any(a in ALIAS.PROMOTE for a in action):
-        click.echo("\n=== Promotion audit trail ===")
-        format_echo(
-            gto.api.audit_promotion(repo, name, sort, table=True),
-            format=TABLE,
-            format_table=format_table,
-            if_empty="No promotions detected in the current workspace",
-        )
+#     if any(a in ALIAS.PROMOTE for a in action):
+#         click.echo("\n=== Promotion audit trail ===")
+#         format_echo(
+#             gto.api.audit_promotion(repo, name, sort, table=True),
+#             format=TABLE,
+#             format_table=format_table,
+#             if_empty="No promotions detected in the current workspace",
+#         )
 
 
 @gto_command()
 @option_repo
 @click.argument("name", required=False, default=None)
 @option_discover
+# @click.option(
+#     "--action",
+#     required=False,
+#     type=click.Choice(ALIAS.COMMIT + ALIAS.REGISTER + ALIAS.PROMOTE),
+#     nargs=-1,
+# )
 @option_format_df
 @option_format_table
 @option_sort
