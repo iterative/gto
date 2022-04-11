@@ -1,7 +1,6 @@
 import logging
 import sys
 from functools import wraps
-from typing import Sequence
 
 import click
 from tabulate import tabulate_formats
@@ -15,8 +14,9 @@ TABLE = "table"
 
 
 class ALIAS:
-    REGISTER = ["register", "reg", "registration", "registrations"]
-    PROMOTE = ["promote", "prom", "promotion", "promotions"]
+    COMMIT = ["commit", "c"]
+    REGISTER = ["register", "r", "reg", "registration", "registrations"]
+    PROMOTE = ["promote", "p", "prom", "promotion", "promotions"]
 
 
 arg_name = click.argument(NAME)
@@ -25,6 +25,26 @@ arg_stage = click.argument(STAGE)
 arg_ref = click.argument(REF)
 option_repo = click.option(
     "-r", "--repo", default=".", help="Repository to use", show_default=True
+)
+option_rev = click.option(
+    "--rev", default=None, help="Repo revision", show_default=True
+)
+option_discover = click.option(
+    "-d",
+    "--discover",
+    is_flag=True,
+    default=False,
+    help="Discover non-registered objects",
+)
+option_all_branches = click.option(
+    "-a",
+    "--all-branches",
+    is_flag=True,
+    default=False,
+    help="Read heads from all branches",
+)
+option_all_commits = click.option(
+    "-A", "--all-commits", is_flag=True, default=False, help="Read all commits"
 )
 option_format = click.option(
     "--format",
@@ -119,7 +139,7 @@ def gto_command(*args, **kwargs):
 
 @gto_command()
 @click.argument("repo", default=".")
-@click.option("--rev", default=None, help="Repo revision", show_default=True)
+@option_rev
 @click.option("--type", default=None, help="Artifact type to list", show_default=True)
 @click.option(
     "--json",
@@ -298,21 +318,49 @@ def check_ref(repo: str, ref: str, format: str):
 @gto_command()
 @option_repo
 @click.argument("object", default="registry")
+@option_discover
+@option_all_branches
+@option_all_commits
 @option_format_df
 @option_format_table
-def show(repo: str, object: str, format: str, format_table: str):
+def show(
+    repo: str,
+    object: str,
+    discover: bool,
+    all_branches,
+    all_commits,
+    format: str,
+    format_table: str,
+):
     """Show current registry state or specific artifact"""
     # TODO: make proper name resolving?
     # e.g. querying artifact named "registry" with artifact/registry
     if format == TABLE:
         format_echo(
-            gto.api.show(repo, object=object, table=True),
+            gto.api.show(
+                repo,
+                object=object,
+                discover=discover,
+                all_branches=all_branches,
+                all_commits=all_commits,
+                table=True,
+            ),
             format=format,
             format_table=format_table,
             if_empty="Nothing found in the current workspace",
         )
     else:
-        format_echo(gto.api.show(repo, object=object, table=False), format=format)
+        format_echo(
+            gto.api.show(
+                repo,
+                object=object,
+                discover=discover,
+                all_branches=all_branches,
+                all_commits=all_commits,
+                table=False,
+            ),
+            format=format,
+        )
 
 
 @gto_command(hidden=True)
@@ -374,55 +422,58 @@ def show_versions(repo, name, json, table, format_table):
 
 @gto_command()
 @option_repo
-@click.argument(
-    "action",
-    required=False,
-    type=click.Choice(ALIAS.REGISTER + ALIAS.PROMOTE),
-    nargs=-1,
-)
-@option_name
-@option_sort
-@option_format_table
-def audit(repo: str, action: Sequence[str], name: str, sort: str, format_table: str):
-    """Shows a journal of actions made in registry"""
-    if not action:
-        action = ALIAS.REGISTER[:1] + ALIAS.PROMOTE[:1]
-    if any(a in ALIAS.REGISTER for a in action):
-        click.echo("\n=== Registration audit trail ===")
-        format_echo(
-            gto.api.audit_registration(repo, name, sort, table=True),
-            format=TABLE,
-            format_table=format_table,
-            if_empty="No registered versions detected in the current workspace",
-        )
-
-    if any(a in ALIAS.PROMOTE for a in action):
-        click.echo("\n=== Promotion audit trail ===")
-        format_echo(
-            gto.api.audit_promotion(repo, name, sort, table=True),
-            format=TABLE,
-            format_table=format_table,
-            if_empty="No promotions detected in the current workspace",
-        )
-
-
-@gto_command()
-@option_repo
-@option_name
+@click.argument("name", required=False, default=None)
+@option_discover
+@option_all_branches
+@option_all_commits
+# @click.option(
+#     "--action",
+#     required=False,
+#     type=click.Choice(ALIAS.COMMIT + ALIAS.REGISTER + ALIAS.PROMOTE),
+#     nargs=-1,
+# )
 @option_format_df
 @option_format_table
 @option_sort
-def history(repo: str, name: str, format: str, format_table: str, sort: str):
+def history(
+    repo: str,
+    name: str,
+    discover,
+    all_branches,
+    all_commits,
+    format: str,
+    format_table: str,
+    sort: str,
+):
     """Show history of artifact"""
     if format == TABLE:
         format_echo(
-            gto.api.history(repo, name, sort, table=True),
+            gto.api.history(
+                repo,
+                name,
+                discover=discover,
+                all_branches=all_branches,
+                all_commits=all_commits,
+                sort=sort,
+                table=True,
+            ),
             format=format,
             format_table=format_table,
             if_empty="No history found",
         )
     else:
-        format_echo(gto.api.history(repo, name, sort, table=False), format=format)
+        format_echo(
+            gto.api.history(
+                repo,
+                name,
+                discover=discover,
+                all_branches=all_branches,
+                all_commits=all_commits,
+                sort=sort,
+                table=False,
+            ),
+            format=format,
+        )
 
 
 @gto_command()
@@ -460,6 +511,17 @@ def print_index(repo: str, format: str):
     """Technical cmd: Print repo index"""
     index = gto.api.get_index(repo).artifact_centric_representation()
     format_echo(index, format)
+
+
+@gto_command()
+@option_repo
+@arg_name
+@option_rev
+def describe(repo, name: str, rev):
+    """Find enrichments for the artifact"""
+    infos = gto.api.describe(repo=repo, name=name, rev=rev)
+    for info in infos:
+        click.echo(info.get_human_readable())
 
 
 if __name__ == "__main__":

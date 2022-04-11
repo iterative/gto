@@ -6,7 +6,7 @@ import git
 import pytest
 
 import gto
-from gto.config import CONFIG_FILE
+from gto.config import CONFIG_FILE_NAME
 
 
 @pytest.fixture
@@ -27,7 +27,7 @@ def init_showcase_semver(empty_git_repo: Tuple[git.Repo, Callable]):
     repo, write_file = empty_git_repo
 
     write_file(
-        CONFIG_FILE,
+        CONFIG_FILE_NAME,
         "",
     )
 

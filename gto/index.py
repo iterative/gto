@@ -1,15 +1,19 @@
 import os
 from abc import ABC, abstractmethod
 from collections import defaultdict
+from datetime import datetime
 from functools import wraps
 from pathlib import Path
-from typing import IO, Dict, Generator, List, Optional, Union
+from typing import IO, Dict, FrozenSet, Generator, List, Optional, Union
 
 import git
 from pydantic import BaseModel, parse_obj_as
 
-from .config import CONFIG_FILE, RegistryConfig, yaml
-from .exceptions import ArtifactExists, ArtifactNotFound, NoFile, NoRepo, PathIsUsed
+from gto.base import BaseManager, BaseRegistryState, BaseVersion
+from gto.config import CONFIG_FILE_NAME, RegistryConfig, yaml
+from gto.constants import Action
+from gto.exceptions import ArtifactExists, ArtifactNotFound, NoFile, NoRepo, PathIsUsed
+from gto.ext import Enrichment, EnrichmentInfo
 
 
 class Artifact(BaseModel):
@@ -154,7 +158,9 @@ class FileIndexManager(BaseIndexManager):
     @classmethod
     def from_path(cls, path: str, config: RegistryConfig = None):
         if config is None:
-            config = RegistryConfig(CONFIG_FILE=os.path.join(path, CONFIG_FILE))
+            config = RegistryConfig(
+                CONFIG_FILE_NAME=os.path.join(path, CONFIG_FILE_NAME)
+            )
         return cls(path=path, config=config)
 
     def index_path(self):
@@ -191,7 +197,7 @@ class RepoIndexManager(FileIndexManager):
                 raise NoRepo(repo) from e
         if config is None:
             config = RegistryConfig(
-                CONFIG_FILE=os.path.join(repo.working_dir, CONFIG_FILE)
+                CONFIG_FILE_NAME=os.path.join(repo.working_dir, CONFIG_FILE_NAME)
             )
         return cls(repo=repo, config=config)
 
@@ -202,10 +208,17 @@ class RepoIndexManager(FileIndexManager):
     class Config:
         arbitrary_types_allowed = True
 
-    def get_commit_index(self, ref: str) -> Index:
-        return Index.read(
-            (self.repo.commit(ref).tree / self.config.INDEX).data_stream, frozen=True
-        )
+    def get_commit_index(
+        self, ref: str, allow_to_not_exist: bool = True
+    ) -> Optional[Index]:
+        if self.config.INDEX in self.repo.commit(ref).tree:
+            return Index.read(
+                (self.repo.commit(ref).tree / self.config.INDEX).data_stream,
+                frozen=True,
+            )
+        if allow_to_not_exist:
+            return None
+        raise ValueError(f"No Index exists at {ref}")
 
     def get_history(self) -> Dict[str, Index]:
         commits = {
@@ -214,7 +227,7 @@ class RepoIndexManager(FileIndexManager):
             for commit in traverse_commit(branch.commit)
         }
         return {
-            commit.hexsha: self.get_commit_index(commit.hexsha)
+            commit.hexsha: self.get_commit_index(commit.hexsha)  # type: ignore
             for commit in commits
             if self.config.INDEX in commit.tree
         }
@@ -234,8 +247,140 @@ class RepoIndexManager(FileIndexManager):
             raise ArtifactNotFound(name)
 
 
+class EnrichmentManager(BaseManager):
+    actions: FrozenSet[Action] = frozenset()
+
+    @classmethod
+    def from_repo(cls, repo, config: RegistryConfig = None):
+        if isinstance(repo, str):
+            repo = git.Repo(repo, search_parent_directories=True)
+        if config is None:
+            config = RegistryConfig(
+                CONFIG_FILE_NAME=os.path.join(repo.working_dir, CONFIG_FILE_NAME)
+            )
+        return cls(repo=repo, config=config)
+
+    def describe(self, name: str, rev: str = None) -> List[EnrichmentInfo]:
+
+        # TODO: add as arg?
+        config = RegistryConfig(
+            CONFIG_FILE_NAME=os.path.join(self.repo.working_dir, CONFIG_FILE_NAME)
+        )
+        enrichments = config.enrichments
+        res = []
+        gto_enrichment = enrichments.pop("gto")
+        gto_info = gto_enrichment.describe(self.repo, name, rev)
+        if gto_info:
+            res.append(gto_info)
+            path = gto_info.get_path()  # type: ignore
+            for enrichment in enrichments.values():
+                enrichment_data = enrichment.describe(self.repo, path, rev)
+                if enrichment_data is not None:
+                    res.append(enrichment_data)
+        return res
+
+    def get_commits(self, all_branches=False, all_commits=False):
+        if all_commits:
+            return {
+                commit
+                for branch in self.repo.heads
+                for commit in traverse_commit(branch.commit)
+            }
+        if all_branches:
+            return {branch.commit for branch in self.repo.heads}
+        return {self.repo.commit()}
+
+    def update_state(
+        self,
+        state: BaseRegistryState,
+        discover: bool = False,
+        all_branches=False,
+        all_commits=False,
+    ) -> BaseRegistryState:
+        # processing registered artifacts and versions first
+        for artifact in state.get_artifacts().values():
+            for version in artifact.versions:
+                enrichments = self.describe(artifact.name, rev=version.commit_hexsha)
+                artifact.update_enrichments(
+                    version=version.name, enrichments=enrichments
+                )
+                state.update_artifact(artifact)
+        # do discovery if requested
+        if discover:
+            for commit in self.get_commits(
+                all_branches=all_branches, all_commits=all_commits
+            ):
+                for enrichment in GTOEnrichment().discover(self.repo, commit):
+                    enrichments = self.describe(enrichment.artifact.name, rev=commit)
+                    artifact = state.find_artifact(
+                        enrichment.artifact.name, create_new=True
+                    )
+                    version = artifact.find_version(commit_hexsha=commit.hexsha)
+                    # TODO: duplicated in tag.py
+                    if version:
+                        version = version.name
+                    else:
+                        artifact.add_version(
+                            BaseVersion(
+                                artifact=enrichment.artifact.name,
+                                name=commit.hexsha,
+                                creation_date=datetime.fromtimestamp(
+                                    commit.committed_date
+                                ),
+                                author=commit.author.name,
+                                commit_hexsha=commit.hexsha,
+                                discovered=True,
+                            )
+                        )
+                        version = commit.hexsha
+                    artifact.update_enrichments(
+                        version=version, enrichments=enrichments
+                    )
+                    state.update_artifact(artifact)
+        return state
+
+    def check_ref(self, ref: str, state: BaseRegistryState):
+        # TODO: implement
+        raise NotImplementedError()
+
+
 def init_index_manager(path):
     try:
         return RepoIndexManager.from_repo(path)
     except NoRepo:
         return FileIndexManager.from_path(path)
+
+
+class GTOInfo(EnrichmentInfo):
+    source = "gto"
+    artifact: Artifact
+
+    def get_object(self) -> BaseModel:
+        return self.artifact
+
+    def get_human_readable(self) -> str:
+        description = f"""GTO artifact: {self.artifact}"""
+        return description
+
+    def get_path(self):
+        return self.artifact.path
+
+
+class GTOEnrichment(Enrichment):
+    source = "gto"
+
+    def discover(  # pylint: disable=no-self-use
+        self, repo, rev: Optional[str]
+    ) -> List[GTOInfo]:
+        index = RepoIndexManager.from_repo(repo).get_commit_index(rev)
+        if index:
+            return [GTOInfo(artifact=artifact) for artifact in index.state.values()]
+        return []
+
+    def describe(  # pylint: disable=no-self-use
+        self, repo, obj: str, rev: Optional[str]
+    ) -> Optional[GTOInfo]:
+        index = RepoIndexManager.from_repo(repo).get_commit_index(rev)
+        if obj in index.state:
+            return GTOInfo(artifact=index.state[obj])
+        return None

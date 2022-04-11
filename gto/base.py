@@ -6,6 +6,7 @@ from pydantic import BaseModel
 
 from gto.config import RegistryConfig
 from gto.constants import Action
+from gto.ext import Enrichment
 from gto.versions import SemVer
 
 from .exceptions import ArtifactNotFound, ManyVersions, VersionRequired
@@ -26,7 +27,14 @@ class BaseVersion(BaseModel):
     creation_date: datetime
     author: str
     commit_hexsha: str
+    discovered: bool = False
     promotions: List[BasePromotion] = []
+    enrichments: List[Enrichment] = []
+
+    @property
+    def is_registered(self):
+        """Tells if this is an explicitly registered version"""
+        return SemVer.is_valid(self.name)
 
     @property
     def version(self):
@@ -63,7 +71,7 @@ class BaseArtifact(BaseModel):
 
     def get_latest_version(self) -> Optional[BaseVersion]:
         versions = sorted(
-            self.versions,
+            (v for v in self.versions if not v.discovered),
             key=lambda x: x.creation_date,
         )
         if versions:
@@ -73,7 +81,23 @@ class BaseArtifact(BaseModel):
     @property
     def promoted(self) -> Dict[str, BasePromotion]:
         stages: Dict[str, BasePromotion] = {}
-        for version in sorted(self.versions, key=lambda x: x.version, reverse=True):
+        # semver
+        versions = sorted(
+            (v for v in self.versions if v.is_registered),
+            key=lambda x: x.version,
+            reverse=True,
+        )
+        # TODO: regular commits - these should be sorted by stage tag creation maybe?
+        # E.g. when you created "rf#prod" tag, then you created a version.
+        # It's probably should be a flag on CLI that will tell how to sort promoted for return.
+        versions.extend(
+            sorted(
+                (v for v in self.versions if not v.is_registered),
+                key=lambda x: x.creation_date,
+                reverse=True,
+            )
+        )
+        for version in versions:
             promotion = version.stage
             if promotion:
                 stages[promotion.stage] = stages.get(promotion.stage) or promotion
@@ -87,19 +111,64 @@ class BaseArtifact(BaseModel):
             promotion
         )
 
+    def update_enrichments(self, version, enrichments):
+        self.find_version(
+            name=version, include_discovered=True
+        ).enrichments = enrichments
+
+    @property
+    def discovered(self):
+        return any(not v.discovered for v in self.versions)
+
+    # @overload
+    # def find_version(
+    #     self,
+    #     name: str = None,
+    #     commit_hexsha: str = None,
+    #     raise_if_not_found: Literal[True] = ...,
+    #     allow_multiple: Literal[False] = ...,
+    # ) -> BaseVersion:
+    #     ...
+
+    # @overload
+    # def find_version(
+    #     self,
+    #     name: str = None,
+    #     commit_hexsha: str = None,
+    #     raise_if_not_found: Literal[False] = ...,
+    #     allow_multiple: Literal[False] = ...,
+    # ) -> Optional[BaseVersion]:
+    #     ...
+
+    # @overload
+    # def find_version(
+    #     self,
+    #     name: str = None,
+    #     commit_hexsha: str = None,
+    #     raise_if_not_found: Literal[False] = ...,
+    #     allow_multiple: Literal[True] = ...,
+    # ) -> List[BaseVersion]:
+    #     ...
+
+    def get_versions(self, discover=False):
+        return [v for v in self.versions if discover or not v.discovered]
+
     def find_version(
         self,
         name: str = None,
         commit_hexsha: str = None,
-        raise_if_not_found=False,
+        raise_if_not_found: bool = False,
         allow_multiple=False,
+        include_discovered=False,
     ) -> Union[None, BaseVersion, List[BaseVersion]]:
         versions = [
             v
             for v in self.versions
             if (v.name == name if name else True)
             and (v.commit_hexsha == commit_hexsha if commit_hexsha else True)
+            and (True if include_discovered else not v.discovered)
         ]
+
         if allow_multiple:
             return versions
         if raise_if_not_found and not versions:
@@ -137,7 +206,12 @@ class BaseRegistryState(BaseModel):
     def update_artifact(self, artifact: BaseArtifact):
         self.artifacts[artifact.name] = artifact
 
-    def find_artifact(self, name, create_new=False):
+    def get_artifacts(self):
+        return self.artifacts
+
+    def find_artifact(self, name: str, create_new=False):
+        if not name:
+            raise ValueError("Artifact name is required")
         if name not in self.artifacts:
             if create_new:
                 self.artifacts[name] = BaseArtifact(name=name, versions=[])

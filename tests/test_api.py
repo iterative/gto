@@ -23,8 +23,8 @@ def test_empty_state(empty_git_repo: Tuple[git.Repo, Callable]):
 def test_api_info_commands_empty_repo(empty_git_repo: Tuple[git.Repo, Callable]):
     repo, write_file = empty_git_repo  # pylint: disable=unused-variable
     gto.api.show(repo.working_dir)
-    gto.api.audit_registration(repo.working_dir)
-    gto.api.audit_promotion(repo.working_dir)
+    # gto.api.audit_registration(repo.working_dir)
+    # gto.api.audit_promotion(repo.working_dir)
     gto.api.history(repo.working_dir)
 
 

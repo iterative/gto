@@ -2,23 +2,28 @@
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseSettings
+from pydantic import BaseModel, BaseSettings
 from pydantic.env_settings import InitSettingsSource
 from ruamel.yaml import YAML
 
 from gto.constants import TAG
 from gto.exceptions import UnknownStage, UnknownType
 
+from .constants import TAG
+from .ext import Enrichment, find_enrichment_types, find_enrichments
+
 yaml = YAML(typ="safe", pure=True)
 yaml.default_flow_style = False
 
-CONFIG_FILE = ".gto"
+CONFIG_FILE_NAME = ".gto"
 
 
 def _set_location_init_source(init_source: InitSettingsSource):
     def inner(settings: "RegistryConfig"):
-        if "CONFIG_FILE" in init_source.init_kwargs:
-            settings.__dict__["CONFIG_FILE"] = init_source.init_kwargs["CONFIG_FILE"]
+        if "CONFIG_FILE_NAME" in init_source.init_kwargs:
+            settings.__dict__["CONFIG_FILE_NAME"] = init_source.init_kwargs[
+                "CONFIG_FILE_NAME"
+            ]
         return {}
 
     return inner
@@ -30,7 +35,7 @@ def config_settings_source(settings: "RegistryConfig") -> Dict[str, Any]:
     """
 
     encoding = settings.__config__.env_file_encoding
-    config_file = getattr(settings, "CONFIG_FILE", CONFIG_FILE)
+    config_file = getattr(settings, "CONFIG_FILE_NAME", CONFIG_FILE_NAME)
     if not isinstance(config_file, Path):
         config_file = Path(config_file)
     if not config_file.exists():
@@ -40,14 +45,23 @@ def config_settings_source(settings: "RegistryConfig") -> Dict[str, Any]:
     return {k.upper(): v for k, v in conf.items()} if conf else {}
 
 
+class EnrichmentConfig(BaseModel):
+    type: str
+    config: Dict = {}
+
+    def load(self) -> Enrichment:
+        return find_enrichment_types()[self.type](**self.config)
+
+
 class RegistryConfig(BaseSettings):
     INDEX: str = "artifacts.yaml"
     TYPE_ALLOWED: List[str] = []
-    VERSION_REQUIRED_FOR_STAGE: bool = True
     STAGE_ALLOWED: List[str] = []
     LOG_LEVEL: str = "INFO"
     DEBUG: bool = False
-    CONFIG_FILE: Optional[str] = CONFIG_FILE
+    ENRICHMENTS: List[EnrichmentConfig] = []
+    AUTOLOAD_ENRICHMENTS: bool = True
+    CONFIG_FILE_NAME: Optional[str] = CONFIG_FILE_NAME
 
     def assert_type(self, name):
         if not self.check_type(name):
@@ -85,6 +99,19 @@ class RegistryConfig(BaseSettings):
         return {
             TAG: TagStageManager,
         }[self.STAGE_BASE]
+
+    @property
+    def ENRICHMENT_MANAGER_CLS(self):
+        from .index import EnrichmentManager
+
+        return EnrichmentManager
+
+    @property
+    def enrichments(self) -> Dict[str, Enrichment]:
+        res = {e.source: e for e in (e.load() for e in self.ENRICHMENTS)}
+        if self.AUTOLOAD_ENRICHMENTS:
+            return {**find_enrichments(), **res}
+        return res
 
     def assert_stage(self, name):
         if not self.check_stage(name):

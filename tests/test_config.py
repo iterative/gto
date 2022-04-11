@@ -1,7 +1,7 @@
 import pytest
 
 from gto.api import add
-from gto.config import CONFIG_FILE
+from gto.config import CONFIG_FILE_NAME
 from gto.exceptions import UnknownType
 from gto.index import init_index_manager
 from gto.registry import GitRegistry
@@ -12,7 +12,7 @@ def init_repo(empty_git_repo):
     repo, write_file = empty_git_repo
 
     write_file(
-        CONFIG_FILE,
+        CONFIG_FILE_NAME,
         "type_allowed: [model, dataset]",
     )
     return repo
