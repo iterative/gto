@@ -1,6 +1,6 @@
 from collections import OrderedDict
 from datetime import datetime
-from typing import List, Union
+from typing import List, Optional, Union
 
 from git import Repo
 
@@ -112,27 +112,29 @@ def check_ref(repo: Union[str, Repo], ref: str):
 
 def show(
     repo: Union[str, Repo],
-    object: str = "registry",
+    name: Optional[str] = None,
     discover: bool = False,
     table: bool = False,
     all_branches=False,
     all_commits=False,
 ):
-    if object == "registry":
-        return _show_registry(
+    return (
+        _show_versions(
+            repo,
+            name=name,
+            discover=discover,
+            all_branches=all_branches,
+            all_commits=all_commits,
+            table=table,
+        )
+        if name
+        else _show_registry(
             repo,
             discover=discover,
             all_branches=all_branches,
             all_commits=all_commits,
             table=table,
         )
-    return _show_versions(
-        repo,
-        name=object,
-        discover=discover,
-        all_branches=all_branches,
-        all_commits=all_commits,
-        table=table,
     )
 
 

@@ -59,6 +59,7 @@ class RegistryConfig(BaseSettings):
     ENRICHMENTS: List[EnrichmentConfig] = []
     AUTOLOAD_ENRICHMENTS: bool = True
     CONFIG_FILE_NAME: Optional[str] = CONFIG_FILE_NAME
+    EMOJIS: bool = True
 
     def assert_type(self, name):
         if not self.check_type(name):
