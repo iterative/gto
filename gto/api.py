@@ -170,11 +170,9 @@ def _show_registry(
                 for name in stages
             },
         }
-        for o in reg.get_state(
+        for o in reg.get_artifacts(
             discover=discover, all_branches=all_branches, all_commits=all_commits
-        )
-        .get_artifacts()
-        .values()
+        ).values()
     }
     if not table:
         return models_state
