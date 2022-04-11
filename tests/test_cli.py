@@ -7,7 +7,8 @@ from typer.main import get_command_from_info
 from typer.testing import CliRunner
 
 from gto.api import get_index
-from gto.cli import FormatTable, app
+from gto.cli import app
+
 from .utils import _check_obj
 
 
@@ -31,37 +32,33 @@ def app_cli_cmd(app_cmd):
 
 
 def test_commands_help(app_cli_cmd):
-    no_help = []
-    for cli_cmd in app_cli_cmd:
-        if cli_cmd.help is None:
-            no_help.append(cli_cmd.name)
-    assert len(no_help) == 0, f"{no_help} cli commnads do not have help!"
+    no_help = [cli_cmd.name for cli_cmd in app_cli_cmd if cli_cmd.help is None]
+    assert not no_help, f"{no_help} cli command do not have help!"
 
 
 def test_commands_args_help(app_cli_cmd):
     no_help = []
     for cmd in app_cli_cmd:
-        for arg in cmd.params:
-            if arg.help is None or arg.help == "":
-                no_help.append(f"{cmd.name}:{arg.name}")
-    assert len(no_help) == 0, f"{no_help} cli commnad args do not have help!"
+        no_help.extend(
+            f"{cmd.name}:{arg.name}"
+            for arg in cmd.params
+            if arg.help is None or arg.help == ""
+        )
+
+    assert not no_help, f"{no_help} cli command args do not have help!"
 
 
 def test_commands_examples(app_cli_cmd):
-    no_examples = []
-    for cmd in app_cli_cmd:
-        if cmd.examples is None:
-            no_examples.append(cmd.name)
-    assert len(no_examples) == 0, f"{no_examples} cli commnads do not have examples!"
+    no_examples = [cmd.name for cmd in app_cli_cmd if cmd.examples is None]
+    assert not no_examples, f"{no_examples} cli command do not have examples!"
 
 
 def test_show(empty_git_repo: Tuple[git.Repo, Callable]):
-    FormatTable
     repo, write_file = empty_git_repo
     _check_successful_cmd(
         "show",
         ["-r", repo.working_dir],
-        "No tracked artifacts detected in the current workspace\n",
+        "Nothing found in the current workspace\n",
     )
 
 

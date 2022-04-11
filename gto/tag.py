@@ -5,8 +5,6 @@ from typing import FrozenSet, Iterable, Optional, Union
 import git
 from pydantic import BaseModel
 
-from gto.index import Artifact
-
 from .base import (
     BaseArtifact,
     BaseManager,
@@ -29,11 +27,14 @@ def name_tag(
     version: Optional[str] = None,
     stage: Optional[str] = None,
     repo: Optional[git.Repo] = None,
+    simple: bool = False,
 ):
     if action == Action.REGISTER:
         return f"{name}{ActionSign[action]}{version}"
 
     if action == Action.PROMOTE:
+        if simple:
+            return f"{name}{ActionSign[action]}{stage}"
         if repo is None:
             raise MissingArg(arg="repo")
         numbers = []
@@ -58,13 +59,17 @@ def parse_name(name: str, raise_on_fail: bool = True):
 
     if ActionSign[Action.PROMOTE] in name:
         name, stage = name.split(ActionSign[Action.PROMOTE])
-        stage, number = stage.split("-")
-        return {
+        result = {
             ACTION: Action.PROMOTE,
             NAME: name,
             STAGE: stage,
-            NUMBER: int(number),
         }
+        if "-" not in stage:
+            return result
+        stage, number = stage.split("-")
+        result[STAGE] = stage
+        result[NUMBER] = int(number)
+        return result
     if raise_on_fail:
         raise ValueError(f"Unknown tag name: {name}")
     return {}
@@ -131,10 +136,10 @@ def create_tag(repo, name, ref, message):
     )
 
 
-def version_from_tag(artifact: Artifact, tag: git.Tag) -> BaseVersion:
+def version_from_tag(tag: git.Tag) -> BaseVersion:
     mtag = parse_tag(tag)
     return BaseVersion(
-        artifact=artifact,
+        artifact=mtag.name,
         name=mtag.version,
         creation_date=mtag.creation_date,
         author=tag.tag.tagger.name,
@@ -142,14 +147,32 @@ def version_from_tag(artifact: Artifact, tag: git.Tag) -> BaseVersion:
     )
 
 
-def promotion_from_tag(artifact: BaseArtifact, tag: git.Tag) -> BasePromotion:
+def promotion_from_tag(
+    artifact: BaseArtifact, tag: git.Tag, version_required: bool
+) -> BasePromotion:
     mtag = parse_tag(tag)
-    version = artifact.find_version(
-        commit_hexsha=tag.commit.hexsha, raise_if_not_found=True
-    )
+    if version_required:
+        version = artifact.find_version(
+            commit_hexsha=tag.commit.hexsha, raise_if_not_found=True
+        ).name  # type: ignore
+    else:
+        version = artifact.find_version(commit_hexsha=tag.commit.hexsha)
+        if version:
+            version = version.name  # type: ignore
+        else:
+            artifact.add_version(
+                BaseVersion(
+                    artifact=mtag.name,
+                    name=tag.commit.hexsha,
+                    creation_date=mtag.creation_date,
+                    author=tag.tag.tagger.name,
+                    commit_hexsha=tag.commit.hexsha,
+                )
+            )
+            version = tag.commit.hexsha
     return BasePromotion(
-        artifact=artifact.commits[tag.commit.hexsha],
-        version=version.name,  # type: ignore
+        artifact=mtag.name,
+        version=version,
         stage=mtag.stage,
         creation_date=mtag.creation_date,
         author=tag.tag.tagger.name,
@@ -157,17 +180,14 @@ def promotion_from_tag(artifact: BaseArtifact, tag: git.Tag) -> BasePromotion:
     )
 
 
-def index_tag(artifact: BaseArtifact, tag: git.Tag) -> BaseArtifact:
+def index_tag(
+    artifact: BaseArtifact, tag: git.Tag, version_required: bool
+) -> BaseArtifact:
     mtag = parse_tag(tag)
-    hexsha = mtag.tag.commit.hexsha
-    if hexsha not in artifact.commits:
-        # issue a warning that we're ignoring a tag,
-        # because artifact wasn't registered in that commit?
-        return artifact
     if mtag.action == Action.REGISTER:
-        artifact.versions.append(version_from_tag(artifact.commits[hexsha], tag))
+        artifact.add_version(version_from_tag(tag))
     if mtag.action == Action.PROMOTE:
-        artifact.add_promotion(promotion_from_tag(artifact, tag))
+        artifact.add_promotion(promotion_from_tag(artifact, tag, version_required))
     return artifact
 
 
@@ -177,7 +197,13 @@ class TagManager(BaseManager):  # pylint: disable=abstract-method
         # this is important to check that history is not broken
         tags = [parse_tag(t) for t in find(repo=self.repo, action=self.actions)]
         for tag in tags:
-            state.artifacts[tag.name] = index_tag(state.artifacts[tag.name], tag.tag)
+            state.update_artifact(
+                index_tag(
+                    state.find_artifact(tag.name, create_new=True),
+                    tag.tag,
+                    version_required=False,
+                )
+            )
         return state
 
 
@@ -204,8 +230,8 @@ class TagVersionManager(TagManager):
             return {}
         return {
             name: version
-            for name in state.artifacts
-            for version in state.artifacts[name].versions
+            for name, artifact in state.get_artifacts().items()
+            for version in artifact.versions
             if name == art_name and version.name == version_name
         }
 
@@ -213,10 +239,10 @@ class TagVersionManager(TagManager):
 class TagStageManager(TagManager):
     actions: FrozenSet[Action] = frozenset((Action.PROMOTE,))
 
-    def promote(self, name, stage, ref, message):
+    def promote(self, name, stage, ref, message, simple):
         create_tag(
             self.repo,
-            name_tag(Action.PROMOTE, name, stage=stage, repo=self.repo),
+            name_tag(Action.PROMOTE, name, stage=stage, repo=self.repo, simple=simple),
             ref=ref,
             message=message,
         )
@@ -233,8 +259,8 @@ class TagStageManager(TagManager):
             return {}
         return {
             name: promotion
-            for name in state.artifacts
-            for promotion in state.artifacts[name].stages
+            for name, artifact in state.get_artifacts().items()
+            for promotion in artifact.stages
             if name == art_name
             and promotion.commit_hexsha == tag.commit.hexsha
             and promotion.creation_date == datetime.fromtimestamp(tag.tag.tagged_date)

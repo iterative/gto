@@ -1,10 +1,10 @@
 from enum import Enum
 
 REF = "ref"
-COMMIT = "commit"
+# COMMIT = "commit"
 TAG = "tag"
-BRANCH = "branch"
-FILE = "file"
+# BRANCH = "branch"
+# FILE = "file"
 
 ACTION = "action"
 TYPE = "type"

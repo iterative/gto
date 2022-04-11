@@ -46,7 +46,7 @@ class ArtifactExists(GTOException):
 
 
 class ArtifactNotFound(GTOException):
-    _message = "Artifact '{name}' doesn't exist in Index"
+    _message = "Cannot find artifact"
 
     def __init__(self, name) -> None:
         self.message = self._message.format(name=name)

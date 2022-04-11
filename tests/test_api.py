@@ -23,8 +23,8 @@ def test_empty_state(empty_git_repo: Tuple[git.Repo, Callable]):
 def test_api_info_commands_empty_repo(empty_git_repo: Tuple[git.Repo, Callable]):
     repo, write_file = empty_git_repo  # pylint: disable=unused-variable
     gto.api.show(repo.working_dir)
-    gto.api.audit_registration(repo.working_dir)
-    gto.api.audit_promotion(repo.working_dir)
+    # gto.api.audit_registration(repo.working_dir)
+    # gto.api.audit_promotion(repo.working_dir)
     gto.api.history(repo.working_dir)
 
 
@@ -45,9 +45,9 @@ def test_add_remove(empty_git_repo: Tuple[git.Repo, Callable]):
 
 
 @pytest.fixture
-def repo_with_artifact(init_showcase_numbers):
+def repo_with_artifact(init_showcase_semver):
     repo: git.Repo
-    repo, write_file = init_showcase_numbers  # pylint: disable=unused-variable
+    repo, write_file = init_showcase_semver  # pylint: disable=unused-variable
     name, type, path_, virtual = "new-artifact", "new-type", "new/path", True
     gto.api.add(repo.working_dir, type, name, path_, virtual=virtual)
     repo.index.add(["artifacts.yaml"])
@@ -57,7 +57,7 @@ def repo_with_artifact(init_showcase_numbers):
 
 def test_register(repo_with_artifact):
     repo, name = repo_with_artifact
-    vname1, vname2 = "v1", "v2"
+    vname1, vname2 = "v1.0.0", "v1.0.1"
     gto.api.register(repo.working_dir, name, "HEAD", vname1)
     latest = gto.api.find_latest_version(repo.working_dir, name)
     assert latest.name == vname1
@@ -78,22 +78,15 @@ def test_promote(repo_with_artifact):
     repo, name = repo_with_artifact
     stage = "staging"
     gto.api.promote(
-        repo.working_dir, name, stage, promote_ref="HEAD", name_version="v1"
+        repo.working_dir, name, stage, promote_ref="HEAD", name_version="v0.0.1"
     )
     promotion = gto.api.find_promotion(repo.working_dir, name, stage)
     author = repo.commit().author.name
     _check_obj(
         promotion,
         dict(
-            artifact=dict(
-                type="new-type",
-                name=name,
-                path="new/path",
-                virtual=True,
-                tags=[],
-                description="",
-            ),
-            version="v1",
+            artifact=name,
+            version="v0.0.1",
             stage=stage,
             author=author,
             commit_hexsha=repo.commit().hexsha,

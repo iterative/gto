@@ -2,24 +2,25 @@
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseSettings
+from pydantic import BaseModel, BaseSettings
 from pydantic.env_settings import InitSettingsSource
 from ruamel.yaml import YAML
 
-from gto.constants import BRANCH, COMMIT, TAG
 from gto.exceptions import UnknownStage, UnknownType
-from gto.versions import AbstractVersion
+from gto.ext import Enrichment, find_enrichment_types, find_enrichments
 
 yaml = YAML(typ="safe", pure=True)
 yaml.default_flow_style = False
 
-CONFIG_FILE = ".gto"
+CONFIG_FILE_NAME = ".gto"
 
 
 def _set_location_init_source(init_source: InitSettingsSource):
     def inner(settings: "RegistryConfig"):
-        if "CONFIG_FILE" in init_source.init_kwargs:
-            settings.__dict__["CONFIG_FILE"] = init_source.init_kwargs["CONFIG_FILE"]
+        if "CONFIG_FILE_NAME" in init_source.init_kwargs:
+            settings.__dict__["CONFIG_FILE_NAME"] = init_source.init_kwargs[
+                "CONFIG_FILE_NAME"
+            ]
         return {}
 
     return inner
@@ -31,7 +32,7 @@ def config_settings_source(settings: "RegistryConfig") -> Dict[str, Any]:
     """
 
     encoding = settings.__config__.env_file_encoding
-    config_file = getattr(settings, "CONFIG_FILE", CONFIG_FILE)
+    config_file = getattr(settings, "CONFIG_FILE_NAME", CONFIG_FILE_NAME)
     if not isinstance(config_file, Path):
         config_file = Path(config_file)
     if not config_file.exists():
@@ -41,18 +42,24 @@ def config_settings_source(settings: "RegistryConfig") -> Dict[str, Any]:
     return {k.upper(): v for k, v in conf.items()} if conf else {}
 
 
+class EnrichmentConfig(BaseModel):
+    type: str
+    config: Dict = {}
+
+    def load(self) -> Enrichment:
+        return find_enrichment_types()[self.type](**self.config)
+
+
 class RegistryConfig(BaseSettings):
     INDEX: str = "artifacts.yaml"
     TYPE_ALLOWED: List[str] = []
-    VERSION_BASE: str = TAG
-    VERSION_CONVENTION: str = "numbers"
-    VERSION_REQUIRED_FOR_STAGE: bool = True
-    STAGE_BASE: str = TAG
     STAGE_ALLOWED: List[str] = []
-    STAGE_BRANCH_MAPPING: Dict[str, str] = {}
     LOG_LEVEL: str = "INFO"
     DEBUG: bool = False
-    CONFIG_FILE: Optional[str] = CONFIG_FILE
+    ENRICHMENTS: List[EnrichmentConfig] = []
+    AUTOLOAD_ENRICHMENTS: bool = True
+    CONFIG_FILE_NAME: Optional[str] = CONFIG_FILE_NAME
+    EMOJIS: bool = True
 
     def assert_type(self, name):
         if not self.check_type(name):
@@ -62,24 +69,11 @@ class RegistryConfig(BaseSettings):
         return name in self.TYPE_ALLOWED or not self.TYPE_ALLOWED
 
     @property
-    def VERSION_SYSTEM_MAPPING(self):
-        from .versions import NumberedVersion, SemVer
-
-        return {"numbers": NumberedVersion, "semver": SemVer}
-
-    @property
-    def VERSION_MANAGER_CLS(self):
-        from .commit import CommitVersionManager
-        from .tag import TagVersionManager
-
-        return {COMMIT: CommitVersionManager, TAG: TagVersionManager}[self.VERSION_BASE]
-
-    @property
-    def STAGE_MANAGER_CLS(self):
-        from .branch import BranchStageManager
-        from .tag import TagStageManager
-
-        return {TAG: TagStageManager, BRANCH: BranchStageManager}[self.STAGE_BASE]
+    def enrichments(self) -> Dict[str, Enrichment]:
+        res = {e.source: e for e in (e.load() for e in self.ENRICHMENTS)}
+        if self.AUTOLOAD_ENRICHMENTS:
+            return {**find_enrichments(), **res}
+        return res
 
     def assert_stage(self, name):
         if not self.check_stage(name):
@@ -90,22 +84,7 @@ class RegistryConfig(BaseSettings):
 
     @property
     def stages(self) -> List[str]:
-        if self.STAGE_BASE == TAG:
-            return self.STAGE_ALLOWED
-        if self.STAGE_BASE == BRANCH:
-            return list(self.STAGE_BRANCH_MAPPING)
-        raise NotImplementedError("Unknown STAGE_BASE")
-
-    def branch_to_stage(self, branch_name):
-        if self.STAGE_BRANCH_MAPPING:
-            return self.STAGE_BRANCH_MAPPING[branch_name]
-        return branch_name
-
-    def stage_to_branch(self, stage_name):
-        if self.STAGE_BRANCH_MAPPING:
-            return {value: key for key, value in self.STAGE_BRANCH_MAPPING.items()}[
-                stage_name
-            ]
+        return self.STAGE_ALLOWED
 
     class Config:
         env_prefix = "gto_"
@@ -163,12 +142,6 @@ class RegistryConfig(BaseSettings):
     #             "ENV_BRANCH_MAPPING must be a dict of str:str", "ENV_BRANCH_MAPPING"
     #         )
     #     return value
-
-    @property
-    def versions_class(self) -> AbstractVersion:
-        if self.VERSION_CONVENTION not in self.VERSION_SYSTEM_MAPPING:
-            raise ValueError(f"Unknown versioning system {self.VERSION_CONVENTION}")
-        return self.VERSION_SYSTEM_MAPPING[self.VERSION_CONVENTION]
 
 
 CONFIG = RegistryConfig()

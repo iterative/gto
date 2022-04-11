@@ -1,12 +1,13 @@
 import contextlib
 from typing import Callable, Optional
 
-from mlem.config import CONFIG
 from rich.align import Align
 from rich.console import Console
 from rich.style import Style
 from rich.table import Column, Table
 from rich.text import Text
+
+from gto.config import CONFIG
 
 console = Console()
 
