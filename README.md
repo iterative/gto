@@ -1,33 +1,42 @@
 # GTO
 
-Great Tool Ops. Turn your Git Repo into Artifact Registry:
-* Index files in repo as artifacts to make them visible for others
+Git Tag Ops. Turn your Git Repo into Artifact Registry:
 * Register new versions of artifacts marking significant changes to them
 * Promote versions to signal downstream systems to act
+* Attach additional info about your artifact with Enrichments
 * Act on new versions and promotions in CI
-* [WIP] Add enrichments that will add more information about the artifacts
 
-To turn your repo into an artifact registry, you only need to `pip install` this package. Indexing, versioning and promoting are done with Git using files, commits, tags and branches. To use the artifact registry, you also need this package only.
+To turn your repo into an artifact registry, you only need to `pip install` this package. Versioning and promotion of artifacts are done by creation of special git tags. To use the artifact registry, you also need this package only.
 
 The tool is created to be used both in CLI and in Python. The README will cover CLI part, but for all commands there are Python API counterparts in `gto.api` module.
 
+## Versioning
+
+To register new version of artifact, you can use `gto register` command. You usually use those to mark significant changes to the artifact. Running `gto register` creates a special git tag.
+
+```
+$ gto register simple-nn HEAD --version v1.0.0
+```
+
+This will create git tag `rf@v1.0.0`.
+
+## Promoting
+
+You could also promote a specific artifact version to Stage. You can use that to signal downstream systems to act - for example, redeploy a ML model (if your artifact is a model) or update the some special file on server (if your artifact is a file).
+
+```
+$ gto promote simple-nn prod
+```
+
+This creates git tag `rf#prod`.
+
 ## Artifacts
 
-To add new artifact or remove the existing ones, run `gto add` or `gto rm`:
+So far we registered some artifacts, but we still didn't specify nowhere `type` of this artifact (dataset, model, something else) and `path` to it.
+To add enrichment for artifact or remove the existing one, run `gto add` or `gto rm`:
 
 ```
 $ gto add model simple-nn models/neural-network.pkl --virtual
-
-$ gto add --help
-Usage: gto add [OPTIONS] TYPE NAME PATH
-
-  Register new artifact (add it to the Index)
-
-Options:
-  -v, --verbose
-  -r, --repo TEXT  Repository to use  [default: .]
-  --virtual        Virtual artifact that wasn't committed to Git
-  --help           Show this message and exit.
 ```
 
 You could also modify `artifacts.yaml` file directly.
@@ -37,46 +46,6 @@ There are two types of artifacts in GTO:
 2. `Virtual` artifacts. This could be an external path, e.g. `s3://mybucket/myfile` or a local path if the file wasn't committed (as in case with DVC). In this case GTO can't pin the current physical state of the artifact and guarantee it's immutability. If `s3://mybucket/myfile` changes, you won't have any way neither retrieve, nor understand it's different now than it was before when you registered that artifact version.
 
 In future versions, we will add enrichments (useful information other tools like DVC and MLEM can provide about the artifacts). This will allow treating files versioned with DVC and DVC PL outputs as usual artifacts instead `virtual` ones.
-
-## Versioning
-
-After adding an artifact and committing modified `artifacts.yaml`, you can start creating new versions of it. You usually use those to mark significant changes to the artifact.
-
-```
-$ gto register simple-nn HEAD --version v1.0.0
-
-$ gto register --help
-Usage: gto register [OPTIONS] NAME REF
-
-  Tag the object with a version (git tags)
-
-Options:
-  -v, --verbose
-  -r, --repo TEXT        Repository to use  [default: .]
-  --version, --ver TEXT  Version to promote
-  -b, --bump TEXT        The exact part to use when bumping a version
-  --help                 Show this message and exit.
-```
-
-## Promoting
-
-You could also promote a specific artifact version to stage. You can use that to signal downstream systems to act - for example, redeploy a ML model (your artifact) or update the config file (your artifact).
-
-```
-$ gto promote simple-nn prod
-
-$ gto promote --help
-Usage: gto promote [OPTIONS] NAME STAGE
-
-  Assign label to specific artifact version
-
-Options:
-  -v, --verbose
-  -r, --repo TEXT  Repository to use  [default: .]
-  --version TEXT   If you provide --ref, this will be used to name new version
-  --ref TEXT
-  --help           Show this message and exit.
-```
 
 ## Using the registry
 
@@ -92,59 +61,46 @@ This is the actual state of the registry: all artifacts, their latest versions, 
 
 ```
 $ gto show
-╒══════════════╤═══════════╤══════════════════╤═══════════════╕
-│ name         │ version   │ env/production   │ env/staging   │
-╞══════════════╪═══════════╪══════════════════╪═══════════════╡
-│ nn           │ v0.0.1    │ -                │ v0.0.1        │
-│ rf           │ v1.0.1    │ v1.0.0           │ v1.0.1        │
-│ features-dvc │ -         │ -                │ -             │
-╘══════════════╧═══════════╧══════════════════╧═══════════════╛
+╒════════╤═══════════╤═════════════════╤════════════════════╕
+│ name   │ version   │ stage/staging   │ stage/production   │
+╞════════╪═══════════╪═════════════════╪════════════════════╡
+│ nn     │ v0.0.1    │ v0.0.1          │ -                  │
+│ rf     │ v1.2.4    │ -               │ v1.2.4             │
+╘════════╧═══════════╧═════════════════╧════════════════════╛
 ```
 
-### Audit the registration and promotion
+Add `--discover` flag to show artifacts that are present in `artifacts.yaml` but weren't registered or promoted. Use `--all-branches` or `--all-commits` to read `artifacts.yaml` from more commits than just HEAD.
 
-`gto audit` will print all registered versions of the artifact and all versions promoted to environments. This will help you to understand what was happening with the artifact.
+Add artifact name to print versions of that artifact:
 
 ```
-$ gto audit --name rf
-
-=== Registration audit trail ===
-╒═════════════════════╤════════╤═══════════╤══════════════╤══════════╤═══════════════════╕
-│ timestamp           │ name   │ version   │ deprecated   │ commit   │ author            │
-╞═════════════════════╪════════╪═══════════╪══════════════╪══════════╪═══════════════════╡
-│ 2022-03-18 12:10:15 │ rf     │ v1.0.0    │ -            │ 5eaf15a  │ Alexander Guschin │
-│ 2022-03-18 12:11:21 │ rf     │ v1.0.1    │ -            │ 9fbb866  │ Alexander Guschin │
-╘═════════════════════╧════════╧═══════════╧══════════════╧══════════╧═══════════════════╛
-
-=== Promotion audit trail ===
-╒═════════════════════╤════════╤════════════╤═══════════╤══════════════╤══════════╤═══════════════════╕
-│ timestamp           │ name   │ label      │ version   │ deprecated   │ commit   │ author            │
-╞═════════════════════╪════════╪════════════╪═══════════╪══════════════╪══════════╪═══════════════════╡
-│ 2022-03-18 12:12:27 │ rf     │ production │ v1.0.0    │ -            │ 5eaf15a  │ Alexander Guschin │
-│ 2022-03-18 12:13:30 │ rf     │ staging    │ v1.0.1    │ -            │ 9fbb866  │ Alexander Guschin │
-│ 2022-03-18 12:14:33 │ rf     │ production │ v1.0.1    │ -            │ 9fbb866  │ Alexander Guschin │
-│ 2022-03-18 12:15:37 │ rf     │ production │ v1.0.0    │ -            │ 5eaf15a  │ Alexander Guschin │
-╘═════════════════════╧════════╧════════════╧═══════════╧══════════════╧══════════╧═══════════════════╛
+$ gto show rf
+╒════════════╤════════╤════════════╤═════════════════════╤═══════════════════╤═════════════════╤══════════════╤═══════════════╕
+│ artifact   │ name   │ stage      │ creation_date       │ author            │ commit_hexsha   │ discovered   │ enrichments   │
+╞════════════╪════════╪════════════╪═════════════════════╪═══════════════════╪═════════════════╪══════════════╪═══════════════╡
+│ rf         │ v1.2.3 │ production │ 2022-04-11 21:51:56 │ Alexander Guschin │ d1d9736         │ False        │ ['gto']       │
+│ rf         │ v1.2.4 │ production │ 2022-04-11 21:51:57 │ Alexander Guschin │ 16b7b77         │ False        │ ['gto']       │
+╘════════════╧════════╧════════════╧═════════════════════╧═══════════════════╧═════════════════╧══════════════╧═══════════════╛
 ```
 
 ### See the history of an artifact
 
-Another way to achieve the same is by using `gto history` command:
+`gto history` will print all registered versions of the artifact and all versions promoted to environments. This will help you to understand what was happening with the artifact.
 
 ```
-$ gto history --name rf
-╒═════════════════════╤════════╤══════════════╤═══════════╤════════════╤══════════════╤══════════╤═══════════════════╕
-│ timestamp           │ name   │ event        │ version   │ label      │ deprecated   │ commit   │ author            │
-╞═════════════════════╪════════╪══════════════╪═══════════╪════════════╪══════════════╪══════════╪═══════════════════╡
-│ 2022-03-18 12:10:12 │ rf     │ commit       │ -         │ -          │ -            │ 5eaf15a  │ Alexander Guschin │
-│ 2022-03-18 12:10:15 │ rf     │ registration │ v1.0.0    │ -          │ -            │ 5eaf15a  │ Alexander Guschin │
-│ 2022-03-18 12:11:18 │ rf     │ commit       │ -         │ -          │ -            │ 9fbb866  │ Alexander Guschin │
-│ 2022-03-18 12:11:21 │ rf     │ registration │ v1.0.1    │ -          │ -            │ 9fbb866  │ Alexander Guschin │
-│ 2022-03-18 12:12:27 │ rf     │ promotion    │ v1.0.0    │ production │ -            │ 5eaf15a  │ Alexander Guschin │
-│ 2022-03-18 12:13:30 │ rf     │ promotion    │ v1.0.1    │ staging    │ -            │ 9fbb866  │ Alexander Guschin │
-│ 2022-03-18 12:14:33 │ rf     │ promotion    │ v1.0.1    │ production │ -            │ 9fbb866  │ Alexander Guschin │
-│ 2022-03-18 12:15:37 │ rf     │ promotion    │ v1.0.0    │ production │ -            │ 5eaf15a  │ Alexander Guschin │
-╘═════════════════════╧════════╧══════════════╧═══════════╧════════════╧══════════════╧══════════╧═══════════════════╛
+$ gto history rf
+╒═════════════════════╤════════╤══════════════╤═══════════╤════════════╤══════════╤═══════════════════╕
+│ timestamp           │ name   │ event        │ version   │ stage      │ commit   │ author            │
+╞═════════════════════╪════════╪══════════════╪═══════════╪════════════╪══════════╪═══════════════════╡
+│ 2022-04-11 21:51:56 │ rf     │ commit       │ -         │ -          │ d1d9736  │ Alexander Guschin │
+│ 2022-04-11 21:51:56 │ rf     │ registration │ v1.2.3    │ -          │ d1d9736  │ Alexander Guschin │
+│ 2022-04-11 21:51:57 │ rf     │ commit       │ -         │ -          │ 16b7b77  │ Alexander Guschin │
+│ 2022-04-11 21:51:57 │ rf     │ registration │ v1.2.4    │ -          │ 16b7b77  │ Alexander Guschin │
+│ 2022-04-11 21:51:57 │ rf     │ promotion    │ v1.2.3    │ production │ d1d9736  │ Alexander Guschin │
+│ 2022-04-11 21:51:58 │ rf     │ promotion    │ v1.2.4    │ staging    │ 16b7b77  │ Alexander Guschin │
+│ 2022-04-11 21:51:59 │ rf     │ promotion    │ v1.2.4    │ production │ 16b7b77  │ Alexander Guschin │
+│ 2022-04-11 21:52:01 │ rf     │ promotion    │ v1.2.3    │ production │ d1d9736  │ Alexander Guschin │
+╘═════════════════════╧════════╧══════════════╧═══════════╧════════════╧══════════╧═══════════════════╛
 ```
 
 ## Act on new versions and promotions in CI
@@ -195,64 +151,16 @@ To download artifacts that are stored with DVC or outside of repo, e.g. in `s3:/
 
 You can write configuration in `.gto` file in the root of your repo or use environment variables like this (note the `GTO_` prefix):
 ```shell
-GTO_VERSION_BASE=tag gto show
+GTO_EMOJIS=true gto show
 ```
 
 The default config written to `.gto` file will look like this (comments are there to help clarify the settings meaning and valid values):
 ```
-index: artifacts.yaml
 type_allowed: []  # list of allowed types
-version_base: tag  # or commit
-version_convention: numbers  # or semver
-version_required_for_env: true  # if false, registering a version isn't required to promote to an environment
-env_base: tag  # or branch
-env_allowed: []  # list of allowed environments to promote to. Make sense for env_base=tag only.
-env_branch_mapping: {}  # map of branch names to environment names. Makes sense for env_base=branch only.
+stage_allowed: []  # list of allowed Stages to promote to
 ```
 
-If some list/dict should allow something but it's empty, that means that all values are allowed.
-
-### Some example configs (skipping default values)
-
-```
-type_allowed: [model, dataset]
-version_convention: semver
-env_allowed: [dev, test, prod]
-```
-
-In this setup you create versions and promote them with git tags (those are defaults). This would be a typical setup when you need both to register versions and promote them to envs, and your requirement is to create a version first before promoting the artifact from specific commit to the env (`gto promote` will automatically create a version for you in that case). It limits allowed types and envs and requires you to version your models with SemVer (v1.2.3 as opposed to v1 that is called Numbers in settings).
-
-```
-type_allowed: [model, dataset]
-version_convention: semver
-version_required_for_env: false
-env_allowed: [dev, test, prod]
-```
-
-This setup has a single difference from the previous one. To promote a model to the environment, it doesn't require you to create a SemVer version. To indicate, which version was promoted, GTO will use a commit hexsha. That effectively means that registering and promoting are decoupled - you can do them independently. `gto show`, `gto audit`, `gto history` showcasing promotions will show SemVer when it's available, and commit hexsha when it's not.
-
-```
-version_base: commit
-env_allowed: [dev, test, prod]
-```
-
-In this setup each commit counts as a version for artifact (it's only required for that artifact to exist in `artifacts.yaml` in those commits). You cannot create versions explicitly with `gto register` right now, because this requires to actually create PR/make a commit to the selected branch and it's not implemented yet. As for versions, you have a whitelist of allowed values. Because each commit is a version, you don't need to create a version before promoting. In fact it is similar to specifying `version_required_for_env: false`.
-
-```
-env_base: branch
-env_branch_mapping:
-    master: prod
-    develop: dev
-```
-
-In this setup artifact version is assumed to be promoted in `prod` if it's committed in `master` and is the latest version in that branch. Because the default is `version_base: tag`, running `gto promote` will register new artifact version - and this at the same time will promote the artifact to the environment from `env_branch_mapping`. If you register a version in a branch that doesn't exist in `env_branch_mapping`, the promotion won't happen.
-
-```
-version_base: commit
-env_base: branch
-```
-
-In this setup you cannot create versions explicitly with `gto register`, because each commit counts as a version for artifact (it's only required for that artifact to exist in `artifacts.yaml` in those commits) and you would need to actually create PR/make a commit to the selected branch. Likewise, you cannot promote to envs with `gto promote` because it's not implemented yet and exact way to do that is unclear - e.g. this would require to create a PR or direct commit that updates the artifact. I guess we should implement all of these in the future. For now this setup allows you to manage artifacts with `gto add` / `gto rm` and see the state of your repo `gto show`, `gto audit`, `gto history`. Finally, because `env_branch_mapping` is not specified, GTO will take into account all branches that have `artifacts.yaml` in them.
+If a list/dict should allow something but it's empty, that means that all values are allowed.
 
 ## Trying it out
 
