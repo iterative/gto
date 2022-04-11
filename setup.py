@@ -55,7 +55,7 @@ setup_args = dict(  # noqa: C408
     entry_points={
         "console_scripts": ["gto = gto.cli:cli"],
         "gto.enrichment": [
-            "mlem = gto.ext_mlem:MlemEnrichment",
+            # "mlem = gto.ext_mlem:MlemEnrichment",
             # "dvc = gto.ext_dvc:DVCEnrichment",
             # "cli = gto.ext:CLIEnrichment",
             "gto = gto.index:GTOEnrichment",
