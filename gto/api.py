@@ -5,7 +5,13 @@ from typing import List, Union
 from git import Repo
 
 from gto.constants import NAME, STAGE, VERSION
-from gto.index import FileIndexManager, RepoIndexManager, init_index_manager
+from gto.ext import EnrichmentInfo
+from gto.index import (
+    EnrichmentManager,
+    FileIndexManager,
+    RepoIndexManager,
+    init_index_manager,
+)
 from gto.registry import GitRegistry
 from gto.tag import parse_name
 
@@ -21,7 +27,7 @@ def get_index(repo: Union[str, Repo], file=False):
 
 def _get_state(repo: Union[str, Repo]):
     """Show current registry state"""
-    return GitRegistry.from_repo(repo).state
+    return GitRegistry.from_repo(repo).get_state()
 
 
 def get_stages(repo: Union[str, Repo], in_use: bool = False):
@@ -107,7 +113,8 @@ def find_promotion(repo: Union[str, Repo], name: str, stage: str):
 def check_ref(repo: Union[str, Repo], ref: str):
     """Find out what have been registered/promoted in the provided ref"""
     reg = GitRegistry.from_repo(repo)
-    ref = ref.removeprefix("refs/tags/")
+    if ref.startswith("refs/tags/"):
+        ref = ref[len("refs/tags/") :]
     if ref.startswith("refs/heads/"):
         ref = reg.repo.commit(ref).hexsha
     result = reg.check_ref(ref)
@@ -117,13 +124,39 @@ def check_ref(repo: Union[str, Repo], ref: str):
     }
 
 
-def show(repo: Union[str, Repo], object: str = "registry", table: bool = False):
+def show(
+    repo: Union[str, Repo],
+    object: str = "registry",
+    discover: bool = False,
+    table: bool = False,
+    all_branches=False,
+    all_commits=False,
+):
     if object == "registry":
-        return _show_registry(repo, table=table)
-    return _show_versions(repo, name=object, table=table)
+        return _show_registry(
+            repo,
+            discover=discover,
+            all_branches=all_branches,
+            all_commits=all_commits,
+            table=table,
+        )
+    return _show_versions(
+        repo,
+        name=object,
+        discover=discover,
+        all_branches=all_branches,
+        all_commits=all_commits,
+        table=table,
+    )
 
 
-def _show_registry(repo: Union[str, Repo], table: bool = False):
+def _show_registry(
+    repo: Union[str, Repo],
+    discover: bool = False,
+    all_branches=False,
+    all_commits=False,
+    table: bool = False,
+):
     """Show current registry state"""
 
     reg = GitRegistry.from_repo(repo)
@@ -136,7 +169,11 @@ def _show_registry(repo: Union[str, Repo], table: bool = False):
                 for name in stages
             },
         }
-        for o in reg.state.artifacts.values()
+        for o in reg.get_state(
+            discover=discover, all_branches=all_branches, all_commits=all_commits
+        )
+        .get_artifacts()
+        .values()
     }
     if not table:
         return models_state
@@ -150,117 +187,123 @@ def _show_registry(repo: Union[str, Repo], table: bool = False):
 
 
 def _show_versions(
-    repo: Union[str, Repo], name: str, raw: bool = False, table: bool = False
+    repo: Union[str, Repo],
+    name: str,
+    raw: bool = False,
+    discover: bool = False,
+    all_branches=False,
+    all_commits=False,
+    table: bool = False,
 ):
     """List versions of artifact"""
     reg = GitRegistry.from_repo(repo)
     if raw:
-        return reg.state.find_artifact(name).versions
-    versions = [v.dict_status() for v in reg.state.find_artifact(name).versions]
+        return reg.find_artifact(name).versions
+    versions = [
+        v.dict_status()
+        for v in reg.find_artifact(
+            name, discover=discover, all_branches=all_branches, all_commits=all_commits
+        ).get_versions(discover=discover)
+    ]
     if not table:
         return versions
 
     first_keys = ["artifact", "name", "stage"]
     versions_ = []
     for v in versions:
-        v["artifact"] = v["artifact"]["name"]
-        v["stage"] = v["stage"]["stage"]
+        if v["stage"]:
+            v["stage"] = v["stage"]["stage"]
         v = OrderedDict(
             [(key, v[key]) for key in first_keys]
             + [(key, v[key]) for key in v if key not in first_keys]
         )
         v["commit_hexsha"] = v["commit_hexsha"][:7]
+        v["enrichments"] = [e["source"] for e in v["enrichments"]]
         versions_.append(v)
     return versions_, "keys"
-
-
-def audit_registration(
-    repo: Union[str, Repo],
-    artifact: str = None,
-    sort: str = "desc",
-    table: bool = False,
-):
-    """Audit registry state"""
-    reg = GitRegistry.from_repo(repo)
-
-    audit_trail = [
-        OrderedDict(
-            timestamp=v.creation_date,
-            name=o.name,
-            version=v.name,
-            commit=v.commit_hexsha[:7],
-            author=v.author,
-        )
-        for o in reg.state.artifacts.values()
-        for v in o.versions
-    ]
-    if artifact:
-        audit_trail = [event for event in audit_trail if event["name"] == artifact]
-    audit_trail.sort(key=lambda x: x["timestamp"])
-    if _is_ascending(sort):
-        audit_trail.reverse()
-    if not table:
-        return audit_trail
-    return audit_trail, "keys"
 
 
 def _is_ascending(sort):
     return sort in {"asc", "Asc", "ascending", "Ascending"}
 
 
-def audit_promotion(
+def describe(
+    repo: Union[str, Repo], name: str, rev: str = None
+) -> List[EnrichmentInfo]:
+    """Find enrichments for the artifact"""
+    return EnrichmentManager.from_repo(repo).describe(name=name, rev=rev)
+
+
+def history(
     repo: Union[str, Repo],
     artifact: str = None,
+    discover: bool = False,
+    # action: str = None,
+    all_branches=False,
+    all_commits=False,
     sort: str = "desc",
     table: bool = False,
 ):
-    """Audit registry state"""
+    # TODO: rework this.
+    # 1. commits should be gathered only --discover is supplied
+    # 2. we shouldn't use audit_something functions
+    # 3. commits should be got from EnrichmentManager, probably
+
     reg = GitRegistry.from_repo(repo)
-    audit_trail = [
+    artifacts = reg.get_artifacts(
+        discover=discover, all_branches=all_branches, all_commits=all_commits
+    )
+
+    commits = [
+        OrderedDict(
+            timestamp=datetime.fromtimestamp(
+                reg.repo.commit(v.commit_hexsha).committed_date
+            ),
+            name=o.name,
+            event="commit [discovered]" if v.discovered else "commit",
+            commit=v.commit_hexsha[:7],
+            author=reg.repo.commit(v.commit_hexsha).author.name,
+        )
+        for o in artifacts.values()
+        for v in o.get_versions(discover=discover)
+    ]
+
+    registration = [
+        OrderedDict(
+            timestamp=v.creation_date,
+            name=o.name,
+            event="registration",
+            version=v.name,
+            commit=v.commit_hexsha[:7],
+            author=v.author,
+            # enrichments=[e.source for e in v.enrichments],
+        )
+        for o in artifacts.values()
+        for v in o.get_versions()
+    ]
+
+    promotion = [
         OrderedDict(
             timestamp=l.creation_date,
             name=o.name,
+            event="promotion",
             version=l.version,
             stage=l.stage,
             commit=l.commit_hexsha[:7],
             author=l.author,
         )
-        for o in reg.state.artifacts.values()
+        for o in artifacts.values()
         for l in o.stages
     ]
-    if artifact:
-        audit_trail = [event for event in audit_trail if event["name"] == artifact]
-    audit_trail.sort(key=lambda x: x["timestamp"])
-    if _is_ascending(sort):
-        audit_trail.reverse()
-    if not table:
-        return audit_trail
-    return audit_trail, "keys"
 
-
-def history(repo: str, artifact: str = None, sort: str = "desc", table: bool = False):
-    def add_event(event_list, event_name):
-        return [{**event, "event": event_name} for event in event_list]
-
-    reg = GitRegistry.from_repo(repo)
-    commits = [
-        dict(
-            timestamp=datetime.fromtimestamp(reg.repo.commit(commit).committed_date),
-            name=name_,
-            event="commit",
-            commit=commit[:7],
-            author=reg.repo.commit(commit).author.name,
-        )
-        for name_, commit_list in reg.index.artifact_centric_representation().items()
-        for commit in commit_list
-    ]
-    registration = audit_registration(repo, table=False)
-    promotion = audit_promotion(repo, table=False)
-    events_order = {"commit": 0, "registration": 1, "promotion": 2}
+    events_order = {
+        "commit": 0,
+        "commit [discovered]": 1,
+        "registration": 2,
+        "promotion": 3,
+    }
     events = sorted(
-        add_event(commits, "commit")
-        + add_event(registration, "registration")
-        + add_event(promotion, "promotion"),
+        commits + registration + promotion,
         key=lambda x: (x["timestamp"], events_order[x["event"]]),
     )
     if _is_ascending(sort):
@@ -275,6 +318,7 @@ def history(repo: str, artifact: str = None, sort: str = "desc", table: bool = F
         "event",
         VERSION,
         STAGE,
+        # "enrichments",
         "commit",
         "author",
     ]

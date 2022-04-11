@@ -1,27 +1,6 @@
 import pytest
 
-from gto.versions import NumberedVersion, SemVer
-
-
-@pytest.mark.parametrize("version", ["v0", "v1"])
-def test_number_version_is_valid(version):
-    assert NumberedVersion.is_valid(version)
-
-
-@pytest.mark.parametrize("version", [1, "1", "v-1", "-v1", "v1x", "v1.", "v1.0"])
-def test_number_version_is_not_valid(version):
-    assert not NumberedVersion.is_valid(version)
-
-
-def test_numbered_version_comparison():
-    assert NumberedVersion("v1") < NumberedVersion("v2")
-    assert NumberedVersion("v1") == NumberedVersion("v1")
-    assert NumberedVersion("v1") < "v2"
-    assert NumberedVersion("v1") == "v1"
-
-
-def test_bump_numbered_version():
-    assert NumberedVersion("v1").bump() == NumberedVersion("v2")
+from gto.versions import SemVer
 
 
 @pytest.mark.parametrize(
