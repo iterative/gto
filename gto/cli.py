@@ -7,7 +7,6 @@ from tabulate import tabulate_formats
 
 import gto
 from gto.constants import NAME, PATH, REF, STAGE, TYPE, VERSION
-from gto.exceptions import NotFound
 from gto.utils import format_echo, make_ready_to_serialize
 
 TABLE = "table"
@@ -22,7 +21,7 @@ class ALIAS:
 arg_name = click.argument(NAME)
 arg_version = click.argument(VERSION)
 arg_stage = click.argument(STAGE)
-arg_ref = click.argument(REF)
+arg_ref = click.argument(REF, default=None)
 option_repo = click.option(
     "-r", "--repo", default=".", help="Repository to use", show_default=True
 )
@@ -98,10 +97,10 @@ option_ref = click.option(
 @click.group()
 def cli():
     """\b
-    Great Tool Ops. Turn your Git Repo into Artifact Registry:
-    * Index files in repo as artifacts to make them visible for others
+    Git Tag Ops. Turn your Git Repo into Artifact Registry:
     * Register new versions of artifacts marking significant changes to them
     * Promote versions to signal downstream systems to act
+    * Attach additional info about your artifact with Enrichments
     * Act on new versions and promotions in CI
     """
 
@@ -138,49 +137,6 @@ def gto_command(*args, **kwargs):
 
 
 @gto_command()
-@click.argument("repo", default=".")
-@option_rev
-@click.option("--type", default=None, help="Artifact type to list", show_default=True)
-@click.option(
-    "--json",
-    is_flag=True,
-    default=False,
-    help="Print output in json format",
-    show_default=True,
-)
-@click.option(
-    "--table",
-    is_flag=True,
-    default=False,
-    help="Print output in table format",
-    show_default=True,
-)
-@option_format_table
-def ls(repo, rev, type, json, table, format_table):
-    """\b
-    List all artifacts in the repository
-    """
-    assert not (json and table), "Only one of --json and --table can be used"
-    if json:
-        click.echo(format_echo(gto.api.ls(repo, rev, type), "json"))
-    elif table:
-        click.echo(
-            format_echo(
-                [gto.api.ls(repo, rev, type), "keys"],
-                "table",
-                format_table,
-                if_empty="No artifacts found",
-            )
-        )
-    else:
-        click.echo(
-            format_echo(
-                [artifact["name"] for artifact in gto.api.ls(repo, rev, type)], "lines"
-            )
-        )
-
-
-@gto_command()
 @option_repo
 @click.argument(TYPE)
 @arg_name
@@ -193,16 +149,42 @@ def ls(repo, rev, type, json, table, format_table):
 )
 @click.option("--tag", multiple=True, default=[], help="Tags to add to artifact")
 @click.option("-d", "--description", default="", help="Artifact description")
-def add(repo: str, type: str, name: str, path: str, virtual: bool, tag, description):
-    """Register new artifact (add it to the Index)"""
-    gto.api.add(repo, type, name, path, virtual, tags=tag, description=description)
+@click.option(
+    "-u", "--update", is_flag=True, default=False, help="Update artifact if it exists"
+)
+def add(
+    repo: str, type: str, name: str, path: str, virtual: bool, tag, description, update
+):
+    """Add the enrichment for the artifact
+
+    Examples:
+       Add new enrichment:
+       $ gto add model nn models/neural_network.h5
+
+       Update existing enrichment:
+       $ gto add model nn models/neural_network.h5 --update
+    """
+    gto.api.add(
+        repo,
+        type,
+        name,
+        path,
+        virtual,
+        tags=tag,
+        description=description,
+        update=update,
+    )
 
 
 @cli.command("rm")
 @option_repo
 @arg_name
 def remove(repo: str, name: str):
-    """Deregister the artifact (remove it from the Index)"""
+    """Remove the enrichment for given artifact
+
+    Examples:
+         $ gto rm nn
+    """
     gto.api.remove(repo, name)
 
 
@@ -210,14 +192,28 @@ def remove(repo: str, name: str):
 @option_repo
 @arg_name
 @arg_ref
-@click.option("--version", "--ver", default=None, help="Version to promote")
+@click.option("--version", "--ver", default=None, help="Version name in SemVer format")
 @click.option(
     "--bump", "-b", default=None, help="The exact part to use when bumping a version"
 )
 def register(repo: str, name: str, ref: str, version: str, bump: str):
-    """Tag the object with a version (git tags)"""
+    """Create git tag that marks the important artifact version
+
+    Examples:
+        Register new version at HEAD:
+        $ gto register nn
+
+        Register new version at a specific ref:
+        $ gto register nn abc1234
+
+        Assign version name explicitly:
+        $ gto register nn --version v1.0.0
+
+        Choose a part to bump version by:
+        $ gto register nn --bump minor
+    """
     registered_version = gto.api.register(
-        repo=repo, name=name, ref=ref, version=version, bump=bump
+        repo=repo, name=name, ref=ref or "HEAD", version=version, bump=bump
     )
     click.echo(
         f"Registered {registered_version.artifact} version {registered_version.name}"
@@ -234,15 +230,34 @@ def register(repo: str, name: str, ref: str, version: str, bump: str):
     help="If you provide --ref, this will be used to name new version",
 )
 @click.option("--ref", default=None)
-def promote(repo: str, name: str, stage: str, version: str, ref: str):
-    """Assign stage to specific artifact version"""
+@click.option(
+    "--simple",
+    is_flag=True,
+    default=False,
+    help="Use simple notation: rf#prod instead of rf#prod-5",
+)
+def promote(repo, name, stage, version, ref, simple):
+    """Assign stage to specific artifact version
+
+    Examples:
+        Promote HEAD:
+        $ gto promote nn prod --ref HEAD
+
+        Promote specific version:
+        $ gto promote nn prod --version v1.0.0
+
+        Promote without increment
+        $ gto promote nn prod --ref HEAD --simple
+    """
     if ref is not None:
         name_version = version
         promote_version = None
     else:
         name_version = None
         promote_version = version
-    promotion = gto.api.promote(repo, name, stage, promote_version, ref, name_version)
+    promotion = gto.api.promote(
+        repo, name, stage, promote_version, ref, name_version, simple=simple
+    )
     click.echo(f"Promoted {name} version {promotion.version} to stage {stage}")
 
 
@@ -251,9 +266,12 @@ def promote(repo: str, name: str, stage: str, version: str, ref: str):
 @arg_name
 @option_path
 @option_ref
-@option_expected
-def latest(repo: str, name: str, path: bool, ref: bool, expected: bool):
-    """Return latest version of artifact"""
+def latest(repo: str, name: str, path: bool, ref: bool):
+    """Return latest version of artifact
+
+    Examples:
+        $ gto latest nn
+    """
     assert not (path and ref), "--path and --ref are mutually exclusive"
     latest_version = gto.api.find_latest_version(repo, name)
     if latest_version:
@@ -263,10 +281,6 @@ def latest(repo: str, name: str, path: bool, ref: bool, expected: bool):
             click.echo(latest_version.commit_hexsha)
         else:
             click.echo(latest_version.name)
-    elif expected:
-        raise NotFound("No version found")
-    else:
-        click.echo("No versions found")
 
 
 @gto_command()
@@ -275,9 +289,18 @@ def latest(repo: str, name: str, path: bool, ref: bool, expected: bool):
 @arg_stage
 @option_path
 @option_ref
-@option_expected
-def which(repo: str, name: str, stage: str, path: bool, ref: bool, expected: bool):
-    """Return version of artifact with specific stage active"""
+def which(repo: str, name: str, stage: str, path: bool, ref: bool):
+    """Return version of artifact with specific stage active
+
+    Exampels:
+        $ gto which nn prod
+
+        Print path to artifact:
+        $ gto which nn prod --path
+
+        Print commit hexsha:
+        $ gto which nn prod --ref
+    """
     assert not (path and ref), "--path and --ref are mutually exclusive"
     version = gto.api.find_promotion(repo, name, stage)
     if version:
@@ -287,10 +310,6 @@ def which(repo: str, name: str, stage: str, path: bool, ref: bool, expected: boo
             click.echo(version.commit_hexsha)
         else:
             click.echo(version.version)
-    elif expected:
-        raise NotFound("Nothing is promoted to this stage right now")
-    else:
-        click.echo(f"No version of '{name}' with stage '{stage}' active")
 
 
 @gto_command(hidden=True)
@@ -298,7 +317,12 @@ def which(repo: str, name: str, stage: str, path: bool, ref: bool, expected: boo
 @click.option("--key", default=None, help="Which key to return")
 @option_format
 def parse_tag(name: str, key: str, format: str):
-    """Given git tag name created by this tool, parse it and return it's parts"""
+    """Given git tag name created by this tool, parse it and return it's parts
+
+    Examples:
+        $ gto parse-tag rf@v1.0.0
+        $ gto parse-tag rf#prod
+    """
     parsed = gto.api.parse_tag(name)
     if key:
         parsed = parsed[key]
@@ -310,7 +334,12 @@ def parse_tag(name: str, key: str, format: str):
 @click.argument("ref")
 @option_format
 def check_ref(repo: str, ref: str, format: str):
-    """Find out artifact & version registered/promoted with the provided ref"""
+    """Find out artifact & version registered/promoted with the provided ref
+
+    Examples:
+        $ gto check-ref rf@v1.0.0
+        $ gto check-ref rf#prod
+    """
     result = gto.api.check_ref(repo, ref)
     format_echo(result, format)
 
@@ -332,7 +361,25 @@ def show(
     format: str,
     format_table: str,
 ):
-    """Show current registry state or specific artifact"""
+    """Show current registry state or specific artifact
+
+    Examples:
+        Show the registry:
+        $ gto show
+
+        Discover non-registered artifacts that have enrichments:
+        $ gto show --discover
+
+        Show versions of specific artifact in registry:
+        $ gto show nn
+
+        Discover potential versions (i.e. commits with enrichments):
+        $ gto show nn --discover
+
+        Use --all-branches and --all-commits to read more than just HEAD:
+        $ gto show --all-branches
+        $ gto show nn --all-commits
+    """
     # TODO: make proper name resolving?
     # e.g. querying artifact named "registry" with artifact/registry
     if format == TABLE:
@@ -445,7 +492,17 @@ def history(
     format_table: str,
     sort: str,
 ):
-    """Show history of artifact"""
+    """Show history of artifact
+
+    Examples:
+        $ gto history nn
+
+        Discover enrichment for artifact (check only HEAD by default):
+        $ gto history nn --discover
+
+        Use --all-branches and --all-commits to read more than just HEAD:
+        $ gto history nn --discover --all-commits
+    """
     if format == TABLE:
         format_echo(
             gto.api.history(
@@ -490,7 +547,7 @@ def print_stages(repo: str, in_use: bool):
     If "in_use", return only those which are in use (among non-deprecated artifacts).
     If not, return all available: either all allowed or all ever used.
     """
-    click.echo(gto.api.get_stages(repo, in_use=in_use))
+    format_echo(gto.api.get_stages(repo, in_use=in_use), "lines")
 
 
 @gto_command(hidden=True)
@@ -518,7 +575,11 @@ def print_index(repo: str, format: str):
 @arg_name
 @option_rev
 def describe(repo, name: str, rev):
-    """Find enrichments for the artifact"""
+    """Find enrichments for the artifact
+
+    Examples:
+        $ gto describe nn
+    """
     infos = gto.api.describe(repo=repo, name=name, rev=rev)
     for info in infos:
         click.echo(info.get_human_readable())

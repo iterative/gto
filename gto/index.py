@@ -97,19 +97,28 @@ class Index(BaseModel):
                 yaml.dump(self.dict()["state"], file)
 
     @not_frozen
-    def add(self, type, name, path, virtual, tags, description):
-        if name in self:
+    def add(self, type, name, path, virtual, tags, description, update) -> Artifact:
+        if name in self and not update:
             raise ArtifactExists(name)
         if find_repeated_path(path, [a.path for a in self.state.values()]) is not None:
             raise PathIsUsed(type=type, name=name, path=path)
-        self.state[name] = Artifact(
-            type=type,
-            name=name,
-            path=path,
-            virtual=virtual,
-            tags=tags,
-            description=description,
-        )
+        if update and name in self.state:
+            self.state[name].type = type or self.state[name].type
+            self.state[name].name = name or self.state[name].name
+            self.state[name].path = path or self.state[name].path
+            self.state[name].virtual = virtual or self.state[name].virtual
+            self.state[name].tags = tags or self.state[name].tags
+            self.state[name].description = description or self.state[name].description
+        else:
+            self.state[name] = Artifact(
+                type=type,
+                name=name,
+                path=path,
+                virtual=virtual,
+                tags=tags,
+                description=description,
+            )
+        return self.state[name]
 
     @not_frozen
     def remove(self, name):
@@ -134,7 +143,7 @@ class BaseIndexManager(BaseModel, ABC):
     def get_history(self) -> Dict[str, Index]:
         raise NotImplementedError
 
-    def add(self, type, name, path, virtual, tags, description):
+    def add(self, type, name, path, virtual, tags, description, update):
         if tags is None:
             tags = []
         self.config.assert_type(type)
@@ -143,7 +152,9 @@ class BaseIndexManager(BaseModel, ABC):
         ):
             raise NoFile(path)
         index = self.get_index()
-        index.add(type, name, path, virtual, tags=tags, description=description)
+        index.add(
+            type, name, path, virtual, tags=tags, description=description, update=update
+        )
         self.update()
 
     def remove(self, name):

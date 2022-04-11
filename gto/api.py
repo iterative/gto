@@ -34,22 +34,6 @@ def get_stages(repo: Union[str, Repo], in_use: bool = False):
     return GitRegistry.from_repo(repo).get_stages(in_use=in_use)
 
 
-def ls(repo: Union[str, Repo], ref: str = None, type: str = None):
-    """List artifacts of given type"""
-    if ref:
-        index = RepoIndexManager.from_repo(repo).get_commit_index(ref)
-    else:
-        index = FileIndexManager.from_path(repo).get_index()
-    artifacts = index.dict()["state"]
-    if type:
-        artifacts = {
-            name: artifact
-            for name, artifact in artifacts.items()
-            if artifact["type"] == type
-        }
-    return list(artifacts.values())
-
-
 def add(
     repo: Union[str, Repo],
     type: str,
@@ -58,10 +42,11 @@ def add(
     virtual: bool = False,
     tags: List[str] = None,
     description: str = "",
+    update: bool = False,
 ):
     """Add an artifact to the Index"""
     return init_index_manager(path=repo).add(
-        type, name, path, virtual, tags=tags, description=description
+        type, name, path, virtual, tags=tags, description=description, update=update
     )
 
 
@@ -86,10 +71,11 @@ def promote(
     promote_version: str = None,
     promote_ref: str = None,
     name_version: str = None,
+    simple: bool = False,
 ):
     """Assign stage to specific artifact version"""
     return GitRegistry.from_repo(repo).promote(
-        name, stage, promote_version, promote_ref, name_version
+        name, stage, promote_version, promote_ref, name_version, simple=simple
     )
 
 
@@ -169,11 +155,9 @@ def _show_registry(
                 for name in stages
             },
         }
-        for o in reg.get_state(
+        for o in reg.get_artifacts(
             discover=discover, all_branches=all_branches, all_commits=all_commits
-        )
-        .get_artifacts()
-        .values()
+        ).values()
     }
     if not table:
         return models_state

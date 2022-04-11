@@ -6,11 +6,8 @@ from pydantic import BaseModel, BaseSettings
 from pydantic.env_settings import InitSettingsSource
 from ruamel.yaml import YAML
 
-from gto.constants import TAG
 from gto.exceptions import UnknownStage, UnknownType
-
-from .constants import TAG
-from .ext import Enrichment, find_enrichment_types, find_enrichments
+from gto.ext import Enrichment, find_enrichment_types, find_enrichments
 
 yaml = YAML(typ="safe", pure=True)
 yaml.default_flow_style = False
@@ -69,42 +66,6 @@ class RegistryConfig(BaseSettings):
 
     def check_type(self, name):
         return name in self.TYPE_ALLOWED or not self.TYPE_ALLOWED
-
-    @property
-    def VERSION_BASE(self):
-        return TAG
-
-    @property
-    def STAGE_BASE(self):
-        return TAG
-
-    @property
-    def VERSION_CLS(self):
-        from .versions import SemVer
-
-        return SemVer
-
-    @property
-    def VERSION_MANAGER_CLS(self):
-        # from .commit import CommitVersionManager
-        from .tag import TagVersionManager
-
-        return {TAG: TagVersionManager}[self.VERSION_BASE]
-
-    @property
-    def STAGE_MANAGER_CLS(self):
-        # from .branch import BranchStageManager
-        from .tag import TagStageManager
-
-        return {
-            TAG: TagStageManager,
-        }[self.STAGE_BASE]
-
-    @property
-    def ENRICHMENT_MANAGER_CLS(self):
-        from .index import EnrichmentManager
-
-        return EnrichmentManager
 
     @property
     def enrichments(self) -> Dict[str, Enrichment]:
