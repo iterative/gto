@@ -204,7 +204,7 @@ option_all_branches = Option(
     help="Read heads from all branches",
 )
 option_all_commits = Option(
-    "-A", "--all-commits", is_flag=True, help="Read all commits"
+    False, "-A", "--all-commits", is_flag=True, help="Read all commits"
 )
 
 
