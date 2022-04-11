@@ -34,22 +34,6 @@ def get_stages(repo: Union[str, Repo], in_use: bool = False):
     return GitRegistry.from_repo(repo).get_stages(in_use=in_use)
 
 
-def ls(repo: Union[str, Repo], ref: str = None, type: str = None):
-    """List artifacts of given type"""
-    if ref:
-        index = RepoIndexManager.from_repo(repo).get_commit_index(ref)
-    else:
-        index = FileIndexManager.from_path(repo).get_index()
-    artifacts = index.dict()["state"]
-    if type:
-        artifacts = {
-            name: artifact
-            for name, artifact in artifacts.items()
-            if artifact["type"] == type
-        }
-    return list(artifacts.values())
-
-
 def add(
     repo: Union[str, Repo],
     type: str,
