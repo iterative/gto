@@ -230,6 +230,7 @@ def _is_ascending(sort):
 def describe(
     repo: Union[str, Repo], name: str, rev: str = None
 ) -> List[EnrichmentInfo]:
+    """Find enrichments for the artifact"""
     return EnrichmentManager.from_repo(repo).describe(name=name, rev=rev)
 
 

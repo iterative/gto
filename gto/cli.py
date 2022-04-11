@@ -518,6 +518,7 @@ def print_index(repo: str, format: str):
 @arg_name
 @option_rev
 def describe(repo, name: str, rev):
+    """Find enrichments for the artifact"""
     infos = gto.api.describe(repo=repo, name=name, rev=rev)
     for info in infos:
         click.echo(info.get_human_readable())
