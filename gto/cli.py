@@ -22,7 +22,7 @@ class ALIAS:
 arg_name = click.argument(NAME)
 arg_version = click.argument(VERSION)
 arg_stage = click.argument(STAGE)
-arg_ref = click.argument(REF)
+arg_ref = click.argument(REF, default=None)
 option_repo = click.option(
     "-r", "--repo", default=".", help="Repository to use", show_default=True
 )
@@ -217,7 +217,7 @@ def remove(repo: str, name: str):
 def register(repo: str, name: str, ref: str, version: str, bump: str):
     """Tag the object with a version (git tags)"""
     registered_version = gto.api.register(
-        repo=repo, name=name, ref=ref, version=version, bump=bump
+        repo=repo, name=name, ref=ref or "HEAD", version=version, bump=bump
     )
     click.echo(
         f"Registered {registered_version.artifact} version {registered_version.name}"
@@ -234,15 +234,31 @@ def register(repo: str, name: str, ref: str, version: str, bump: str):
     help="If you provide --ref, this will be used to name new version",
 )
 @click.option("--ref", default=None)
-def promote(repo: str, name: str, stage: str, version: str, ref: str):
-    """Assign stage to specific artifact version"""
+@click.option(
+    "--simple",
+    is_flag=True,
+    default=False,
+    help="Use simple notation: rf#prod instead of rf#prod-5",
+)
+def promote(repo, name, stage, version, ref, simple):
+    """Assign stage to specific artifact version
+
+    Examples:
+        Promote HEAD:
+        $ gto promote rf stage --ref HEAD
+
+        Promote without increment
+        $ gto promote rf stage --ref HEAD --simple
+    """
     if ref is not None:
         name_version = version
         promote_version = None
     else:
         name_version = None
         promote_version = version
-    promotion = gto.api.promote(repo, name, stage, promote_version, ref, name_version)
+    promotion = gto.api.promote(
+        repo, name, stage, promote_version, ref, name_version, simple=simple
+    )
     click.echo(f"Promoted {name} version {promotion.version} to stage {stage}")
 
 

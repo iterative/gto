@@ -126,6 +126,7 @@ class GitRegistry(BaseModel):
         promote_version=None,
         promote_ref=None,
         name_version=None,
+        simple=False,
     ) -> BasePromotion:
         """Assign stage to specific artifact version"""
         self.config.assert_stage(stage)
@@ -151,6 +152,7 @@ class GitRegistry(BaseModel):
             stage,
             ref=promote_ref,
             message=f"Promoting {name} version {promote_version} to stage {stage}",
+            simple=simple,
         )
         return self.get_state().find_artifact(name).promoted[stage]
 

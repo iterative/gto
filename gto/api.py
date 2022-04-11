@@ -86,10 +86,11 @@ def promote(
     promote_version: str = None,
     promote_ref: str = None,
     name_version: str = None,
+    simple: bool = False,
 ):
     """Assign stage to specific artifact version"""
     return GitRegistry.from_repo(repo).promote(
-        name, stage, promote_version, promote_ref, name_version
+        name, stage, promote_version, promote_ref, name_version, simple=simple
     )
 
 

@@ -27,11 +27,14 @@ def name_tag(
     version: Optional[str] = None,
     stage: Optional[str] = None,
     repo: Optional[git.Repo] = None,
+    simple: bool = False,
 ):
     if action == Action.REGISTER:
         return f"{name}{ActionSign[action]}{version}"
 
     if action == Action.PROMOTE:
+        if simple:
+            return f"{name}{ActionSign[action]}{stage}"
         if repo is None:
             raise MissingArg(arg="repo")
         numbers = []
@@ -56,13 +59,17 @@ def parse_name(name: str, raise_on_fail: bool = True):
 
     if ActionSign[Action.PROMOTE] in name:
         name, stage = name.split(ActionSign[Action.PROMOTE])
-        stage, number = stage.split("-")
-        return {
+        result = {
             ACTION: Action.PROMOTE,
             NAME: name,
             STAGE: stage,
-            NUMBER: int(number),
         }
+        if "-" not in stage:
+            return result
+        stage, number = stage.split("-")
+        result[STAGE] = stage
+        result[NUMBER] = int(number)
+        return result
     if raise_on_fail:
         raise ValueError(f"Unknown tag name: {name}")
     return {}
@@ -232,10 +239,10 @@ class TagVersionManager(TagManager):
 class TagStageManager(TagManager):
     actions: FrozenSet[Action] = frozenset((Action.PROMOTE,))
 
-    def promote(self, name, stage, ref, message):
+    def promote(self, name, stage, ref, message, simple):
         create_tag(
             self.repo,
-            name_tag(Action.PROMOTE, name, stage=stage, repo=self.repo),
+            name_tag(Action.PROMOTE, name, stage=stage, repo=self.repo, simple=simple),
             ref=ref,
             message=message,
         )
