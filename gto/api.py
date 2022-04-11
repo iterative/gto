@@ -58,10 +58,11 @@ def add(
     virtual: bool = False,
     tags: List[str] = None,
     description: str = "",
+    update: bool = False,
 ):
     """Add an artifact to the Index"""
     return init_index_manager(path=repo).add(
-        type, name, path, virtual, tags=tags, description=description
+        type, name, path, virtual, tags=tags, description=description, update=update
     )
 
 
