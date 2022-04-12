@@ -311,7 +311,9 @@ def gto_callback(
         logger = logging.getLogger("gto")
         logger.handlers[0].setLevel(logging.DEBUG)
         logger.setLevel(logging.DEBUG)
-        from gto.config import CONFIG  # pylint: disable=import-outside-toplevel
+        from gto.config import (  # pylint: disable=import-outside-toplevel
+            CONFIG,
+        )
 
         echo(CONFIG.__repr_str__("\n"))
         echo()

@@ -12,7 +12,13 @@ from pydantic import BaseModel, parse_obj_as
 from gto.base import BaseManager, BaseRegistryState, BaseVersion
 from gto.config import CONFIG_FILE_NAME, RegistryConfig, yaml
 from gto.constants import Action
-from gto.exceptions import ArtifactExists, ArtifactNotFound, NoFile, NoRepo, PathIsUsed
+from gto.exceptions import (
+    ArtifactExists,
+    ArtifactNotFound,
+    NoFile,
+    NoRepo,
+    PathIsUsed,
+)
 from gto.ext import Enrichment, EnrichmentInfo
 
 
