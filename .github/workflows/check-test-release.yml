@@ -103,7 +103,7 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
       with:
-        name: tpi ${{ steps.meta.outputs.tag }} alpha
+        name: gto ${{ steps.meta.outputs.tag }} alpha
         body_path: _CHANGES.md
         draft: true
         files: |
