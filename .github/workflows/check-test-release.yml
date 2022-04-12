@@ -36,7 +36,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest]  # TODO: add windows-latest
+        os: [ubuntu-latest, macos-latest]
         python: ["3.7", "3.8", "3.9"]
       fail-fast: false
     steps:
@@ -58,12 +58,11 @@ jobs:
         key: ${{ runner.os }}-pip-${{ hashFiles('setup.cfg') }}
         restore-keys: |
           ${{ runner.os }}-pip-
-    # legacy-resolver makes install faster by order of magnitude
     - name: Install
       if: steps.cache.pip-cache-dir.cache-hit != 'true'
       run: |
         pip install --upgrade pip setuptools wheel
-        pip install pre-commit .[tests] --use-deprecated=legacy-resolver
+        pip install pre-commit .[tests]
     - name: Run tests
       timeout-minutes: 30
       run: |
