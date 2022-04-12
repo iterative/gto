@@ -1,4 +1,5 @@
 [run]
+source=gto
 omit =
     gto/analytics.py
 
