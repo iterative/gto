@@ -28,9 +28,7 @@ class NoFile(GTOException):
 
 
 class UnknownType(GTOException):
-    _message = (
-        "Type '{type}' is not present in your config file. Allowed values are: {types}."
-    )
+    _message = "Type '{type}' is not present in your config file. Allowed values are: '{types}'"
 
     def __init__(self, type, types) -> None:
         self.message = self._message.format(type=type, types=types)
@@ -54,7 +52,7 @@ class ArtifactNotFound(GTOException):
 
 
 class PathIsUsed(GTOException):
-    _message = "Provided path conflicts with {path} ({type} {name})"
+    _message = "Provided path conflicts with '{path}' ('{type}' '{name}')"
 
     def __init__(self, type, name, path) -> None:
         self.message = self._message.format(type=type, name=name, path=path)
@@ -70,7 +68,7 @@ class VersionRequired(GTOException):
 
 
 class ManyVersions(GTOException):
-    _message = "{versions} versions of artifact {name} found"
+    _message = "'{versions}' versions of artifact '{name}' found"
 
     def __init__(self, name, versions) -> None:
         self.message = self._message.format(name=name, versions=versions)
@@ -86,23 +84,15 @@ class VersionAlreadyRegistered(GTOException):
 
 
 class VersionExistsForCommit(GTOException):
-    _message = "The model {model} was already registered in this commit with version '{version}'."
+    _message = "The artifact '{model}' is already registered in this commit with version '{version}'."
 
     def __init__(self, model, version) -> None:
         self.message = self._message.format(model=model, version=version)
         super().__init__(self.message)
 
 
-class VersionIsOld(GTOException):
-    _message = "Version '{suggested}' is younger than the latest {latest}"
-
-    def __init__(self, latest, suggested) -> None:
-        self.message = self._message.format(latest=latest, suggested=suggested)
-        super().__init__(self.message)
-
-
 class UnknownStage(GTOException):
-    _message = "Stage '{stage}' is not present in your config file. Allowed stages are: {stages}."
+    _message = "Stage '{stage}' is not present in your config file. Allowed stages are: '{stages}'."
 
     def __init__(self, stage, stages) -> None:
         self.message = self._message.format(stage=stage, stages=stages)
@@ -126,7 +116,7 @@ class RefNotFound(GTOException):
 
 
 class InvalidVersion(GTOException):
-    _message = "Supplied version {version} doesn't look like {cls} version"
+    _message = "Supplied version '{version}' doesn't look like '{cls}' version"
 
     def __init__(self, version, cls) -> None:
         self.message = self._message.format(version=version, cls=cls)
@@ -134,7 +124,7 @@ class InvalidVersion(GTOException):
 
 
 class IncomparableVersions(GTOException):
-    _message = "You can compare only versions of the same system, but not {} and {}"
+    _message = "You can compare only versions of the same system, but not '{}' and '{}'"
 
     def __init__(self, this, that) -> None:
         self.message = self._message.format(this, that)

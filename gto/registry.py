@@ -1,29 +1,28 @@
 import os
 from typing import Union
 
-import click
 import git
 from git import InvalidGitRepositoryError, Repo
 from pydantic import BaseModel
 
-from gto.base import BaseManager, BasePromotion, BaseRegistryState
+from gto.base import BasePromotion, BaseRegistryState
 from gto.config import CONFIG_FILE_NAME, RegistryConfig
 from gto.exceptions import (
     NoRepo,
     VersionAlreadyRegistered,
     VersionExistsForCommit,
-    VersionIsOld,
 )
 from gto.index import EnrichmentManager
 from gto.tag import TagStageManager, TagVersionManager
+from gto.ui import echo
 from gto.versions import SemVer
 
 
 class GitRegistry(BaseModel):
     repo: git.Repo
-    version_manager: BaseManager
-    stage_manager: BaseManager
-    enrichment_manager: BaseManager
+    version_manager: TagVersionManager
+    stage_manager: TagStageManager
+    enrichment_manager: EnrichmentManager
     config: RegistryConfig
 
     class Config:
@@ -80,7 +79,7 @@ class GitRegistry(BaseModel):
             name, create_new=create_new  # type: ignore
         )
 
-    def register(self, name, ref, version=None, bump=None):
+    def register(self, name, ref, version=None, bump=None, stdout=False):
         """Register artifact version"""
         ref = self.repo.commit(ref).hexsha
         # TODO: add the same check for other actions, to promote and etc
@@ -88,35 +87,38 @@ class GitRegistry(BaseModel):
         found_artifact = self.find_artifact(name, create_new=True)
         # check that this commit don't have a version already
         found_version = found_artifact.find_version(commit_hexsha=ref)
-        if found_version is not None:
+        if found_version is not None and found_version.is_registered:
             raise VersionExistsForCommit(name, found_version.name)
         # if version name is provided, use it
         if version:
             if found_artifact.find_version(name=version) is not None:
                 raise VersionAlreadyRegistered(version)
-            if found_artifact.discovered:
-                latest_ver = found_artifact.get_latest_version().name
-                if SemVer(version) < latest_ver:
-                    raise VersionIsOld(latest=latest_ver, suggested=version)
-        # if version name wasn't provided but there were some, bump the last one
-        elif found_artifact.discovered:
-            version = (
-                SemVer(self.find_artifact(name).get_latest_version().name)
-                .bump(**({"part": bump} if bump else {}))
-                .version
-            )
-        # if no versions exist, use the minimal version possible
         else:
-            version = SemVer.get_minimal().version
+            # if version name wasn't provided but there were some, bump the last one
+            last_version = found_artifact.get_latest_version(registered=True)
+            if last_version:
+                version = (
+                    SemVer(last_version.name)
+                    .bump(**({"part": bump} if bump else {}))
+                    .version
+                )
+            # if no versions exist, use the minimal version possible
+            else:
+                version = SemVer.get_minimal().version
         self.version_manager.register(
             name,
             version,
             ref,
             message=f"Registering artifact {name} version {version}",
         )
-        return self.find_artifact(name).find_version(
+        registered_version = self.find_artifact(name).find_version(
             name=version, raise_if_not_found=True
         )
+        if stdout:
+            echo(
+                f"Created git tag '{registered_version.tag}' that registers a new version"
+            )
+        return registered_version
 
     def promote(
         self,
@@ -126,6 +128,7 @@ class GitRegistry(BaseModel):
         promote_ref=None,
         name_version=None,
         simple=False,
+        stdout=False,
     ) -> BasePromotion:
         """Assign stage to specific artifact version"""
         self.config.assert_stage(stage)
@@ -142,9 +145,8 @@ class GitRegistry(BaseModel):
         else:
             found_version = found_artifact.find_version(commit_hexsha=promote_ref)
             if found_version is None:
-                version = self.register(name, version=name_version, ref=promote_ref)
-                click.echo(
-                    f"Registered new version '{version.name}' of '{name}' at commit '{promote_ref}'"
+                self.register(
+                    name, version=name_version, ref=promote_ref, stdout=stdout
                 )
         self.stage_manager.promote(  # type: ignore
             name,
@@ -153,7 +155,12 @@ class GitRegistry(BaseModel):
             message=f"Promoting {name} version {promote_version} to stage {stage}",
             simple=simple,
         )
-        return self.get_state().find_artifact(name).promoted[stage]
+        promotion = self.get_state().find_artifact(name).promoted[stage]
+        if stdout:
+            echo(
+                f"Created git tag '{promotion.tag}' that promotes '{promotion.version}'"
+            )
+        return promotion
 
     def check_ref(self, ref: str):
         "Find out what was registered/promoted in this ref"

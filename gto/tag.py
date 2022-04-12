@@ -144,6 +144,7 @@ def version_from_tag(tag: git.Tag) -> BaseVersion:
         creation_date=mtag.creation_date,
         author=tag.tag.tagger.name,
         commit_hexsha=tag.commit.hexsha,
+        tag=tag.name,
     )
 
 
@@ -177,6 +178,7 @@ def promotion_from_tag(
         creation_date=mtag.creation_date,
         author=tag.tag.tagger.name,
         commit_hexsha=tag.commit.hexsha,
+        tag=tag.name,
     )
 
 
