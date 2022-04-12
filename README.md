@@ -28,7 +28,13 @@ You could also promote a specific artifact version to Stage. You can use that to
 $ gto promote simple-nn prod
 ```
 
-This creates git tag `rf#prod`.
+This creates git tag `rf#prod-N`.
+
+There are two notations used for git tags in promotion:
+- simple: `rf#prod`
+- incremental: `rf#prod-N`
+
+Incremental is the default one and we suggest you use it when possible. The benefit of using it is that you don't have to delete git tags (with simple notation you'll need to delete them because you can't have two tags with the same name). This will keep the history of your promotions.
 
 ## Artifacts
 
