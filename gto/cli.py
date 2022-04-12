@@ -1,5 +1,4 @@
 import logging
-import sys
 from collections import defaultdict
 from enum import Enum  # , EnumMeta, _EnumDict
 from functools import partial, wraps
@@ -317,8 +316,6 @@ def gto_callback(
 
         echo(CONFIG.__repr_str__("\n"))
         echo()
-    else:
-        sys.tracebacklimit = 0
 
     ctx.obj = {"traceback": traceback}
 
@@ -457,7 +454,7 @@ def register(
     registered_version = gto.api.register(
         repo=repo, name=name, ref=ref or "HEAD", version=version, bump=bump
     )
-    echo(f"Registered {registered_version.artifact} version {registered_version.name}")
+    echo(f"Created git tag '{registered_version.tag}' that registers a new version")
 
 
 @gto_command(section=COMMANDS.REGISTER_PROMOTE)

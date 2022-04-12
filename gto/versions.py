@@ -44,7 +44,7 @@ class SemVer(AbstractVersion):
         try:
             cls.parse(version)
             return True
-        except ValueError:
+        except (InvalidVersion, ValueError) as e:  # pylint: disable=unused-variable
             return False
 
     @classmethod

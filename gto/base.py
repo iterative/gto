@@ -28,13 +28,14 @@ class BaseVersion(BaseModel):
     author: str
     commit_hexsha: str
     discovered: bool = False
+    tag: Optional[str] = None
     promotions: List[BasePromotion] = []
     enrichments: List[Enrichment] = []
 
     @property
     def is_registered(self):
         """Tells if this is an explicitly registered version"""
-        return SemVer.is_valid(self.name)
+        return self.tag is not None  # SemVer.is_valid(self.name)
 
     @property
     def version(self):
@@ -69,9 +70,13 @@ class BaseArtifact(BaseModel):
         stages = ", ".join(f"'{l}'" for l in self.unique_stages)
         return f"Artifact(versions=[{versions}], stages=[{stages}])"
 
-    def get_latest_version(self) -> Optional[BaseVersion]:
+    def get_latest_version(self, registered=False) -> Optional[BaseVersion]:
         versions = sorted(
-            (v for v in self.versions if not v.discovered),
+            (
+                v
+                for v in self.versions
+                if not v.discovered and (not registered or v.is_registered)
+            ),
             key=lambda x: x.creation_date,
         )
         if versions:

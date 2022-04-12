@@ -12,7 +12,6 @@ from gto.exceptions import (
     NoRepo,
     VersionAlreadyRegistered,
     VersionExistsForCommit,
-    VersionIsOld,
 )
 from gto.index import EnrichmentManager
 from gto.tag import TagStageManager, TagVersionManager
@@ -88,26 +87,24 @@ class GitRegistry(BaseModel):
         found_artifact = self.find_artifact(name, create_new=True)
         # check that this commit don't have a version already
         found_version = found_artifact.find_version(commit_hexsha=ref)
-        if found_version is not None:
+        if found_version is not None and found_version.is_registered:
             raise VersionExistsForCommit(name, found_version.name)
         # if version name is provided, use it
         if version:
             if found_artifact.find_version(name=version) is not None:
                 raise VersionAlreadyRegistered(version)
-            if found_artifact.discovered:
-                latest_ver = found_artifact.get_latest_version().name
-                if SemVer(version) < latest_ver:
-                    raise VersionIsOld(latest=latest_ver, suggested=version)
-        # if version name wasn't provided but there were some, bump the last one
-        elif found_artifact.discovered:
-            version = (
-                SemVer(self.find_artifact(name).get_latest_version().name)
-                .bump(**({"part": bump} if bump else {}))
-                .version
-            )
-        # if no versions exist, use the minimal version possible
         else:
-            version = SemVer.get_minimal().version
+            # if version name wasn't provided but there were some, bump the last one
+            last_version = found_artifact.get_latest_version(registered=True)
+            if last_version:
+                version = (
+                    SemVer(last_version.name)
+                    .bump(**({"part": bump} if bump else {}))
+                    .version
+                )
+            # if no versions exist, use the minimal version possible
+            else:
+                version = SemVer.get_minimal().version
         self.version_manager.register(
             name,
             version,
