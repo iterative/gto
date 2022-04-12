@@ -18,7 +18,7 @@ To register new version of artifact, you can use `gto register` command. You usu
 $ gto register simple-nn HEAD --version v1.0.0
 ```
 
-This will create git tag `rf@v1.0.0`.
+This will create git tag `rf@v1.0.0`
 
 ## Promoting
 
@@ -28,7 +28,7 @@ You could also promote a specific artifact version to Stage. You can use that to
 $ gto promote simple-nn prod
 ```
 
-This creates git tag `rf#prod-N`.
+This creates git tag `rf#prod-N`
 
 There are two notations used for git tags in promotion:
 - simple: `rf#prod`
@@ -157,7 +157,7 @@ To download artifacts that are stored with DVC or outside of repo, e.g. in `s3:/
 
 You can write configuration in `.gto` file in the root of your repo or use environment variables like this (note the `GTO_` prefix):
 ```shell
-GTO_EMOJIS=true gto show
+GTO_TYPE_ALLOWED=[] gto add model rf path/to/model.pkl
 ```
 
 The default config written to `.gto` file will look like this (comments are there to help clarify the settings meaning and valid values):
