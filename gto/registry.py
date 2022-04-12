@@ -1,12 +1,11 @@
 import os
 from typing import Union
 
-import click
 import git
 from git import InvalidGitRepositoryError, Repo
 from pydantic import BaseModel
 
-from gto.base import BaseManager, BasePromotion, BaseRegistryState
+from gto.base import BasePromotion, BaseRegistryState
 from gto.config import CONFIG_FILE_NAME, RegistryConfig
 from gto.exceptions import (
     NoRepo,
@@ -15,14 +14,15 @@ from gto.exceptions import (
 )
 from gto.index import EnrichmentManager
 from gto.tag import TagStageManager, TagVersionManager
+from gto.ui import echo
 from gto.versions import SemVer
 
 
 class GitRegistry(BaseModel):
     repo: git.Repo
-    version_manager: BaseManager
-    stage_manager: BaseManager
-    enrichment_manager: BaseManager
+    version_manager: TagVersionManager
+    stage_manager: TagStageManager
+    enrichment_manager: EnrichmentManager
     config: RegistryConfig
 
     class Config:
@@ -79,7 +79,7 @@ class GitRegistry(BaseModel):
             name, create_new=create_new  # type: ignore
         )
 
-    def register(self, name, ref, version=None, bump=None):
+    def register(self, name, ref, version=None, bump=None, stdout=False):
         """Register artifact version"""
         ref = self.repo.commit(ref).hexsha
         # TODO: add the same check for other actions, to promote and etc
@@ -111,9 +111,14 @@ class GitRegistry(BaseModel):
             ref,
             message=f"Registering artifact {name} version {version}",
         )
-        return self.find_artifact(name).find_version(
+        registered_version = self.find_artifact(name).find_version(
             name=version, raise_if_not_found=True
         )
+        if stdout:
+            echo(
+                f"Created git tag '{registered_version.tag}' that registers a new version"
+            )
+        return registered_version
 
     def promote(
         self,
@@ -123,6 +128,7 @@ class GitRegistry(BaseModel):
         promote_ref=None,
         name_version=None,
         simple=False,
+        stdout=False,
     ) -> BasePromotion:
         """Assign stage to specific artifact version"""
         self.config.assert_stage(stage)
@@ -139,9 +145,8 @@ class GitRegistry(BaseModel):
         else:
             found_version = found_artifact.find_version(commit_hexsha=promote_ref)
             if found_version is None:
-                version = self.register(name, version=name_version, ref=promote_ref)
-                click.echo(
-                    f"Registered new version '{version.name}' of '{name}' at commit '{promote_ref}'"
+                self.register(
+                    name, version=name_version, ref=promote_ref, stdout=stdout
                 )
         self.stage_manager.promote(  # type: ignore
             name,
@@ -150,7 +155,12 @@ class GitRegistry(BaseModel):
             message=f"Promoting {name} version {promote_version} to stage {stage}",
             simple=simple,
         )
-        return self.get_state().find_artifact(name).promoted[stage]
+        promotion = self.get_state().find_artifact(name).promoted[stage]
+        if stdout:
+            echo(
+                f"Created git tag '{promotion.tag}' that promotes '{promotion.version}'"
+            )
+        return promotion
 
     def check_ref(self, ref: str):
         "Find out what was registered/promoted in this ref"

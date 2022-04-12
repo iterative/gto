@@ -1,69 +1,43 @@
 # pylint: disable=unused-variable
-import datetime
-
 from gto.registry import GitRegistry
 
 from .utils import _check_dict
 
 EXPECTED_REGISTRY_TAG_TAG_STATE = {
     "artifacts": {
-        # "features": {
-        #     "name": "features",
-        #     "commits": {
-        #         "c6232f2ff38f2efe9768ab58b279e500085c0b0a": {
-        #             "type": "dataset",
-        #             "name": "features",
-        #             "path": "datasets/features.csv",
-        #             "virtual": True,
-        #             "tags": [],
-        #             "description": "",
-        #         },
-        #         "1570672b226558a3614c1a7f21295553102a2869": {
-        #             "type": "dataset",
-        #             "name": "features",
-        #             "path": "datasets/features.csv",
-        #             "virtual": True,
-        #             "tags": [],
-        #             "description": "",
-        #         },
-        #     },
-        #     "versions": [],
-        # },
         "nn": {
             "name": "nn",
-            "commits": {
-                "c6232f2ff38f2efe9768ab58b279e500085c0b0a": {
-                    "type": "model",
-                    "name": "nn",
-                    "path": "models/neural-network.pkl",
-                    "virtual": False,
-                    "tags": [],
-                    "description": "",
-                },
-                "1570672b226558a3614c1a7f21295553102a2869": {
-                    "type": "model",
-                    "name": "nn",
-                    "path": "models/neural-network.pkl",
-                    "virtual": False,
-                    "tags": [],
-                    "description": "",
-                },
-            },
             "versions": [
                 {
                     "artifact": "nn",
                     "name": "v0.0.1",
-                    "creation_date": datetime.datetime(2022, 4, 1, 17, 47, 59),
+                    "creation_date": "2022-04-11T21:51:56",
                     "author": "Alexander Guschin",
-                    "commit_hexsha": "1570672b226558a3614c1a7f21295553102a2869",
+                    "commit_hexsha": "d1d973669cade722f2900e75379cee42fe6b0244",
+                    "discovered": False,
+                    "tag": "nn@v0.0.1",
                     "promotions": [
                         {
                             "artifact": "nn",
                             "version": "v0.0.1",
                             "stage": "staging",
-                            "creation_date": datetime.datetime(2022, 4, 1, 17, 48),
+                            "creation_date": "2022-04-11T21:51:57",
                             "author": "Alexander Guschin",
-                            "commit_hexsha": "1570672b226558a3614c1a7f21295553102a2869",
+                            "commit_hexsha": "d1d973669cade722f2900e75379cee42fe6b0244",
+                            "tag": "nn#staging-1",
+                        }
+                    ],
+                    "enrichments": [
+                        {
+                            "source": "gto",
+                            "artifact": {
+                                "type": "model",
+                                "name": "nn",
+                                "path": "models/neural-network.pkl",
+                                "virtual": False,
+                                "tags": [],
+                                "description": "",
+                            },
                         }
                     ],
                 }
@@ -71,73 +45,98 @@ EXPECTED_REGISTRY_TAG_TAG_STATE = {
         },
         "rf": {
             "name": "rf",
-            "commits": {
-                "c6232f2ff38f2efe9768ab58b279e500085c0b0a": {
-                    "type": "model",
-                    "name": "rf",
-                    "path": "models/random-forest.pkl",
-                    "virtual": False,
-                    "tags": [],
-                    "description": "",
-                },
-                "1570672b226558a3614c1a7f21295553102a2869": {
-                    "type": "model",
-                    "name": "rf",
-                    "path": "models/random-forest.pkl",
-                    "virtual": False,
-                    "tags": [],
-                    "description": "",
-                },
-            },
             "versions": [
                 {
                     "artifact": "rf",
                     "name": "v1.2.3",
-                    "creation_date": datetime.datetime(2022, 4, 1, 17, 47, 59),
+                    "creation_date": "2022-04-11T21:51:56",
                     "author": "Alexander Guschin",
-                    "commit_hexsha": "1570672b226558a3614c1a7f21295553102a2869",
+                    "commit_hexsha": "d1d973669cade722f2900e75379cee42fe6b0244",
+                    "discovered": False,
+                    "tag": "rf@v1.2.3",
                     "promotions": [
                         {
                             "artifact": "rf",
                             "version": "v1.2.3",
                             "stage": "production",
-                            "creation_date": datetime.datetime(2022, 4, 1, 17, 48),
+                            "creation_date": "2022-04-11T21:51:57",
                             "author": "Alexander Guschin",
-                            "commit_hexsha": "1570672b226558a3614c1a7f21295553102a2869",
+                            "commit_hexsha": "d1d973669cade722f2900e75379cee42fe6b0244",
+                            "tag": "rf#production-2",
                         },
                         {
                             "artifact": "rf",
                             "version": "v1.2.3",
                             "stage": "production",
-                            "creation_date": datetime.datetime(2022, 4, 1, 17, 48, 3),
+                            "creation_date": "2022-04-11T21:52:01",
                             "author": "Alexander Guschin",
-                            "commit_hexsha": "1570672b226558a3614c1a7f21295553102a2869",
+                            "commit_hexsha": "d1d973669cade722f2900e75379cee42fe6b0244",
+                            "tag": "rf#production-5",
                         },
+                    ],
+                    "enrichments": [
+                        {
+                            "source": "gto",
+                            "artifact": {
+                                "type": "model",
+                                "name": "rf",
+                                "path": "models/random-forest.pkl",
+                                "virtual": False,
+                                "tags": [],
+                                "description": "",
+                            },
+                        }
                     ],
                 },
                 {
                     "artifact": "rf",
                     "name": "v1.2.4",
-                    "creation_date": datetime.datetime(2022, 4, 1, 17, 48),
+                    "creation_date": "2022-04-12T19:03:44",
                     "author": "Alexander Guschin",
-                    "commit_hexsha": "c6232f2ff38f2efe9768ab58b279e500085c0b0a",
+                    "commit_hexsha": "16b7b77f1219ea3c10ae5beeb8473fb49cbd8c13",
+                    "discovered": False,
+                    "tag": "rf@v1.2.4",
                     "promotions": [
                         {
                             "artifact": "rf",
                             "version": "v1.2.4",
                             "stage": "staging",
-                            "creation_date": datetime.datetime(2022, 4, 1, 17, 48, 1),
+                            "creation_date": "2022-04-11T21:51:58",
                             "author": "Alexander Guschin",
-                            "commit_hexsha": "c6232f2ff38f2efe9768ab58b279e500085c0b0a",
+                            "commit_hexsha": "16b7b77f1219ea3c10ae5beeb8473fb49cbd8c13",
+                            "tag": "rf#staging-3",
                         },
                         {
                             "artifact": "rf",
                             "version": "v1.2.4",
                             "stage": "production",
-                            "creation_date": datetime.datetime(2022, 4, 1, 17, 48, 2),
+                            "creation_date": "2022-04-11T21:51:59",
                             "author": "Alexander Guschin",
-                            "commit_hexsha": "c6232f2ff38f2efe9768ab58b279e500085c0b0a",
+                            "commit_hexsha": "16b7b77f1219ea3c10ae5beeb8473fb49cbd8c13",
+                            "tag": "rf#production-4",
                         },
+                        {
+                            "artifact": "rf",
+                            "version": "v1.2.4",
+                            "stage": "stagegeg",
+                            "creation_date": "2022-04-12T19:26:08",
+                            "author": "Alexander Guschin",
+                            "commit_hexsha": "16b7b77f1219ea3c10ae5beeb8473fb49cbd8c13",
+                            "tag": "rf#stagegeg-6",
+                        },
+                    ],
+                    "enrichments": [
+                        {
+                            "source": "gto",
+                            "artifact": {
+                                "type": "model",
+                                "name": "rf",
+                                "path": "models/random-forest.pkl",
+                                "virtual": False,
+                                "tags": [],
+                                "description": "",
+                            },
+                        }
                     ],
                 },
             ],
@@ -175,6 +174,7 @@ def test_registry_state_tag_tag(showcase):
     reg = GitRegistry.from_repo(repo)
     state = reg.get_state().dict()
 
+    # TODO: update state
     exclude = {
         "commits": [],
         "versions": [
@@ -183,7 +183,6 @@ def test_registry_state_tag_tag(showcase):
             "commit_hexsha",
             "promotions",
             "enrichments",
-            "discovered",
         ],
         "promotions": ["author", "creation_date", "commit_hexsha"],
     }

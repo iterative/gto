@@ -451,10 +451,9 @@ def register(
         Choose a part to bump version by:
         $ gto register nn --bump minor
     """
-    registered_version = gto.api.register(
-        repo=repo, name=name, ref=ref or "HEAD", version=version, bump=bump
+    gto.api.register(
+        repo=repo, name=name, ref=ref or "HEAD", version=version, bump=bump, stdout=True
     )
-    echo(f"Created git tag '{registered_version.tag}' that registers a new version")
 
 
 @gto_command(section=COMMANDS.REGISTER_PROMOTE)
@@ -493,10 +492,16 @@ def promote(
     else:
         name_version = None
         promote_version = version
-    promotion = gto.api.promote(
-        repo, name, stage, promote_version, ref, name_version, simple=simple
+    gto.api.promote(
+        repo,
+        name,
+        stage,
+        promote_version,
+        ref,
+        name_version,
+        simple=simple,
+        stdout=True,
     )
-    click.echo(f"Promoted {name} version {promotion.version} to stage {stage}")
 
 
 @gto_command(section=COMMANDS.REGISTRY)
@@ -515,11 +520,11 @@ def latest(
     latest_version = gto.api.find_latest_version(repo, name)
     if latest_version:
         if path:
-            click.echo(latest_version.artifact.path)
+            echo(latest_version.artifact.path)
         elif ref:
-            click.echo(latest_version.commit_hexsha)
+            echo(latest_version.commit_hexsha)
         else:
-            click.echo(latest_version.name)
+            echo(latest_version.name)
 
 
 @gto_command(section=COMMANDS.REGISTRY)
@@ -545,11 +550,11 @@ def which(
     version = gto.api.find_promotion(repo, name, stage)
     if version:
         if path:
-            click.echo(version.artifact.path)
+            echo(version.artifact.path)
         elif ref:
-            click.echo(version.commit_hexsha)
+            echo(version.commit_hexsha)
         else:
-            click.echo(version.version)
+            echo(version.version)
 
 
 @gto_command(hidden=True)
@@ -766,7 +771,7 @@ def describe(
     """
     infos = gto.api.describe(repo=repo, name=name, rev=rev)
     for info in infos:
-        click.echo(info.get_human_readable())
+        echo(info.get_human_readable())
 
 
 if __name__ == "__main__":

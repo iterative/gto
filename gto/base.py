@@ -19,6 +19,7 @@ class BasePromotion(BaseModel):
     creation_date: datetime
     author: str
     commit_hexsha: str
+    tag: str
 
 
 class BaseVersion(BaseModel):

@@ -56,11 +56,20 @@ def remove(repo: Union[str, Repo], name: str):
 
 
 def register(
-    repo: Union[str, Repo], name: str, ref: str, version: str = None, bump: str = None
+    repo: Union[str, Repo],
+    name: str,
+    ref: str,
+    version: str = None,
+    bump: str = None,
+    stdout: bool = False,
 ):
     """Register new artifact version"""
     return GitRegistry.from_repo(repo).register(
-        name=name, ref=ref, version=version, bump=bump
+        name=name,
+        ref=ref,
+        version=version,
+        bump=bump,
+        stdout=stdout,
     )
 
 
@@ -72,10 +81,17 @@ def promote(
     promote_ref: str = None,
     name_version: str = None,
     simple: bool = False,
+    stdout: bool = False,
 ):
     """Assign stage to specific artifact version"""
     return GitRegistry.from_repo(repo).promote(
-        name, stage, promote_version, promote_ref, name_version, simple=simple
+        name,
+        stage,
+        promote_version,
+        promote_ref,
+        name_version,
+        simple=simple,
+        stdout=stdout,
     )
 
 
