@@ -52,6 +52,9 @@ class GtoCliMixin(Command):
         self.section = section
         self.aliases = aliases
 
+    # def collect_usage_pieces(self, ctx: Context) -> List[str]:
+    #     return [p.lower() for p in super().collect_usage_pieces(ctx)]
+
     def get_help(self, ctx: Context) -> str:
         """Formats the help into a string and returns it.
 
@@ -188,7 +191,6 @@ app = Typer(cls=GtoGroup, context_settings={"help_option_names": ["-h", "--help"
 arg_name = Argument(..., help="Artifact name")
 arg_version = Argument(..., help="Artifact version")
 arg_stage = Argument(..., help="Stage to promote to")
-arg_ref = Argument("HEAD", help="Git reference to use")
 option_rev = Option("HEAD", "--rev", help="Repo revision to use", show_default=True)
 option_repo = Option(".", "-r", "--repo", help="Repository to use", show_default=True)
 option_discover = Option(
@@ -410,7 +412,7 @@ def remove(repo: str = option_repo, name: str = arg_name):
 def register(
     repo: str = option_repo,
     name: str = arg_name,
-    ref: str = arg_ref,
+    ref: str = Argument("HEAD", help="Git reference to use for registration"),
     version: Optional[str] = Option(
         None, "--version", "--ver", help="Version name in SemVer format"
     ),
@@ -504,7 +506,7 @@ def latest(
         if path:
             echo(latest_version.artifact.path)
         elif ref:
-            echo(latest_version.commit_hexsha)
+            echo(latest_version.tag or latest_version.commit_hexsha)
         else:
             echo(latest_version.name)
 
@@ -534,7 +536,7 @@ def which(
         if path:
             echo(version.artifact.path)
         elif ref:
-            echo(version.commit_hexsha)
+            echo(version.tag or version.commit_hexsha)
         else:
             echo(version.version)
 

@@ -28,7 +28,7 @@ class NoFile(GTOException):
 
 
 class UnknownType(GTOException):
-    _message = "Type '{type}' is not present in your config file. Allowed values are: '{types}'"
+    _message = "Allowed types are: '{types}'"
 
     def __init__(self, type, types) -> None:
         self.message = self._message.format(type=type, types=types)
@@ -36,7 +36,7 @@ class UnknownType(GTOException):
 
 
 class ArtifactExists(GTOException):
-    _message = "Artifact '{name}' is already exists in Index"
+    _message = "Enrichment for '{name}' already exists"
 
     def __init__(self, name) -> None:
         self.message = self._message.format(name=name)
@@ -84,7 +84,9 @@ class VersionAlreadyRegistered(GTOException):
 
 
 class VersionExistsForCommit(GTOException):
-    _message = "The artifact '{model}' is already registered in this commit with version '{version}'."
+    _message = (
+        "'{model}' is already registered in this commit with version '{version}'."
+    )
 
     def __init__(self, model, version) -> None:
         self.message = self._message.format(model=model, version=version)
@@ -92,7 +94,7 @@ class VersionExistsForCommit(GTOException):
 
 
 class UnknownStage(GTOException):
-    _message = "Stage '{stage}' is not present in your config file. Allowed stages are: '{stages}'."
+    _message = "Allowed stages are: '{stages}'."
 
     def __init__(self, stage, stages) -> None:
         self.message = self._message.format(stage=stage, stages=stages)

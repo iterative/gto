@@ -376,8 +376,7 @@ class GTOInfo(EnrichmentInfo):
         return self.artifact
 
     def get_human_readable(self) -> str:
-        description = f"""GTO artifact: {self.artifact}"""
-        return description
+        return f"GTO enrichment: {self.artifact.dict()}"
 
     def get_path(self):
         return self.artifact.path
