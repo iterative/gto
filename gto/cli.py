@@ -9,7 +9,6 @@ import click
 import typer
 from click import Abort, ClickException, Command, Context, HelpFormatter
 from click.exceptions import Exit
-from tabulate import tabulate_formats
 from typer import Argument, Option, Typer
 from typer.core import TyperCommand, TyperGroup
 
@@ -218,37 +217,6 @@ class FormatDF(str, Enum):
     table = "table"
 
 
-option_format = Option(
-    Format.yaml,
-    "--format",
-    "-f",
-    help="Output format",
-    show_default=True,
-)
-option_format_df = Option(
-    FormatDF.table,
-    "--format",
-    "-f",
-    help="Output format",
-    show_default=True,
-)
-
-
-class StrEnum(Enum):  # str,
-    def _generate_next_value_(
-        name, start, count, last_values
-    ):  # pylint: disable=no-self-argument
-        return name
-
-
-FormatTable = StrEnum("FormatTable", tabulate_formats, module=__name__, type=str)  # type: ignore  # pylint: disable=too-many-function-args, unexpected-keyword-arg
-option_format_table = Option(
-    "fancy_outline",
-    "-ft",
-    "--format-table",
-    show_default=True,
-    help="How to format the table",
-)
 option_name = Option(None, "--name", "-n", help="Artifact name", show_default=True)
 option_sort = Option(
     "desc",
@@ -272,6 +240,20 @@ option_json = Option(
     "--json",
     is_flag=True,
     help="Print output in json format",
+    show_default=True,
+)
+option_plain = Option(
+    False,
+    "--plain",
+    is_flag=True,
+    help="Print table in grep-able format",
+    show_default=True,
+)
+option_name_only = Option(
+    False,
+    "--name-only",
+    is_flag=True,
+    help="Print names only",
     show_default=True,
 )
 option_table = Option(
@@ -363,7 +345,7 @@ def gto_command(*args, section="other", aliases=None, parent=app, **kwargs):
                         )
                     )
                     echo(
-                        "Please report it here: <https://github.com/iterative/mlem/issues>"
+                        "Please report it here: <https://github.com/iterative/gto/issues>"
                     )
             finally:
                 # TODO: analytics
@@ -378,16 +360,16 @@ def gto_command(*args, section="other", aliases=None, parent=app, **kwargs):
 @gto_command(section=COMMANDS.ENRICHMENT)
 def add(
     repo: str = option_repo,
-    type: str = Argument(..., help="TODO"),
+    type: str = Argument(..., help="Artifact type"),
     name: str = arg_name,
-    path: str = Argument(..., help="TODO"),
+    path: str = Argument(..., help="Artifact path"),
     virtual: bool = Option(
         False,
         "--virtual",
         is_flag=True,
         help="Virtual artifact that wasn't committed to Git",
     ),
-    tag: List[str] = Option(..., "--tag", help="Tags to add to artifact"),
+    tag: List[str] = Option(None, "--tag", help="Tags to add to artifact"),
     description: str = Option("", "-d", "--description", help="Artifact description"),
     update: bool = Option(
         False, "-u", "--update", is_flag=True, help="Update artifact if it exists"
@@ -561,7 +543,6 @@ def which(
 def parse_tag(
     name: str = arg_name,
     key: Optional[str] = Option(None, "--key", help="Which key to return"),
-    format: Format = option_format,
 ):
     """Given git tag name created by this tool, parse it and return it's parts
 
@@ -572,14 +553,13 @@ def parse_tag(
     parsed = gto.api.parse_tag(name)
     if key:
         parsed = parsed[key]
-    format_echo(parsed, format)
+    format_echo(parsed, "json")
 
 
 @gto_command(section=COMMANDS.CI)
 def check_ref(
     repo: str = option_repo,
-    ref: str = Argument(..., help="TODO"),
-    format: Format = option_format,
+    ref: str = Argument(..., help="Git reference to analyze"),
 ):
     """Find out artifact & version registered/promoted with the provided ref
 
@@ -588,7 +568,7 @@ def check_ref(
         $ gto check-ref rf#prod
     """
     result = gto.api.check_ref(repo, ref)
-    format_echo(result, format)
+    format_echo(result, "json")
 
 
 @gto_command(section=COMMANDS.REGISTRY)
@@ -598,8 +578,9 @@ def show(
     discover: bool = option_discover,
     all_branches: bool = option_all_branches,
     all_commits: bool = option_all_commits,
-    format: FormatDF = option_format_df,
-    format_table: FormatTable = option_format_table,  # type: ignore
+    json: bool = option_json,
+    plain: bool = option_plain,
+    name_only: bool = option_name_only,
 ):
     """Show current registry state or specific artifact
 
@@ -622,7 +603,23 @@ def show(
     """
     # TODO: make proper name resolving?
     # e.g. querying artifact named "registry" with artifact/registry
-    if format == FormatDF.table:
+    assert (
+        sum(bool(i) for i in (json, plain, name_only)) <= 1
+    ), "Only one output format allowed"
+    if name_only or json:
+        output = gto.api.show(
+            repo,
+            name=name,
+            discover=discover,
+            all_branches=all_branches,
+            all_commits=all_commits,
+            table=False,
+        )
+        if name_only:
+            format_echo(output, "lines")
+        else:
+            format_echo(output, "json")
+    else:
         format_echo(
             gto.api.show(
                 repo,
@@ -632,21 +629,9 @@ def show(
                 all_commits=all_commits,
                 table=True,
             ),
-            format=format,
-            format_table=format_table,
+            format="table",
+            format_table="plain" if plain else "fancy_outline",
             if_empty="Nothing found in the current workspace",
-        )
-    else:
-        format_echo(
-            gto.api.show(
-                repo,
-                name=name,
-                discover=discover,
-                all_branches=all_branches,
-                all_commits=all_commits,
-                table=False,
-            ),
-            format=format,
         )
 
 
@@ -667,8 +652,8 @@ def history(
     discover: bool = option_discover,
     all_branches: bool = option_all_branches,
     all_commits: bool = option_all_commits,
-    format: FormatDF = option_format_df,
-    format_table: FormatTable = option_format_table,  # type: ignore
+    json: bool = option_json,
+    plain: bool = option_plain,
     sort: str = option_sort,
 ):
     """Show history of artifact
@@ -682,22 +667,8 @@ def history(
         Use --all-branches and --all-commits to read more than just HEAD:
         $ gto history nn --discover --all-commits
     """
-    if format == TABLE:
-        format_echo(
-            gto.api.history(
-                repo,
-                name,
-                discover=discover,
-                all_branches=all_branches,
-                all_commits=all_commits,
-                sort=sort,
-                table=True,
-            ),
-            format=format,
-            format_table=format_table,
-            if_empty="No history found",
-        )
-    else:
+    assert sum(bool(i) for i in (json, plain)) <= 1, "Only one output format allowed"
+    if json:
         format_echo(
             gto.api.history(
                 repo,
@@ -708,7 +679,22 @@ def history(
                 sort=sort,
                 table=False,
             ),
-            format=format,
+            format="json",
+        )
+    else:
+        format_echo(
+            gto.api.history(
+                repo,
+                name,
+                discover=discover,
+                all_branches=all_branches,
+                all_commits=all_commits,
+                sort=sort,
+                table=True,
+            ),
+            format="table",
+            format_table="plain" if plain else "fancy_outline",
+            if_empty="No history found",
         )
 
 
@@ -735,7 +721,7 @@ def print_stages(
 
 
 @gto_command(hidden=True)
-def print_state(repo: str = option_repo, format: Format = option_format):
+def print_state(repo: str = option_repo):
     """Technical cmd: Print current registry state
 
     Examples:
@@ -744,18 +730,18 @@ def print_state(repo: str = option_repo, format: Format = option_format):
     state = make_ready_to_serialize(
         gto.api._get_state(repo).dict()  # pylint: disable=protected-access
     )
-    format_echo(state, format)
+    format_echo(state, "json")
 
 
 @gto_command(hidden=True)
-def print_index(repo: str = option_repo, format: Format = option_format):
+def print_index(repo: str = option_repo):
     """Technical cmd: Print repo index
 
     Examples:
         $ gto print-index
     """
     index = gto.api.get_index(repo).artifact_centric_representation()
-    format_echo(index, format)
+    format_echo(index, "json")
 
 
 @gto_command(section=COMMANDS.ENRICHMENT)
