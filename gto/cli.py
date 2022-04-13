@@ -378,16 +378,16 @@ def gto_command(*args, section="other", aliases=None, parent=app, **kwargs):
 @gto_command(section=COMMANDS.ENRICHMENT)
 def add(
     repo: str = option_repo,
-    type: str = Argument(..., help="TODO"),
+    type: str = Argument(..., help="Artifact type"),
     name: str = arg_name,
-    path: str = Argument(..., help="TODO"),
+    path: str = Argument(..., help="Artifact path"),
     virtual: bool = Option(
         False,
         "--virtual",
         is_flag=True,
         help="Virtual artifact that wasn't committed to Git",
     ),
-    tag: List[str] = Option(..., "--tag", help="Tags to add to artifact"),
+    tag: List[str] = Option(None, "--tag", help="Tags to add to artifact"),
     description: str = Option("", "-d", "--description", help="Artifact description"),
     update: bool = Option(
         False, "-u", "--update", is_flag=True, help="Update artifact if it exists"
@@ -578,7 +578,7 @@ def parse_tag(
 @gto_command(section=COMMANDS.CI)
 def check_ref(
     repo: str = option_repo,
-    ref: str = Argument(..., help="TODO"),
+    ref: str = Argument(..., help="Git reference to analyze"),
     format: Format = option_format,
 ):
     """Find out artifact & version registered/promoted with the provided ref
