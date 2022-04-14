@@ -265,6 +265,16 @@ option_table = Option(
     help="Print output in table format",
     show_default=True,
 )
+option_type = Option(None, "--type", help="Artifact type")
+option_path = Option(None, "--path", help="Artifact path")
+option_virtual = Option(
+    False,
+    "--virtual",
+    is_flag=True,
+    help="Virtual artifact that wasn't committed to Git",
+)
+option_tag = Option(None, "--tag", help="Tags to add to artifact")
+option_description = Option("", "-d", "--description", help="Artifact description")
 
 
 @app.callback("gto", invoke_without_command=True, no_args_is_help=True)
@@ -359,55 +369,6 @@ def gto_command(*args, section="other", aliases=None, parent=app, **kwargs):
     return decorator
 
 
-@gto_command(section=COMMANDS.ENRICHMENT)
-def add(
-    repo: str = option_repo,
-    type: str = Argument(..., help="Artifact type"),
-    name: str = arg_name,
-    path: str = Argument(..., help="Artifact path"),
-    virtual: bool = Option(
-        False,
-        "--virtual",
-        is_flag=True,
-        help="Virtual artifact that wasn't committed to Git",
-    ),
-    tag: List[str] = Option(None, "--tag", help="Tags to add to artifact"),
-    description: str = Option("", "-d", "--description", help="Artifact description"),
-    update: bool = Option(
-        False, "-u", "--update", is_flag=True, help="Update artifact if it exists"
-    ),
-):
-    """Add the enrichment for the artifact
-
-    Examples:
-       Add new enrichment:
-       $ gto add model nn models/neural_network.h5
-
-       Update existing enrichment:
-       $ gto add model nn models/neural_network.h5 --update
-    """
-    gto.api.add(
-        repo,
-        type,
-        name,
-        path,
-        virtual,
-        tags=tag,
-        description=description,
-        update=update,
-    )
-
-
-@gto_command("rm", section=COMMANDS.ENRICHMENT)
-def remove(repo: str = option_repo, name: str = arg_name):
-    """Remove the enrichment for given artifact
-
-    Examples:
-         $ gto rm nn
-    """
-    gto.api.remove(repo, name)
-
-
 @gto_command(section=COMMANDS.REGISTER_PROMOTE)
 def register(
     repo: str = option_repo,
@@ -419,6 +380,11 @@ def register(
     bump: Optional[str] = Option(
         None, "--bump", "-b", help="The exact part to increment when bumping a version"
     ),
+    type: Optional[str] = option_type,
+    path: Optional[str] = option_path,
+    virtual: bool = option_virtual,
+    tag: List[str] = option_tag,
+    description: str = option_description,
 ):
     """Create git tag that marks the important artifact version
 
@@ -436,7 +402,17 @@ def register(
         $ gto register nn --bump minor
     """
     gto.api.register(
-        repo=repo, name=name, ref=ref or "HEAD", version=version, bump=bump, stdout=True
+        repo=repo,
+        name=name,
+        ref=ref or "HEAD",
+        version=version,
+        bump=bump,
+        stdout=True,
+        type=type,
+        path=path,
+        virtual=virtual,
+        tags=tag,
+        description=description,
     )
 
 
@@ -457,6 +433,11 @@ def promote(
         is_flag=True,
         help="Use simple notation, e.g. rf#prod instead of rf#prod-5",
     ),
+    type: Optional[str] = option_type,
+    path: Optional[str] = option_path,
+    virtual: bool = option_virtual,
+    tag: List[str] = option_tag,
+    description: str = option_description,
 ):
     """Assign stage to specific artifact version
 
@@ -485,6 +466,11 @@ def promote(
         name_version,
         simple=simple,
         stdout=True,
+        type=type,
+        path=path,
+        virtual=virtual,
+        tags=tag,
+        description=description,
     )
 
 

@@ -1,3 +1,4 @@
+# sourcery skip: avoid-builtin-shadow
 import os
 from abc import ABC, abstractmethod
 from collections import defaultdict
@@ -23,9 +24,9 @@ from gto.ext import Enrichment, EnrichmentInfo
 
 
 class Artifact(BaseModel):
-    type: str
     name: str
-    path: str
+    type: Optional[str] = None
+    path: Optional[str] = None
     virtual: bool = False
     tags: List[str] = []  # TODO: allow key:value labels
     description: str = ""

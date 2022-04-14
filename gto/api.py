@@ -62,14 +62,26 @@ def register(
     version: str = None,
     bump: str = None,
     stdout: bool = False,
+    type: str = None,
+    path: str = None,
+    virtual: bool = False,
+    tags: List[str] = None,
+    description: str = "",
 ):
     """Register new artifact version"""
+    if tags is None:
+        tags = []
     return GitRegistry.from_repo(repo).register(
         name=name,
         ref=ref,
         version=version,
         bump=bump,
         stdout=stdout,
+        type=type,
+        path=path,
+        virtual=virtual,
+        tags=tags,
+        description=description,
     )
 
 
@@ -82,6 +94,11 @@ def promote(
     name_version: str = None,
     simple: bool = False,
     stdout: bool = False,
+    type: str = None,
+    path: str = None,
+    virtual: bool = False,
+    tags: List[str] = None,
+    description: str = "",
 ):
     """Assign stage to specific artifact version"""
     return GitRegistry.from_repo(repo).promote(
@@ -92,6 +109,11 @@ def promote(
         name_version,
         simple=simple,
         stdout=stdout,
+        type=type,
+        path=path,
+        virtual=virtual,
+        tags=tags,
+        description=description,
     )
 
 

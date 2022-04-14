@@ -12,6 +12,15 @@ from gto.versions import SemVer
 from .exceptions import ArtifactNotFound, ManyVersions, VersionRequired
 
 
+class Artifact(BaseModel):
+    name: str
+    type: Optional[str] = None
+    path: Optional[str] = None
+    virtual: bool = False
+    tags: List[str] = []  # TODO: allow key:value labels
+    description: str = ""
+
+
 class BasePromotion(BaseModel):
     artifact: str
     version: str
@@ -24,6 +33,7 @@ class BasePromotion(BaseModel):
 
 class BaseVersion(BaseModel):
     artifact: str
+    details: Artifact
     name: str
     creation_date: datetime
     author: str

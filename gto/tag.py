@@ -1,9 +1,12 @@
+import json
 import logging
 from datetime import datetime
 from typing import FrozenSet, Iterable, Optional, Union
 
 import git
-from pydantic import BaseModel
+from pydantic import BaseModel, parse_obj_as
+
+from gto.base import Artifact
 
 from .base import (
     BaseArtifact,
@@ -140,6 +143,7 @@ def version_from_tag(tag: git.Tag) -> BaseVersion:
     mtag = parse_tag(tag)
     return BaseVersion(
         artifact=mtag.name,
+        details=parse_obj_as(Artifact, json.loads(tag.tag.message)),
         name=mtag.version,
         creation_date=mtag.creation_date,
         author=tag.tag.tagger.name,

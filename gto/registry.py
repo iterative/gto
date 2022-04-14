@@ -1,5 +1,5 @@
 import os
-from typing import Union
+from typing import List, Union
 
 import git
 from git import InvalidGitRepositoryError, Repo
@@ -12,7 +12,7 @@ from gto.exceptions import (
     VersionAlreadyRegistered,
     VersionExistsForCommit,
 )
-from gto.index import EnrichmentManager
+from gto.index import Artifact, EnrichmentManager
 from gto.tag import TagStageManager, TagVersionManager
 from gto.ui import echo
 from gto.versions import SemVer
@@ -50,18 +50,18 @@ class GitRegistry(BaseModel):
 
     def get_state(
         self,
-        # discover: bool = False,
-        all_branches=False,
-        all_commits=False,
+        # discover: bool = False, TODO
+        all_branches=False,  # TODO pylint: disable=unused-argument
+        all_commits=False,  # TODO pylint: disable=unused-argument
     ) -> BaseRegistryState:
         state = BaseRegistryState()
         state = self.version_manager.update_state(state)
         state = self.stage_manager.update_state(state)
-        state = self.enrichment_manager.update_state(
-            state,  # discover=discover,
-            all_branches=all_branches,
-            all_commits=all_commits,
-        )
+        # state = self.enrichment_manager.update_state(
+        #     state,  # discover=discover,
+        #     all_branches=all_branches,
+        #     all_commits=all_commits,
+        # )
         state.sort()
         return state
 
@@ -93,7 +93,19 @@ class GitRegistry(BaseModel):
             name, create_new=create_new  # type: ignore
         )
 
-    def register(self, name, ref, version=None, bump=None, stdout=False):
+    def register(  # pylint: disable=too-many-locals
+        self,
+        name,
+        ref,
+        version=None,
+        bump=None,
+        stdout=False,
+        type: str = None,
+        path: str = None,
+        virtual: bool = False,
+        tags: List[str] = None,
+        description: str = "",
+    ):
         """Register artifact version"""
         ref = self.repo.commit(ref).hexsha
         # TODO: add the same check for other actions, to promote and etc
@@ -119,11 +131,19 @@ class GitRegistry(BaseModel):
             # if no versions exist, use the minimal version possible
             else:
                 version = SemVer.get_minimal().version
+        artifact = Artifact(
+            name=name,
+            type=type,
+            path=path,
+            virtual=virtual,
+            tags=tags,
+            description=description,
+        )
         self.version_manager.register(
             name,
             version,
             ref,
-            message=f"Registering artifact {name} version {version}",
+            message=artifact.json(exclude_defaults=True),
         )
         registered_version = self.find_artifact(name).find_version(
             name=version, raise_if_not_found=True
@@ -134,7 +154,7 @@ class GitRegistry(BaseModel):
             )
         return registered_version
 
-    def promote(
+    def promote(  # pylint: disable=too-many-locals
         self,
         name,
         stage,
@@ -143,6 +163,11 @@ class GitRegistry(BaseModel):
         name_version=None,
         simple=False,
         stdout=False,
+        type: str = None,
+        path: str = None,
+        virtual: bool = False,
+        tags: List[str] = None,
+        description: str = "",
     ) -> BasePromotion:
         """Assign stage to specific artifact version"""
         self.config.assert_stage(stage)
@@ -160,13 +185,29 @@ class GitRegistry(BaseModel):
             found_version = found_artifact.find_version(commit_hexsha=promote_ref)
             if found_version is None:
                 self.register(
-                    name, version=name_version, ref=promote_ref, stdout=stdout
+                    name,
+                    version=name_version,
+                    ref=promote_ref,
+                    stdout=stdout,
+                    type=type,
+                    path=path,
+                    virtual=virtual,
+                    tags=tags,
+                    description=description,
                 )
+        artifact = Artifact(
+            name=name,
+            type=type,
+            path=path,
+            virtual=virtual,
+            tags=tags,
+            description=description,
+        )
         self.stage_manager.promote(  # type: ignore
             name,
             stage,
             ref=promote_ref,
-            message=f"Promoting {name} version {promote_version} to stage {stage}",
+            message=artifact.json(exclude_defaults=True),
             simple=simple,
         )
         promotion = self.get_state().find_artifact(name).promoted[stage]
