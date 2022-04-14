@@ -129,7 +129,7 @@ def check_ref(repo: Union[str, Repo], ref: str):
 def show(
     repo: Union[str, Repo],
     name: Optional[str] = None,
-    discover: bool = False,
+    # discover: bool = False,
     table: bool = False,
     all_branches=False,
     all_commits=False,
@@ -138,7 +138,7 @@ def show(
         _show_versions(
             repo,
             name=name,
-            discover=discover,
+            # discover=discover,
             all_branches=all_branches,
             all_commits=all_commits,
             table=table,
@@ -146,7 +146,7 @@ def show(
         if name
         else _show_registry(
             repo,
-            discover=discover,
+            # discover=discover,
             all_branches=all_branches,
             all_commits=all_commits,
             table=table,
@@ -156,7 +156,7 @@ def show(
 
 def _show_registry(
     repo: Union[str, Repo],
-    discover: bool = False,
+    # discover: bool = False,
     all_branches=False,
     all_commits=False,
     table: bool = False,
@@ -174,7 +174,9 @@ def _show_registry(
             },
         }
         for o in reg.get_artifacts(
-            discover=discover, all_branches=all_branches, all_commits=all_commits
+            # discover=discover,
+            all_branches=all_branches,
+            all_commits=all_commits,
         ).values()
     }
     if not table:
@@ -184,7 +186,7 @@ def _show_registry(
         [name, d["version"]] + [d["stage"][name] for name in stages]
         for name, d in models_state.items()
     ]
-    headers = ["name", "version"] + [f"stage/{e}" for e in stages]
+    headers = ["name", "latest version"] + [f"stage/{e}" for e in stages]
     return result, headers
 
 
@@ -192,7 +194,7 @@ def _show_versions(
     repo: Union[str, Repo],
     name: str,
     raw: bool = False,
-    discover: bool = False,
+    # discover: bool = False,
     all_branches=False,
     all_commits=False,
     table: bool = False,
@@ -204,8 +206,11 @@ def _show_versions(
     versions = [
         v.dict_status()
         for v in reg.find_artifact(
-            name, discover=discover, all_branches=all_branches, all_commits=all_commits
-        ).get_versions(discover=discover)
+            name,
+            # discover=discover,
+            all_branches=all_branches,
+            all_commits=all_commits,
+        ).get_versions(include_discovered=True)
     ]
     if not table:
         return versions
@@ -239,7 +244,7 @@ def describe(
 def history(
     repo: Union[str, Repo],
     artifact: str = None,
-    discover: bool = False,
+    # discover: bool = False,
     # action: str = None,
     all_branches=False,
     all_commits=False,
@@ -253,7 +258,9 @@ def history(
 
     reg = GitRegistry.from_repo(repo)
     artifacts = reg.get_artifacts(
-        discover=discover, all_branches=all_branches, all_commits=all_commits
+        # discover=discover,
+        all_branches=all_branches,
+        all_commits=all_commits,
     )
 
     commits = [
@@ -262,12 +269,12 @@ def history(
                 reg.repo.commit(v.commit_hexsha).committed_date
             ),
             name=o.name,
-            event="commit [discovered]" if v.discovered else "commit",
+            event="commit",  # "commit [discovered]" if v.discovered else "commit",
             commit=v.commit_hexsha[:7],
             author=reg.repo.commit(v.commit_hexsha).author.name,
         )
         for o in artifacts.values()
-        for v in o.get_versions(discover=discover)
+        for v in o.get_versions(include_discovered=True)
     ]
 
     registration = [
@@ -300,7 +307,7 @@ def history(
 
     events_order = {
         "commit": 0,
-        "commit [discovered]": 1,
+        # "commit [discovered]": 1,
         "registration": 2,
         "promotion": 3,
     }

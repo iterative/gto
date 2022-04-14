@@ -297,6 +297,8 @@ class EnrichmentManager(BaseManager):
         return res
 
     def get_commits(self, all_branches=False, all_commits=False):
+        if not self.repo.refs:
+            return {}
         if all_commits:
             return {
                 commit
@@ -310,7 +312,7 @@ class EnrichmentManager(BaseManager):
     def update_state(
         self,
         state: BaseRegistryState,
-        discover: bool = False,
+        # discover: bool = False,
         all_branches=False,
         all_commits=False,
     ) -> BaseRegistryState:
@@ -323,37 +325,33 @@ class EnrichmentManager(BaseManager):
                 )
                 state.update_artifact(artifact)
         # do discovery if requested
-        if discover:
-            for commit in self.get_commits(
-                all_branches=all_branches, all_commits=all_commits
-            ):
-                for enrichment in GTOEnrichment().discover(self.repo, commit):
-                    enrichments = self.describe(enrichment.artifact.name, rev=commit)
-                    artifact = state.find_artifact(
-                        enrichment.artifact.name, create_new=True
-                    )
-                    version = artifact.find_version(commit_hexsha=commit.hexsha)
-                    # TODO: duplicated in tag.py
-                    if version:
-                        version = version.name
-                    else:
-                        artifact.add_version(
-                            BaseVersion(
-                                artifact=enrichment.artifact.name,
-                                name=commit.hexsha,
-                                creation_date=datetime.fromtimestamp(
-                                    commit.committed_date
-                                ),
-                                author=commit.author.name,
-                                commit_hexsha=commit.hexsha,
-                                discovered=True,
-                            )
+        # if discover:
+        for commit in self.get_commits(
+            all_branches=all_branches, all_commits=all_commits
+        ):
+            for enrichment in GTOEnrichment().discover(self.repo, commit):
+                enrichments = self.describe(enrichment.artifact.name, rev=commit)
+                artifact = state.find_artifact(
+                    enrichment.artifact.name, create_new=True
+                )
+                version = artifact.find_version(commit_hexsha=commit.hexsha)
+                # TODO: duplicated in tag.py
+                if version:
+                    version = version.name
+                else:
+                    artifact.add_version(
+                        BaseVersion(
+                            artifact=enrichment.artifact.name,
+                            name=commit.hexsha,
+                            creation_date=datetime.fromtimestamp(commit.committed_date),
+                            author=commit.author.name,
+                            commit_hexsha=commit.hexsha,
+                            discovered=True,
                         )
-                        version = commit.hexsha
-                    artifact.update_enrichments(
-                        version=version, enrichments=enrichments
                     )
-                    state.update_artifact(artifact)
+                    version = commit.hexsha
+                artifact.update_enrichments(version=version, enrichments=enrichments)
+                state.update_artifact(artifact)
         return state
 
     def check_ref(self, ref: str, state: BaseRegistryState):
@@ -376,8 +374,7 @@ class GTOInfo(EnrichmentInfo):
         return self.artifact
 
     def get_human_readable(self) -> str:
-        description = f"""GTO artifact: {self.artifact}"""
-        return description
+        return f"GTO enrichment: {self.artifact.dict()}"
 
     def get_path(self):
         return self.artifact.path
@@ -398,6 +395,6 @@ class GTOEnrichment(Enrichment):
         self, repo, obj: str, rev: Optional[str]
     ) -> Optional[GTOInfo]:
         index = RepoIndexManager.from_repo(repo).get_commit_index(rev)
-        if obj in index.state:
+        if index and obj in index.state:
             return GTOInfo(artifact=index.state[obj])
         return None

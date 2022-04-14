@@ -52,6 +52,9 @@ class GtoCliMixin(Command):
         self.section = section
         self.aliases = aliases
 
+    # def collect_usage_pieces(self, ctx: Context) -> List[str]:
+    #     return [p.lower() for p in super().collect_usage_pieces(ctx)]
+
     def get_help(self, ctx: Context) -> str:
         """Formats the help into a string and returns it.
 
@@ -188,12 +191,11 @@ app = Typer(cls=GtoGroup, context_settings={"help_option_names": ["-h", "--help"
 arg_name = Argument(..., help="Artifact name")
 arg_version = Argument(..., help="Artifact version")
 arg_stage = Argument(..., help="Stage to promote to")
-arg_ref = Argument("HEAD", help="Git reference to use")
 option_rev = Option("HEAD", "--rev", help="Repo revision to use", show_default=True)
 option_repo = Option(".", "-r", "--repo", help="Repository to use", show_default=True)
-option_discover = Option(
-    False, "-d", "--discover", is_flag=True, help="Discover non-registered artifacts"
-)
+# option_discover = Option(
+#     False, "-d", "--discover", is_flag=True, help="Discover non-registered artifacts"
+# )
 option_all_branches = Option(
     False,
     "-a",
@@ -410,7 +412,7 @@ def remove(repo: str = option_repo, name: str = arg_name):
 def register(
     repo: str = option_repo,
     name: str = arg_name,
-    ref: str = arg_ref,
+    ref: str = Argument("HEAD", help="Git reference to use for registration"),
     version: Optional[str] = Option(
         None, "--version", "--ver", help="Version name in SemVer format"
     ),
@@ -504,7 +506,7 @@ def latest(
         if path:
             echo(latest_version.artifact.path)
         elif ref:
-            echo(latest_version.commit_hexsha)
+            echo(latest_version.tag or latest_version.commit_hexsha)
         else:
             echo(latest_version.name)
 
@@ -534,7 +536,7 @@ def which(
         if path:
             echo(version.artifact.path)
         elif ref:
-            echo(version.commit_hexsha)
+            echo(version.tag or version.commit_hexsha)
         else:
             echo(version.version)
 
@@ -575,7 +577,7 @@ def check_ref(
 def show(
     repo: str = option_repo,
     name: str = Argument(None, help="Artifact name to show. If empty, show registry."),
-    discover: bool = option_discover,
+    # discover: bool = option_discover,
     all_branches: bool = option_all_branches,
     all_commits: bool = option_all_commits,
     json: bool = option_json,
@@ -588,14 +590,8 @@ def show(
         Show the registry:
         $ gto show
 
-        Discover non-registered artifacts that have enrichments:
-        $ gto show --discover
-
         Show versions of specific artifact in registry:
         $ gto show nn
-
-        Discover potential versions (i.e. commits with enrichments):
-        $ gto show nn --discover
 
         Use --all-branches and --all-commits to read more than just HEAD:
         $ gto show --all-branches
@@ -610,7 +606,7 @@ def show(
         output = gto.api.show(
             repo,
             name=name,
-            discover=discover,
+            # discover=discover,
             all_branches=all_branches,
             all_commits=all_commits,
             table=False,
@@ -624,7 +620,7 @@ def show(
             gto.api.show(
                 repo,
                 name=name,
-                discover=discover,
+                # discover=discover,
                 all_branches=all_branches,
                 all_commits=all_commits,
                 table=True,
@@ -649,7 +645,7 @@ def show(
 def history(
     repo: str = option_repo,
     name: str = Argument(None, help="Artifact name to show. If empty, show all."),
-    discover: bool = option_discover,
+    # discover: bool = option_discover,
     all_branches: bool = option_all_branches,
     all_commits: bool = option_all_commits,
     json: bool = option_json,
@@ -661,11 +657,8 @@ def history(
     Examples:
         $ gto history nn
 
-        Discover enrichment for artifact (check only HEAD by default):
-        $ gto history nn --discover
-
         Use --all-branches and --all-commits to read more than just HEAD:
-        $ gto history nn --discover --all-commits
+        $ gto history nn --all-commits
     """
     assert sum(bool(i) for i in (json, plain)) <= 1, "Only one output format allowed"
     if json:
@@ -673,7 +666,7 @@ def history(
             gto.api.history(
                 repo,
                 name,
-                discover=discover,
+                # discover=discover,
                 all_branches=all_branches,
                 all_commits=all_commits,
                 sort=sort,
@@ -686,7 +679,7 @@ def history(
             gto.api.history(
                 repo,
                 name,
-                discover=discover,
+                # discover=discover,
                 all_branches=all_branches,
                 all_commits=all_commits,
                 sort=sort,
