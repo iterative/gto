@@ -15,7 +15,7 @@ def test_api(showcase):
     ) = showcase
 
     artifacts = gto.api._get_state(path).artifacts  # pylint: disable=protected-access
-    assert set(artifacts.keys()) == {"nn", "rf"}  # "features"
+    assert set(artifacts.keys()) == {"nn", "rf", "features"}
     # assert isinstance(artifacts["features"], BaseArtifact)
     # _check_obj(
     #     artifacts["features"],
@@ -25,7 +25,7 @@ def test_api(showcase):
     nn_artifact = artifacts["nn"]
     assert isinstance(nn_artifact, BaseArtifact)
     assert nn_artifact.name == "nn"
-    assert len(nn_artifact.versions) == 1
+    assert len(nn_artifact.versions) == 2
     nn_version = nn_artifact.versions[0]
     assert isinstance(nn_version, BaseVersion)
     author = repo.commit().author.name

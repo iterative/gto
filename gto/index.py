@@ -297,6 +297,8 @@ class EnrichmentManager(BaseManager):
         return res
 
     def get_commits(self, all_branches=False, all_commits=False):
+        if not self.repo.refs:
+            return {}
         if all_commits:
             return {
                 commit
