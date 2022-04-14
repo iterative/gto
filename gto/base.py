@@ -156,8 +156,8 @@ class BaseArtifact(BaseModel):
     # ) -> List[BaseVersion]:
     #     ...
 
-    def get_versions(self, discover=False):
-        return [v for v in self.versions if discover or not v.discovered]
+    def get_versions(self, include_discovered=False):
+        return [v for v in self.versions if include_discovered or not v.discovered]
 
     def find_version(
         self,

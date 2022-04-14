@@ -193,9 +193,9 @@ arg_version = Argument(..., help="Artifact version")
 arg_stage = Argument(..., help="Stage to promote to")
 option_rev = Option("HEAD", "--rev", help="Repo revision to use", show_default=True)
 option_repo = Option(".", "-r", "--repo", help="Repository to use", show_default=True)
-option_discover = Option(
-    False, "-d", "--discover", is_flag=True, help="Discover non-registered artifacts"
-)
+# option_discover = Option(
+#     False, "-d", "--discover", is_flag=True, help="Discover non-registered artifacts"
+# )
 option_all_branches = Option(
     False,
     "-a",
@@ -577,7 +577,7 @@ def check_ref(
 def show(
     repo: str = option_repo,
     name: str = Argument(None, help="Artifact name to show. If empty, show registry."),
-    discover: bool = option_discover,
+    # discover: bool = option_discover,
     all_branches: bool = option_all_branches,
     all_commits: bool = option_all_commits,
     json: bool = option_json,
@@ -590,14 +590,8 @@ def show(
         Show the registry:
         $ gto show
 
-        Discover non-registered artifacts that have enrichments:
-        $ gto show --discover
-
         Show versions of specific artifact in registry:
         $ gto show nn
-
-        Discover potential versions (i.e. commits with enrichments):
-        $ gto show nn --discover
 
         Use --all-branches and --all-commits to read more than just HEAD:
         $ gto show --all-branches
@@ -612,7 +606,7 @@ def show(
         output = gto.api.show(
             repo,
             name=name,
-            discover=discover,
+            # discover=discover,
             all_branches=all_branches,
             all_commits=all_commits,
             table=False,
@@ -626,7 +620,7 @@ def show(
             gto.api.show(
                 repo,
                 name=name,
-                discover=discover,
+                # discover=discover,
                 all_branches=all_branches,
                 all_commits=all_commits,
                 table=True,
@@ -651,7 +645,7 @@ def show(
 def history(
     repo: str = option_repo,
     name: str = Argument(None, help="Artifact name to show. If empty, show all."),
-    discover: bool = option_discover,
+    # discover: bool = option_discover,
     all_branches: bool = option_all_branches,
     all_commits: bool = option_all_commits,
     json: bool = option_json,
@@ -663,11 +657,8 @@ def history(
     Examples:
         $ gto history nn
 
-        Discover enrichment for artifact (check only HEAD by default):
-        $ gto history nn --discover
-
         Use --all-branches and --all-commits to read more than just HEAD:
-        $ gto history nn --discover --all-commits
+        $ gto history nn --all-commits
     """
     assert sum(bool(i) for i in (json, plain)) <= 1, "Only one output format allowed"
     if json:
@@ -675,7 +666,7 @@ def history(
             gto.api.history(
                 repo,
                 name,
-                discover=discover,
+                # discover=discover,
                 all_branches=all_branches,
                 all_commits=all_commits,
                 sort=sort,
@@ -688,7 +679,7 @@ def history(
             gto.api.history(
                 repo,
                 name,
-                discover=discover,
+                # discover=discover,
                 all_branches=all_branches,
                 all_commits=all_commits,
                 sort=sort,

@@ -49,32 +49,46 @@ class GitRegistry(BaseModel):
         )
 
     def get_state(
-        self, discover: bool = False, all_branches=False, all_commits=False
+        self,
+        # discover: bool = False,
+        all_branches=False,
+        all_commits=False,
     ) -> BaseRegistryState:
         state = BaseRegistryState()
         state = self.version_manager.update_state(state)
         state = self.stage_manager.update_state(state)
         state = self.enrichment_manager.update_state(
-            state, discover=discover, all_branches=all_branches, all_commits=all_commits
+            state,  # discover=discover,
+            all_branches=all_branches,
+            all_commits=all_commits,
         )
         state.sort()
         return state
 
-    def get_artifacts(self, discover=False, all_branches=False, all_commits=False):
+    def get_artifacts(
+        self,
+        # discover=False,
+        all_branches=False,
+        all_commits=False,
+    ):
         return self.get_state(
-            discover=discover, all_branches=all_branches, all_commits=all_commits
+            # discover=discover,
+            all_branches=all_branches,
+            all_commits=all_commits,
         ).get_artifacts()
 
     def find_artifact(
         self,
         name: str = None,
         create_new=False,
-        discover=False,
+        # discover=False,
         all_branches=False,
         all_commits=False,
     ):
         return self.get_state(
-            discover=discover, all_branches=all_branches, all_commits=all_commits
+            # discover=discover,
+            all_branches=all_branches,
+            all_commits=all_commits,
         ).find_artifact(
             name, create_new=create_new  # type: ignore
         )
