@@ -84,9 +84,7 @@ class VersionAlreadyRegistered(GTOException):
 
 
 class VersionExistsForCommit(GTOException):
-    _message = (
-        "'{model}' is already registered in this commit with version '{version}'."
-    )
+    _message = "'{model}' is already registered in this commit with version '{version}'"
 
     def __init__(self, model, version) -> None:
         self.message = self._message.format(model=model, version=version)
@@ -94,7 +92,7 @@ class VersionExistsForCommit(GTOException):
 
 
 class UnknownStage(GTOException):
-    _message = "Allowed stages are: '{stages}'."
+    _message = "Allowed stages are: '{stages}'"
 
     def __init__(self, stage, stages) -> None:
         self.message = self._message.format(stage=stage, stages=stages)
@@ -134,7 +132,7 @@ class IncomparableVersions(GTOException):
 
 
 class UnknownAction(GTOException):
-    message = "Unknown action '{action}' was requested."
+    message = "Unknown action '{action}' was requested"
 
     def __init__(self, action) -> None:
         self.message = self.message.format(action=action)
@@ -142,7 +140,7 @@ class UnknownAction(GTOException):
 
 
 class MissingArg(GTOException):
-    message = "'{arg}' is required."
+    message = "'{arg}' is required"
 
     def __init__(self, arg) -> None:
         self.message = self.message.format(arg=arg)

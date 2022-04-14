@@ -54,7 +54,7 @@ class GitRegistry(BaseModel):
         state = BaseRegistryState()
         state = self.version_manager.update_state(state)
         state = self.stage_manager.update_state(state)
-        state = self.enrichment_manager.update_state(  # type: ignore
+        state = self.enrichment_manager.update_state(
             state, discover=discover, all_branches=all_branches, all_commits=all_commits
         )
         state.sort()

@@ -397,6 +397,6 @@ class GTOEnrichment(Enrichment):
         self, repo, obj: str, rev: Optional[str]
     ) -> Optional[GTOInfo]:
         index = RepoIndexManager.from_repo(repo).get_commit_index(rev)
-        if obj in index.state:
+        if index and obj in index.state:
             return GTOInfo(artifact=index.state[obj])
         return None

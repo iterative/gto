@@ -184,7 +184,7 @@ def _show_registry(
         [name, d["version"]] + [d["stage"][name] for name in stages]
         for name, d in models_state.items()
     ]
-    headers = ["name", "version"] + [f"stage/{e}" for e in stages]
+    headers = ["name", "latest version"] + [f"stage/{e}" for e in stages]
     return result, headers
 
 
