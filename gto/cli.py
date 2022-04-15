@@ -380,6 +380,11 @@ def register(
     bump: Optional[str] = Option(
         None, "--bump", "-b", help="The exact part to increment when bumping a version"
     ),
+    inherit_from: Optional[str] = Option(
+        None,
+        "--inherit",
+        help="Inherit artifact details from another version. Default - latest version.",
+    ),
     type: Optional[str] = option_type,
     path: Optional[str] = option_path,
     virtual: bool = option_virtual,
@@ -413,6 +418,7 @@ def register(
         virtual=virtual,
         tags=tag,
         description=description,
+        inherit_from=inherit_from,
     )
 
 
@@ -432,6 +438,9 @@ def promote(
         "--simple",
         is_flag=True,
         help="Use simple notation, e.g. rf#prod instead of rf#prod-5",
+    ),
+    inherit_from: Optional[str] = Option(
+        None, "--inherit", help="Inherit artifact details from another version"
     ),
     type: Optional[str] = option_type,
     path: Optional[str] = option_path,
@@ -471,6 +480,7 @@ def promote(
         virtual=virtual,
         tags=tag,
         description=description,
+        inherit_from=inherit_from,
     )
 
 

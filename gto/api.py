@@ -67,6 +67,7 @@ def register(
     virtual: bool = False,
     tags: List[str] = None,
     description: str = "",
+    inherit_from: str = None,
 ):
     """Register new artifact version"""
     if tags is None:
@@ -82,6 +83,7 @@ def register(
         virtual=virtual,
         tags=tags,
         description=description,
+        inherit_from=inherit_from,
     )
 
 
@@ -99,6 +101,7 @@ def promote(
     virtual: bool = False,
     tags: List[str] = None,
     description: str = "",
+    inherit_from: str = None,
 ):
     """Assign stage to specific artifact version"""
     return GitRegistry.from_repo(repo).promote(
@@ -114,6 +117,7 @@ def promote(
         virtual=virtual,
         tags=tags,
         description=description,
+        inherit_from=inherit_from,
     )
 
 

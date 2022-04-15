@@ -23,6 +23,7 @@ class Artifact(BaseModel):
 
 class BasePromotion(BaseModel):
     artifact: str
+    details: Artifact
     version: str
     stage: str
     creation_date: datetime

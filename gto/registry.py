@@ -12,7 +12,7 @@ from gto.exceptions import (
     VersionAlreadyRegistered,
     VersionExistsForCommit,
 )
-from gto.index import Artifact, EnrichmentManager
+from gto.index import EnrichmentManager
 from gto.tag import TagStageManager, TagVersionManager
 from gto.ui import echo
 from gto.versions import SemVer
@@ -105,6 +105,7 @@ class GitRegistry(BaseModel):
         virtual: bool = False,
         tags: List[str] = None,
         description: str = "",
+        inherit_from: str = None,
     ):
         """Register artifact version"""
         ref = self.repo.commit(ref).hexsha
@@ -131,14 +132,18 @@ class GitRegistry(BaseModel):
             # if no versions exist, use the minimal version possible
             else:
                 version = SemVer.get_minimal().version
-        artifact = Artifact(
-            name=name,
-            type=type,
-            path=path,
-            virtual=virtual,
-            tags=tags,
-            description=description,
-        )
+        if inherit_from:
+            artifact = self.find_artifact(name).find_version(name=inherit_from).details
+        else:
+            last_version = self.find_artifact(name).get_latest_version(registered=True)
+            artifact = last_version.details if last_version else {}
+        # update
+        artifact.type = type or artifact.type
+        artifact.path = path or artifact.path
+        artifact.virtual = virtual or artifact.virtual
+        artifact.tags = tags or artifact.tags
+        artifact.description = description or artifact.description
+
         self.version_manager.register(
             name,
             version,
@@ -150,7 +155,8 @@ class GitRegistry(BaseModel):
         )
         if stdout:
             echo(
-                f"Created git tag '{registered_version.tag}' that registers a new version"
+                f"Created git tag '{registered_version.tag}' that registers a new version with details: "
+                f"{artifact.json(exclude_defaults=True)}"
             )
         return registered_version
 
@@ -168,6 +174,7 @@ class GitRegistry(BaseModel):
         virtual: bool = False,
         tags: List[str] = None,
         description: str = "",
+        inherit_from: str = None,
     ) -> BasePromotion:
         """Assign stage to specific artifact version"""
         self.config.assert_stage(stage)
@@ -195,14 +202,27 @@ class GitRegistry(BaseModel):
                     tags=tags,
                     description=description,
                 )
-        artifact = Artifact(
-            name=name,
-            type=type,
-            path=path,
-            virtual=virtual,
-            tags=tags,
-            description=description,
-        )
+        # TODO: can inherit from promotion tags also, so --inherit=<tag> should be supported
+        if inherit_from:
+            artifact = self.find_artifact(name).find_version(name=inherit_from).details
+        else:
+            last_version = self.find_artifact(name).get_latest_version(registered=True)
+            # take last promotion first
+            if last_version.promotions:
+                artifact = last_version.promotions[-1].details
+            # if no promotions, take version
+            elif last_version:
+                artifact = last_version.details
+            # otherwise empty
+            else:
+                artifact = {}
+        # update
+        artifact.type = type or artifact.type
+        artifact.path = path or artifact.path
+        artifact.virtual = virtual or artifact.virtual
+        artifact.tags = tags or artifact.tags
+        artifact.description = description or artifact.description
+
         self.stage_manager.promote(  # type: ignore
             name,
             stage,
@@ -213,7 +233,8 @@ class GitRegistry(BaseModel):
         promotion = self.get_state().find_artifact(name).promoted[stage]
         if stdout:
             echo(
-                f"Created git tag '{promotion.tag}' that promotes '{promotion.version}'"
+                f"Created git tag '{promotion.tag}' that promotes '{promotion.version}' with details: "
+                f"{artifact.json(exclude_defaults=True)}"
             )
         return promotion
 

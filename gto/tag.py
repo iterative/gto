@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import FrozenSet, Iterable, Optional, Union
 
 import git
-from pydantic import BaseModel, parse_obj_as
+from pydantic import BaseModel, ValidationError, parse_obj_as
 
 from gto.base import Artifact
 
@@ -98,6 +98,14 @@ def parse_tag(tag: git.Tag):
     )
 
 
+def is_annotated(tag: git.TagReference):
+    try:
+        tag.tag.tagged_date  # pylint: disable=pointless-statement
+        return True
+    except (ValueError, AttributeError) as _:
+        return False
+
+
 def find(
     action: Union[Action, FrozenSet[Action]] = None,
     name: Optional[str] = None,
@@ -106,6 +114,7 @@ def find(
     repo: Optional[git.Repo] = None,
     sort: str = "by_time",
     tags: Optional[Iterable[git.Tag]] = None,
+    annotated_only: bool = True,
 ):
     if isinstance(action, Action):
         action = frozenset([action])
@@ -113,6 +122,8 @@ def find(
         if repo is None:
             raise MissingArg(arg="repo")
         tags = [t for t in repo.tags if parse_name(t.name, raise_on_fail=False)]
+        if annotated_only:
+            tags = [t for t in tags if is_annotated(t)]
     if action:
         tags = [t for t in tags if parse_name(t.name)[ACTION] in action]
     if name:
@@ -139,11 +150,18 @@ def create_tag(repo, name, ref, message):
     )
 
 
+def parse_message(name: str, message: str) -> Artifact:
+    try:
+        return parse_obj_as(Artifact, json.loads(message))
+    except ValidationError:
+        return Artifact(name=name, description=message)
+
+
 def version_from_tag(tag: git.Tag) -> BaseVersion:
     mtag = parse_tag(tag)
     return BaseVersion(
         artifact=mtag.name,
-        details=parse_obj_as(Artifact, json.loads(tag.tag.message)),
+        details=parse_message(mtag.name, tag.tag.message),
         name=mtag.version,
         creation_date=mtag.creation_date,
         author=tag.tag.tagger.name,
@@ -177,6 +195,7 @@ def promotion_from_tag(
             version = tag.commit.hexsha
     return BasePromotion(
         artifact=mtag.name,
+        details=parse_message(mtag.name, tag.tag.message),
         version=version,
         stage=mtag.stage,
         creation_date=mtag.creation_date,
