@@ -45,19 +45,14 @@ def showcase(
     write_file("models/random-forest.pkl", "1st version")
     write_file("models/neural-network.pkl", "1st version")
     repo.index.add(["models"])
-    repo.index.commit("Create models")
-
-    gto.api.add(path, "model", "rf", "models/random-forest.pkl")
-    gto.api.add(path, "model", "nn", "models/neural-network.pkl")
-    gto.api.add(path, "dataset", "features", "datasets/features.csv", virtual=True)
-
-    repo.index.add(["artifacts.yaml"])
-    first_commit = repo.index.commit("Add artifacts")
+    first_commit = repo.index.commit("Create models")
 
     nn_vname = "v0.0.1"
     rf_vname = "v1.2.3"
-    gto.api.register(path, "rf", "HEAD", rf_vname)
-    gto.api.register(path, "nn", "HEAD")
+    gto.api.register(
+        path, "rf", "HEAD", rf_vname, type="model", path="models/random-forest.pkl"
+    )
+    gto.api.register(path, "nn", "HEAD", type="model", path="models/neural-network.pkl")
     sleep(1)
 
     write_file("models/random-forest.pkl", "2nd version")

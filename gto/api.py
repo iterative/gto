@@ -6,12 +6,7 @@ from git import Repo
 
 from gto.constants import NAME, STAGE, VERSION
 from gto.ext import EnrichmentInfo
-from gto.index import (
-    EnrichmentManager,
-    FileIndexManager,
-    RepoIndexManager,
-    init_index_manager,
-)
+from gto.index import EnrichmentManager, FileIndexManager, RepoIndexManager
 from gto.registry import GitRegistry
 from gto.tag import parse_name
 
@@ -32,27 +27,6 @@ def _get_state(repo: Union[str, Repo]):
 
 def get_stages(repo: Union[str, Repo], in_use: bool = False):
     return GitRegistry.from_repo(repo).get_stages(in_use=in_use)
-
-
-def add(
-    repo: Union[str, Repo],
-    type: str,
-    name: str,
-    path: str,
-    virtual: bool = False,
-    tags: List[str] = None,
-    description: str = "",
-    update: bool = False,
-):
-    """Add an artifact to the Index"""
-    return init_index_manager(path=repo).add(
-        type, name, path, virtual, tags=tags, description=description, update=update
-    )
-
-
-def remove(repo: Union[str, Repo], name: str):
-    """Remove an artifact from the Index"""
-    return init_index_manager(path=repo).remove(name)
 
 
 def register(

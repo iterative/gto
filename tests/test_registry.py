@@ -183,8 +183,9 @@ def test_registry_state_tag_tag(showcase):
             "commit_hexsha",
             "promotions",
             "enrichments",
+            "details",  # TODO: add this to check
         ],
-        "promotions": ["author", "creation_date", "commit_hexsha"],
+        "promotions": ["author", "creation_date", "commit_hexsha", "details"],
     }
 
     _check_state(state, EXPECTED_REGISTRY_TAG_TAG_STATE, exclude)

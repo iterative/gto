@@ -6,10 +6,10 @@ import pytest
 from typer.main import get_command_from_info
 from typer.testing import CliRunner
 
-from gto.api import get_index
+# from gto.api import get_index
 from gto.cli import app
 
-from .utils import _check_obj
+# from .utils import _check_obj
 
 
 def _check_successful_cmd(cmd: str, args: list, expected_stdout: str):
@@ -77,36 +77,36 @@ def test_commands(showcase):
     )
 
 
-def test_add(empty_git_repo):
-    repo, write_file = empty_git_repo
-    _check_successful_cmd(
-        "add",
-        [
-            "-r",
-            repo.working_dir,
-            "new-type",
-            "new-artifact",
-            "new/path",
-            "--virtual",
-            "--tag",
-            "some-tag",
-            "--tag",
-            "another-tag",
-            "--description",
-            "some description",
-        ],
-        "",
-    )
-    artifact = get_index(repo.working_dir, file=True).get_index().state["new-artifact"]
-    _check_obj(
-        artifact,
-        dict(
-            name="new-artifact",
-            type="new-type",
-            path="new/path",
-            virtual=True,
-            tags=["some-tag", "another-tag"],
-            description="some description",
-        ),
-        [],
-    )
+# def test_add(empty_git_repo):
+#     repo, write_file = empty_git_repo
+#     _check_successful_cmd(
+#         "add",
+#         [
+#             "-r",
+#             repo.working_dir,
+#             "new-type",
+#             "new-artifact",
+#             "new/path",
+#             "--virtual",
+#             "--tag",
+#             "some-tag",
+#             "--tag",
+#             "another-tag",
+#             "--description",
+#             "some description",
+#         ],
+#         "",
+#     )
+#     artifact = get_index(repo.working_dir, file=True).get_index().state["new-artifact"]
+#     _check_obj(
+#         artifact,
+#         dict(
+#             name="new-artifact",
+#             type="new-type",
+#             path="new/path",
+#             virtual=True,
+#             tags=["some-tag", "another-tag"],
+#             description="some description",
+#         ),
+#         [],
+#     )

@@ -15,17 +15,11 @@ def test_api(showcase):
     ) = showcase
 
     artifacts = gto.api._get_state(path).artifacts  # pylint: disable=protected-access
-    assert set(artifacts.keys()) == {"nn", "rf", "features"}
-    # assert isinstance(artifacts["features"], BaseArtifact)
-    # _check_obj(
-    #     artifacts["features"],
-    #     dict(name="features", versions=[]),
-    #     ["commits"],
-    # )
+    assert set(artifacts.keys()) == {"nn", "rf"}
     nn_artifact = artifacts["nn"]
     assert isinstance(nn_artifact, BaseArtifact)
     assert nn_artifact.name == "nn"
-    assert len(nn_artifact.versions) == 2
+    assert len(nn_artifact.versions) == 1
     nn_version = nn_artifact.versions[0]
     assert isinstance(nn_version, BaseVersion)
     author = repo.commit().author.name
@@ -38,7 +32,8 @@ def test_api(showcase):
             commit_hexsha=first_commit.hexsha,
             discovered=False,
         ),
-        {"creation_date", "promotions", "enrichments", "tag"},
+        # TODO: remove tag, details here and everywhere
+        {"creation_date", "promotions", "enrichments", "tag", "details"},
     )
     assert len(nn_artifact.stages) == 1
     nn_promotion = nn_artifact.stages[0]
@@ -52,7 +47,7 @@ def test_api(showcase):
             author=author,
             commit_hexsha=first_commit.hexsha,
         ),
-        {"creation_date", "tag"},
+        {"creation_date", "tag", "details"},
     )
 
     rf_artifact = artifacts["rf"]
@@ -71,7 +66,7 @@ def test_api(showcase):
             commit_hexsha=first_commit.hexsha,
             discovered=False,
         ),
-        {"creation_date", "promotions", "enrichments", "tag"},
+        {"creation_date", "promotions", "enrichments", "tag", "details"},
     )
     _check_obj(
         rf_ver2,
@@ -82,7 +77,7 @@ def test_api(showcase):
             commit_hexsha=second_commit.hexsha,
             discovered=False,
         ),
-        {"creation_date", "promotions", "enrichments", "tag"},
+        {"creation_date", "promotions", "enrichments", "tag", "details"},
     )
 
     assert len(rf_artifact.stages) == 4
@@ -99,7 +94,7 @@ def test_api(showcase):
             author=author,
             commit_hexsha=first_commit.hexsha,
         ),
-        {"creation_date", "tag"},
+        {"creation_date", "tag", "details"},
     )
     _check_obj(
         rf_l4,
@@ -110,7 +105,7 @@ def test_api(showcase):
             author=author,
             commit_hexsha=second_commit.hexsha,
         ),
-        {"creation_date", "tag"},
+        {"creation_date", "tag", "details"},
     )
     _check_obj(
         rf_l3,
@@ -121,5 +116,5 @@ def test_api(showcase):
             author=author,
             commit_hexsha=second_commit.hexsha,
         ),
-        {"creation_date", "tag"},
+        {"creation_date", "tag", "details"},
     )

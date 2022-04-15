@@ -52,7 +52,7 @@ class EnrichmentConfig(BaseModel):
 
 class RegistryConfig(BaseSettings):
     INDEX: str = "artifacts.yaml"
-    TYPE_ALLOWED: List[str] = []
+    TYPE_ALLOWED: List[str] = []  # TODO: pointless in this PR, need to update code
     STAGE_ALLOWED: List[str] = []
     LOG_LEVEL: str = "INFO"
     DEBUG: bool = False

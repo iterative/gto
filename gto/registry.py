@@ -5,7 +5,7 @@ import git
 from git import InvalidGitRepositoryError, Repo
 from pydantic import BaseModel
 
-from gto.base import BasePromotion, BaseRegistryState
+from gto.base import Artifact, BasePromotion, BaseRegistryState
 from gto.config import CONFIG_FILE_NAME, RegistryConfig
 from gto.exceptions import (
     NoRepo,
@@ -135,8 +135,10 @@ class GitRegistry(BaseModel):
         if inherit_from:
             artifact = self.find_artifact(name).find_version(name=inherit_from).details
         else:
-            last_version = self.find_artifact(name).get_latest_version(registered=True)
-            artifact = last_version.details if last_version else {}
+            last_version = self.find_artifact(name, create_new=True).get_latest_version(
+                registered=True
+            )
+            artifact = last_version.details if last_version else Artifact(name=name)
         # update
         artifact.type = type or artifact.type
         artifact.path = path or artifact.path
@@ -206,7 +208,9 @@ class GitRegistry(BaseModel):
         if inherit_from:
             artifact = self.find_artifact(name).find_version(name=inherit_from).details
         else:
-            last_version = self.find_artifact(name).get_latest_version(registered=True)
+            last_version = self.find_artifact(name, create_new=True).get_latest_version(
+                registered=True
+            )
             # take last promotion first
             if last_version.promotions:
                 artifact = last_version.promotions[-1].details
@@ -215,7 +219,7 @@ class GitRegistry(BaseModel):
                 artifact = last_version.details
             # otherwise empty
             else:
-                artifact = {}
+                artifact = Artifact(name=name)
         # update
         artifact.type = type or artifact.type
         artifact.path = path or artifact.path
