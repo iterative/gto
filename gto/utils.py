@@ -8,6 +8,7 @@ from enum import Enum
 import click
 import git
 from pydantic import BaseModel
+from shtab import Optional
 from tabulate import tabulate
 
 from gto.config import yaml
@@ -75,5 +76,7 @@ def format_echo(result, format, format_table=None, if_empty="", missing_value="-
         raise NotImplementedError(f"Format {format} is not implemented")
 
 
-def resolve_ref(repo: git.Repo, ref: str):
-    return repo.refs[ref].commit if ref in repo.refs else repo.commit(ref)
+def resolve_ref(
+    repo: git.Repo, ref: Optional[str] = None
+):  # pylint: disable=unsubscriptable-object
+    return repo.refs[ref].commit if (ref and ref in repo.refs) else repo.commit(ref)

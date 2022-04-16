@@ -13,7 +13,7 @@ from typer import Argument, Option, Typer
 from typer.core import TyperCommand, TyperGroup
 
 import gto
-from gto.exceptions import GTOException
+from gto.exceptions import GTOException, WrongArgs
 from gto.ui import EMOJI_FAIL, EMOJI_MLEM, bold, cli_echo, color, echo
 from gto.utils import format_echo, make_ready_to_serialize
 
@@ -754,15 +754,21 @@ def describe(
     infos = gto.api.describe(repo=repo, name=name, rev=rev)
     if not infos:
         return
-    d = infos[0].get_object().dict()
+    d = infos[0].get_object().dict(exclude_defaults=True)
     if type:
+        if "type" not in d:
+            raise WrongArgs("No type in enrichment")
         echo(d["type"])
     elif path:
+        if "path" not in d:
+            raise WrongArgs("No path in enrichment")
         echo(d["path"])
     elif description:
+        if "description" not in d:
+            raise WrongArgs("No description in enrichment")
         echo(d["description"])
     else:
-        echo(d)
+        format_echo(d, "json")
 
 
 if __name__ == "__main__":

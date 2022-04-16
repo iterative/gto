@@ -253,7 +253,6 @@ def describe(
         return EnrichmentManager.from_repo(repo).describe(name=name, rev=rev)
     if ref_type == NAME_REFERENCE.TAG:
         if rev:
-            print(rev)
             raise WrongArgs("Should not specify revision if you pass git tag")
         return EnrichmentManager.from_repo(repo).describe(name=parsed[NAME], rev=name)
     raise NotImplementedError

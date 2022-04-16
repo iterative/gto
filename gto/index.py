@@ -247,9 +247,9 @@ class RepoIndexManager(FileIndexManager):
         arbitrary_types_allowed = True
 
     def get_commit_index(
-        self, ref: Union[str, git.Reference], allow_to_not_exist: bool = True
+        self, ref: Union[str, git.Reference, None], allow_to_not_exist: bool = True
     ) -> Optional[Index]:
-        if isinstance(ref, str):
+        if not ref or isinstance(ref, str):
             ref = resolve_ref(self.repo, ref)
         if self.config.INDEX in ref.tree:
             return Index.read(

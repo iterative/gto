@@ -1,4 +1,4 @@
-# pylint: disable=unused-variable
+# pylint: disable=unused-variable, redefined-outer-name
 from typing import Callable, Tuple
 
 import git
@@ -62,6 +62,15 @@ def test_show(empty_git_repo: Tuple[git.Repo, Callable]):
     )
 
 
+EXPECTED_DESCRIBE_OUTPUT = """{
+    "name": "rf",
+    "type": "model",
+    "path": "models/random-forest.pkl",
+    "virtual": false
+}
+"""
+
+
 # this is one function because showcase fixture takes some time to be created
 def test_commands(showcase):
     path, repo, write_file, first_commit, second_commit = showcase
@@ -85,11 +94,10 @@ def test_commands(showcase):
         ["-r", path, "rf", "production", "--ref"],
         "rf#production-4\n",
     )
-    # _check_successful_cmd(
-    #     "describe",
-    #     ["-r", path, "rf"],
-    #     "v1.2.4\n",
-    # )
+    _check_successful_cmd("describe", ["-r", path, "rf"], EXPECTED_DESCRIBE_OUTPUT)
+    _check_successful_cmd(
+        "describe", ["-r", path, "rf", "--path"], "models/random-forest.pkl\n"
+    )
 
 
 def test_annotate(empty_git_repo):

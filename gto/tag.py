@@ -83,7 +83,7 @@ class NAME_REFERENCE(Enum):
 
 def parse_name_reference(name: str):
     parsed = parse_name(name, raise_on_fail=False)
-    if parsed is None:
+    if not parsed:
         return NAME_REFERENCE.NAME, name
     return NAME_REFERENCE.TAG, parsed
 
