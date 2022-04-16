@@ -1,6 +1,6 @@
 import pytest
 
-from gto.api import enrich
+from gto.api import annotate
 from gto.config import CONFIG_FILE_NAME
 from gto.exceptions import UnknownType
 from gto.index import init_index_manager
@@ -29,9 +29,9 @@ def test_config_load_registry(init_repo):
 
 
 def test_adding_allowed_type(init_repo):
-    enrich(init_repo, "model", "name", "path", virtual=True)
+    annotate(init_repo, "name", type="model")
 
 
 def test_adding_not_allowed_type(init_repo):
     with pytest.raises(UnknownType):
-        enrich(init_repo, "unknown", "name", "path", virtual=True)
+        annotate(init_repo, "name", type="unknown")

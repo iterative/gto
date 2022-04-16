@@ -30,13 +30,22 @@ def test_api_info_commands_empty_repo(empty_git_repo: Tuple[git.Repo, Callable])
 
 def test_add_remove(empty_git_repo: Tuple[git.Repo, Callable]):
     repo, write_file = empty_git_repo  # pylint: disable=unused-variable
-    name, type, path, virtual = "new-artifact", "new-type", "new/path", True
-    gto.api.enrich(repo.working_dir, type, name, path, virtual=virtual)
+    name, type, path, must_exist = "new-artifact", "new-type", "new/path", False
+    gto.api.annotate(
+        repo.working_dir, name, type=type, path=path, must_exist=must_exist
+    )
     index = gto.api.get_index(repo.working_dir).get_index()
     assert name in index
     _check_obj(
         index.state[name],
-        dict(name=name, type=type, path=path, virtual=virtual, tags=[], description=""),
+        dict(
+            name=name,
+            type=type,
+            path=path,
+            virtual=not must_exist,
+            tags=[],
+            description="",
+        ),
         [],
     )
     gto.api.remove(repo.working_dir, name)
@@ -48,8 +57,10 @@ def test_add_remove(empty_git_repo: Tuple[git.Repo, Callable]):
 def repo_with_artifact(init_showcase_semver):
     repo: git.Repo
     repo, write_file = init_showcase_semver  # pylint: disable=unused-variable
-    name, type, path_, virtual = "new-artifact", "new-type", "new/path", True
-    gto.api.enrich(repo.working_dir, type, name, path_, virtual=virtual)
+    name, type, path, must_exist = "new-artifact", "new-type", "new/path", False
+    gto.api.annotate(
+        repo.working_dir, name, type=type, path=path, must_exist=must_exist
+    )
     repo.index.add(["artifacts.yaml"])
     repo.index.commit("Added index")
     return repo, name
@@ -61,12 +72,12 @@ def test_register(repo_with_artifact):
     gto.api.register(repo.working_dir, name, "HEAD", vname1)
     latest = gto.api.find_latest_version(repo.working_dir, name)
     assert latest.name == vname1
-    gto.api.enrich(
+    gto.api.annotate(
         repo.working_dir,
         "something-irrelevant",
         "doesnt-matter",
         "anything",
-        virtual=True,
+        must_exist=False,
     )
     repo.index.commit("Irrelevant action to create a git commit")
     gto.api.register(repo.working_dir, name, "HEAD")

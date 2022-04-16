@@ -37,19 +37,26 @@ def get_stages(repo: Union[str, Repo], in_use: bool = False):
     return GitRegistry.from_repo(repo).get_stages(in_use=in_use)
 
 
-def enrich(
+# TODO: make this work the same as CLI version
+def annotate(
     repo: Union[str, Repo],
-    type: str,
     name: str,
-    path: str,
-    virtual: bool = False,
+    type: Optional[str] = None,
+    path: Optional[str] = None,
+    must_exist: bool = False,
     tags: List[str] = None,
     description: str = "",
-    update: bool = False,
+    # update: bool = False,
 ):
     """Add an artifact to the Index"""
     return init_index_manager(path=repo).add(
-        type, name, path, virtual, tags=tags, description=description, update=update
+        name,
+        type=type,
+        path=path,
+        must_exist=must_exist,
+        tags=tags,
+        description=description,
+        update=True,
     )
 
 

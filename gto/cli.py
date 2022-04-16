@@ -370,41 +370,38 @@ def gto_command(*args, section="other", aliases=None, parent=app, **kwargs):
 
 
 @gto_command(section=COMMANDS.ENRICHMENT)
-def enrich(
+def annotate(
     repo: str = option_repo,
-    type: str = Argument(..., help="Artifact type"),
     name: str = arg_name,
-    path: str = Argument(..., help="Artifact path"),
-    virtual: bool = Option(
+    type: str = Option(None, help="Artifact type"),
+    path: str = Option(None, help="Artifact path"),
+    must_exist: bool = Option(
         False,
-        "--virtual",
+        "-e",
+        "--must-exist",
         is_flag=True,
-        help="Virtual artifact that wasn't committed to Git",
+        help="Verify artifact is committed to Git",
     ),
     tag: List[str] = Option(None, "--tag", help="Tags to add to artifact"),
     description: str = Option("", "-d", "--description", help="Artifact description"),
-    update: bool = Option(
-        False, "-u", "--update", is_flag=True, help="Update artifact if it exists"
-    ),
+    # update: bool = Option(
+    #     False, "-u", "--update", is_flag=True, help="Update artifact if it exists"
+    # ),
 ):
-    """Add the enrichment for the artifact
+    """Update enrichment for the artifact with given details
 
     Examples:
-       Add new enrichment:
-       $ gto add model nn models/neural_network.h5
-
-       Update existing enrichment:
-       $ gto add model nn models/neural_network.h5 --update
+       $ gto enrich nn --type model --path models/neural_network.h5
     """
-    gto.api.enrich(
+    gto.api.annotate(
         repo,
-        type,
         name,
-        path,
-        virtual,
+        type=type,
+        path=path,
+        must_exist=must_exist,
         tags=tag,
         description=description,
-        update=update,
+        # update=update,
     )
 
 
@@ -529,7 +526,7 @@ def which(
     Examples:
         $ gto which nn prod
 
-        Print commit hexsha:
+        Print git tag that did the promotion:
         $ gto which nn prod --ref
     """
     version = gto.api.find_promotion(repo, name, stage)

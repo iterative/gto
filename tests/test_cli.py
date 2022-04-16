@@ -71,23 +71,39 @@ def test_commands(showcase):
         "v1.2.4\n",
     )
     _check_successful_cmd(
+        "latest",
+        ["-r", path, "rf", "--ref"],
+        "rf@v1.2.4\n",
+    )
+    _check_successful_cmd(
         "which",
         ["-r", path, "rf", "production"],
         "v1.2.4\n",
     )
+    _check_successful_cmd(
+        "which",
+        ["-r", path, "rf", "production", "--ref"],
+        "rf#production-4\n",
+    )
+    # _check_successful_cmd(
+    #     "describe",
+    #     ["-r", path, "rf"],
+    #     "v1.2.4\n",
+    # )
 
 
-def test_add(empty_git_repo):
+def test_annotate(empty_git_repo):
     repo, write_file = empty_git_repo
     _check_successful_cmd(
-        "add",
+        "annotate",
         [
             "-r",
             repo.working_dir,
+            "--type",
             "new-type",
             "new-artifact",
+            "--path",
             "new/path",
-            "--virtual",
             "--tag",
             "some-tag",
             "--tag",

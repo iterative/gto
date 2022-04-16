@@ -24,7 +24,9 @@ def git_index_repo(empty_git_repo: Tuple[git.Repo, Callable]):
 
 def test_git_index_add_virtual(git_index_repo):
     index, repo = git_index_repo
-    index.add("a", "a", "a", virtual=True, tags=[], description="", update=False)
+    index.add(
+        "a", type="a", path="a", must_exist=False, tags=[], description="", update=False
+    )
 
     new_index = init_index(repo.git_dir)
     assert isinstance(new_index, RepoIndexManager)
@@ -41,7 +43,7 @@ def test_git_index_add_virtual(git_index_repo):
 
 def test_git_index_remove_virtual(git_index_repo):
     index, repo = git_index_repo
-    index.add("a", "a", "a", virtual=True, tags=[], description="", update=True)
+    index.add("a", "a", "a", must_exist=False, tags=[], description="", update=True)
 
     new_index = init_index(repo.git_dir)
     assert isinstance(new_index, RepoIndexManager)

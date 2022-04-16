@@ -18,16 +18,17 @@ from gto.exceptions import (
     NoFile,
     NoRepo,
     PathIsUsed,
+    WrongArgs,
 )
 from gto.ext import Enrichment, EnrichmentInfo
 from gto.utils import resolve_ref
 
 
 class Artifact(BaseModel):
-    type: str
     name: str
-    path: str
-    virtual: bool = False
+    type: Optional[str] = None
+    path: Optional[str] = None
+    virtual: bool = True
     tags: List[str] = []  # TODO: allow key:value labels
     description: str = ""
 
@@ -101,19 +102,29 @@ class Index(BaseModel):
     def write_state(self, path_or_file: Union[str, IO]):
         if isinstance(path_or_file, str):
             with open(path_or_file, "w", encoding="utf8") as file:
-                yaml.dump(self.dict()["state"], file)
+                state = self.dict(exclude_defaults=True).get("state", {})
+                yaml.dump(state, file)
 
     @not_frozen
-    def add(self, type, name, path, virtual, tags, description, update) -> Artifact:
+    def add(self, name, type, path, must_exist, tags, description, update) -> Artifact:
         if name in self and not update:
             raise ArtifactExists(name)
-        if find_repeated_path(path, [a.path for a in self.state.values()]) is not None:
+        if (
+            must_exist
+            and find_repeated_path(
+                path, [a.path for n, a in self.state.items() if n != name]
+            )
+            is not None
+        ):
             raise PathIsUsed(type=type, name=name, path=path)
         if update and name in self.state:
             self.state[name].type = type or self.state[name].type
             self.state[name].name = name or self.state[name].name
             self.state[name].path = path or self.state[name].path
-            self.state[name].virtual = virtual or self.state[name].virtual
+            if must_exist:
+                self.state[name].virtual = False
+            elif path:
+                self.state[name].virtual = True
             self.state[name].tags = tags or self.state[name].tags
             self.state[name].description = description or self.state[name].description
         else:
@@ -121,7 +132,7 @@ class Index(BaseModel):
                 type=type,
                 name=name,
                 path=path,
-                virtual=virtual,
+                virtual=not must_exist,
                 tags=tags,
                 description=description,
             )
@@ -150,17 +161,26 @@ class BaseIndexManager(BaseModel, ABC):
     def get_history(self) -> Dict[str, Index]:
         raise NotImplementedError
 
-    def add(self, type, name, path, virtual, tags, description, update):
+    def add(self, name, type, path, must_exist, tags, description, update):
         if tags is None:
             tags = []
         self.config.assert_type(type)
-        if not virtual and not check_if_path_exists(
-            path, self.repo if hasattr(self, "repo") else None
-        ):
-            raise NoFile(path)
+        if must_exist:
+            if not path:
+                raise WrongArgs("`path` is required when `must_exist` is set to True")
+            if not check_if_path_exists(
+                path, self.repo if hasattr(self, "repo") else None
+            ):
+                raise NoFile(path)
         index = self.get_index()
         index.add(
-            type, name, path, virtual, tags=tags, description=description, update=update
+            name,
+            type=type,
+            path=path,
+            must_exist=must_exist,
+            tags=tags,
+            description=description,
+            update=update,
         )
         self.update()
 
