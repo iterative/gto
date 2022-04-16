@@ -191,7 +191,7 @@ app = Typer(cls=GtoGroup, context_settings={"help_option_names": ["-h", "--help"
 arg_name = Argument(..., help="Artifact name")
 arg_version = Argument(..., help="Artifact version")
 arg_stage = Argument(..., help="Stage to promote to")
-option_rev = Option("HEAD", "--rev", help="Repo revision to use", show_default=True)
+option_rev = Option(None, "--rev", help="Repo revision to use", show_default=True)
 option_repo = Option(".", "-r", "--repo", help="Repository to use", show_default=True)
 # option_discover = Option(
 #     False, "-d", "--discover", is_flag=True, help="Discover non-registered artifacts"
@@ -502,7 +502,6 @@ def promote(
 def latest(
     repo: str = option_repo,
     name: str = arg_name,
-    path: bool = option_path_bool,
     ref: bool = option_ref_bool,
 ):
     """Return latest version of artifact
@@ -510,12 +509,9 @@ def latest(
     Examples:
         $ gto latest nn
     """
-    assert not (path and ref), "--path and --ref are mutually exclusive"
     latest_version = gto.api.find_latest_version(repo, name)
     if latest_version:
-        if path:
-            echo(latest_version.artifact.path)
-        elif ref:
+        if ref:
             echo(latest_version.tag or latest_version.commit_hexsha)
         else:
             echo(latest_version.name)
@@ -526,7 +522,6 @@ def which(
     repo: str = option_repo,
     name: str = arg_name,
     stage: str = arg_stage,
-    path: bool = option_path_bool,
     ref: bool = option_ref_bool,
 ):
     """Return version of artifact with specific stage active
@@ -534,18 +529,12 @@ def which(
     Examples:
         $ gto which nn prod
 
-        Print path to artifact:
-        $ gto which nn prod --path
-
         Print commit hexsha:
         $ gto which nn prod --ref
     """
-    assert not (path and ref), "--path and --ref are mutually exclusive"
     version = gto.api.find_promotion(repo, name, stage)
     if version:
-        if path:
-            echo(version.artifact.path)
-        elif ref:
+        if ref:
             echo(version.tag or version.commit_hexsha)
         else:
             echo(version.version)
@@ -759,12 +748,15 @@ def describe(
     """Find enrichments for the artifact
 
     Examples:
-        $ gto describe nn
+        $ gto describe nn --rev HEAD
+        $ gto describe nn@v0.0.1
     """
     assert (
         sum(bool(i) for i in (type, path, description)) <= 1
     ), "Can output one key only"
     infos = gto.api.describe(repo=repo, name=name, rev=rev)
+    if not infos:
+        return
     d = infos[0].get_object().dict()
     if type:
         echo(d["type"])

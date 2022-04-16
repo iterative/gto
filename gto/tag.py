@@ -1,5 +1,6 @@
 import logging
 from datetime import datetime
+from enum import Enum
 from typing import FrozenSet, Iterable, Optional, Union
 
 import git
@@ -12,7 +13,7 @@ from .base import (
     BaseRegistryState,
     BaseVersion,
 )
-from .constants import ACTION, NAME, NUMBER, STAGE, VERSION, Action
+from .constants import ACTION, NAME, NUMBER, STAGE, TAG, VERSION, Action
 from .exceptions import MissingArg, RefNotFound, UnknownAction
 
 ActionSign = {
@@ -73,6 +74,18 @@ def parse_name(name: str, raise_on_fail: bool = True):
     if raise_on_fail:
         raise ValueError(f"Unknown tag name: {name}")
     return {}
+
+
+class NAME_REFERENCE(Enum):
+    TAG = TAG
+    NAME = NAME
+
+
+def parse_name_reference(name: str):
+    parsed = parse_name(name, raise_on_fail=False)
+    if parsed is None:
+        return NAME_REFERENCE.NAME, name
+    return NAME_REFERENCE.TAG, parsed
 
 
 class Tag(BaseModel):

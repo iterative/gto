@@ -20,6 +20,7 @@ from gto.exceptions import (
     PathIsUsed,
 )
 from gto.ext import Enrichment, EnrichmentInfo
+from gto.utils import resolve_ref
 
 
 class Artifact(BaseModel):
@@ -226,11 +227,13 @@ class RepoIndexManager(FileIndexManager):
         arbitrary_types_allowed = True
 
     def get_commit_index(
-        self, ref: str, allow_to_not_exist: bool = True
+        self, ref: Union[str, git.Reference], allow_to_not_exist: bool = True
     ) -> Optional[Index]:
-        if self.config.INDEX in self.repo.commit(ref).tree:
+        if isinstance(ref, str):
+            ref = resolve_ref(self.repo, ref)
+        if self.config.INDEX in ref.tree:
             return Index.read(
-                (self.repo.commit(ref).tree / self.config.INDEX).data_stream,
+                (ref.tree / self.config.INDEX).data_stream,
                 frozen=True,
             )
         if allow_to_not_exist:
@@ -278,12 +281,7 @@ class EnrichmentManager(BaseManager):
         return cls(repo=repo, config=config)
 
     def describe(self, name: str, rev: str = None) -> List[EnrichmentInfo]:
-
-        # TODO: add as arg?
-        config = RegistryConfig(
-            CONFIG_FILE_NAME=os.path.join(self.repo.working_dir, CONFIG_FILE_NAME)
-        )
-        enrichments = config.enrichments
+        enrichments = self.config.enrichments
         res = []
         gto_enrichment = enrichments.pop("gto")
         gto_info = gto_enrichment.describe(self.repo, name, rev)
