@@ -235,8 +235,18 @@ option_expected = Option(
     help="Return exit code 1 if no result",
     show_default=True,
 )
-option_path = Option(False, "--path", is_flag=True, help="Show path", show_default=True)
-option_ref = Option(False, "--ref", is_flag=True, help="Show ref", show_default=True)
+option_type_bool = Option(
+    False, "--type", is_flag=True, help="Show type", show_default=True
+)
+option_path_bool = Option(
+    False, "--path", is_flag=True, help="Show path", show_default=True
+)
+option_ref_bool = Option(
+    False, "--ref", is_flag=True, help="Show ref", show_default=True
+)
+option_description_bool = Option(
+    False, "--description", is_flag=True, help="Show description", show_default=True
+)
 option_json = Option(
     False,
     "--json",
@@ -360,7 +370,7 @@ def gto_command(*args, section="other", aliases=None, parent=app, **kwargs):
 
 
 @gto_command(section=COMMANDS.ENRICHMENT)
-def add(
+def enrich(
     repo: str = option_repo,
     type: str = Argument(..., help="Artifact type"),
     name: str = arg_name,
@@ -386,7 +396,7 @@ def add(
        Update existing enrichment:
        $ gto add model nn models/neural_network.h5 --update
     """
-    gto.api.add(
+    gto.api.enrich(
         repo,
         type,
         name,
@@ -398,7 +408,7 @@ def add(
     )
 
 
-@gto_command("rm", section=COMMANDS.ENRICHMENT)
+@gto_command(section=COMMANDS.ENRICHMENT)
 def remove(repo: str = option_repo, name: str = arg_name):
     """Remove the enrichment for given artifact
 
@@ -492,8 +502,8 @@ def promote(
 def latest(
     repo: str = option_repo,
     name: str = arg_name,
-    path: bool = option_path,
-    ref: bool = option_ref,
+    path: bool = option_path_bool,
+    ref: bool = option_ref_bool,
 ):
     """Return latest version of artifact
 
@@ -516,8 +526,8 @@ def which(
     repo: str = option_repo,
     name: str = arg_name,
     stage: str = arg_stage,
-    path: bool = option_path,
-    ref: bool = option_ref,
+    path: bool = option_path_bool,
+    ref: bool = option_ref_bool,
 ):
     """Return version of artifact with specific stage active
 
@@ -742,15 +752,28 @@ def describe(
     repo: str = option_repo,
     name: str = arg_name,
     rev: str = option_rev,
+    type: Optional[bool] = option_type_bool,
+    path: Optional[bool] = option_path_bool,
+    description: Optional[bool] = option_description_bool,
 ):
     """Find enrichments for the artifact
 
     Examples:
         $ gto describe nn
     """
+    assert (
+        sum(bool(i) for i in (type, path, description)) <= 1
+    ), "Can output one key only"
     infos = gto.api.describe(repo=repo, name=name, rev=rev)
-    for info in infos:
-        echo(info.get_human_readable())
+    d = infos[0].get_object().dict()
+    if type:
+        echo(d["type"])
+    elif path:
+        echo(d["path"])
+    elif description:
+        echo(d["description"])
+    else:
+        echo(d)
 
 
 if __name__ == "__main__":

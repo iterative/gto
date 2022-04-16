@@ -31,7 +31,7 @@ def test_api_info_commands_empty_repo(empty_git_repo: Tuple[git.Repo, Callable])
 def test_add_remove(empty_git_repo: Tuple[git.Repo, Callable]):
     repo, write_file = empty_git_repo  # pylint: disable=unused-variable
     name, type, path, virtual = "new-artifact", "new-type", "new/path", True
-    gto.api.add(repo.working_dir, type, name, path, virtual=virtual)
+    gto.api.enrich(repo.working_dir, type, name, path, virtual=virtual)
     index = gto.api.get_index(repo.working_dir).get_index()
     assert name in index
     _check_obj(
@@ -49,7 +49,7 @@ def repo_with_artifact(init_showcase_semver):
     repo: git.Repo
     repo, write_file = init_showcase_semver  # pylint: disable=unused-variable
     name, type, path_, virtual = "new-artifact", "new-type", "new/path", True
-    gto.api.add(repo.working_dir, type, name, path_, virtual=virtual)
+    gto.api.enrich(repo.working_dir, type, name, path_, virtual=virtual)
     repo.index.add(["artifacts.yaml"])
     repo.index.commit("Added index")
     return repo, name
@@ -61,7 +61,7 @@ def test_register(repo_with_artifact):
     gto.api.register(repo.working_dir, name, "HEAD", vname1)
     latest = gto.api.find_latest_version(repo.working_dir, name)
     assert latest.name == vname1
-    gto.api.add(
+    gto.api.enrich(
         repo.working_dir,
         "something-irrelevant",
         "doesnt-matter",

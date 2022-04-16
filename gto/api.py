@@ -34,7 +34,7 @@ def get_stages(repo: Union[str, Repo], in_use: bool = False):
     return GitRegistry.from_repo(repo).get_stages(in_use=in_use)
 
 
-def add(
+def enrich(
     repo: Union[str, Repo],
     type: str,
     name: str,
