@@ -5,6 +5,7 @@ from typing import List, Optional, Union
 from git import Repo
 
 from gto.constants import NAME, STAGE, VERSION
+from gto.exceptions import WrongArgs
 from gto.ext import EnrichmentInfo
 from gto.index import (
     EnrichmentManager,
@@ -13,7 +14,9 @@ from gto.index import (
     init_index_manager,
 )
 from gto.registry import GitRegistry
-from gto.tag import parse_name
+from gto.tag import NAME_REFERENCE
+from gto.tag import parse_name as parse_tag_name
+from gto.tag import parse_name_reference
 
 
 def get_index(repo: Union[str, Repo], file=False):
@@ -34,19 +37,26 @@ def get_stages(repo: Union[str, Repo], in_use: bool = False):
     return GitRegistry.from_repo(repo).get_stages(in_use=in_use)
 
 
-def add(
+# TODO: make this work the same as CLI version
+def annotate(
     repo: Union[str, Repo],
-    type: str,
     name: str,
-    path: str,
-    virtual: bool = False,
+    type: Optional[str] = None,
+    path: Optional[str] = None,
+    must_exist: bool = False,
     tags: List[str] = None,
     description: str = "",
-    update: bool = False,
+    # update: bool = False,
 ):
     """Add an artifact to the Index"""
     return init_index_manager(path=repo).add(
-        type, name, path, virtual, tags=tags, description=description, update=update
+        name,
+        type=type,
+        path=path,
+        must_exist=must_exist,
+        tags=tags,
+        description=description,
+        update=True,
     )
 
 
@@ -96,7 +106,7 @@ def promote(
 
 
 def parse_tag(name: str):
-    return parse_name(name)
+    return parse_tag_name(name)
 
 
 def find_latest_version(
@@ -238,7 +248,14 @@ def describe(
     repo: Union[str, Repo], name: str, rev: str = None
 ) -> List[EnrichmentInfo]:
     """Find enrichments for the artifact"""
-    return EnrichmentManager.from_repo(repo).describe(name=name, rev=rev)
+    ref_type, parsed = parse_name_reference(name)
+    if ref_type == NAME_REFERENCE.NAME:
+        return EnrichmentManager.from_repo(repo).describe(name=name, rev=rev)
+    if ref_type == NAME_REFERENCE.TAG:
+        if rev:
+            raise WrongArgs("Should not specify revision if you pass git tag")
+        return EnrichmentManager.from_repo(repo).describe(name=parsed[NAME], rev=name)
+    raise NotImplementedError
 
 
 def history(

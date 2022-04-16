@@ -1,4 +1,4 @@
-# pylint: disable=unused-variable
+# pylint: disable=unused-variable, redefined-outer-name
 from typing import Callable, Tuple
 
 import git
@@ -62,6 +62,15 @@ def test_show(empty_git_repo: Tuple[git.Repo, Callable]):
     )
 
 
+EXPECTED_DESCRIBE_OUTPUT = """{
+    "name": "rf",
+    "type": "model",
+    "path": "models/random-forest.pkl",
+    "virtual": false
+}
+"""
+
+
 # this is one function because showcase fixture takes some time to be created
 def test_commands(showcase):
     path, repo, write_file, first_commit, second_commit = showcase
@@ -71,23 +80,38 @@ def test_commands(showcase):
         "v1.2.4\n",
     )
     _check_successful_cmd(
+        "latest",
+        ["-r", path, "rf", "--ref"],
+        "rf@v1.2.4\n",
+    )
+    _check_successful_cmd(
         "which",
         ["-r", path, "rf", "production"],
         "v1.2.4\n",
     )
+    _check_successful_cmd(
+        "which",
+        ["-r", path, "rf", "production", "--ref"],
+        "rf#production-4\n",
+    )
+    _check_successful_cmd("describe", ["-r", path, "rf"], EXPECTED_DESCRIBE_OUTPUT)
+    _check_successful_cmd(
+        "describe", ["-r", path, "rf", "--path"], "models/random-forest.pkl\n"
+    )
 
 
-def test_add(empty_git_repo):
+def test_annotate(empty_git_repo):
     repo, write_file = empty_git_repo
     _check_successful_cmd(
-        "add",
+        "annotate",
         [
             "-r",
             repo.working_dir,
+            "--type",
             "new-type",
             "new-artifact",
+            "--path",
             "new/path",
-            "--virtual",
             "--tag",
             "some-tag",
             "--tag",

@@ -145,3 +145,7 @@ class MissingArg(GTOException):
     def __init__(self, arg) -> None:
         self.message = self.message.format(arg=arg)
         super().__init__(self.message)
+
+
+class WrongArgs(GTOException):
+    pass

@@ -13,7 +13,7 @@ from typer import Argument, Option, Typer
 from typer.core import TyperCommand, TyperGroup
 
 import gto
-from gto.exceptions import GTOException
+from gto.exceptions import GTOException, WrongArgs
 from gto.ui import EMOJI_FAIL, EMOJI_MLEM, bold, cli_echo, color, echo
 from gto.utils import format_echo, make_ready_to_serialize
 
@@ -191,7 +191,7 @@ app = Typer(cls=GtoGroup, context_settings={"help_option_names": ["-h", "--help"
 arg_name = Argument(..., help="Artifact name")
 arg_version = Argument(..., help="Artifact version")
 arg_stage = Argument(..., help="Stage to promote to")
-option_rev = Option("HEAD", "--rev", help="Repo revision to use", show_default=True)
+option_rev = Option(None, "--rev", help="Repo revision to use", show_default=True)
 option_repo = Option(".", "-r", "--repo", help="Repository to use", show_default=True)
 # option_discover = Option(
 #     False, "-d", "--discover", is_flag=True, help="Discover non-registered artifacts"
@@ -235,8 +235,18 @@ option_expected = Option(
     help="Return exit code 1 if no result",
     show_default=True,
 )
-option_path = Option(False, "--path", is_flag=True, help="Show path", show_default=True)
-option_ref = Option(False, "--ref", is_flag=True, help="Show ref", show_default=True)
+option_type_bool = Option(
+    False, "--type", is_flag=True, help="Show type", show_default=True
+)
+option_path_bool = Option(
+    False, "--path", is_flag=True, help="Show path", show_default=True
+)
+option_ref_bool = Option(
+    False, "--ref", is_flag=True, help="Show ref", show_default=True
+)
+option_description_bool = Option(
+    False, "--description", is_flag=True, help="Show description", show_default=True
+)
 option_json = Option(
     False,
     "--json",
@@ -360,45 +370,42 @@ def gto_command(*args, section="other", aliases=None, parent=app, **kwargs):
 
 
 @gto_command(section=COMMANDS.ENRICHMENT)
-def add(
+def annotate(
     repo: str = option_repo,
-    type: str = Argument(..., help="Artifact type"),
     name: str = arg_name,
-    path: str = Argument(..., help="Artifact path"),
-    virtual: bool = Option(
+    type: str = Option(None, help="Artifact type"),
+    path: str = Option(None, help="Artifact path"),
+    must_exist: bool = Option(
         False,
-        "--virtual",
+        "-e",
+        "--must-exist",
         is_flag=True,
-        help="Virtual artifact that wasn't committed to Git",
+        help="Verify artifact is committed to Git",
     ),
     tag: List[str] = Option(None, "--tag", help="Tags to add to artifact"),
     description: str = Option("", "-d", "--description", help="Artifact description"),
-    update: bool = Option(
-        False, "-u", "--update", is_flag=True, help="Update artifact if it exists"
-    ),
+    # update: bool = Option(
+    #     False, "-u", "--update", is_flag=True, help="Update artifact if it exists"
+    # ),
 ):
-    """Add the enrichment for the artifact
+    """Update enrichment for the artifact with given details
 
     Examples:
-       Add new enrichment:
-       $ gto add model nn models/neural_network.h5
-
-       Update existing enrichment:
-       $ gto add model nn models/neural_network.h5 --update
+       $ gto enrich nn --type model --path models/neural_network.h5
     """
-    gto.api.add(
+    gto.api.annotate(
         repo,
-        type,
         name,
-        path,
-        virtual,
+        type=type,
+        path=path,
+        must_exist=must_exist,
         tags=tag,
         description=description,
-        update=update,
+        # update=update,
     )
 
 
-@gto_command("rm", section=COMMANDS.ENRICHMENT)
+@gto_command(section=COMMANDS.ENRICHMENT)
 def remove(repo: str = option_repo, name: str = arg_name):
     """Remove the enrichment for given artifact
 
@@ -492,20 +499,16 @@ def promote(
 def latest(
     repo: str = option_repo,
     name: str = arg_name,
-    path: bool = option_path,
-    ref: bool = option_ref,
+    ref: bool = option_ref_bool,
 ):
     """Return latest version of artifact
 
     Examples:
         $ gto latest nn
     """
-    assert not (path and ref), "--path and --ref are mutually exclusive"
     latest_version = gto.api.find_latest_version(repo, name)
     if latest_version:
-        if path:
-            echo(latest_version.artifact.path)
-        elif ref:
+        if ref:
             echo(latest_version.tag or latest_version.commit_hexsha)
         else:
             echo(latest_version.name)
@@ -516,26 +519,19 @@ def which(
     repo: str = option_repo,
     name: str = arg_name,
     stage: str = arg_stage,
-    path: bool = option_path,
-    ref: bool = option_ref,
+    ref: bool = option_ref_bool,
 ):
     """Return version of artifact with specific stage active
 
     Examples:
         $ gto which nn prod
 
-        Print path to artifact:
-        $ gto which nn prod --path
-
-        Print commit hexsha:
+        Print git tag that did the promotion:
         $ gto which nn prod --ref
     """
-    assert not (path and ref), "--path and --ref are mutually exclusive"
     version = gto.api.find_promotion(repo, name, stage)
     if version:
-        if path:
-            echo(version.artifact.path)
-        elif ref:
+        if ref:
             echo(version.tag or version.commit_hexsha)
         else:
             echo(version.version)
@@ -742,15 +738,37 @@ def describe(
     repo: str = option_repo,
     name: str = arg_name,
     rev: str = option_rev,
+    type: Optional[bool] = option_type_bool,
+    path: Optional[bool] = option_path_bool,
+    description: Optional[bool] = option_description_bool,
 ):
     """Find enrichments for the artifact
 
     Examples:
-        $ gto describe nn
+        $ gto describe nn --rev HEAD
+        $ gto describe nn@v0.0.1
     """
+    assert (
+        sum(bool(i) for i in (type, path, description)) <= 1
+    ), "Can output one key only"
     infos = gto.api.describe(repo=repo, name=name, rev=rev)
-    for info in infos:
-        echo(info.get_human_readable())
+    if not infos:
+        return
+    d = infos[0].get_object().dict(exclude_defaults=True)
+    if type:
+        if "type" not in d:
+            raise WrongArgs("No type in enrichment")
+        echo(d["type"])
+    elif path:
+        if "path" not in d:
+            raise WrongArgs("No path in enrichment")
+        echo(d["path"])
+    elif description:
+        if "description" not in d:
+            raise WrongArgs("No description in enrichment")
+        echo(d["description"])
+    else:
+        format_echo(d, "json")
 
 
 if __name__ == "__main__":

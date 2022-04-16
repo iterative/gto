@@ -4,8 +4,10 @@ from collections.abc import Iterable
 from copy import deepcopy
 from datetime import datetime
 from enum import Enum
+from typing import Optional
 
 import click
+import git
 from pydantic import BaseModel
 from tabulate import tabulate
 
@@ -72,3 +74,7 @@ def format_echo(result, format, format_table=None, if_empty="", missing_value="-
             click.echo(line)
     else:
         raise NotImplementedError(f"Format {format} is not implemented")
+
+
+def resolve_ref(repo: git.Repo, ref: Optional[str] = None):
+    return repo.refs[ref].commit if (ref and ref in repo.refs) else repo.commit(ref)
