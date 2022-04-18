@@ -715,12 +715,12 @@ def history(
             ),
             format="table",
             format_table="plain" if plain else "fancy_outline",
-            if_empty="No history found",
+            if_empty="Nothing found in the current workspace",
         )
 
 
 @gto_command(section=COMMANDS.REGISTRY)
-def print_stages(
+def stages(
     repo: str = option_repo,
     in_use: bool = Option(
         False,
