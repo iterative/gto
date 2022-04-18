@@ -1,7 +1,6 @@
 from pathlib import Path
 
 from setuptools import find_packages, setup
-from setuptools.command.build_py import build_py
 
 install_requires = [
     "gitpython",
@@ -31,7 +30,8 @@ tests = [
 
 setup_args = dict(  # noqa: C408
     name="gto",
-    version="0.1.2",
+    use_scm_version=True,
+    setup_requires=["setuptools_scm", "fastentrypoints>=0.12"],
     description="Version and deploy your models following GitOps principles",
     long_description=(Path(__file__).parent / "README.md").read_text(encoding="utf8"),
     long_description_content_type="text/markdown",
@@ -62,7 +62,6 @@ setup_args = dict(  # noqa: C408
             "gto = gto.index:GTOEnrichment",
         ],
     },
-    cmdclass={"build_py": build_py},
     zip_safe=False,
 )
 
