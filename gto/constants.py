@@ -18,9 +18,3 @@ NUMBER = "number"
 class Action(Enum):
     REGISTER = "register"
     PROMOTE = "promote"
-
-
-class VersionPart(Enum):
-    MAJOR = "major"
-    MINOR = "minor"
-    PATCH = "patch"

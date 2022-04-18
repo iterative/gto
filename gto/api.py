@@ -70,7 +70,9 @@ def register(
     name: str,
     ref: str,
     version: str = None,
-    bump: str = None,
+    bump_major: bool = False,
+    bump_minor: bool = False,
+    bump_patch: bool = False,
     stdout: bool = False,
 ):
     """Register new artifact version"""
@@ -78,7 +80,9 @@ def register(
         name=name,
         ref=ref,
         version=version,
-        bump=bump,
+        bump_major=bump_major,
+        bump_minor=bump_minor,
+        bump_patch=bump_patch,
         stdout=stdout,
     )
 

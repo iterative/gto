@@ -94,8 +94,22 @@ class GitRegistry(BaseModel):
             name, create_new=create_new  # type: ignore
         )
 
-    def register(self, name, ref, version=None, bump=None, stdout=False):
+    def register(
+        self,
+        name,
+        ref,
+        version=None,
+        bump_major=False,
+        bump_minor=False,
+        bump_patch=False,
+        stdout=False,
+    ):
         """Register artifact version"""
+        version_args = sum(
+            bool(i) for i in (version, bump_major, bump_minor, bump_patch)
+        )
+        if version_args > 1:
+            raise WrongArgs("Need to specify either version or single bump argument")
         ref = self.repo.commit(ref).hexsha
         # TODO: add the same check for other actions, to promote and etc
         # also we need to check integrity of the index+state
@@ -112,12 +126,18 @@ class GitRegistry(BaseModel):
             # if version name wasn't provided but there were some, bump the last one
             last_version = found_artifact.get_latest_version(registered=True)
             if last_version:
-                version = (
-                    SemVer(last_version.name)
-                    .bump(**({"part": bump} if bump else {}))
-                    .version
+                version = SemVer(last_version.name)
+                if bump_major:
+                    version = version.bump_major()
+                elif bump_minor:
+                    version = version.bump_minor()
+                elif bump_patch:
+                    version = version.bump_patch()
+                version = version.version
+            elif version_args:
+                raise WrongArgs(
+                    "Can't apply bump, because this is the first version being registered"
                 )
-            # if no versions exist, use the minimal version possible
             else:
                 version = SemVer.get_minimal().version
         self.version_manager.register(

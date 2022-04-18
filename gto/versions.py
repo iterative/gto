@@ -1,9 +1,7 @@
 from functools import total_ordering
-from typing import Union
 
 import semver
 
-from gto.constants import VersionPart
 from gto.exceptions import IncomparableVersions, InvalidVersion
 
 
@@ -23,9 +21,6 @@ class AbstractVersion:
         return self.version == other.version
 
     def __lt__(self, other):
-        raise NotImplementedError
-
-    def bump(self, part: Union[VersionPart, str]) -> "AbstractVersion":
         raise NotImplementedError
 
     @classmethod
@@ -78,10 +73,14 @@ class SemVer(AbstractVersion):
             raise IncomparableVersions(self, other)
         return self.parse(self.version) < self.parse(other.version)
 
-    def bump(self, part: Union[VersionPart, str] = VersionPart.PATCH):
-        part = VersionPart(part)
-        next_version = getattr(self.parse(self.version), f"bump_{part.value}")()
-        return self.__class__(f"v{next_version}")
+    def bump_major(self):
+        return self.__class__(f"v{self.parse(self.version).bump_major()}")
+
+    def bump_minor(self):
+        return self.__class__(f"v{self.parse(self.version).bump_minor()}")
+
+    def bump_patch(self):
+        return self.__class__(f"v{self.parse(self.version).bump_patch()}")
 
     @classmethod
     def get_minimal(cls):

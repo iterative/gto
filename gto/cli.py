@@ -423,8 +423,14 @@ def register(
     version: Optional[str] = Option(
         None, "--version", "--ver", help="Version name in SemVer format"
     ),
-    bump: Optional[str] = Option(
-        None, "--bump", "-b", help="The exact part to increment when bumping a version"
+    bump_major: bool = Option(
+        False, "--bump-major", is_flag=True, help="Bump major version"
+    ),
+    bump_minor: bool = Option(
+        False, "--bump-minor", is_flag=True, help="Bump minor version"
+    ),
+    bump_patch: bool = Option(
+        False, "--bump-patch", is_flag=True, help="Bump patch version"
     ),
 ):
     """Create git tag that marks the important artifact version
@@ -443,7 +449,14 @@ def register(
         $ gto register nn --bump minor
     """
     gto.api.register(
-        repo=repo, name=name, ref=ref or "HEAD", version=version, bump=bump, stdout=True
+        repo=repo,
+        name=name,
+        ref=ref or "HEAD",
+        version=version,
+        bump_major=bump_major,
+        bump_minor=bump_minor,
+        bump_patch=bump_patch,
+        stdout=True,
     )
 
 
