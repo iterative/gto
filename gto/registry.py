@@ -122,18 +122,23 @@ class GitRegistry(BaseModel):
         if version:
             if found_artifact.find_version(name=version) is not None:
                 raise VersionAlreadyRegistered(version)
+            if not SemVer.is_valid(version):
+                raise WrongArgs(
+                    f"Version '{version}' is not valid. Example of valid version: 'v1.0.0'"
+                )
         else:
             # if version name wasn't provided but there were some, bump the last one
             last_version = found_artifact.get_latest_version(registered=True)
             if last_version:
-                version = SemVer(last_version.name)
-                if bump_major:
-                    version = version.bump_major()
-                elif bump_minor:
-                    version = version.bump_minor()
-                elif bump_patch:
-                    version = version.bump_patch()
-                version = version.version
+                version = (
+                    SemVer(last_version.name)
+                    .bump(
+                        bump_major=bump_major,
+                        bump_minor=bump_minor,
+                        bump_patch=bump_patch,
+                    )
+                    .version
+                )
             elif version_args:
                 raise WrongArgs(
                     "Can't apply bump, because this is the first version being registered"
@@ -173,14 +178,21 @@ class GitRegistry(BaseModel):
         if promote_ref:
             promote_ref = self.repo.commit(promote_ref).hexsha
         found_artifact = self.find_artifact(name, create_new=True)
-        if promote_version is not None:
+        if promote_version:
             found_version = found_artifact.find_version(
-                name=promote_version, raise_if_not_found=True
+                name=promote_version, raise_if_not_found=False
             )
+            if not found_version:
+                raise WrongArgs(f"Version '{promote_version}' is not registered")
             promote_ref = self.find_commit(name, promote_version)
         else:
             found_version = found_artifact.find_version(commit_hexsha=promote_ref)
-            if found_version is None:
+            if found_version:
+                if name_version:
+                    raise WrongArgs(
+                        f"Can't register '{SemVer(name_version).version}', since '{found_version.name}' is registered already at this ref"
+                    )
+            else:
                 self.register(
                     name, version=name_version, ref=promote_ref, stdout=stdout
                 )

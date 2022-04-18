@@ -2,7 +2,7 @@ from functools import total_ordering
 
 import semver
 
-from gto.exceptions import IncomparableVersions, InvalidVersion
+from gto.exceptions import IncomparableVersions, InvalidVersion, WrongArgs
 
 
 class AbstractVersion:
@@ -10,7 +10,7 @@ class AbstractVersion:
 
     def __init__(self, version) -> None:
         if not self.is_valid(version):
-            raise InvalidVersion(version=version, cls=self.__class__)
+            raise InvalidVersion(version=version, cls=self.__class__.__name__)
         self.version = version
 
     @classmethod
@@ -81,6 +81,20 @@ class SemVer(AbstractVersion):
 
     def bump_patch(self):
         return self.__class__(f"v{self.parse(self.version).bump_patch()}")
+
+    def bump(self, bump_major=False, bump_minor=False, bump_patch=False):
+        if sum(bool(i) for i in (bump_major, bump_minor, bump_patch)) != 1:
+            raise WrongArgs("Need to specify exactly one bump argument")
+        if bump_major:
+            return self.bump_major()
+        if bump_minor:
+            return self.bump_minor()
+        if bump_patch:
+            return self.bump_patch()
+        # TODO: stop using WrongArgs everywhere :)
+        raise WrongArgs(
+            "At least one of bump_major, bump_minor, bump_patch must be True"
+        )
 
     @classmethod
     def get_minimal(cls):

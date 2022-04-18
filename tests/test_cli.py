@@ -21,6 +21,15 @@ def _check_successful_cmd(cmd: str, args: list, expected_stdout: str):
     assert result.output == expected_stdout
 
 
+def _check_failing_cmd(cmd: str, args: list, expected_stderr: str):
+    runner = CliRunner()
+    result = runner.invoke(app, [cmd] + args)
+    assert result.exit_code != 0, (result.output, result.exception)
+    if expected_stderr:
+        assert len(result.output) > 0, "Output is empty, but should not be"
+    assert result.output == expected_stderr
+
+
 @pytest.fixture
 def app_cmd():
     return app.registered_commands
@@ -133,4 +142,50 @@ def test_annotate(empty_git_repo):
             description="some description",
         ),
         [],
+    )
+
+
+def test_register(repo_with_commit: Tuple[git.Repo, Callable]):
+    repo, write_file = repo_with_commit
+
+    _check_successful_cmd(
+        "register",
+        ["-r", repo.working_dir, "a1"],
+        "Created git tag 'a1@v0.0.1' that registers a new version\n",
+    )
+
+    _check_successful_cmd(
+        "register",
+        ["-r", repo.working_dir, "a2", "--version", "v1.2.3"],
+        "Created git tag 'a2@v1.2.3' that registers a new version\n",
+    )
+
+    _check_failing_cmd(
+        "register",
+        ["-r", repo.working_dir, "a3", "--version", "1.2.3"],
+        "❌ Version '1.2.3' is not valid. Example of valid version: 'v1.0.0'\n",
+    )
+
+
+def test_promote(repo_with_commit: Tuple[git.Repo, Callable]):
+    repo, write_file = repo_with_commit
+
+    _check_successful_cmd(
+        "promote",
+        ["-r", repo.working_dir, "nn1", "prod", "HEAD"],
+        "Created git tag 'nn1@v0.0.1' that registers a new version\n"
+        "Created git tag 'nn1#prod-1' that promotes 'v0.0.1'\n",
+    )
+
+    # this check depends on the previous promotion
+    _check_failing_cmd(
+        "promote",
+        ["-r", repo.working_dir, "nn1", "stage", "HEAD", "--version", "v1.0.0"],
+        "❌ Can't register 'v1.0.0', since 'v0.0.1' is registered already at this ref\n",
+    )
+
+    _check_failing_cmd(
+        "promote",
+        ["-r", repo.working_dir, "nn2", "prod", "HEAD", "--version", "1.0.0"],
+        "❌ Version '1.0.0' is not valid. Example of valid version: 'v1.0.0'\n",
     )

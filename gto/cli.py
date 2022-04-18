@@ -465,12 +465,12 @@ def promote(
     repo: str = option_repo,
     name: str = arg_name,
     stage: str = arg_stage,
+    ref: Optional[str] = Argument(None, help="Git reference to promote"),
     version: Optional[str] = Option(
         None,
         "--version",
-        help="If you provide --ref, this will be used to name new version",
+        help="If you provide REF, this will be used to name new version",
     ),
-    ref: Optional[str] = Option(None, "--ref", help="Git reference to promote"),
     simple: bool = Option(
         False,
         "--simple",
@@ -484,11 +484,14 @@ def promote(
     """Assign stage to specific artifact version
 
     Examples:
-        Promote HEAD:
-        $ gto promote nn prod --ref HEAD
+        Promote "nn" to "prod" at specific ref:
+        $ gto promote nn prod abcd123
 
         Promote specific version:
         $ gto promote nn prod --version v1.0.0
+
+        Promote at specific ref and name version explicitly:
+        $ gto promote nn prod abcd123 --version v1.0.0
 
         Promote without increment
         $ gto promote nn prod --ref HEAD --simple
@@ -496,9 +499,13 @@ def promote(
     if ref is not None:
         name_version = version
         promote_version = None
-    else:
+    elif version is not None:
         name_version = None
         promote_version = version
+    else:
+        ref = "HEAD"
+        name_version = None
+        promote_version = None
     gto.api.promote(
         repo,
         name,
