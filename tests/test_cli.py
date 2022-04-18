@@ -72,7 +72,6 @@ def test_show(empty_git_repo: Tuple[git.Repo, Callable]):
 
 
 EXPECTED_DESCRIBE_OUTPUT = """{
-    "name": "rf",
     "type": "model",
     "path": "models/random-forest.pkl",
     "virtual": false
@@ -121,10 +120,10 @@ def test_annotate(empty_git_repo):
             "new-artifact",
             "--path",
             "new/path",
-            "--tag",
-            "some-tag",
-            "--tag",
-            "another-tag",
+            "--label",
+            "some-label",
+            "--label",
+            "another-label",
             "--description",
             "some description",
         ],
@@ -134,11 +133,10 @@ def test_annotate(empty_git_repo):
     _check_obj(
         artifact,
         dict(
-            name="new-artifact",
             type="new-type",
             path="new/path",
             virtual=True,
-            tags=["some-tag", "another-tag"],
+            labels=["some-label", "another-label"],
             description="some description",
         ),
         [],

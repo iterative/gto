@@ -93,5 +93,5 @@ def showcase(
     sleep(1)
     gto.api.promote(path, "rf", "production", promote_ref=repo.head.ref.commit.hexsha)
     sleep(1)
-    gto.api.promote(path, "rf", "production", promote_version=rf_vname)
+    gto.api.promote(path, "rf", "production", promote_version=rf_vname, force=True)
     return path, repo, write_file, first_commit, second_commit

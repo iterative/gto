@@ -44,7 +44,7 @@ def annotate(
     type: Optional[str] = None,
     path: Optional[str] = None,
     must_exist: bool = False,
-    tags: List[str] = None,
+    labels: List[str] = None,
     description: str = "",
     # update: bool = False,
 ):
@@ -54,7 +54,7 @@ def annotate(
         type=type,
         path=path,
         must_exist=must_exist,
-        tags=tags,
+        labels=labels,
         description=description,
         update=True,
     )

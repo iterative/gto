@@ -382,7 +382,7 @@ def annotate(
         is_flag=True,
         help="Verify artifact is committed to Git",
     ),
-    tag: List[str] = Option(None, "--tag", help="Tags to add to artifact"),
+    label: List[str] = Option(None, "--label", help="Labels to add to artifact"),
     description: str = Option("", "-d", "--description", help="Artifact description"),
     # update: bool = Option(
     #     False, "-u", "--update", is_flag=True, help="Update artifact if it exists"
@@ -399,7 +399,7 @@ def annotate(
         type=type,
         path=path,
         must_exist=must_exist,
-        tags=tag,
+        labels=label,
         description=description,
         # update=update,
     )

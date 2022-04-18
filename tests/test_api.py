@@ -41,11 +41,10 @@ def test_add_remove(empty_git_repo: Tuple[git.Repo, Callable]):
     _check_obj(
         index.state[name],
         dict(
-            name=name,
             type=type,
             path=path,
             virtual=not must_exist,
-            tags=[],
+            labels=[],
             description="",
         ),
         [],

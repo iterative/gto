@@ -201,7 +201,12 @@ class GitRegistry(BaseModel):
                 self.register(
                     name, version=name_version, ref=promote_ref, stdout=stdout
                 )
-        if not force and found_version and found_version.stage.stage == stage:
+        if (
+            not force
+            and found_version
+            and found_version.stage
+            and found_version.stage.stage == stage
+        ):
             raise WrongArgs(f"Version is already in stage '{stage}'")
         self.stage_manager.promote(  # type: ignore
             name,
