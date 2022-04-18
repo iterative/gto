@@ -464,6 +464,9 @@ def promote(
         is_flag=True,
         help="Use simple notation, e.g. rf#prod instead of rf#prod-5",
     ),
+    force: bool = Option(
+        False, help="Promote even if version is already in required Stage"
+    ),
 ):
     """Assign stage to specific artifact version
 
@@ -491,6 +494,7 @@ def promote(
         ref,
         name_version,
         simple=simple,
+        force=force,
         stdout=True,
     )
 
