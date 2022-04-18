@@ -14,7 +14,7 @@ from typer.core import TyperCommand, TyperGroup
 
 import gto
 from gto.exceptions import GTOException, WrongArgs
-from gto.ui import EMOJI_FAIL, EMOJI_MLEM, bold, cli_echo, color, echo
+from gto.ui import EMOJI_FAIL, EMOJI_GTO, bold, cli_echo, color, echo
 from gto.utils import format_echo, make_ready_to_serialize
 
 TABLE = "table"
@@ -182,7 +182,7 @@ class GtoGroup(TyperGroup, GtoCliMixin):
         return None
 
 
-def MlemGroupSection(section):
+def GTOGroupSection(section):
     return partial(GtoGroup, section=section)
 
 
@@ -299,7 +299,7 @@ def gto_callback(
     """
     if ctx.invoked_subcommand is None and show_version:
         with cli_echo():
-            echo(f"{EMOJI_MLEM} GTO Version: {gto.__version__}")
+            echo(f"{EMOJI_GTO} GTO Version: {gto.__version__}")
     if verbose:
         logger = logging.getLogger("gto")
         logger.handlers[0].setLevel(logging.DEBUG)
