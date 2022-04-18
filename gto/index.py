@@ -358,7 +358,7 @@ class EnrichmentManager(BaseManager):
                         BaseVersion(
                             artifact=art_name,
                             name=commit.hexsha,
-                            creation_date=datetime.fromtimestamp(commit.committed_date),
+                            created_at=datetime.fromtimestamp(commit.committed_date),
                             author=commit.author.name,
                             commit_hexsha=commit.hexsha,
                             discovered=True,

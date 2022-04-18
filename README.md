@@ -86,7 +86,7 @@ Add artifact name to print versions of that artifact:
 ```
 $ gto show rf
 ╒════════════╤════════╤════════════╤═════════════════════╤═══════════════════╤═════════════════╤══════════════╤═══════════════╕
-│ artifact   │ name   │ stage      │ creation_date       │ author            │ commit_hexsha   │ discovered   │ enrichments   │
+│ artifact   │ name   │ stage      │ created_at       │ author            │ commit_hexsha   │ discovered   │ enrichments   │
 ╞════════════╪════════╪════════════╪═════════════════════╪═══════════════════╪═════════════════╪══════════════╪═══════════════╡
 │ rf         │ v1.2.3 │ production │ 2022-04-11 21:51:56 │ Alexander Guschin │ d1d9736         │ False        │ ['gto']       │
 │ rf         │ v1.2.4 │ production │ 2022-04-11 21:51:57 │ Alexander Guschin │ 16b7b77         │ False        │ ['gto']       │
@@ -126,7 +126,7 @@ version:
     artifact: rf
     author: Alexander Guschin
     commit_hexsha: 9fbb8664a4a48575ee5d422e177174f20e460b94
-    creation_date: '2022-03-18T12:11:21'
+    created_at: '2022-03-18T12:11:21'
     deprecated_date: null
     name: v1.0.1
 ```

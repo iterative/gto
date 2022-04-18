@@ -2,7 +2,7 @@ import os
 from typing import Union
 
 import git
-from git import InvalidGitRepositoryError, Repo
+from git import InvalidGitRepositoryError, NoSuchPathError, Repo
 from pydantic import BaseModel
 
 from gto.base import BasePromotion, BaseRegistryState
@@ -34,7 +34,7 @@ class GitRegistry(BaseModel):
         if isinstance(repo, str):
             try:
                 repo = git.Repo(repo, search_parent_directories=True)
-            except InvalidGitRepositoryError as e:
+            except (InvalidGitRepositoryError, NoSuchPathError) as e:
                 raise NoRepo(repo) from e
         if config is None:
             config = RegistryConfig(

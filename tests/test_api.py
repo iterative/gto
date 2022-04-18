@@ -103,7 +103,7 @@ def test_promote(repo_with_artifact):
             author=author,
             commit_hexsha=repo.commit().hexsha,
         ),
-        {"creation_date", "promotions", "tag"},
+        {"created_at", "promotions", "tag"},
     )
 
 

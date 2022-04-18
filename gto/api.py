@@ -304,7 +304,7 @@ def history(
 
     registration = [
         OrderedDict(
-            timestamp=v.creation_date,
+            timestamp=v.created_at,
             name=o.name,
             event="registration",
             version=v.name,
@@ -318,7 +318,7 @@ def history(
 
     promotion = [
         OrderedDict(
-            timestamp=l.creation_date,
+            timestamp=l.created_at,
             name=o.name,
             event="promotion",
             version=l.version,

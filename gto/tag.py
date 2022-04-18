@@ -93,7 +93,7 @@ class Tag(BaseModel):
     name: str
     version: Optional[str]
     stage: Optional[str]
-    creation_date: datetime
+    created_at: datetime
     tag: git.Tag
 
     class Config:
@@ -103,7 +103,7 @@ class Tag(BaseModel):
 def parse_tag(tag: git.Tag):
     return Tag(
         tag=tag,
-        creation_date=datetime.fromtimestamp(tag.tag.tagged_date),
+        created_at=datetime.fromtimestamp(tag.tag.tagged_date),
         **parse_name(tag.name),
     )
 
@@ -154,7 +154,7 @@ def version_from_tag(tag: git.Tag) -> BaseVersion:
     return BaseVersion(
         artifact=mtag.name,
         name=mtag.version,
-        creation_date=mtag.creation_date,
+        created_at=mtag.created_at,
         author=tag.tag.tagger.name,
         commit_hexsha=tag.commit.hexsha,
         tag=tag.name,
@@ -178,7 +178,7 @@ def promotion_from_tag(
                 BaseVersion(
                     artifact=mtag.name,
                     name=tag.commit.hexsha,
-                    creation_date=mtag.creation_date,
+                    created_at=mtag.created_at,
                     author=tag.tag.tagger.name,
                     commit_hexsha=tag.commit.hexsha,
                 )
@@ -188,7 +188,7 @@ def promotion_from_tag(
         artifact=mtag.name,
         version=version,
         stage=mtag.stage,
-        creation_date=mtag.creation_date,
+        created_at=mtag.created_at,
         author=tag.tag.tagger.name,
         commit_hexsha=tag.commit.hexsha,
         tag=tag.name,
@@ -278,5 +278,5 @@ class TagStageManager(TagManager):
             for promotion in artifact.stages
             if name == art_name
             and promotion.commit_hexsha == tag.commit.hexsha
-            and promotion.creation_date == datetime.fromtimestamp(tag.tag.tagged_date)
+            and promotion.created_at == datetime.fromtimestamp(tag.tag.tagged_date)
         }

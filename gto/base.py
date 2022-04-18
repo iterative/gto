@@ -16,7 +16,7 @@ class BasePromotion(BaseModel):
     artifact: str
     version: str
     stage: str
-    creation_date: datetime
+    created_at: datetime
     author: str
     commit_hexsha: str
     tag: str
@@ -25,7 +25,7 @@ class BasePromotion(BaseModel):
 class BaseVersion(BaseModel):
     artifact: str
     name: str
-    creation_date: datetime
+    created_at: datetime
     author: str
     commit_hexsha: str
     discovered: bool = False
@@ -45,7 +45,7 @@ class BaseVersion(BaseModel):
 
     @property
     def stage(self):
-        promotions = sorted(self.promotions, key=lambda p: p.creation_date)
+        promotions = sorted(self.promotions, key=lambda p: p.created_at)
         return promotions[-1] if promotions else None
 
     def dict_status(self):
@@ -78,7 +78,7 @@ class BaseArtifact(BaseModel):
                 for v in self.versions
                 if not v.discovered and (not registered or v.is_registered)
             ),
-            key=lambda x: x.creation_date,
+            key=lambda x: x.created_at,
         )
         if versions:
             return versions[-1]
@@ -99,7 +99,7 @@ class BaseArtifact(BaseModel):
         versions.extend(
             sorted(
                 (v for v in self.versions if not v.is_registered),
-                key=lambda x: x.creation_date,
+                key=lambda x: x.created_at,
                 reverse=True,
             )
         )
@@ -196,7 +196,7 @@ class BaseArtifact(BaseModel):
                 raise_if_not_found=True,
                 allow_multiple=True,
             )
-            if (v.creation_date <= latest_datetime if latest_datetime else True)  # type: ignore
+            if (v.created_at <= latest_datetime if latest_datetime else True)  # type: ignore
         ][-1]
 
 
@@ -247,9 +247,9 @@ class BaseRegistryState(BaseModel):
 
     def sort(self):
         for name in self.artifacts:  # pylint: disable=consider-using-dict-items
-            self.artifacts[name].versions.sort(key=lambda x: (x.creation_date, x.name))
+            self.artifacts[name].versions.sort(key=lambda x: (x.created_at, x.name))
             self.artifacts[name].stages.sort(
-                key=lambda x: (x.creation_date, x.version, x.stage)
+                key=lambda x: (x.created_at, x.version, x.stage)
             )
 
 
