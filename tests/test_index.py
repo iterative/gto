@@ -25,15 +25,19 @@ def git_index_repo(empty_git_repo: Tuple[git.Repo, Callable]):
 def test_git_index_add_virtual(git_index_repo):
     index, repo = git_index_repo
     index.add(
-        "a", type="a", path="a", must_exist=False, tags=[], description="", update=False
+        "a",
+        type="a",
+        path="a",
+        must_exist=False,
+        labels=[],
+        description="",
+        update=False,
     )
 
     new_index = init_index(repo.git_dir)
     assert isinstance(new_index, RepoIndexManager)
     index_value = new_index.get_index()
-    assert index_value.state["a"] == Artifact(
-        name="a", path="a", type="a", virtual=True
-    )
+    assert index_value.state["a"] == Artifact(path="a", type="a", virtual=True)
 
     repo.index.add(CONFIG.INDEX)
     commit = repo.index.commit("add index")
@@ -43,7 +47,7 @@ def test_git_index_add_virtual(git_index_repo):
 
 def test_git_index_remove_virtual(git_index_repo):
     index, repo = git_index_repo
-    index.add("a", "a", "a", must_exist=False, tags=[], description="", update=True)
+    index.add("a", "a", "a", must_exist=False, labels=[], description="", update=True)
 
     new_index = init_index(repo.git_dir)
     assert isinstance(new_index, RepoIndexManager)

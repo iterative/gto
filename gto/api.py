@@ -44,7 +44,7 @@ def annotate(
     type: Optional[str] = None,
     path: Optional[str] = None,
     must_exist: bool = False,
-    tags: List[str] = None,
+    labels: List[str] = None,
     description: str = "",
     # update: bool = False,
 ):
@@ -54,7 +54,7 @@ def annotate(
         type=type,
         path=path,
         must_exist=must_exist,
-        tags=tags,
+        labels=labels,
         description=description,
         update=True,
     )
@@ -70,7 +70,9 @@ def register(
     name: str,
     ref: str,
     version: str = None,
-    bump: str = None,
+    bump_major: bool = False,
+    bump_minor: bool = False,
+    bump_patch: bool = False,
     stdout: bool = False,
 ):
     """Register new artifact version"""
@@ -78,7 +80,9 @@ def register(
         name=name,
         ref=ref,
         version=version,
-        bump=bump,
+        bump_major=bump_major,
+        bump_minor=bump_minor,
+        bump_patch=bump_patch,
         stdout=stdout,
     )
 
@@ -91,6 +95,8 @@ def promote(
     promote_ref: str = None,
     name_version: str = None,
     simple: bool = False,
+    force: bool = False,
+    skip_registration: bool = False,
     stdout: bool = False,
 ):
     """Assign stage to specific artifact version"""
@@ -101,6 +107,8 @@ def promote(
         promote_ref,
         name_version,
         simple=simple,
+        force=force,
+        skip_registration=skip_registration,
         stdout=stdout,
     )
 

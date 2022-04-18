@@ -25,11 +25,10 @@ from gto.utils import resolve_ref
 
 
 class Artifact(BaseModel):
-    name: str
     type: Optional[str] = None
     path: Optional[str] = None
     virtual: bool = True
-    tags: List[str] = []  # TODO: allow key:value labels
+    labels: List[str] = []  # TODO: allow key:value labels
     description: str = ""
 
 
@@ -106,7 +105,9 @@ class Index(BaseModel):
                 yaml.dump(state, file)
 
     @not_frozen
-    def add(self, name, type, path, must_exist, tags, description, update) -> Artifact:
+    def add(
+        self, name, type, path, must_exist, labels, description, update
+    ) -> Artifact:
         if name in self and not update:
             raise ArtifactExists(name)
         if (
@@ -119,21 +120,19 @@ class Index(BaseModel):
             raise PathIsUsed(type=type, name=name, path=path)
         if update and name in self.state:
             self.state[name].type = type or self.state[name].type
-            self.state[name].name = name or self.state[name].name
             self.state[name].path = path or self.state[name].path
             if must_exist:
                 self.state[name].virtual = False
             elif path:
                 self.state[name].virtual = True
-            self.state[name].tags = tags or self.state[name].tags
+            self.state[name].labels = labels or self.state[name].labels
             self.state[name].description = description or self.state[name].description
         else:
             self.state[name] = Artifact(
                 type=type,
-                name=name,
                 path=path,
                 virtual=not must_exist,
-                tags=tags,
+                labels=labels,
                 description=description,
             )
         return self.state[name]
@@ -161,9 +160,9 @@ class BaseIndexManager(BaseModel, ABC):
     def get_history(self) -> Dict[str, Index]:
         raise NotImplementedError
 
-    def add(self, name, type, path, must_exist, tags, description, update):
-        if tags is None:
-            tags = []
+    def add(self, name, type, path, must_exist, labels, description, update):
+        if labels is None:
+            labels = []
         self.config.assert_type(type)
         if must_exist:
             if not path:
@@ -178,7 +177,7 @@ class BaseIndexManager(BaseModel, ABC):
             type=type,
             path=path,
             must_exist=must_exist,
-            tags=tags,
+            labels=labels,
             description=description,
             update=update,
         )
@@ -347,11 +346,9 @@ class EnrichmentManager(BaseManager):
         for commit in self.get_commits(
             all_branches=all_branches, all_commits=all_commits
         ):
-            for enrichment in GTOEnrichment().discover(self.repo, commit):
-                enrichments = self.describe(enrichment.artifact.name, rev=commit)
-                artifact = state.find_artifact(
-                    enrichment.artifact.name, create_new=True
-                )
+            for art_name in GTOEnrichment().discover(self.repo, commit):
+                enrichments = self.describe(art_name, rev=commit)
+                artifact = state.find_artifact(art_name, create_new=True)
                 version = artifact.find_version(commit_hexsha=commit.hexsha)
                 # TODO: duplicated in tag.py
                 if version:
@@ -359,7 +356,7 @@ class EnrichmentManager(BaseManager):
                 else:
                     artifact.add_version(
                         BaseVersion(
-                            artifact=enrichment.artifact.name,
+                            artifact=art_name,
                             name=commit.hexsha,
                             creation_date=datetime.fromtimestamp(commit.committed_date),
                             author=commit.author.name,
@@ -403,11 +400,14 @@ class GTOEnrichment(Enrichment):
 
     def discover(  # pylint: disable=no-self-use
         self, repo, rev: Optional[str]
-    ) -> List[GTOInfo]:
+    ) -> Dict[str, GTOInfo]:
         index = RepoIndexManager.from_repo(repo).get_commit_index(rev)
         if index:
-            return [GTOInfo(artifact=artifact) for artifact in index.state.values()]
-        return []
+            return {
+                name: GTOInfo(artifact=artifact)
+                for name, artifact in index.state.items()
+            }
+        return {}
 
     def describe(  # pylint: disable=no-self-use
         self, repo, obj: str, rev: Optional[str]

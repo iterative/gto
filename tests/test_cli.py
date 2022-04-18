@@ -1,5 +1,5 @@
 # pylint: disable=unused-variable, redefined-outer-name
-from typing import Callable, Tuple
+from typing import Callable, Optional, Tuple
 
 import git
 import pytest
@@ -12,13 +12,23 @@ from gto.cli import app
 from .utils import _check_obj
 
 
-def _check_successful_cmd(cmd: str, args: list, expected_stdout: str):
+def _check_successful_cmd(cmd: str, args: list, expected_stdout: Optional[str]):
     runner = CliRunner()
     result = runner.invoke(app, [cmd] + args)
     assert result.exit_code == 0, (result.output, result.exception)
     if expected_stdout:
+        if len(expected_stdout):
+            assert len(result.output) > 0, "Output is empty, but should not be"
+        assert result.output == expected_stdout
+
+
+def _check_failing_cmd(cmd: str, args: list, expected_stderr: str):
+    runner = CliRunner()
+    result = runner.invoke(app, [cmd] + args)
+    assert result.exit_code != 0, (result.output, result.exception)
+    if expected_stderr:
         assert len(result.output) > 0, "Output is empty, but should not be"
-    assert result.output == expected_stdout
+    assert result.output == expected_stderr
 
 
 @pytest.fixture
@@ -60,10 +70,14 @@ def test_show(empty_git_repo: Tuple[git.Repo, Callable]):
         ["-r", repo.working_dir],
         "Nothing found in the current workspace\n",
     )
+    _check_successful_cmd(
+        "history",
+        ["-r", repo.working_dir],
+        "Nothing found in the current workspace\n",
+    )
 
 
 EXPECTED_DESCRIBE_OUTPUT = """{
-    "name": "rf",
     "type": "model",
     "path": "models/random-forest.pkl",
     "virtual": false
@@ -98,10 +112,37 @@ def test_commands(showcase):
     _check_successful_cmd(
         "describe", ["-r", path, "rf", "--path"], "models/random-forest.pkl\n"
     )
+    # None because of random order - fix this
+    _check_successful_cmd("stages", ["-r", path], None)
+    # None because of output randomness and complexity
+    _check_successful_cmd(
+        "show",
+        ["-r", path],
+        None,
+    )
+    # None because of output randomness and complexity
+    _check_successful_cmd(
+        "history",
+        ["-r", path],
+        None,
+    )
 
 
-def test_annotate(empty_git_repo):
+EXPECTED_DESCRIBE_OUTPUT_2 = """{
+    "type": "new-type",
+    "path": "new/path",
+    "labels": [
+        "some-label",
+        "another-label"
+    ],
+    "description": "some description"
+}
+"""
+
+
+def test_annotate(empty_git_repo: Tuple[git.Repo, Callable]):
     repo, write_file = empty_git_repo
+    name = "new-artifact"
     _check_successful_cmd(
         "annotate",
         [
@@ -109,28 +150,85 @@ def test_annotate(empty_git_repo):
             repo.working_dir,
             "--type",
             "new-type",
-            "new-artifact",
+            name,
             "--path",
             "new/path",
-            "--tag",
-            "some-tag",
-            "--tag",
-            "another-tag",
+            "--label",
+            "some-label",
+            "--label",
+            "another-label",
             "--description",
             "some description",
         ],
         "",
     )
-    artifact = get_index(repo.working_dir, file=True).get_index().state["new-artifact"]
+    artifact = get_index(repo.working_dir, file=True).get_index().state[name]
     _check_obj(
         artifact,
         dict(
-            name="new-artifact",
             type="new-type",
             path="new/path",
             virtual=True,
-            tags=["some-tag", "another-tag"],
+            labels=["some-label", "another-label"],
             description="some description",
         ),
         [],
+    )
+    repo.index.add(["artifacts.yaml"])
+    repo.index.commit("Add new artifact")
+
+    _check_successful_cmd(
+        "describe", ["-r", repo.working_dir, name], EXPECTED_DESCRIBE_OUTPUT_2
+    )
+    _check_successful_cmd("remove", ["-r", repo.working_dir, name], "")
+    write_file(name, "new-artifact update")
+    repo.index.add(["artifacts.yaml"])
+    repo.index.commit("Remove new artifact")
+
+    _check_successful_cmd("describe", ["-r", repo.working_dir, name], "")
+
+
+def test_register(repo_with_commit: Tuple[git.Repo, Callable]):
+    repo, write_file = repo_with_commit
+
+    _check_successful_cmd(
+        "register",
+        ["-r", repo.working_dir, "a1"],
+        "Created git tag 'a1@v0.0.1' that registers a new version\n",
+    )
+
+    _check_successful_cmd(
+        "register",
+        ["-r", repo.working_dir, "a2", "--version", "v1.2.3"],
+        "Created git tag 'a2@v1.2.3' that registers a new version\n",
+    )
+
+    _check_failing_cmd(
+        "register",
+        ["-r", repo.working_dir, "a3", "--version", "1.2.3"],
+        "❌ Version '1.2.3' is not valid. Example of valid version: 'v1.0.0'\n",
+    )
+
+
+def test_promote(repo_with_commit: Tuple[git.Repo, Callable]):
+    repo, write_file = repo_with_commit
+
+    _check_successful_cmd(
+        "promote",
+        ["-r", repo.working_dir, "nn1", "prod", "HEAD"],
+        "Created git tag 'nn1@v0.0.1' that registers a new version\n"
+        "Created git tag 'nn1#prod-1' that promotes 'v0.0.1'\n",
+    )
+
+    # this check depends on the previous promotion
+    _check_failing_cmd(
+        "promote",
+        ["-r", repo.working_dir, "nn1", "stage", "HEAD", "--version", "v1.0.0"],
+        "❌ Can't register 'v1.0.0', since 'v0.0.1' is registered already at this ref\n",
+    )
+
+    _check_failing_cmd(
+        "promote",
+        ["-r", repo.working_dir, "nn2", "prod", "HEAD", "--version", "1.0.0"],
+        "❌ Version '1.0.0' is not valid. Example of valid version: 'v1.0.0'\n",
     )

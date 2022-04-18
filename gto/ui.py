@@ -75,7 +75,7 @@ def bold(text):
 EMOJI_LOAD = emoji("⏳️")
 EMOJI_FAIL = emoji("❌ ")
 EMOJI_OK = emoji("✅ ")
-EMOJI_MLEM = emoji("🐶")
+EMOJI_GTO = emoji("🌱")
 EMOJI_SAVE = emoji("💾")
 EMOJI_APPLY = emoji("🍏")
 EMOJI_COPY = emoji("🐏")

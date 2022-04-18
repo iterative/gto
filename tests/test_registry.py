@@ -6,7 +6,6 @@ from .utils import _check_dict
 EXPECTED_REGISTRY_TAG_TAG_STATE = {
     "artifacts": {
         "nn": {
-            "name": "nn",
             "versions": [
                 {
                     "artifact": "nn",
@@ -35,7 +34,7 @@ EXPECTED_REGISTRY_TAG_TAG_STATE = {
                                 "name": "nn",
                                 "path": "models/neural-network.pkl",
                                 "virtual": False,
-                                "tags": [],
+                                "labels": [],
                                 "description": "",
                             },
                         }
@@ -44,7 +43,6 @@ EXPECTED_REGISTRY_TAG_TAG_STATE = {
             ],
         },
         "rf": {
-            "name": "rf",
             "versions": [
                 {
                     "artifact": "rf",
@@ -82,7 +80,7 @@ EXPECTED_REGISTRY_TAG_TAG_STATE = {
                                 "name": "rf",
                                 "path": "models/random-forest.pkl",
                                 "virtual": False,
-                                "tags": [],
+                                "labels": [],
                                 "description": "",
                             },
                         }
@@ -133,7 +131,7 @@ EXPECTED_REGISTRY_TAG_TAG_STATE = {
                                 "name": "rf",
                                 "path": "models/random-forest.pkl",
                                 "virtual": False,
-                                "tags": [],
+                                "labels": [],
                                 "description": "",
                             },
                         }

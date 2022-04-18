@@ -14,7 +14,7 @@ from typer.core import TyperCommand, TyperGroup
 
 import gto
 from gto.exceptions import GTOException, WrongArgs
-from gto.ui import EMOJI_FAIL, EMOJI_MLEM, bold, cli_echo, color, echo
+from gto.ui import EMOJI_FAIL, EMOJI_GTO, bold, cli_echo, color, echo
 from gto.utils import format_echo, make_ready_to_serialize
 
 TABLE = "table"
@@ -182,7 +182,7 @@ class GtoGroup(TyperGroup, GtoCliMixin):
         return None
 
 
-def MlemGroupSection(section):
+def GTOGroupSection(section):
     return partial(GtoGroup, section=section)
 
 
@@ -299,7 +299,7 @@ def gto_callback(
     """
     if ctx.invoked_subcommand is None and show_version:
         with cli_echo():
-            echo(f"{EMOJI_MLEM} GTO Version: {gto.__version__}")
+            echo(f"{EMOJI_GTO} GTO Version: {gto.__version__}")
     if verbose:
         logger = logging.getLogger("gto")
         logger.handlers[0].setLevel(logging.DEBUG)
@@ -382,7 +382,7 @@ def annotate(
         is_flag=True,
         help="Verify artifact is committed to Git",
     ),
-    tag: List[str] = Option(None, "--tag", help="Tags to add to artifact"),
+    label: List[str] = Option(None, "--label", help="Labels to add to artifact"),
     description: str = Option("", "-d", "--description", help="Artifact description"),
     # update: bool = Option(
     #     False, "-u", "--update", is_flag=True, help="Update artifact if it exists"
@@ -399,7 +399,7 @@ def annotate(
         type=type,
         path=path,
         must_exist=must_exist,
-        tags=tag,
+        labels=label,
         description=description,
         # update=update,
     )
@@ -423,8 +423,14 @@ def register(
     version: Optional[str] = Option(
         None, "--version", "--ver", help="Version name in SemVer format"
     ),
-    bump: Optional[str] = Option(
-        None, "--bump", "-b", help="The exact part to increment when bumping a version"
+    bump_major: bool = Option(
+        False, "--bump-major", is_flag=True, help="Bump major version"
+    ),
+    bump_minor: bool = Option(
+        False, "--bump-minor", is_flag=True, help="Bump minor version"
+    ),
+    bump_patch: bool = Option(
+        False, "--bump-patch", is_flag=True, help="Bump patch version"
     ),
 ):
     """Create git tag that marks the important artifact version
@@ -443,7 +449,14 @@ def register(
         $ gto register nn --bump minor
     """
     gto.api.register(
-        repo=repo, name=name, ref=ref or "HEAD", version=version, bump=bump, stdout=True
+        repo=repo,
+        name=name,
+        ref=ref or "HEAD",
+        version=version,
+        bump_major=bump_major,
+        bump_minor=bump_minor,
+        bump_patch=bump_patch,
+        stdout=True,
     )
 
 
@@ -452,27 +465,40 @@ def promote(
     repo: str = option_repo,
     name: str = arg_name,
     stage: str = arg_stage,
+    ref: Optional[str] = Argument(None, help="Git reference to promote"),
     version: Optional[str] = Option(
         None,
         "--version",
-        help="If you provide --ref, this will be used to name new version",
+        help="If you provide REF, this will be used to name new version",
     ),
-    ref: Optional[str] = Option(None, "--ref", help="Git reference to promote"),
     simple: bool = Option(
         False,
         "--simple",
         is_flag=True,
         help="Use simple notation, e.g. rf#prod instead of rf#prod-5",
     ),
+    force: bool = Option(
+        False, help="Promote even if version is already in required Stage"
+    ),
+    skip_registration: bool = Option(
+        False,
+        "--sr",
+        "--skip-registration",
+        is_flag=True,
+        help="Don't register a version at specified commit",
+    ),
 ):
     """Assign stage to specific artifact version
 
     Examples:
-        Promote HEAD:
-        $ gto promote nn prod --ref HEAD
+        Promote "nn" to "prod" at specific ref:
+        $ gto promote nn prod abcd123
 
         Promote specific version:
         $ gto promote nn prod --version v1.0.0
+
+        Promote at specific ref and name version explicitly:
+        $ gto promote nn prod abcd123 --version v1.0.0
 
         Promote without increment
         $ gto promote nn prod --ref HEAD --simple
@@ -480,9 +506,13 @@ def promote(
     if ref is not None:
         name_version = version
         promote_version = None
-    else:
+    elif version is not None:
         name_version = None
         promote_version = version
+    else:
+        ref = "HEAD"
+        name_version = None
+        promote_version = None
     gto.api.promote(
         repo,
         name,
@@ -491,6 +521,8 @@ def promote(
         ref,
         name_version,
         simple=simple,
+        force=force,
+        skip_registration=skip_registration,
         stdout=True,
     )
 
@@ -683,12 +715,12 @@ def history(
             ),
             format="table",
             format_table="plain" if plain else "fancy_outline",
-            if_empty="No history found",
+            if_empty="Nothing found in the current workspace",
         )
 
 
 @gto_command(section=COMMANDS.REGISTRY)
-def print_stages(
+def stages(
     repo: str = option_repo,
     in_use: bool = Option(
         False,

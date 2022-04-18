@@ -116,7 +116,7 @@ class RefNotFound(GTOException):
 
 
 class InvalidVersion(GTOException):
-    _message = "Supplied version '{version}' doesn't look like '{cls}' version"
+    _message = "Supplied version '{version}' doesn't look like valid {cls} version"
 
     def __init__(self, version, cls) -> None:
         self.message = self._message.format(version=version, cls=cls)

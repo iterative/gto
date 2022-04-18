@@ -25,6 +25,6 @@ def test_semver_comparison():
 
 
 def test_bump_semver():
-    assert SemVer("v1.3.4").bump("major") == SemVer("v2.0.0")
-    assert SemVer("v1.3.4").bump("minor") == SemVer("v1.4.0")
-    assert SemVer("v1.3.4").bump("patch") == SemVer("v1.3.5")
+    assert SemVer("v1.3.4").bump_major() == SemVer("v2.0.0")
+    assert SemVer("v1.3.4").bump_minor() == SemVer("v1.4.0")
+    assert SemVer("v1.3.4").bump_patch() == SemVer("v1.3.5")

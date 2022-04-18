@@ -23,6 +23,20 @@ def empty_git_repo(tmp_path):
 
 
 @pytest.fixture
+def repo_with_commit(empty_git_repo: Tuple[git.Repo, Callable]):
+    repo, write_file = empty_git_repo
+
+    write_file(
+        "some-random-file",
+        "some-random-text",
+    )
+    repo.index.add(["some-random-file"])
+    repo.index.commit("Initial commit")
+
+    return repo, write_file
+
+
+@pytest.fixture
 def init_showcase_semver(empty_git_repo: Tuple[git.Repo, Callable]):
     repo, write_file = empty_git_repo
 
@@ -79,5 +93,5 @@ def showcase(
     sleep(1)
     gto.api.promote(path, "rf", "production", promote_ref=repo.head.ref.commit.hexsha)
     sleep(1)
-    gto.api.promote(path, "rf", "production", promote_version=rf_vname)
+    gto.api.promote(path, "rf", "production", promote_version=rf_vname, force=True)
     return path, repo, write_file, first_commit, second_commit

@@ -11,6 +11,7 @@ from gto.exceptions import (
     NoRepo,
     VersionAlreadyRegistered,
     VersionExistsForCommit,
+    WrongArgs,
 )
 from gto.index import EnrichmentManager
 from gto.tag import TagStageManager, TagVersionManager
@@ -93,8 +94,22 @@ class GitRegistry(BaseModel):
             name, create_new=create_new  # type: ignore
         )
 
-    def register(self, name, ref, version=None, bump=None, stdout=False):
+    def register(
+        self,
+        name,
+        ref,
+        version=None,
+        bump_major=False,
+        bump_minor=False,
+        bump_patch=False,
+        stdout=False,
+    ):
         """Register artifact version"""
+        version_args = sum(
+            bool(i) for i in (version, bump_major, bump_minor, bump_patch)
+        )
+        if version_args > 1:
+            raise WrongArgs("Need to specify either version or single bump argument")
         ref = self.repo.commit(ref).hexsha
         # TODO: add the same check for other actions, to promote and etc
         # also we need to check integrity of the index+state
@@ -107,16 +122,27 @@ class GitRegistry(BaseModel):
         if version:
             if found_artifact.find_version(name=version) is not None:
                 raise VersionAlreadyRegistered(version)
+            if not SemVer.is_valid(version):
+                raise WrongArgs(
+                    f"Version '{version}' is not valid. Example of valid version: 'v1.0.0'"
+                )
         else:
             # if version name wasn't provided but there were some, bump the last one
             last_version = found_artifact.get_latest_version(registered=True)
             if last_version:
                 version = (
                     SemVer(last_version.name)
-                    .bump(**({"part": bump} if bump else {}))
+                    .bump(
+                        bump_major=bump_major,
+                        bump_minor=bump_minor,
+                        bump_patch=bump_patch if (bump_major or bump_minor) else True,
+                    )
                     .version
                 )
-            # if no versions exist, use the minimal version possible
+            elif version_args:
+                raise WrongArgs(
+                    "Can't apply bump, because this is the first version being registered"
+                )
             else:
                 version = SemVer.get_minimal().version
         self.version_manager.register(
@@ -142,26 +168,46 @@ class GitRegistry(BaseModel):
         promote_ref=None,
         name_version=None,
         simple=False,
+        force=False,
+        skip_registration=False,
         stdout=False,
     ) -> BasePromotion:
         """Assign stage to specific artifact version"""
         self.config.assert_stage(stage)
         if not (promote_version is None) ^ (promote_ref is None):
-            raise ValueError("One and only one of (version, ref) must be specified.")
+            raise WrongArgs("One and only one of (version, ref) must be specified.")
+        if name_version and skip_registration:
+            raise WrongArgs(
+                "You either need to supply version name or skip registration"
+            )
         if promote_ref:
             promote_ref = self.repo.commit(promote_ref).hexsha
         found_artifact = self.find_artifact(name, create_new=True)
-        if promote_version is not None:
+        if promote_version:
             found_version = found_artifact.find_version(
-                name=promote_version, raise_if_not_found=True
+                name=promote_version, raise_if_not_found=False
             )
+            if not found_version:
+                raise WrongArgs(f"Version '{promote_version}' is not registered")
             promote_ref = self.find_commit(name, promote_version)
         else:
             found_version = found_artifact.find_version(commit_hexsha=promote_ref)
-            if found_version is None:
+            if found_version:
+                if name_version:
+                    raise WrongArgs(
+                        f"Can't register '{SemVer(name_version).version}', since '{found_version.name}' is registered already at this ref"
+                    )
+            elif not skip_registration:
                 self.register(
                     name, version=name_version, ref=promote_ref, stdout=stdout
                 )
+        if (
+            not force
+            and found_version
+            and found_version.stage
+            and found_version.stage.stage == stage
+        ):
+            raise WrongArgs(f"Version is already in stage '{stage}'")
         self.stage_manager.promote(  # type: ignore
             name,
             stage,
