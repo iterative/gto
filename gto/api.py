@@ -96,6 +96,7 @@ def promote(
     name_version: str = None,
     simple: bool = False,
     force: bool = False,
+    skip_registration: bool = False,
     stdout: bool = False,
 ):
     """Assign stage to specific artifact version"""
@@ -107,6 +108,7 @@ def promote(
         name_version,
         simple=simple,
         force=force,
+        skip_registration=skip_registration,
         stdout=stdout,
     )
 

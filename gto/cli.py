@@ -480,6 +480,13 @@ def promote(
     force: bool = Option(
         False, help="Promote even if version is already in required Stage"
     ),
+    skip_registration: bool = Option(
+        False,
+        "--sr",
+        "--skip-registration",
+        is_flag=True,
+        help="Don't register a version at specified commit",
+    ),
 ):
     """Assign stage to specific artifact version
 
@@ -515,6 +522,7 @@ def promote(
         name_version,
         simple=simple,
         force=force,
+        skip_registration=skip_registration,
         stdout=True,
     )
 

@@ -135,7 +135,7 @@ class GitRegistry(BaseModel):
                     .bump(
                         bump_major=bump_major,
                         bump_minor=bump_minor,
-                        bump_patch=bump_patch,
+                        bump_patch=bump_patch if (bump_major or bump_minor) else True,
                     )
                     .version
                 )
@@ -169,12 +169,17 @@ class GitRegistry(BaseModel):
         name_version=None,
         simple=False,
         force=False,
+        skip_registration=False,
         stdout=False,
     ) -> BasePromotion:
         """Assign stage to specific artifact version"""
         self.config.assert_stage(stage)
         if not (promote_version is None) ^ (promote_ref is None):
-            raise ValueError("One and only one of (version, ref) must be specified.")
+            raise WrongArgs("One and only one of (version, ref) must be specified.")
+        if name_version and skip_registration:
+            raise WrongArgs(
+                "You either need to supply version name or skip registration"
+            )
         if promote_ref:
             promote_ref = self.repo.commit(promote_ref).hexsha
         found_artifact = self.find_artifact(name, create_new=True)
@@ -192,7 +197,7 @@ class GitRegistry(BaseModel):
                     raise WrongArgs(
                         f"Can't register '{SemVer(name_version).version}', since '{found_version.name}' is registered already at this ref"
                     )
-            else:
+            elif not skip_registration:
                 self.register(
                     name, version=name_version, ref=promote_ref, stdout=stdout
                 )

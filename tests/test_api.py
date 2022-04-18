@@ -5,6 +5,8 @@ import git
 import pytest
 
 import gto
+from gto.exceptions import WrongArgs
+from gto.versions import SemVer
 from tests.utils import _check_obj
 
 
@@ -104,3 +106,22 @@ def test_promote(repo_with_artifact):
         ),
         {"creation_date", "promotions", "tag"},
     )
+
+
+def test_promote_skip_registration(repo_with_artifact):
+    repo, name = repo_with_artifact
+    stage = "staging"
+    with pytest.raises(WrongArgs):
+        gto.api.promote(
+            repo.working_dir,
+            name,
+            stage,
+            promote_ref="HEAD",
+            name_version="v0.0.1",
+            skip_registration=True,
+        )
+    gto.api.promote(
+        repo.working_dir, name, stage, promote_ref="HEAD", skip_registration=True
+    )
+    promotion = gto.api.find_promotion(repo.working_dir, name, stage)
+    assert not SemVer.is_valid(promotion.version)
