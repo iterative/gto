@@ -147,7 +147,6 @@ def check_ref(repo: Union[str, Repo], ref: str):
 def show(
     repo: Union[str, Repo],
     name: Optional[str] = None,
-    # discover: bool = False,
     table: bool = False,
     all_branches=False,
     all_commits=False,
@@ -156,7 +155,6 @@ def show(
         _show_versions(
             repo,
             name=name,
-            # discover=discover,
             all_branches=all_branches,
             all_commits=all_commits,
             table=table,
@@ -164,7 +162,6 @@ def show(
         if name
         else _show_registry(
             repo,
-            # discover=discover,
             all_branches=all_branches,
             all_commits=all_commits,
             table=table,
@@ -174,7 +171,6 @@ def show(
 
 def _show_registry(
     repo: Union[str, Repo],
-    # discover: bool = False,
     all_branches=False,
     all_commits=False,
     table: bool = False,
@@ -192,7 +188,6 @@ def _show_registry(
             },
         }
         for o in reg.get_artifacts(
-            # discover=discover,
             all_branches=all_branches,
             all_commits=all_commits,
         ).values()
@@ -212,7 +207,6 @@ def _show_versions(
     repo: Union[str, Repo],
     name: str,
     raw: bool = False,
-    # discover: bool = False,
     all_branches=False,
     all_commits=False,
     table: bool = False,
@@ -225,7 +219,6 @@ def _show_versions(
         v.dict_status()
         for v in reg.find_artifact(
             name,
-            # discover=discover,
             all_branches=all_branches,
             all_commits=all_commits,
         ).get_versions(include_discovered=True)
@@ -269,21 +262,15 @@ def describe(
 def history(
     repo: Union[str, Repo],
     artifact: str = None,
-    # discover: bool = False,
     # action: str = None,
     all_branches=False,
     all_commits=False,
     sort: str = "desc",
     table: bool = False,
 ):
-    # TODO: rework this.
-    # 1. commits should be gathered only --discover is supplied
-    # 2. we shouldn't use audit_something functions
-    # 3. commits should be got from EnrichmentManager, probably
 
     reg = GitRegistry.from_repo(repo)
     artifacts = reg.get_artifacts(
-        # discover=discover,
         all_branches=all_branches,
         all_commits=all_commits,
     )
@@ -294,7 +281,7 @@ def history(
                 reg.repo.commit(v.commit_hexsha).committed_date
             ),
             name=o.name,
-            event="commit",  # "commit [discovered]" if v.discovered else "commit",
+            event="commit",
             commit=v.commit_hexsha[:7],
             author=reg.repo.commit(v.commit_hexsha).author.name,
         )
@@ -331,8 +318,7 @@ def history(
     ]
 
     events_order = {
-        "commit": 0,
-        # "commit [discovered]": 1,
+        "commit": 1,
         "registration": 2,
         "promotion": 3,
     }

@@ -79,7 +79,7 @@ $ gto show
 ╘════════╧═══════════╧═════════════════╧════════════════════╛
 ```
 
-Add `--discover` flag to show artifacts that are present in `artifacts.yaml` but weren't registered or promoted. Use `--all-branches` or `--all-commits` to read `artifacts.yaml` from more commits than just HEAD.
+Use `--all-branches` or `--all-commits` to read `artifacts.yaml` from more commits than just HEAD.
 
 Add artifact name to print versions of that artifact:
 
