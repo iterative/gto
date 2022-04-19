@@ -713,23 +713,21 @@ def history(
 @gto_command(section=COMMANDS.REGISTRY)
 def stages(
     repo: str = option_repo,
-    in_use: bool = Option(
+    allowed: bool = Option(
         False,
-        "--in-use",
+        "--allowed",
         is_flag=True,
-        help="Show only in-use stages",
+        help="Show allowed stages from config",
         show_default=True,
     ),
 ):
-    """Return list of stages in the registry.
-    If "in_use", return only those which are in use (among non-deprecated artifacts).
-    If not, return all available: either all allowed or all ever used.
+    """Return list of stages used in the registry.
 
     Examples:
         $ gto print-stage
-        $ gto print-stage --in-use
+        $ gto print-stage --allowed
     """
-    format_echo(gto.api.get_stages(repo, in_use=in_use), "lines")
+    format_echo(gto.api.get_stages(repo, allowed=allowed), "lines")
 
 
 @gto_command(hidden=True)

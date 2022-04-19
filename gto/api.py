@@ -33,8 +33,8 @@ def _get_state(repo: Union[str, Repo]):
     return GitRegistry.from_repo(repo).get_state()
 
 
-def get_stages(repo: Union[str, Repo], in_use: bool = False):
-    return GitRegistry.from_repo(repo).get_stages(in_use=in_use)
+def get_stages(repo: Union[str, Repo], allowed: bool = False):
+    return GitRegistry.from_repo(repo).get_stages(allowed=allowed)
 
 
 # TODO: make this work the same as CLI version
@@ -178,12 +178,16 @@ def _show_registry(
     """Show current registry state"""
 
     reg = GitRegistry.from_repo(repo)
-    stages = list(reg.get_stages(in_use=False))
+    stages = list(reg.get_stages())
     models_state = {
         o.name: {
-            "version": o.get_latest_version().name if o.get_latest_version() else None,
+            "version": o.get_latest_version(registered=True).name
+            if o.get_latest_version(registered=True)
+            else None,
             "stage": {
-                name: o.promoted[name].version if name in o.promoted else None
+                name: o.get_promotions()[name].version
+                if name in o.get_promotions()
+                else None
                 for name in stages
             },
         }
@@ -221,22 +225,26 @@ def _show_versions(
             name,
             all_branches=all_branches,
             all_commits=all_commits,
-        ).get_versions(include_discovered=True)
+        ).get_versions(include_non_explicit=True, include_discovered=True)
     ]
     if not table:
         return versions
 
-    first_keys = ["artifact", "name", "stage"]
+    first_keys = ["artifact", "version", "stage"]
     versions_ = []
     for v in versions:
+        v["version"] = v["name"][:7]
         if v["stage"]:
             v["stage"] = v["stage"]["stage"]
+        v["commit_hexsha"] = v["commit_hexsha"][:7]
+        v["ref"] = v["tag"] or v["commit_hexsha"][:7]
+        for key in "enrichments", "discovered", "tag", "commit_hexsha", "name":
+            v.pop(key)
+        # v["enrichments"] = [e["source"] for e in v["enrichments"]]
         v = OrderedDict(
             [(key, v[key]) for key in first_keys]
             + [(key, v[key]) for key in v if key not in first_keys]
         )
-        v["commit_hexsha"] = v["commit_hexsha"][:7]
-        v["enrichments"] = [e["source"] for e in v["enrichments"]]
         versions_.append(v)
     return versions_, "keys"
 
@@ -280,21 +288,21 @@ def history(
             timestamp=datetime.fromtimestamp(
                 reg.repo.commit(v.commit_hexsha).committed_date
             ),
-            name=o.name,
+            artifact=o.name,
             event="commit",
             commit=v.commit_hexsha[:7],
             author=reg.repo.commit(v.commit_hexsha).author.name,
         )
         for o in artifacts.values()
-        for v in o.get_versions(include_discovered=True)
+        for v in o.get_versions(include_non_explicit=True, include_discovered=True)
     ]
 
     registration = [
         OrderedDict(
             timestamp=v.created_at,
-            name=o.name,
+            artifact=o.name,
             event="registration",
-            version=v.name,
+            version=v.name[:7],
             commit=v.commit_hexsha[:7],
             author=v.author,
             # enrichments=[e.source for e in v.enrichments],
@@ -306,9 +314,9 @@ def history(
     promotion = [
         OrderedDict(
             timestamp=l.created_at,
-            name=o.name,
+            artifact=o.name,
             event="promotion",
-            version=l.version,
+            version=l.version[:7],
             stage=l.stage,
             commit=l.commit_hexsha[:7],
             author=l.author,
@@ -329,12 +337,12 @@ def history(
     if _is_ascending(sort):
         events.reverse()
     if artifact:
-        events = [event for event in events if event["name"] == artifact]
+        events = [event for event in events if event["artifact"] == artifact]
     if not table:
         return events
     keys_order = [
         "timestamp",
-        NAME,
+        "artifact",
         "event",
         VERSION,
         STAGE,

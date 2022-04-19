@@ -210,7 +210,12 @@ class GitRegistry(BaseModel):
             message=f"Promoting {name} version {promote_version} to stage {stage}",
             simple=simple,
         )
-        promotion = self.get_state().find_artifact(name).promoted[stage]
+        promotion = (
+            self.get_state()
+            .find_artifact(name)
+            .find_version_at_commit(promote_ref)
+            .stage
+        )
         if stdout:
             echo(
                 f"Created git tag '{promotion.tag}' that promotes '{promotion.version}'"
@@ -233,17 +238,18 @@ class GitRegistry(BaseModel):
 
     def latest(self, name: str):
         """Return latest active version for artifact"""
-        return self.get_state().find_artifact(name).get_latest_version()
+        return self.get_state().find_artifact(name).get_latest_version(registered=True)
 
-    def get_stages(self, in_use: bool = False):
+    def get_stages(self, allowed: bool = False):
         """Return list of stages in the registry.
-        If "in_use", return only those which are in use for non-deprecated artifacts.
-        If not, return all available: either all allowed or all ever used.
+        If "allowed", return stages that are allowed in config.
         """
-        if in_use:
-            return {
-                stage for o in self.get_artifacts().values() for stage in o.promoted
+        if allowed:
+            return self.config.stages
+        return sorted(
+            {
+                stage
+                for o in self.get_artifacts().values()
+                for stage in o.get_promotions()
             }
-        return self.config.stages or {
-            stage for o in self.get_artifacts().values() for stage in o.unique_stages
-        }
+        )

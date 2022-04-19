@@ -84,8 +84,7 @@ class BaseArtifact(BaseModel):
             return versions[-1]
         return None
 
-    @property
-    def promoted(self) -> Dict[str, BasePromotion]:
+    def get_promotions(self) -> Dict[str, BasePromotion]:
         stages: Dict[str, BasePromotion] = {}
         # semver
         versions = sorted(
@@ -156,8 +155,14 @@ class BaseArtifact(BaseModel):
     # ) -> List[BaseVersion]:
     #     ...
 
-    def get_versions(self, include_discovered=False):
-        return [v for v in self.versions if include_discovered or not v.discovered]
+    def get_versions(self, include_non_explicit=False, include_discovered=False):
+        return [
+            v
+            for v in self.versions
+            if (v.is_registered and not v.discovered)
+            or (include_discovered and v.discovered)
+            or (include_non_explicit and not v.is_registered)
+        ]
 
     def find_version(
         self,
@@ -238,7 +243,7 @@ class BaseRegistryState(BaseModel):
 
     def which(self, name, stage, raise_if_not_found=True):
         """Return stage active in specific stage"""
-        promoted = self.find_artifact(name).promoted
+        promoted = self.find_artifact(name).get_promotions()
         if stage in promoted:
             return promoted[stage]
         if raise_if_not_found:
