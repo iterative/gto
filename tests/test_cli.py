@@ -106,7 +106,7 @@ def test_commands(showcase):
     _check_successful_cmd(
         "which",
         ["-r", path, "rf", "production", "--ref"],
-        "rf#production-4\n",
+        "rf#production-3\n",
     )
     _check_successful_cmd("describe", ["-r", path, "rf"], EXPECTED_DESCRIBE_OUTPUT)
     _check_successful_cmd(
@@ -231,4 +231,17 @@ def test_promote(repo_with_commit: Tuple[git.Repo, Callable]):
         "promote",
         ["-r", repo.working_dir, "nn2", "prod", "HEAD", "--version", "1.0.0"],
         "❌ Version '1.0.0' is not valid. Example of valid version: 'v1.0.0'\n",
+    )
+
+    _check_successful_cmd(
+        "promote",
+        ["-r", repo.working_dir, "x", "prod", "HEAD", "--simple"],
+        "Created git tag 'x@v0.0.1' that registers a new version\n"
+        "Created git tag 'x#prod' that promotes 'v0.0.1'\n",
+    )
+
+    _check_failing_cmd(
+        "promote",
+        ["-r", repo.working_dir, "x", "prod", "HEAD", "--simple"],
+        "❌ Version is already in stage 'prod'\n",
     )

@@ -149,3 +149,11 @@ class MissingArg(GTOException):
 
 class WrongArgs(GTOException):
     pass
+
+
+class TagExists(GTOException):
+    message = "tag '{name}' already exists"
+
+    def __init__(self, name) -> None:
+        self.message = self.message.format(name=name)
+        super().__init__(self.message)

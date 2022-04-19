@@ -14,7 +14,7 @@ from .base import (
     BaseVersion,
 )
 from .constants import ACTION, NAME, NUMBER, STAGE, TAG, VERSION, Action
-from .exceptions import MissingArg, RefNotFound, UnknownAction
+from .exceptions import MissingArg, RefNotFound, TagExists, UnknownAction
 
 ActionSign = {
     Action.REGISTER: "@",
@@ -41,7 +41,11 @@ def name_tag(
         numbers = []
         for tag in repo.tags:
             parsed = parse_name(tag.name)
-            if parsed[ACTION] in (Action.PROMOTE,):
+            if (
+                (parsed[NAME] == name)
+                and (parsed[ACTION] == Action.PROMOTE)
+                and (NUMBER in parsed)
+            ):
                 numbers.append(parsed[NUMBER])
         new_number = max(numbers) + 1 if numbers else 1
         return f"{name}{ActionSign[action]}{stage}-{new_number}"
@@ -141,7 +145,8 @@ def find(
 def create_tag(repo, name, ref, message):
     if all(c.hexsha != ref for c in repo.iter_commits()):
         raise RefNotFound(ref=ref)
-
+    if name in repo.refs:
+        raise TagExists(name=name)
     repo.create_tag(
         name,
         ref=ref,
