@@ -23,7 +23,7 @@ EXPECTED_REGISTRY_TAG_TAG_STATE = {
                             "created_at": "2022-04-11T21:51:57",
                             "author": "Alexander Guschin",
                             "commit_hexsha": "d1d973669cade722f2900e75379cee42fe6b0244",
-                            "tag": "nn#staging-1",
+                            "tag": "nn#staging#1",
                         }
                     ],
                     "enrichments": [
@@ -60,7 +60,7 @@ EXPECTED_REGISTRY_TAG_TAG_STATE = {
                             "created_at": "2022-04-11T21:51:57",
                             "author": "Alexander Guschin",
                             "commit_hexsha": "d1d973669cade722f2900e75379cee42fe6b0244",
-                            "tag": "rf#production-1",
+                            "tag": "rf#production#1",
                         },
                         {
                             "artifact": "rf",
@@ -69,7 +69,7 @@ EXPECTED_REGISTRY_TAG_TAG_STATE = {
                             "created_at": "2022-04-11T21:52:01",
                             "author": "Alexander Guschin",
                             "commit_hexsha": "d1d973669cade722f2900e75379cee42fe6b0244",
-                            "tag": "rf#production-4",
+                            "tag": "rf#production#4",
                         },
                     ],
                     "enrichments": [
@@ -102,7 +102,7 @@ EXPECTED_REGISTRY_TAG_TAG_STATE = {
                             "created_at": "2022-04-11T21:51:58",
                             "author": "Alexander Guschin",
                             "commit_hexsha": "16b7b77f1219ea3c10ae5beeb8473fb49cbd8c13",
-                            "tag": "rf#staging-2",
+                            "tag": "rf#staging#2",
                         },
                         {
                             "artifact": "rf",
@@ -111,7 +111,7 @@ EXPECTED_REGISTRY_TAG_TAG_STATE = {
                             "created_at": "2022-04-11T21:51:59",
                             "author": "Alexander Guschin",
                             "commit_hexsha": "16b7b77f1219ea3c10ae5beeb8473fb49cbd8c13",
-                            "tag": "rf#production-3",
+                            "tag": "rf#production#3",
                         },
                         {
                             "artifact": "rf",
@@ -120,7 +120,7 @@ EXPECTED_REGISTRY_TAG_TAG_STATE = {
                             "created_at": "2022-04-12T19:26:08",
                             "author": "Alexander Guschin",
                             "commit_hexsha": "16b7b77f1219ea3c10ae5beeb8473fb49cbd8c13",
-                            "tag": "rf#stagegeg-5",
+                            "tag": "rf#stagegeg#5",
                         },
                     ],
                     "enrichments": [

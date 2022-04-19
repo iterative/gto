@@ -615,8 +615,6 @@ def show(
         $ gto show --all-branches
         $ gto show nn --all-commits
     """
-    # TODO: make proper name resolving?
-    # e.g. querying artifact named "registry" with artifact/registry
     assert (
         sum(bool(i) for i in (json, plain, name_only)) <= 1
     ), "Only one output format allowed"

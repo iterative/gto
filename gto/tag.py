@@ -48,14 +48,15 @@ def name_tag(
             ):
                 numbers.append(parsed[NUMBER])
         new_number = max(numbers) + 1 if numbers else 1
-        return f"{name}{ActionSign[action]}{stage}-{new_number}"
+        return f"{name}{ActionSign[action]}{stage}{ActionSign[action]}{new_number}"
     raise UnknownAction(action=action)
 
 
 def parse_name(name: str, raise_on_fail: bool = True):
 
     if ActionSign[Action.REGISTER] in name:
-        name, version = name.split(ActionSign[Action.REGISTER])
+        sign = len(name) - name[::-1].index(ActionSign[Action.REGISTER])
+        name, version = name[: sign - 1], name[sign:]
         return {
             ACTION: Action.REGISTER,
             NAME: name,
@@ -63,18 +64,20 @@ def parse_name(name: str, raise_on_fail: bool = True):
         }
 
     if ActionSign[Action.PROMOTE] in name:
-        name, stage = name.split(ActionSign[Action.PROMOTE])
-        result = {
-            ACTION: Action.PROMOTE,
-            NAME: name,
-            STAGE: stage,
-        }
-        if "-" not in stage:
-            return result
-        stage, number = stage.split("-")
-        result[STAGE] = stage
-        result[NUMBER] = int(number)
-        return result
+        parsed = name.split(ActionSign[Action.PROMOTE])
+        if len(parsed) == 2:
+            return {
+                ACTION: Action.PROMOTE,
+                NAME: parsed[0],
+                STAGE: parsed[1],
+            }
+        if len(parsed) == 3:
+            return {
+                ACTION: Action.PROMOTE,
+                NAME: parsed[0],
+                STAGE: parsed[1],
+                NUMBER: int(parsed[2]),
+            }
     if raise_on_fail:
         raise ValueError(f"Unknown tag name: {name}")
     return {}
