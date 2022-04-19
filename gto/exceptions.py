@@ -157,3 +157,7 @@ class TagExists(GTOException):
     def __init__(self, name) -> None:
         self.message = self.message.format(name=name)
         super().__init__(self.message)
+
+
+class ValidationError(GTOException):
+    pass

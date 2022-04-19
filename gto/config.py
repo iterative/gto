@@ -1,12 +1,13 @@
 # pylint: disable=no-self-use, no-self-argument, inconsistent-return-statements, invalid-name, import-outside-toplevel
+import re
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, BaseSettings
+from pydantic import BaseModel, BaseSettings, validator
 from pydantic.env_settings import InitSettingsSource
 from ruamel.yaml import YAML
 
-from gto.exceptions import UnknownStage, UnknownType
+from gto.exceptions import UnknownStage, UnknownType, ValidationError
 from gto.ext import Enrichment, find_enrichment_types, find_enrichments
 
 yaml = YAML(typ="safe", pure=True)
@@ -50,6 +51,13 @@ class EnrichmentConfig(BaseModel):
         return find_enrichment_types()[self.type](**self.config)
 
 
+def assert_name_is_valid(name):
+    if not re.match(r"[a-zA-Z0-9-/]*$", name):
+        raise ValidationError(
+            f"Invalid value '{name}'. Only alphanumeric characters, '-', '/' are allowed."
+        )
+
+
 class RegistryConfig(BaseSettings):
     INDEX: str = "artifacts.yaml"
     TYPE_ALLOWED: List[str] = []
@@ -62,11 +70,14 @@ class RegistryConfig(BaseSettings):
     EMOJIS: bool = True
 
     def assert_type(self, name):
-        if not self.check_type(name):
+        assert_name_is_valid(name)
+        if self.TYPE_ALLOWED and name not in self.TYPE_ALLOWED:
             raise UnknownType(name, self.TYPE_ALLOWED)
 
-    def check_type(self, name):
-        return name in self.TYPE_ALLOWED or not self.TYPE_ALLOWED
+    def assert_stage(self, name):
+        assert_name_is_valid(name)
+        if self.stages and name not in self.stages:
+            raise UnknownStage(name, self.stages)
 
     @property
     def enrichments(self) -> Dict[str, Enrichment]:
@@ -74,13 +85,6 @@ class RegistryConfig(BaseSettings):
         if self.AUTOLOAD_ENRICHMENTS:
             return {**find_enrichments(), **res}
         return res
-
-    def assert_stage(self, name):
-        if not self.check_stage(name):
-            raise UnknownStage(name, self.stages)
-
-    def check_stage(self, name):
-        return name in self.stages or not self.stages
 
     @property
     def stages(self) -> List[str]:
@@ -105,43 +109,17 @@ class RegistryConfig(BaseSettings):
                 file_secret_settings,
             )
 
-    # @validator("VERSION_REQUIRED_FOR_ENV", always=True)
-    # def validate_version_required_for_env(cls, value):
-    #     if not value:
-    #         raise NotImplementedError
-    #     return value
+    @validator("TYPE_ALLOWED")
+    def types_are_valid(cls, v):
+        for name in v:
+            assert_name_is_valid(name)
+        return v
 
-    # TODO: now fails, make this work
-    # @validator("ENV_BASE", always=True, pre=True)
-    # def validate_env_base(cls, value):
-    #     if value not in cls.ENV_MANAGERS_MAPPING:
-    #         raise ValueError(f"ENV_BASE must be one of: {cls.ENV_MANAGERS_MAPPING.keys()}")
-    #     return value
-
-    # @validator("ENV_WHITELIST", always=True)
-    # def validate_env_whitelist(cls, value, values):
-    #     if values["ENV_BASE"] == BRANCH:
-    #         # logging.warning("ENV_WHITELIST is ignored when ENV_BASE is BRANCH")
-    #         pass
-    #     return value
-
-    # @validator("ENV_BRANCH_MAPPING", always=True)
-    # def validate_env_branch_mapping(
-    #     cls, value: Dict[str, str], values
-    # ) -> Dict[str, str]:
-    #     if values["ENV_BASE"] != BRANCH:
-    #         # logging.warning("ENV_BRANCH_MAPPING is ignored when ENV_BASE is not BRANCH")
-    #         return value
-    #     if not isinstance(value, dict):
-    #         raise ValueError(
-    #             f"ENV_BRANCH_MAPPING must be a dict, got {type(value)}",
-    #             "ENV_BRANCH_MAPPING",
-    #         )
-    #     if not all(isinstance(k, str) and isinstance(v, str) for k, v in value.items()):
-    #         raise ValueError(
-    #             "ENV_BRANCH_MAPPING must be a dict of str:str", "ENV_BRANCH_MAPPING"
-    #         )
-    #     return value
+    @validator("STAGE_ALLOWED")
+    def stages_are_valid(cls, v):
+        for name in v:
+            assert_name_is_valid(name)
+        return v
 
 
 CONFIG = RegistryConfig()
