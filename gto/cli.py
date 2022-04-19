@@ -287,12 +287,6 @@ def gto_callback(
     * Promote versions to signal downstream systems to act
     * Attach additional info about your artifact with Enrichments
     * Act on new versions and promotions in CI
-
-    Examples:
-        $ gto register nn HEAD  # Register new version
-        $ gto promote nn staging --ref HEAD  # Promote version to Stage
-        $ gto show  # See the registry state
-        $ gto history  # See the history of events
     """
     if ctx.invoked_subcommand is None and show_version:
         with cli_echo():
@@ -430,7 +424,7 @@ def register(
         False, "--bump-patch", is_flag=True, help="Bump patch version"
     ),
 ):
-    """Create git tag that marks the important artifact version
+    """Create git tag marking important artifact version
 
     Examples:
         Register new version at HEAD:
@@ -485,7 +479,7 @@ def promote(
         help="Don't register a version at specified commit",
     ),
 ):
-    """Assign stage to specific artifact version
+    """Create git tag assigning stage to artifact version
 
     Examples:
         Promote "nn" to "prod" at specific ref:
@@ -530,7 +524,7 @@ def latest(
     name: str = arg_name,
     ref: bool = option_ref_bool,
 ):
-    """Return latest version of artifact
+    """Find latest version of artifact
 
     Examples:
         $ gto latest nn
@@ -550,7 +544,7 @@ def which(
     stage: str = arg_stage,
     ref: bool = option_ref_bool,
 ):
-    """Return version of artifact with specific stage active
+    """Find latest artifact version in specific stage
 
     Examples:
         $ gto which nn prod
@@ -588,7 +582,7 @@ def check_ref(
     repo: str = option_repo,
     ref: str = Argument(..., help="Git reference to analyze"),
 ):
-    """Find out artifact & version registered/promoted with the provided ref
+    """Find out the artifact version registered/promoted with ref
 
     Examples:
         $ gto check-ref rf@v1.0.0
@@ -601,14 +595,14 @@ def check_ref(
 @gto_command(section=COMMANDS.REGISTRY)
 def show(
     repo: str = option_repo,
-    name: str = Argument(None, help="Artifact name to show. If empty, show registry."),
+    name: str = Argument(None, help="Artifact name to show. If empty, show registry"),
     all_branches: bool = option_all_branches,
     all_commits: bool = option_all_commits,
     json: bool = option_json,
     plain: bool = option_plain,
     name_only: bool = option_name_only,
 ):
-    """Show current registry state or specific artifact
+    """Show registry state
 
     Examples:
         Show the registry:
@@ -673,7 +667,7 @@ def history(
     plain: bool = option_plain,
     sort: str = option_sort,
 ):
-    """Show history of artifact
+    """Show a journal of events in registry
 
     Examples:
         $ gto history nn
@@ -721,7 +715,7 @@ def stages(
         show_default=True,
     ),
 ):
-    """Return list of stages used in the registry.
+    """Print list of stages used in the registry
 
     Examples:
         $ gto print-stage
