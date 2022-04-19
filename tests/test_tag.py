@@ -15,7 +15,7 @@ def test_name_tag(empty_git_repo):
     )
     assert (
         name_tag(Action.PROMOTE, "myartifact", repo=repo, stage="stage", simple=False)
-        == f"myartifact{ActionSign[Action.PROMOTE]}stage-1"
+        == f"myartifact{ActionSign[Action.PROMOTE]}stage{ActionSign[Action.PROMOTE]}1"
     )
 
 
@@ -26,6 +26,6 @@ def test_parse_name():
     assert parse_name(f"path{ActionSign[Action.PROMOTE]}stage") == dict(
         name="path", action=Action.PROMOTE, stage="stage"
     )
-    assert parse_name(f"path{ActionSign[Action.PROMOTE]}stage-1") == dict(
-        name="path", action=Action.PROMOTE, stage="stage", number=1
-    )
+    assert parse_name(
+        f"path{ActionSign[Action.PROMOTE]}stage{ActionSign[Action.PROMOTE]}1"
+    ) == dict(name="path", action=Action.PROMOTE, stage="stage", number=1)

@@ -16,7 +16,7 @@ class BasePromotion(BaseModel):
     artifact: str
     version: str
     stage: str
-    creation_date: datetime
+    created_at: datetime
     author: str
     commit_hexsha: str
     tag: str
@@ -25,7 +25,7 @@ class BasePromotion(BaseModel):
 class BaseVersion(BaseModel):
     artifact: str
     name: str
-    creation_date: datetime
+    created_at: datetime
     author: str
     commit_hexsha: str
     discovered: bool = False
@@ -45,7 +45,7 @@ class BaseVersion(BaseModel):
 
     @property
     def stage(self):
-        promotions = sorted(self.promotions, key=lambda p: p.creation_date)
+        promotions = sorted(self.promotions, key=lambda p: p.created_at)
         return promotions[-1] if promotions else None
 
     def dict_status(self):
@@ -78,14 +78,13 @@ class BaseArtifact(BaseModel):
                 for v in self.versions
                 if not v.discovered and (not registered or v.is_registered)
             ),
-            key=lambda x: x.creation_date,
+            key=lambda x: x.created_at,
         )
         if versions:
             return versions[-1]
         return None
 
-    @property
-    def promoted(self) -> Dict[str, BasePromotion]:
+    def get_promotions(self) -> Dict[str, BasePromotion]:
         stages: Dict[str, BasePromotion] = {}
         # semver
         versions = sorted(
@@ -99,7 +98,7 @@ class BaseArtifact(BaseModel):
         versions.extend(
             sorted(
                 (v for v in self.versions if not v.is_registered),
-                key=lambda x: x.creation_date,
+                key=lambda x: x.created_at,
                 reverse=True,
             )
         )
@@ -156,8 +155,14 @@ class BaseArtifact(BaseModel):
     # ) -> List[BaseVersion]:
     #     ...
 
-    def get_versions(self, include_discovered=False):
-        return [v for v in self.versions if include_discovered or not v.discovered]
+    def get_versions(self, include_non_explicit=False, include_discovered=False):
+        return [
+            v
+            for v in self.versions
+            if (v.is_registered and not v.discovered)
+            or (include_discovered and v.discovered)
+            or (include_non_explicit and not v.is_registered)
+        ]
 
     def find_version(
         self,
@@ -196,7 +201,7 @@ class BaseArtifact(BaseModel):
                 raise_if_not_found=True,
                 allow_multiple=True,
             )
-            if (v.creation_date <= latest_datetime if latest_datetime else True)  # type: ignore
+            if (v.created_at <= latest_datetime if latest_datetime else True)  # type: ignore
         ][-1]
 
 
@@ -238,7 +243,7 @@ class BaseRegistryState(BaseModel):
 
     def which(self, name, stage, raise_if_not_found=True):
         """Return stage active in specific stage"""
-        promoted = self.find_artifact(name).promoted
+        promoted = self.find_artifact(name).get_promotions()
         if stage in promoted:
             return promoted[stage]
         if raise_if_not_found:
@@ -247,9 +252,9 @@ class BaseRegistryState(BaseModel):
 
     def sort(self):
         for name in self.artifacts:  # pylint: disable=consider-using-dict-items
-            self.artifacts[name].versions.sort(key=lambda x: (x.creation_date, x.name))
+            self.artifacts[name].versions.sort(key=lambda x: (x.created_at, x.name))
             self.artifacts[name].stages.sort(
-                key=lambda x: (x.creation_date, x.version, x.stage)
+                key=lambda x: (x.created_at, x.version, x.stage)
             )
 
 

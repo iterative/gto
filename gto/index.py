@@ -329,7 +329,6 @@ class EnrichmentManager(BaseManager):
     def update_state(
         self,
         state: BaseRegistryState,
-        # discover: bool = False,
         all_branches=False,
         all_commits=False,
     ) -> BaseRegistryState:
@@ -341,8 +340,6 @@ class EnrichmentManager(BaseManager):
                     version=version.name, enrichments=enrichments
                 )
                 state.update_artifact(artifact)
-        # do discovery if requested
-        # if discover:
         for commit in self.get_commits(
             all_branches=all_branches, all_commits=all_commits
         ):
@@ -358,7 +355,7 @@ class EnrichmentManager(BaseManager):
                         BaseVersion(
                             artifact=art_name,
                             name=commit.hexsha,
-                            creation_date=datetime.fromtimestamp(commit.committed_date),
+                            created_at=datetime.fromtimestamp(commit.committed_date),
                             author=commit.author.name,
                             commit_hexsha=commit.hexsha,
                             discovered=True,

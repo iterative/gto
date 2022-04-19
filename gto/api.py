@@ -33,8 +33,8 @@ def _get_state(repo: Union[str, Repo]):
     return GitRegistry.from_repo(repo).get_state()
 
 
-def get_stages(repo: Union[str, Repo], in_use: bool = False):
-    return GitRegistry.from_repo(repo).get_stages(in_use=in_use)
+def get_stages(repo: Union[str, Repo], allowed: bool = False):
+    return GitRegistry.from_repo(repo).get_stages(allowed=allowed)
 
 
 # TODO: make this work the same as CLI version
@@ -147,7 +147,6 @@ def check_ref(repo: Union[str, Repo], ref: str):
 def show(
     repo: Union[str, Repo],
     name: Optional[str] = None,
-    # discover: bool = False,
     table: bool = False,
     all_branches=False,
     all_commits=False,
@@ -156,7 +155,6 @@ def show(
         _show_versions(
             repo,
             name=name,
-            # discover=discover,
             all_branches=all_branches,
             all_commits=all_commits,
             table=table,
@@ -164,7 +162,6 @@ def show(
         if name
         else _show_registry(
             repo,
-            # discover=discover,
             all_branches=all_branches,
             all_commits=all_commits,
             table=table,
@@ -174,7 +171,6 @@ def show(
 
 def _show_registry(
     repo: Union[str, Repo],
-    # discover: bool = False,
     all_branches=False,
     all_commits=False,
     table: bool = False,
@@ -182,17 +178,20 @@ def _show_registry(
     """Show current registry state"""
 
     reg = GitRegistry.from_repo(repo)
-    stages = list(reg.get_stages(in_use=False))
+    stages = list(reg.get_stages())
     models_state = {
         o.name: {
-            "version": o.get_latest_version().name if o.get_latest_version() else None,
+            "version": o.get_latest_version(registered=True).name
+            if o.get_latest_version(registered=True)
+            else None,
             "stage": {
-                name: o.promoted[name].version if name in o.promoted else None
+                name: o.get_promotions()[name].version
+                if name in o.get_promotions()
+                else None
                 for name in stages
             },
         }
         for o in reg.get_artifacts(
-            # discover=discover,
             all_branches=all_branches,
             all_commits=all_commits,
         ).values()
@@ -212,7 +211,6 @@ def _show_versions(
     repo: Union[str, Repo],
     name: str,
     raw: bool = False,
-    # discover: bool = False,
     all_branches=False,
     all_commits=False,
     table: bool = False,
@@ -225,25 +223,28 @@ def _show_versions(
         v.dict_status()
         for v in reg.find_artifact(
             name,
-            # discover=discover,
             all_branches=all_branches,
             all_commits=all_commits,
-        ).get_versions(include_discovered=True)
+        ).get_versions(include_non_explicit=True, include_discovered=True)
     ]
     if not table:
         return versions
 
-    first_keys = ["artifact", "name", "stage"]
+    first_keys = ["artifact", "version", "stage"]
     versions_ = []
     for v in versions:
+        v["version"] = v["name"][:7]
         if v["stage"]:
             v["stage"] = v["stage"]["stage"]
+        v["commit_hexsha"] = v["commit_hexsha"][:7]
+        v["ref"] = v["tag"] or v["commit_hexsha"][:7]
+        for key in "enrichments", "discovered", "tag", "commit_hexsha", "name":
+            v.pop(key)
+        # v["enrichments"] = [e["source"] for e in v["enrichments"]]
         v = OrderedDict(
             [(key, v[key]) for key in first_keys]
             + [(key, v[key]) for key in v if key not in first_keys]
         )
-        v["commit_hexsha"] = v["commit_hexsha"][:7]
-        v["enrichments"] = [e["source"] for e in v["enrichments"]]
         versions_.append(v)
     return versions_, "keys"
 
@@ -269,21 +270,15 @@ def describe(
 def history(
     repo: Union[str, Repo],
     artifact: str = None,
-    # discover: bool = False,
     # action: str = None,
     all_branches=False,
     all_commits=False,
     sort: str = "desc",
     table: bool = False,
 ):
-    # TODO: rework this.
-    # 1. commits should be gathered only --discover is supplied
-    # 2. we shouldn't use audit_something functions
-    # 3. commits should be got from EnrichmentManager, probably
 
     reg = GitRegistry.from_repo(repo)
     artifacts = reg.get_artifacts(
-        # discover=discover,
         all_branches=all_branches,
         all_commits=all_commits,
     )
@@ -293,21 +288,21 @@ def history(
             timestamp=datetime.fromtimestamp(
                 reg.repo.commit(v.commit_hexsha).committed_date
             ),
-            name=o.name,
-            event="commit",  # "commit [discovered]" if v.discovered else "commit",
+            artifact=o.name,
+            event="commit",
             commit=v.commit_hexsha[:7],
             author=reg.repo.commit(v.commit_hexsha).author.name,
         )
         for o in artifacts.values()
-        for v in o.get_versions(include_discovered=True)
+        for v in o.get_versions(include_non_explicit=True, include_discovered=True)
     ]
 
     registration = [
         OrderedDict(
-            timestamp=v.creation_date,
-            name=o.name,
+            timestamp=v.created_at,
+            artifact=o.name,
             event="registration",
-            version=v.name,
+            version=v.name[:7],
             commit=v.commit_hexsha[:7],
             author=v.author,
             # enrichments=[e.source for e in v.enrichments],
@@ -318,10 +313,10 @@ def history(
 
     promotion = [
         OrderedDict(
-            timestamp=l.creation_date,
-            name=o.name,
+            timestamp=l.created_at,
+            artifact=o.name,
             event="promotion",
-            version=l.version,
+            version=l.version[:7],
             stage=l.stage,
             commit=l.commit_hexsha[:7],
             author=l.author,
@@ -331,8 +326,7 @@ def history(
     ]
 
     events_order = {
-        "commit": 0,
-        # "commit [discovered]": 1,
+        "commit": 1,
         "registration": 2,
         "promotion": 3,
     }
@@ -343,12 +337,12 @@ def history(
     if _is_ascending(sort):
         events.reverse()
     if artifact:
-        events = [event for event in events if event["name"] == artifact]
+        events = [event for event in events if event["artifact"] == artifact]
     if not table:
         return events
     keys_order = [
         "timestamp",
-        NAME,
+        "artifact",
         "event",
         VERSION,
         STAGE,

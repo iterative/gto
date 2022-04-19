@@ -38,7 +38,7 @@ def test_api(showcase):
             commit_hexsha=first_commit.hexsha,
             discovered=False,
         ),
-        {"creation_date", "promotions", "enrichments", "tag"},
+        {"created_at", "promotions", "enrichments", "tag"},
     )
     assert len(nn_artifact.stages) == 1
     nn_promotion = nn_artifact.stages[0]
@@ -52,7 +52,7 @@ def test_api(showcase):
             author=author,
             commit_hexsha=first_commit.hexsha,
         ),
-        {"creation_date", "tag"},
+        {"created_at", "tag"},
     )
 
     rf_artifact = artifacts["rf"]
@@ -71,7 +71,7 @@ def test_api(showcase):
             commit_hexsha=first_commit.hexsha,
             discovered=False,
         ),
-        {"creation_date", "promotions", "enrichments", "tag"},
+        {"created_at", "promotions", "enrichments", "tag"},
     )
     _check_obj(
         rf_ver2,
@@ -82,7 +82,7 @@ def test_api(showcase):
             commit_hexsha=second_commit.hexsha,
             discovered=False,
         ),
-        {"creation_date", "promotions", "enrichments", "tag"},
+        {"created_at", "promotions", "enrichments", "tag"},
     )
 
     assert len(rf_artifact.stages) == 4
@@ -99,7 +99,7 @@ def test_api(showcase):
             author=author,
             commit_hexsha=first_commit.hexsha,
         ),
-        {"creation_date", "tag"},
+        {"created_at", "tag"},
     )
     _check_obj(
         rf_l4,
@@ -110,7 +110,7 @@ def test_api(showcase):
             author=author,
             commit_hexsha=second_commit.hexsha,
         ),
-        {"creation_date", "tag"},
+        {"created_at", "tag"},
     )
     _check_obj(
         rf_l3,
@@ -121,5 +121,5 @@ def test_api(showcase):
             author=author,
             commit_hexsha=second_commit.hexsha,
         ),
-        {"creation_date", "tag"},
+        {"created_at", "tag"},
     )
