@@ -17,20 +17,11 @@ from gto.exceptions import GTOException, WrongArgs
 from gto.ui import EMOJI_FAIL, EMOJI_GTO, bold, cli_echo, color, echo
 from gto.utils import format_echo, make_ready_to_serialize
 
-TABLE = "table"
 
-
-class ALIAS:
-    COMMIT = ["commit", "c"]
-    REGISTER = ["register", "r", "reg", "registration", "registrations"]
-    PROMOTE = ["promote", "p", "prom", "promotion", "promotions"]
-
-
-class COMMANDS:
-    REGISTRY = "Read the registry"
-    REGISTER_PROMOTE = "Register and promote"
-    ENRICHMENT = "Manage enrichments"
-    CI = "Use in CI"
+class CommandGroups:
+    querying = "Read the registry"
+    modifying = "Modify artifacts"
+    enriching = "Manage artifact enrichments"
 
 
 class GtoFormatter(click.HelpFormatter):
@@ -107,10 +98,9 @@ class GtoCommand(TyperCommand, GtoCliMixin):
 
 class GtoGroup(TyperGroup, GtoCliMixin):
     order = [
-        COMMANDS.REGISTRY,
-        COMMANDS.REGISTER_PROMOTE,
-        COMMANDS.ENRICHMENT,
-        COMMANDS.CI,
+        CommandGroups.querying,
+        CommandGroups.modifying,
+        CommandGroups.enriching,
         "other",
     ]
 
@@ -282,11 +272,11 @@ def gto_callback(
     traceback: bool = Option(False, "--traceback", "--tb", hidden=True),
 ):
     """\b
-    Git Tag Ops. Turn your Git Repo into Artifact Registry:
-    * Register new versions of artifacts marking significant changes to them
-    * Promote versions to signal downstream systems to act
-    * Attach additional info about your artifact with Enrichments
-    * Act on new versions and promotions in CI
+    Git Tag Ops. Turn your Git Repo into an Artifact Registry:
+    * Register new versions of artifacts marking releases/significant changes
+    * Promote versions to ordered, named stages to track their lifecycles
+    * Signal CI/CD automation, or downstream systems to act (GitOps) upon registration & promotion events
+    * Maintain and query artifact metadata / additional info using an Enrichments machinery
     """
     if ctx.invoked_subcommand is None and show_version:
         with cli_echo():
@@ -360,7 +350,7 @@ def gto_command(*args, section="other", aliases=None, parent=app, **kwargs):
     return decorator
 
 
-@gto_command(section=COMMANDS.ENRICHMENT)
+@gto_command(section=CommandGroups.enriching)
 def annotate(
     repo: str = option_repo,
     name: str = arg_name,
@@ -379,7 +369,7 @@ def annotate(
     #     False, "-u", "--update", is_flag=True, help="Update artifact if it exists"
     # ),
 ):
-    """Update enrichment for the artifact with given details
+    """Update artifact metadata annotations
 
     Examples:
        $ gto enrich nn --type model --path models/neural_network.h5
@@ -396,7 +386,7 @@ def annotate(
     )
 
 
-@gto_command(section=COMMANDS.ENRICHMENT)
+@gto_command(section=CommandGroups.enriching)
 def remove(repo: str = option_repo, name: str = arg_name):
     """Remove the enrichment for given artifact
 
@@ -406,7 +396,7 @@ def remove(repo: str = option_repo, name: str = arg_name):
     gto.api.remove(repo, name)
 
 
-@gto_command(section=COMMANDS.REGISTER_PROMOTE)
+@gto_command(section=CommandGroups.modifying)
 def register(
     repo: str = option_repo,
     name: str = arg_name,
@@ -424,7 +414,7 @@ def register(
         False, "--bump-patch", is_flag=True, help="Bump patch version"
     ),
 ):
-    """Create git tag marking important artifact version
+    """Create an artifact version to signify an important, published or released iteration
 
     Examples:
         Register new version at HEAD:
@@ -451,7 +441,7 @@ def register(
     )
 
 
-@gto_command(section=COMMANDS.REGISTER_PROMOTE)
+@gto_command(section=CommandGroups.modifying)
 def promote(
     repo: str = option_repo,
     name: str = arg_name,
@@ -479,7 +469,7 @@ def promote(
         help="Don't register a version at specified commit",
     ),
 ):
-    """Create git tag assigning stage to artifact version
+    """Move an artifact version to a specific stage
 
     Examples:
         Promote "nn" to "prod" at specific ref:
@@ -518,13 +508,13 @@ def promote(
     )
 
 
-@gto_command(section=COMMANDS.REGISTRY)
+@gto_command(section=CommandGroups.querying)
 def latest(
     repo: str = option_repo,
     name: str = arg_name,
     ref: bool = option_ref_bool,
 ):
-    """Find latest version of artifact
+    """Find the latest version of artifact
 
     Examples:
         $ gto latest nn
@@ -537,14 +527,14 @@ def latest(
             echo(latest_version.name)
 
 
-@gto_command(section=COMMANDS.REGISTRY)
+@gto_command(section=CommandGroups.querying)
 def which(
     repo: str = option_repo,
     name: str = arg_name,
     stage: str = arg_stage,
     ref: bool = option_ref_bool,
 ):
-    """Find latest artifact version in specific stage
+    """Find the latest artifact version in a given stage
 
     Examples:
         $ gto which nn prod
@@ -577,7 +567,7 @@ def parse_tag(
     format_echo(parsed, "json")
 
 
-@gto_command(section=COMMANDS.CI)
+@gto_command(section=CommandGroups.querying)
 def check_ref(
     repo: str = option_repo,
     ref: str = Argument(..., help="Git reference to analyze"),
@@ -592,7 +582,7 @@ def check_ref(
     format_echo(result, "json")
 
 
-@gto_command(section=COMMANDS.REGISTRY)
+@gto_command(section=CommandGroups.querying)
 def show(
     repo: str = option_repo,
     name: str = Argument(None, help="Artifact name to show. If empty, show registry"),
@@ -602,7 +592,7 @@ def show(
     plain: bool = option_plain,
     name_only: bool = option_name_only,
 ):
-    """Show registry state
+    """Show the registry state
 
     Examples:
         Show the registry:
@@ -655,7 +645,7 @@ def show(
 # )
 
 
-@gto_command(section=COMMANDS.REGISTRY)
+@gto_command(section=CommandGroups.querying)
 def history(
     repo: str = option_repo,
     name: str = Argument(None, help="Artifact name to show. If empty, show all."),
@@ -665,7 +655,7 @@ def history(
     plain: bool = option_plain,
     sort: str = option_sort,
 ):
-    """Show a journal of events in registry
+    """Show a journal of registry operations
 
     Examples:
         $ gto history nn
@@ -702,7 +692,7 @@ def history(
         )
 
 
-@gto_command(section=COMMANDS.REGISTRY)
+@gto_command(section=CommandGroups.querying)
 def stages(
     repo: str = option_repo,
     allowed: bool = Option(
@@ -746,7 +736,7 @@ def print_index(repo: str = option_repo):
     format_echo(index, "json")
 
 
-@gto_command(section=COMMANDS.ENRICHMENT)
+@gto_command(section=CommandGroups.enriching)
 def describe(
     repo: str = option_repo,
     name: str = arg_name,
@@ -755,7 +745,7 @@ def describe(
     path: Optional[bool] = option_path_bool,
     description: Optional[bool] = option_description_bool,
 ):
-    """Find enrichments for the artifact
+    """Display enrichments for an artifact
 
     Examples:
         $ gto describe nn --rev HEAD
