@@ -12,7 +12,7 @@ Git Tag Ops. Turn your Git repository into an Artifact Registry:
 * Act on new versions and promotions in CI/CD
 
 To turn any data science repo into an artifact registry, you only need to `pip install` this package.
-GTO versioning and promotes artifacts by creating special Git tags.
+GTO versions and promotes artifacts by creating special Git tags.
 To use the artifact registry, you also need this package only.
 
 This tool can be used both as CLI and in Python code.
