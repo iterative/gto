@@ -16,7 +16,7 @@ GTO versions and promotes artifacts by creating special Git tags.
 To use the artifact registry, you also need this package only.
 
 This tool can be used both as CLI and in Python code.
-The README will cover CLI usage, but for every command there is a Python API counterpart in the `gto.api` module.
+The README will cover CLI usage, but for every command there is a Python API counterpart in the [`gto.api`](/iterative/gto/blob/main/gto/api.py) module.
 
 ## Versioning
 
