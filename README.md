@@ -4,11 +4,12 @@
 
 # GTO
 
-Git Tag Ops. Turn your Git Repo into Artifact Registry:
-* Register new versions of artifacts marking significant changes to them
-* Promote versions to signal downstream systems to act
-* Attach additional info about your artifact with Enrichments
-* Act on new versions and promotions in CI
+Git Tag Ops. Turn your Git Repo into an Artifact Registry:
+
+* Register new versions of artifacts by marking significant changes to them
+* Promote certain versions to signal downstream systems to act
+* Attach additional information about your artifact with Enrichments
+* Act on new versions and promotions in CI/CD
 
 To turn your repo into an artifact registry, you only need to `pip install` this package. Versioning and promotion of artifacts are done by creation of special git tags. To use the artifact registry, you also need this package only.
 
