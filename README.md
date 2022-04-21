@@ -35,7 +35,7 @@ $ git clone git@github.com:iterative/gto-example.git
 $ cd gto-example
 ```
 
-## Versioning
+### Versioning
 
 To register new version of artifact, you can use `gto register` command. You usually use those to mark significant changes to the artifact. Running `gto register` creates a special git tag.
 
@@ -44,7 +44,7 @@ $ gto register rf
 Created git tag 'rf@v0.0.1' that registers a new version
 ```
 
-## Promoting
+### Promoting
 
 You could also promote a specific artifact version to Stage. Stages are statuses of your artifact specifying the readiness to be used by downstream systems. You can use promotions to signal downstream systems to act via CI/CD or webhooks - for example, redeploy a ML model (if your artifact is a model) or update the some special file on server (if your artifact is a file).
 
@@ -59,7 +59,7 @@ There are two notations used for git tags in promotion:
 
 Incremental is the default one and we suggest you use it when possible. The benefit of using it is that you don't have to delete git tags (with simple notation you'll need to delete them because you can't have two tags with the same name). This will keep the history of your promotions.
 
-## Artifacts
+### Artifacts
 
 So far we've seen how to register versions and promote them, but we still didn't specify `type` of artifact (dataset, model, something else) and `path` to it. For simple workflows, when we have a single artifact, we can hardcore those to CI/CD or downstream systems. But for more advanced cases we would like to codify them - and we can do that with `artifacts.yaml` file.
 
@@ -130,7 +130,7 @@ $ gto history rf
 ╘═════════════════════╧════════╧══════════════╧═══════════╧════════════╧══════════╧═══════════════════╛
 ```
 
-## Act on new versions and promotions in CI
+### Act on new versions and promotions in CI
 
 To act upon created git tags, you can create simple CI workflow. With GH actions it can look like this:
 ```
