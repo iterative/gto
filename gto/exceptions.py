@@ -19,6 +19,14 @@ class NoRepo(GTOException):
         super().__init__(self.message)
 
 
+class WrongConfig(GTOException):
+    _message = "Wrong config file '{path}'"
+
+    def __init__(self, path) -> None:
+        self.message = self._message.format(path=path)
+        super().__init__(self.message)
+
+
 class NoFile(GTOException):
     _message = "No file/folder found in '{path}' for checkouted commit"
 
@@ -44,7 +52,7 @@ class ArtifactExists(GTOException):
 
 
 class ArtifactNotFound(GTOException):
-    _message = "Cannot find artifact"
+    _message = "Cannot find artifact '{name}'"
 
     def __init__(self, name) -> None:
         self.message = self._message.format(name=name)
@@ -116,11 +124,7 @@ class RefNotFound(GTOException):
 
 
 class InvalidVersion(GTOException):
-    _message = "Supplied version '{version}' doesn't look like valid {cls} version"
-
-    def __init__(self, version, cls) -> None:
-        self.message = self._message.format(version=version, cls=cls)
-        super().__init__(self.message)
+    pass
 
 
 class IncomparableVersions(GTOException):
@@ -149,6 +153,14 @@ class MissingArg(GTOException):
 
 class WrongArgs(GTOException):
     pass
+
+
+class InvalidTagName(GTOException):
+    message = "Cannot parse tag name '{tag}'"
+
+    def __init__(self, tag) -> None:
+        self.message = self.message.format(tag=tag)
+        super().__init__(self.message)
 
 
 class TagExists(GTOException):

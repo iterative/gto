@@ -7,13 +7,85 @@ from pydantic import BaseModel, BaseSettings, validator
 from pydantic.env_settings import InitSettingsSource
 from ruamel.yaml import YAML
 
-from gto.exceptions import UnknownStage, UnknownType, ValidationError
+from gto.exceptions import (
+    UnknownStage,
+    UnknownType,
+    ValidationError,
+    WrongConfig,
+)
 from gto.ext import Enrichment, find_enrichment_types, find_enrichments
 
 yaml = YAML(typ="safe", pure=True)
 yaml.default_flow_style = False
 
 CONFIG_FILE_NAME = ".gto"
+
+
+def check_name_is_valid(name):
+    return bool(re.match(r"[a-zA-Z0-9-/]*$", name))
+
+
+def assert_name_is_valid(name):
+    if not check_name_is_valid(name):
+        raise ValidationError(
+            f"Invalid value '{name}'. Only alphanumeric characters, '-', '/' are allowed."
+        )
+
+
+class EnrichmentConfig(BaseModel):
+    type: str
+    config: Dict = {}
+
+    def load(self) -> Enrichment:
+        return find_enrichment_types()[self.type](**self.config)
+
+
+class NoFileConfig(BaseSettings):
+    INDEX: str = "artifacts.yaml"
+    TYPE_ALLOWED: List[str] = []
+    STAGE_ALLOWED: List[str] = []
+    LOG_LEVEL: str = "INFO"
+    DEBUG: bool = False
+    ENRICHMENTS: List[EnrichmentConfig] = []
+    AUTOLOAD_ENRICHMENTS: bool = True
+    CONFIG_FILE_NAME: Optional[str] = CONFIG_FILE_NAME
+    EMOJIS: bool = True
+
+    class Config:
+        env_prefix = "gto_"
+
+    def assert_type(self, name):
+        assert_name_is_valid(name)
+        if self.TYPE_ALLOWED and name not in self.TYPE_ALLOWED:
+            raise UnknownType(name, self.TYPE_ALLOWED)
+
+    def assert_stage(self, name):
+        assert_name_is_valid(name)
+        if self.stages and name not in self.stages:
+            raise UnknownStage(name, self.stages)
+
+    @property
+    def enrichments(self) -> Dict[str, Enrichment]:
+        res = {e.source: e for e in (e.load() for e in self.ENRICHMENTS)}
+        if self.AUTOLOAD_ENRICHMENTS:
+            return {**find_enrichments(), **res}
+        return res
+
+    @property
+    def stages(self) -> List[str]:
+        return self.STAGE_ALLOWED
+
+    @validator("TYPE_ALLOWED")
+    def types_are_valid(cls, v):
+        for name in v:
+            assert_name_is_valid(name)
+        return v
+
+    @validator("STAGE_ALLOWED")
+    def stages_are_valid(cls, v):
+        for name in v:
+            assert_name_is_valid(name)
+        return v
 
 
 def _set_location_init_source(init_source: InitSettingsSource):
@@ -43,53 +115,7 @@ def config_settings_source(settings: "RegistryConfig") -> Dict[str, Any]:
     return {k.upper(): v for k, v in conf.items()} if conf else {}
 
 
-class EnrichmentConfig(BaseModel):
-    type: str
-    config: Dict = {}
-
-    def load(self) -> Enrichment:
-        return find_enrichment_types()[self.type](**self.config)
-
-
-def assert_name_is_valid(name):
-    if not re.match(r"[a-zA-Z0-9-/]*$", name):
-        raise ValidationError(
-            f"Invalid value '{name}'. Only alphanumeric characters, '-', '/' are allowed."
-        )
-
-
-class RegistryConfig(BaseSettings):
-    INDEX: str = "artifacts.yaml"
-    TYPE_ALLOWED: List[str] = []
-    STAGE_ALLOWED: List[str] = []
-    LOG_LEVEL: str = "INFO"
-    DEBUG: bool = False
-    ENRICHMENTS: List[EnrichmentConfig] = []
-    AUTOLOAD_ENRICHMENTS: bool = True
-    CONFIG_FILE_NAME: Optional[str] = CONFIG_FILE_NAME
-    EMOJIS: bool = True
-
-    def assert_type(self, name):
-        assert_name_is_valid(name)
-        if self.TYPE_ALLOWED and name not in self.TYPE_ALLOWED:
-            raise UnknownType(name, self.TYPE_ALLOWED)
-
-    def assert_stage(self, name):
-        assert_name_is_valid(name)
-        if self.stages and name not in self.stages:
-            raise UnknownStage(name, self.stages)
-
-    @property
-    def enrichments(self) -> Dict[str, Enrichment]:
-        res = {e.source: e for e in (e.load() for e in self.ENRICHMENTS)}
-        if self.AUTOLOAD_ENRICHMENTS:
-            return {**find_enrichments(), **res}
-        return res
-
-    @property
-    def stages(self) -> List[str]:
-        return self.STAGE_ALLOWED
-
+class RegistryConfig(NoFileConfig):
     class Config:
         env_prefix = "gto_"
         env_file_encoding = "utf-8"
@@ -109,17 +135,12 @@ class RegistryConfig(BaseSettings):
                 file_secret_settings,
             )
 
-    @validator("TYPE_ALLOWED")
-    def types_are_valid(cls, v):
-        for name in v:
-            assert_name_is_valid(name)
-        return v
 
-    @validator("STAGE_ALLOWED")
-    def stages_are_valid(cls, v):
-        for name in v:
-            assert_name_is_valid(name)
-        return v
+def read_registry_config(config_file_name):
+    try:
+        return RegistryConfig(CONFIG_FILE_NAME=config_file_name)
+    except Exception as e:  # pylint: disable=bare-except
+        raise WrongConfig(config_file_name) from e
 
 
-CONFIG = RegistryConfig()
+CONFIG = NoFileConfig()
