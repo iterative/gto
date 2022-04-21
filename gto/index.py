@@ -10,7 +10,12 @@ import git
 from pydantic import BaseModel, parse_obj_as
 
 from gto.base import BaseManager, BaseRegistryState, BaseVersion
-from gto.config import CONFIG_FILE_NAME, RegistryConfig, yaml
+from gto.config import (
+    CONFIG_FILE_NAME,
+    RegistryConfig,
+    read_registry_config,
+    yaml,
+)
 from gto.constants import Action
 from gto.exceptions import (
     ArtifactExists,
@@ -195,9 +200,7 @@ class FileIndexManager(BaseIndexManager):
     @classmethod
     def from_path(cls, path: str, config: RegistryConfig = None):
         if config is None:
-            config = RegistryConfig(
-                CONFIG_FILE_NAME=os.path.join(path, CONFIG_FILE_NAME)
-            )
+            config = read_registry_config(os.path.join(path, CONFIG_FILE_NAME))
         return cls(path=path, config=config)
 
     def index_path(self):
@@ -233,8 +236,8 @@ class RepoIndexManager(FileIndexManager):
             except git.InvalidGitRepositoryError as e:
                 raise NoRepo(repo) from e
         if config is None:
-            config = RegistryConfig(
-                CONFIG_FILE_NAME=os.path.join(repo.working_dir, CONFIG_FILE_NAME)
+            config = read_registry_config(
+                os.path.join(repo.working_dir, CONFIG_FILE_NAME)
             )
         return cls(repo=repo, config=config)
 
@@ -294,8 +297,8 @@ class EnrichmentManager(BaseManager):
         if isinstance(repo, str):
             repo = git.Repo(repo, search_parent_directories=True)
         if config is None:
-            config = RegistryConfig(
-                CONFIG_FILE_NAME=os.path.join(repo.working_dir, CONFIG_FILE_NAME)
+            config = read_registry_config(
+                os.path.join(repo.working_dir, CONFIG_FILE_NAME)
             )
         return cls(repo=repo, config=config)
 
