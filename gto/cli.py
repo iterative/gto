@@ -176,7 +176,11 @@ def GTOGroupSection(section):
     return partial(GtoGroup, section=section)
 
 
-app = Typer(cls=GtoGroup, context_settings={"help_option_names": ["-h", "--help"]})
+app = Typer(
+    cls=GtoGroup,
+    context_settings={"help_option_names": ["-h", "--help"]},
+    add_completion=False,
+)
 
 arg_name = Argument(..., help="Artifact name")
 arg_version = Argument(..., help="Artifact version")
@@ -272,11 +276,11 @@ def gto_callback(
     traceback: bool = Option(False, "--traceback", "--tb", hidden=True),
 ):
     """\b
-    Git Tag Ops. Turn your Git Repo into an Artifact Registry:
+    Git Tag Ops. Turn your Git repository into an Artifact Registry:
     * Register new versions of artifacts marking releases/significant changes
     * Promote versions to ordered, named stages to track their lifecycles
-    * Signal CI/CD automation, or downstream systems to act (GitOps) upon registration & promotion events
-    * Maintain and query artifact metadata / additional info using an Enrichments machinery
+    * GitOps: signal CI/CD automation or downstream systems to act upon these actions
+    * Maintain and query artifact metadata / additional info with Enrichments machinery
     """
     if ctx.invoked_subcommand is None and show_version:
         with cli_echo():
@@ -391,7 +395,7 @@ def remove(repo: str = option_repo, name: str = arg_name):
     """Remove the enrichment for given artifact
 
     Examples:
-         $ gto rm nn
+         $ gto remove nn
     """
     gto.api.remove(repo, name)
 
@@ -706,8 +710,8 @@ def stages(
     """Print list of stages used in the registry
 
     Examples:
-        $ gto print-stage
-        $ gto print-stage --allowed
+        $ gto stages
+        $ gto stages --allowed
     """
     format_echo(gto.api.get_stages(repo, allowed=allowed), "lines")
 

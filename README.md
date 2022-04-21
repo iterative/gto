@@ -1,22 +1,39 @@
+# GTO
+
 [![Check, test and release](https://github.com/iterative/gto/actions/workflows/check-test-release.yml/badge.svg)](https://github.com/iterative/gto/actions/workflows/check-test-release.yml)
 [![Codecov](https://codecov.io/gh/iterative/gto/branch/main/graph/badge.svg?token=NXT11717BG)](https://codecov.io/gh/iterative/gto)
 [![PyPi](https://img.shields.io/pypi/v/gto.svg?label=pip&logo=PyPI&logoColor=white)](https://pypi.org/project/gto)
 
-# GTO
-
 Git Tag Ops. Turn your Git repository into an Artifact Registry:
 
-* Register new versions of artifacts by marking significant changes to them
-* Promote certain versions to signal downstream systems to act
-* Attach additional information about your artifact with Enrichments
-* Act on new versions and promotions in CI/CD
+* Register new versions of artifacts marking releases/significant changes
+* Promote versions to ordered, named stages to track their lifecycles
+* GitOps: signal CI/CD automation or downstream systems to act upon these actions
+* Maintain and query artifact metadata / additional info with Enrichments machinery
 
-To turn any data science repo into an artifact registry, you only need to `pip install` this package.
-GTO versions and promotes artifacts by creating special Git tags.
-To use the artifact registry, you also need this package only.
+GTO versions and promotes artifacts by creating annotated Git tags in special format.
 
-This tool can be used both as CLI and in Python code.
-The README will cover CLI usage, but for every command there is a Python API counterpart in the [`gto.api`](/iterative/gto/blob/main/gto/api.py) module.
+## Installation
+
+Install GTO with pip:
+
+```
+$ pip install gto
+```
+
+This will install both python package with API you can use and CLI `gto` entrypoint.
+
+Installing this package is enough to get started with using any repo as an artifact registry - no need to set up neither other services, nor a DB.
+
+## Quick walkthrough
+
+The README will cover CLI usage, but for every command there is a Python API counterpart in the [`gto.api`](/iterative/gto/blob/main/gto/api.py) module. In README we'll use this example repo: https://github.com/iterative/gto-example
+
+Let's clone the example repo first:
+```
+$ git clone git@github.com:iterative/gto-example.git
+$ cd gto-example
+```
 
 ## Versioning
 
@@ -64,11 +81,7 @@ In future versions, we will add enrichments: useful information other tools like
 
 ## Using the registry
 
-Let's see what are the commands that help us use the registry. Let's clone the example repo first:
-```
-$ git clone git@github.com:iterative/gto-example.git
-$ cd gto-example
-```
+Let's see what are the commands that help us use the registry.
 
 ### Show the actual state
 
@@ -185,24 +198,16 @@ type_allowed: [model, dataset]  # list of allowed types
 stage_allowed: [dev, stage, prod]  # list of allowed Stages
 ```
 
-## Trying it out
+## Trying out the latest version
 
-### See example repo
-
-Check out the example repo:
-https://github.com/iterative/gto-example
-read README in it and try it out
-
-### To try out the latest version
-
-#### 1. Clone this repository
+### 1. Clone this repository
 
 ```bash
 git clone git@github.com:iterative/gto.git
 cd gto
 ```
 
-#### 2. Create virtual environment named `venv`
+### 2. Create virtual environment named `venv`
 ```bash
 python3 -m venv venv
 source venv/bin/activate
@@ -213,7 +218,7 @@ Install python libraries
 pip install --upgrade pip setuptools wheel ".[tests]"
 ```
 
-#### 3. Run
+### 3. Run
 
 ```bash
 pytest --basetemp=pytest-cache
