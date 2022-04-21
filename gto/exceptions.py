@@ -19,6 +19,14 @@ class NoRepo(GTOException):
         super().__init__(self.message)
 
 
+class WrongConfig(GTOException):
+    _message = "Wrong config file '{path}'"
+
+    def __init__(self, path) -> None:
+        self.message = self._message.format(path=path)
+        super().__init__(self.message)
+
+
 class NoFile(GTOException):
     _message = "No file/folder found in '{path}' for checkouted commit"
 
@@ -44,7 +52,7 @@ class ArtifactExists(GTOException):
 
 
 class ArtifactNotFound(GTOException):
-    _message = "Cannot find artifact"
+    _message = "Cannot find artifact '{name}'"
 
     def __init__(self, name) -> None:
         self.message = self._message.format(name=name)

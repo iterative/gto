@@ -7,7 +7,12 @@ from pydantic import BaseModel, BaseSettings, validator
 from pydantic.env_settings import InitSettingsSource
 from ruamel.yaml import YAML
 
-from gto.exceptions import UnknownStage, UnknownType, ValidationError
+from gto.exceptions import (
+    UnknownStage,
+    UnknownType,
+    ValidationError,
+    WrongConfig,
+)
 from gto.ext import Enrichment, find_enrichment_types, find_enrichments
 
 yaml = YAML(typ="safe", pure=True)
@@ -62,7 +67,14 @@ def assert_name_is_valid(name):
         )
 
 
-class RegistryConfig(BaseSettings):
+def read_registry_config(config_file_name):
+    try:
+        return RegistryConfig(CONFIG_FILE_NAME=config_file_name)
+    except Exception as e:  # pylint: disable=bare-except
+        raise WrongConfig(config_file_name) from e
+
+
+class NoFileConfig(BaseSettings):
     INDEX: str = "artifacts.yaml"
     TYPE_ALLOWED: List[str] = []
     STAGE_ALLOWED: List[str] = []
@@ -72,6 +84,9 @@ class RegistryConfig(BaseSettings):
     AUTOLOAD_ENRICHMENTS: bool = True
     CONFIG_FILE_NAME: Optional[str] = CONFIG_FILE_NAME
     EMOJIS: bool = True
+
+    class Config:
+        env_prefix = "gto_"
 
     def assert_type(self, name):
         assert_name_is_valid(name)
@@ -94,6 +109,20 @@ class RegistryConfig(BaseSettings):
     def stages(self) -> List[str]:
         return self.STAGE_ALLOWED
 
+    @validator("TYPE_ALLOWED")
+    def types_are_valid(cls, v):
+        for name in v:
+            assert_name_is_valid(name)
+        return v
+
+    @validator("STAGE_ALLOWED")
+    def stages_are_valid(cls, v):
+        for name in v:
+            assert_name_is_valid(name)
+        return v
+
+
+class RegistryConfig(NoFileConfig):
     class Config:
         env_prefix = "gto_"
         env_file_encoding = "utf-8"
@@ -113,17 +142,5 @@ class RegistryConfig(BaseSettings):
                 file_secret_settings,
             )
 
-    @validator("TYPE_ALLOWED")
-    def types_are_valid(cls, v):
-        for name in v:
-            assert_name_is_valid(name)
-        return v
 
-    @validator("STAGE_ALLOWED")
-    def stages_are_valid(cls, v):
-        for name in v:
-            assert_name_is_valid(name)
-        return v
-
-
-CONFIG = RegistryConfig()
+CONFIG = NoFileConfig()

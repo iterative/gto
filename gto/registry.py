@@ -6,7 +6,7 @@ from git import InvalidGitRepositoryError, NoSuchPathError, Repo
 from pydantic import BaseModel
 
 from gto.base import BasePromotion, BaseRegistryState
-from gto.config import CONFIG_FILE_NAME, RegistryConfig
+from gto.config import CONFIG_FILE_NAME, RegistryConfig, read_registry_config
 from gto.exceptions import (
     NoRepo,
     VersionAlreadyRegistered,
@@ -37,8 +37,8 @@ class GitRegistry(BaseModel):
             except (InvalidGitRepositoryError, NoSuchPathError) as e:
                 raise NoRepo(repo) from e
         if config is None:
-            config = RegistryConfig(
-                CONFIG_FILE_NAME=os.path.join(repo.working_dir, CONFIG_FILE_NAME)
+            config = read_registry_config(
+                os.path.join(repo.working_dir, CONFIG_FILE_NAME)
             )
 
         return cls(
