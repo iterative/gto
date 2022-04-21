@@ -21,41 +21,6 @@ yaml.default_flow_style = False
 CONFIG_FILE_NAME = ".gto"
 
 
-def _set_location_init_source(init_source: InitSettingsSource):
-    def inner(settings: "RegistryConfig"):
-        if "CONFIG_FILE_NAME" in init_source.init_kwargs:
-            settings.__dict__["CONFIG_FILE_NAME"] = init_source.init_kwargs[
-                "CONFIG_FILE_NAME"
-            ]
-        return {}
-
-    return inner
-
-
-def config_settings_source(settings: "RegistryConfig") -> Dict[str, Any]:
-    """
-    A simple settings source that loads variables from a yaml file in GTO DIR
-    """
-
-    encoding = settings.__config__.env_file_encoding
-    config_file = getattr(settings, "CONFIG_FILE_NAME", CONFIG_FILE_NAME)
-    if not isinstance(config_file, Path):
-        config_file = Path(config_file)
-    if not config_file.exists():
-        return {}
-    conf = yaml.load(config_file.read_text(encoding=encoding))
-
-    return {k.upper(): v for k, v in conf.items()} if conf else {}
-
-
-class EnrichmentConfig(BaseModel):
-    type: str
-    config: Dict = {}
-
-    def load(self) -> Enrichment:
-        return find_enrichment_types()[self.type](**self.config)
-
-
 def check_name_is_valid(name):
     return bool(re.match(r"[a-zA-Z0-9-/]*$", name))
 
@@ -67,11 +32,12 @@ def assert_name_is_valid(name):
         )
 
 
-def read_registry_config(config_file_name):
-    try:
-        return RegistryConfig(CONFIG_FILE_NAME=config_file_name)
-    except Exception as e:  # pylint: disable=bare-except
-        raise WrongConfig(config_file_name) from e
+class EnrichmentConfig(BaseModel):
+    type: str
+    config: Dict = {}
+
+    def load(self) -> Enrichment:
+        return find_enrichment_types()[self.type](**self.config)
 
 
 class NoFileConfig(BaseSettings):
@@ -122,6 +88,33 @@ class NoFileConfig(BaseSettings):
         return v
 
 
+def _set_location_init_source(init_source: InitSettingsSource):
+    def inner(settings: "RegistryConfig"):
+        if "CONFIG_FILE_NAME" in init_source.init_kwargs:
+            settings.__dict__["CONFIG_FILE_NAME"] = init_source.init_kwargs[
+                "CONFIG_FILE_NAME"
+            ]
+        return {}
+
+    return inner
+
+
+def config_settings_source(settings: "RegistryConfig") -> Dict[str, Any]:
+    """
+    A simple settings source that loads variables from a yaml file in GTO DIR
+    """
+
+    encoding = settings.__config__.env_file_encoding
+    config_file = getattr(settings, "CONFIG_FILE_NAME", CONFIG_FILE_NAME)
+    if not isinstance(config_file, Path):
+        config_file = Path(config_file)
+    if not config_file.exists():
+        return {}
+    conf = yaml.load(config_file.read_text(encoding=encoding))
+
+    return {k.upper(): v for k, v in conf.items()} if conf else {}
+
+
 class RegistryConfig(NoFileConfig):
     class Config:
         env_prefix = "gto_"
@@ -141,6 +134,13 @@ class RegistryConfig(NoFileConfig):
                 config_settings_source,
                 file_secret_settings,
             )
+
+
+def read_registry_config(config_file_name):
+    try:
+        return RegistryConfig(CONFIG_FILE_NAME=config_file_name)
+    except Exception as e:  # pylint: disable=bare-except
+        raise WrongConfig(config_file_name) from e
 
 
 CONFIG = NoFileConfig()
