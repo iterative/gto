@@ -10,7 +10,7 @@ class AbstractVersion:
 
     def __init__(self, version) -> None:
         if not self.is_valid(version):
-            raise InvalidVersion(version=version, cls=self.__class__.__name__)
+            raise InvalidVersion(f"Supplied version '{version}' cannot be parsed")
         self.version = version
 
     @classmethod
@@ -39,7 +39,7 @@ class SemVer(AbstractVersion):
         try:
             cls.parse(version)
             return True
-        except (InvalidVersion, ValueError) as e:  # pylint: disable=unused-variable
+        except (InvalidVersion, ValueError, IndexError) as _:
             return False
 
     @classmethod
@@ -52,9 +52,9 @@ class SemVer(AbstractVersion):
         :return: a new instance
         """
         if not isinstance(version, str):
-            raise ValueError("Version should be of type str")
+            raise InvalidVersion("Version should be of type str")
         if version[0] not in ("v"):
-            raise ValueError(
+            raise InvalidVersion(
                 f"{version}: not a valid semantic version tag. Must start with 'v'"
             )
         return semver.VersionInfo.parse(version[1:])

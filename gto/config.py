@@ -51,8 +51,12 @@ class EnrichmentConfig(BaseModel):
         return find_enrichment_types()[self.type](**self.config)
 
 
+def check_name_is_valid(name):
+    return bool(re.match(r"[a-zA-Z0-9-/]*$", name))
+
+
 def assert_name_is_valid(name):
-    if not re.match(r"[a-zA-Z0-9-/]*$", name):
+    if not check_name_is_valid(name):
         raise ValidationError(
             f"Invalid value '{name}'. Only alphanumeric characters, '-', '/' are allowed."
         )
