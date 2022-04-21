@@ -6,6 +6,9 @@ from typing import FrozenSet, Iterable, Optional, Union
 import git
 from pydantic import BaseModel
 
+from gto.config import assert_name_is_valid, check_name_is_valid
+from gto.versions import SemVer
+
 from .base import (
     BaseArtifact,
     BaseManager,
@@ -14,7 +17,14 @@ from .base import (
     BaseVersion,
 )
 from .constants import ACTION, NAME, NUMBER, STAGE, TAG, VERSION, Action
-from .exceptions import MissingArg, RefNotFound, TagExists, UnknownAction
+from .exceptions import (
+    InvalidTagName,
+    InvalidVersion,
+    MissingArg,
+    RefNotFound,
+    TagExists,
+    UnknownAction,
+)
 
 ActionSign = {
     Action.REGISTER: "@",
@@ -52,19 +62,31 @@ def name_tag(
     raise UnknownAction(action=action)
 
 
-def parse_name(name: str, raise_on_fail: bool = True):
-
-    if ActionSign[Action.REGISTER] in name:
-        sign = len(name) - name[::-1].index(ActionSign[Action.REGISTER])
-        name, version = name[: sign - 1], name[sign:]
+def _parse_register(name: str, raise_on_fail: bool = True):
+    sign = len(name) - name[::-1].index(ActionSign[Action.REGISTER])
+    name, version = name[: sign - 1], name[sign:]
+    if check_name_is_valid(name) and SemVer.is_valid(version):
         return {
             ACTION: Action.REGISTER,
             NAME: name,
             VERSION: version,
         }
+    if raise_on_fail:
+        assert_name_is_valid(name)
+        if not SemVer.is_valid(version):
+            raise InvalidVersion(
+                f"Version format should be v1.0.0, cannot parse {version}"
+            )
+    return {}
 
-    if ActionSign[Action.PROMOTE] in name:
-        parsed = name.split(ActionSign[Action.PROMOTE])
+
+def _parse_promote(name: str, raise_on_fail: bool = True):
+    parsed = name.split(ActionSign[Action.PROMOTE])
+    if (
+        check_name_is_valid(parsed[0])
+        and check_name_is_valid(parsed[1])
+        and (parsed[2].isdigit() if len(parsed) == 3 else True)
+    ):
         if len(parsed) == 2:
             return {
                 ACTION: Action.PROMOTE,
@@ -79,7 +101,23 @@ def parse_name(name: str, raise_on_fail: bool = True):
                 NUMBER: int(parsed[2]),
             }
     if raise_on_fail:
-        raise ValueError(f"Unknown tag name: {name}")
+        assert_name_is_valid(parsed[0])
+        assert_name_is_valid(parsed[1])
+        if not parsed[2].isdigit():
+            raise InvalidTagName(name)
+    return {}
+
+
+def parse_name(name: str, raise_on_fail: bool = True):
+
+    if ActionSign[Action.REGISTER] in name:
+        return _parse_register(name, raise_on_fail=raise_on_fail)
+
+    if ActionSign[Action.PROMOTE] in name:
+        return _parse_promote(name, raise_on_fail=raise_on_fail)
+
+    if raise_on_fail:
+        raise InvalidTagName(name)
     return {}
 
 
