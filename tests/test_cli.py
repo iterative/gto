@@ -106,7 +106,7 @@ def test_commands(showcase):
     _check_successful_cmd(
         "which",
         ["-r", path, "rf", "production", "--ref"],
-        "rf#production-4\n",
+        "rf#production#3\n",
     )
     _check_successful_cmd("describe", ["-r", path, "rf"], EXPECTED_DESCRIBE_OUTPUT)
     _check_successful_cmd(
@@ -231,7 +231,7 @@ def test_promote(repo_with_commit: Tuple[git.Repo, Callable]):
         "promote",
         ["-r", repo.working_dir, "nn1", "prod", "HEAD"],
         "Created git tag 'nn1@v0.0.1' that registers a new version\n"
-        "Created git tag 'nn1#prod-1' that promotes 'v0.0.1'\n",
+        "Created git tag 'nn1#prod#1' that promotes 'v0.0.1'\n",
     )
 
     # this check depends on the previous promotion
