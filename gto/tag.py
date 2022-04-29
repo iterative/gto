@@ -50,9 +50,10 @@ def name_tag(
             raise MissingArg(arg="repo")
         numbers = []
         for tag in repo.tags:
-            parsed = parse_name(tag.name)
+            parsed = parse_name(tag.name, raise_on_fail=False)
             if (
-                (parsed[NAME] == name)
+                parsed
+                and (parsed[NAME] == name)
                 and (parsed[ACTION] == Action.PROMOTE)
                 and (NUMBER in parsed)
             ):
