@@ -84,9 +84,11 @@ def test_register(repo_with_artifact):
     assert latest.name == vname2
 
 
-def test_promote(repo_with_artifact):
+def test_promote(repo_with_artifact: Tuple[git.Repo, str]):
     repo, name = repo_with_artifact
     stage = "staging"
+    repo.create_tag("v1.0.0")
+    repo.create_tag("wrong-tag-unrelated")
     gto.api.promote(
         repo.working_dir, name, stage, promote_ref="HEAD", name_version="v0.0.1"
     )
