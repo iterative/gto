@@ -106,7 +106,7 @@ def test_commands(showcase):
     _check_successful_cmd(
         "which",
         ["-r", path, "rf", "production", "--ref"],
-        "rf#production#3\n",
+        "rf#production-4\n",
     )
     _check_successful_cmd("describe", ["-r", path, "rf"], EXPECTED_DESCRIBE_OUTPUT)
     _check_successful_cmd(
@@ -132,10 +132,11 @@ EXPECTED_DESCRIBE_OUTPUT_2 = """{
     "type": "new-type",
     "path": "new/path",
     "labels": [
-        "some-label",
-        "another-label"
+        "another-label",
+        "new-label",
+        "some-label"
     ],
-    "description": "some description"
+    "description": "new description"
 }
 """
 
@@ -162,6 +163,19 @@ def test_annotate(empty_git_repo: Tuple[git.Repo, Callable]):
         ],
         "",
     )
+    _check_successful_cmd(
+        "annotate",
+        [
+            "-r",
+            repo.working_dir,
+            name,
+            "--label",
+            "new-label",
+            "--description",
+            "new description",
+        ],
+        "",
+    )
     artifact = get_index(repo.working_dir, file=True).get_index().state[name]
     _check_obj(
         artifact,
@@ -169,8 +183,8 @@ def test_annotate(empty_git_repo: Tuple[git.Repo, Callable]):
             type="new-type",
             path="new/path",
             virtual=True,
-            labels=["some-label", "another-label"],
-            description="some description",
+            labels=["another-label", "new-label", "some-label"],
+            description="new description",
         ),
         [],
     )
@@ -217,7 +231,7 @@ def test_promote(repo_with_commit: Tuple[git.Repo, Callable]):
         "promote",
         ["-r", repo.working_dir, "nn1", "prod", "HEAD"],
         "Created git tag 'nn1@v0.0.1' that registers a new version\n"
-        "Created git tag 'nn1#prod#1' that promotes 'v0.0.1'\n",
+        "Created git tag 'nn1#prod-1' that promotes 'v0.0.1'\n",
     )
 
     # this check depends on the previous promotion
@@ -231,17 +245,4 @@ def test_promote(repo_with_commit: Tuple[git.Repo, Callable]):
         "promote",
         ["-r", repo.working_dir, "nn2", "prod", "HEAD", "--version", "1.0.0"],
         "❌ Version '1.0.0' is not valid. Example of valid version: 'v1.0.0'\n",
-    )
-
-    _check_successful_cmd(
-        "promote",
-        ["-r", repo.working_dir, "x", "prod", "HEAD", "--simple"],
-        "Created git tag 'x@v0.0.1' that registers a new version\n"
-        "Created git tag 'x#prod' that promotes 'v0.0.1'\n",
-    )
-
-    _check_failing_cmd(
-        "promote",
-        ["-r", repo.working_dir, "x", "prod", "HEAD", "--simple"],
-        "❌ Version is already in stage 'prod'\n",
     )

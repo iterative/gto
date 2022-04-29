@@ -130,7 +130,7 @@ class Index(BaseModel):
                 self.state[name].virtual = False
             elif path:
                 self.state[name].virtual = True
-            self.state[name].labels = labels or self.state[name].labels
+            self.state[name].labels = sorted(set(self.state[name].labels).union(labels))
             self.state[name].description = description or self.state[name].description
         else:
             self.state[name] = Artifact(
@@ -166,9 +166,8 @@ class BaseIndexManager(BaseModel, ABC):
         raise NotImplementedError
 
     def add(self, name, type, path, must_exist, labels, description, update):
-        if labels is None:
-            labels = []
-        self.config.assert_type(type)
+        if type:
+            self.config.assert_type(type)
         if must_exist:
             if not path:
                 raise WrongArgs("`path` is required when `must_exist` is set to True")
@@ -182,7 +181,7 @@ class BaseIndexManager(BaseModel, ABC):
             type=type,
             path=path,
             must_exist=must_exist,
-            labels=labels,
+            labels=labels or [],
             description=description,
             update=update,
         )

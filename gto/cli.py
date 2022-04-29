@@ -329,7 +329,7 @@ def gto_command(*args, section="other", aliases=None, parent=app, **kwargs):
                     raise
                 with cli_echo():
                     echo(EMOJI_FAIL + color(str(e), col=typer.colors.RED))
-                raise typer.Exit(1)
+                raise typer.Exit(1) from e
             except Exception as e:  # pylint: disable=broad-except
                 error = str(type(e))
                 if ctx.obj["traceback"]:
@@ -344,6 +344,7 @@ def gto_command(*args, section="other", aliases=None, parent=app, **kwargs):
                     echo(
                         "Please report it here: <https://github.com/iterative/gto/issues>"
                     )
+                raise typer.Exit(1) from e
             finally:
                 # TODO: analytics
                 error  # pylint: disable=pointless-statement
