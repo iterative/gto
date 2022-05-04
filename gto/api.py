@@ -1,6 +1,6 @@
 from collections import OrderedDict
 from datetime import datetime
-from typing import List, Optional, Union
+from typing import Dict, List, Optional, Union
 
 from git import Repo
 
@@ -255,7 +255,7 @@ def _is_ascending(sort):
 
 def describe(
     repo: Union[str, Repo], name: str, rev: str = None
-) -> List[EnrichmentInfo]:
+) -> Dict[str, EnrichmentInfo]:
     """Find enrichments for the artifact"""
     ref_type, parsed = parse_name_reference(name)
     if ref_type == NAME_REFERENCE.NAME:

@@ -16,7 +16,7 @@ from gto.config import (
     read_registry_config,
     yaml,
 )
-from gto.constants import Action
+from gto.constants import GTO, Action
 from gto.exceptions import (
     ArtifactExists,
     ArtifactNotFound,
@@ -301,18 +301,18 @@ class EnrichmentManager(BaseManager):
             )
         return cls(repo=repo, config=config)
 
-    def describe(self, name: str, rev: str = None) -> List[EnrichmentInfo]:
+    def describe(self, name: str, rev: str = None) -> Dict[str, EnrichmentInfo]:
         enrichments = self.config.enrichments
-        res = []
-        gto_enrichment = enrichments.pop("gto")
-        gto_info = gto_enrichment.describe(self.repo, name, rev)
-        if gto_info:
-            res.append(gto_info)
-            path = gto_info.get_path()  # type: ignore
+        res = {}
+        gto_enrichment = enrichments.pop(GTO)
+        annotation = gto_enrichment.describe(self.repo, name, rev)
+        if annotation:
+            res[annotation.source] = annotation
+            path = annotation.get_path()  # type: ignore
             for enrichment in enrichments.values():
                 enrichment_data = enrichment.describe(self.repo, path, rev)
                 if enrichment_data is not None:
-                    res.append(enrichment_data)
+                    res[enrichment_data.source] = enrichment_data
         return res
 
     def get_commits(self, all_branches=False, all_commits=False):
@@ -381,7 +381,7 @@ def init_index_manager(path):
 
 
 class GTOInfo(EnrichmentInfo):
-    source = "gto"
+    source = GTO
     artifact: Artifact
 
     def get_object(self) -> BaseModel:
