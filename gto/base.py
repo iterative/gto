@@ -18,6 +18,7 @@ class BasePromotion(BaseModel):
     stage: str
     created_at: datetime
     author: str
+    author_email: Optional[str]  # remove as optional later
     commit_hexsha: str
     tag: str
 
@@ -27,6 +28,7 @@ class BaseVersion(BaseModel):
     name: str
     created_at: datetime
     author: str
+    author_email: Optional[str]  # remove as optional later
     commit_hexsha: str
     discovered: bool = False
     tag: Optional[str] = None

@@ -359,6 +359,7 @@ class EnrichmentManager(BaseManager):
                             name=commit.hexsha,
                             created_at=datetime.fromtimestamp(commit.committed_date),
                             author=commit.author.name,
+                            author_email=commit.author.email,
                             commit_hexsha=commit.hexsha,
                             discovered=True,
                         )
