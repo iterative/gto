@@ -94,6 +94,7 @@ def test_promote(repo_with_artifact: Tuple[git.Repo, str]):
     )
     promotion = gto.api.find_promotion(repo.working_dir, name, stage)
     author = repo.commit().author.name
+    author_email = repo.commit().author.email
     _check_obj(
         promotion,
         dict(
@@ -101,6 +102,7 @@ def test_promote(repo_with_artifact: Tuple[git.Repo, str]):
             version="v0.0.1",
             stage=stage,
             author=author,
+            author_email=author_email,
             commit_hexsha=repo.commit().hexsha,
         ),
         {"created_at", "promotions", "tag"},
