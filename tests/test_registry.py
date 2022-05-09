@@ -186,12 +186,13 @@ def test_registry_state_tag_tag(showcase):
         "commits": [],
         "versions": [
             "author",
+            "author_email",
             "created_at",
             "commit_hexsha",
             "promotions",
             "enrichments",
         ],
-        "promotions": ["author", "created_at", "commit_hexsha"],
+        "promotions": ["author", "author_email", "created_at", "commit_hexsha"],
     }
 
     _check_state(state, EXPECTED_REGISTRY_TAG_TAG_STATE, exclude)
