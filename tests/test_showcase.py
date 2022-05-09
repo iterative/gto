@@ -29,12 +29,14 @@ def test_api(showcase):
     nn_version = nn_artifact.versions[0]
     assert isinstance(nn_version, BaseVersion)
     author = repo.commit().author.name
+    author_email = repo.commit().author.email
     _check_obj(
         nn_version,
         dict(
             artifact="nn",
             name="v0.0.1",
             author=author,
+            author_email=author_email,
             commit_hexsha=first_commit.hexsha,
             discovered=False,
         ),
@@ -50,6 +52,7 @@ def test_api(showcase):
             version="v0.0.1",
             stage="staging",
             author=author,
+            author_email=author_email,
             commit_hexsha=first_commit.hexsha,
         ),
         {"created_at", "tag"},
@@ -68,6 +71,7 @@ def test_api(showcase):
             artifact="rf",
             name="v1.2.3",
             author=author,
+            author_email=author_email,
             commit_hexsha=first_commit.hexsha,
             discovered=False,
         ),
@@ -79,6 +83,7 @@ def test_api(showcase):
             artifact="rf",
             name="v1.2.4",
             author=author,
+            author_email=author_email,
             commit_hexsha=second_commit.hexsha,
             discovered=False,
         ),
@@ -97,6 +102,7 @@ def test_api(showcase):
             version="v1.2.3",
             stage="production",
             author=author,
+            author_email=author_email,
             commit_hexsha=first_commit.hexsha,
         ),
         {"created_at", "tag"},
@@ -108,6 +114,7 @@ def test_api(showcase):
             version="v1.2.4",
             stage="production",
             author=author,
+            author_email=author_email,
             commit_hexsha=second_commit.hexsha,
         ),
         {"created_at", "tag"},
@@ -119,6 +126,7 @@ def test_api(showcase):
             version="v1.2.4",
             stage="staging",
             author=author,
+            author_email=author_email,
             commit_hexsha=second_commit.hexsha,
         ),
         {"created_at", "tag"},
