@@ -150,6 +150,7 @@ def show(
     table: bool = False,
     all_branches=False,
     all_commits=False,
+    truncate_hexsha=False,
 ):
     return (
         _show_versions(
@@ -158,6 +159,7 @@ def show(
             all_branches=all_branches,
             all_commits=all_commits,
             table=table,
+            truncate_hexsha=truncate_hexsha,
         )
         if name
         else _show_registry(
@@ -165,6 +167,7 @@ def show(
             all_branches=all_branches,
             all_commits=all_commits,
             table=table,
+            truncate_hexsha=truncate_hexsha,
         )
     )
 
@@ -174,6 +177,7 @@ def _show_registry(
     all_branches=False,
     all_commits=False,
     table: bool = False,
+    truncate_hexsha: bool = False,  # pylint: disable=unused-argument
 ):
     """Show current registry state"""
 
@@ -214,8 +218,13 @@ def _show_versions(
     all_branches=False,
     all_commits=False,
     table: bool = False,
+    truncate_hexsha: bool = False,
 ):
     """List versions of artifact"""
+
+    def format_hexsha(hexsha):
+        return hexsha[:7] if truncate_hexsha else hexsha
+
     reg = GitRegistry.from_repo(repo)
     if raw:
         return reg.find_artifact(name).versions
@@ -233,11 +242,11 @@ def _show_versions(
     first_keys = ["artifact", "version", "stage"]
     versions_ = []
     for v in versions:
-        v["version"] = v["name"][:7]
+        v["version"] = format_hexsha(v["name"])
         if v["stage"]:
             v["stage"] = v["stage"]["stage"]
-        v["commit_hexsha"] = v["commit_hexsha"][:7]
-        v["ref"] = v["tag"] or v["commit_hexsha"][:7]
+        v["commit_hexsha"] = format_hexsha(v["commit_hexsha"])
+        v["ref"] = v["tag"] or v["commit_hexsha"]
         for key in "enrichments", "discovered", "tag", "commit_hexsha", "name":
             v.pop(key)
         # v["enrichments"] = [e["source"] for e in v["enrichments"]]
@@ -267,7 +276,7 @@ def describe(
     raise NotImplementedError
 
 
-def history(
+def history(  # pylint: disable=too-many-locals
     repo: Union[str, Repo],
     artifact: str = None,
     # action: str = None,
@@ -275,6 +284,7 @@ def history(
     all_commits=False,
     sort: str = "desc",
     table: bool = False,
+    truncate_hexsha: bool = False,
 ):
 
     reg = GitRegistry.from_repo(repo)
@@ -283,6 +293,9 @@ def history(
         all_commits=all_commits,
     )
 
+    def format_hexsha(hexsha):
+        return hexsha[:7] if truncate_hexsha else hexsha
+
     commits = [
         OrderedDict(
             timestamp=datetime.fromtimestamp(
@@ -290,7 +303,7 @@ def history(
             ),
             artifact=o.name,
             event="commit",
-            commit=v.commit_hexsha[:7],
+            commit=format_hexsha(v.commit_hexsha),
             author=reg.repo.commit(v.commit_hexsha).author.name,
         )
         for o in artifacts.values()
@@ -302,8 +315,8 @@ def history(
             timestamp=v.created_at,
             artifact=o.name,
             event="registration",
-            version=v.name[:7],
-            commit=v.commit_hexsha[:7],
+            version=format_hexsha(v.name),
+            commit=format_hexsha(v.commit_hexsha),
             author=v.author,
             # enrichments=[e.source for e in v.enrichments],
         )
@@ -316,9 +329,9 @@ def history(
             timestamp=l.created_at,
             artifact=o.name,
             event="promotion",
-            version=l.version[:7],
+            version=format_hexsha(l.version),
             stage=l.stage,
-            commit=l.commit_hexsha[:7],
+            commit=format_hexsha(l.commit_hexsha),
             author=l.author,
         )
         for o in artifacts.values()
