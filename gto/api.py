@@ -310,6 +310,7 @@ def history(  # pylint: disable=too-many-locals
             commit=format_hexsha(v.commit_hexsha),
             author=reg.repo.commit(v.commit_hexsha).author.name,
             author_email=reg.repo.commit(v.commit_hexsha).author.email,
+            message=reg.repo.commit(v.commit_hexsha).message,
         )
         for o in artifacts.values()
         for v in o.get_versions(include_non_explicit=True, include_discovered=True)
@@ -324,6 +325,7 @@ def history(  # pylint: disable=too-many-locals
             commit=format_hexsha(v.commit_hexsha),
             author=v.author,
             author_email=v.author_email,
+            message=v.message,
             # enrichments=[e.source for e in v.enrichments],
         )
         for o in artifacts.values()
@@ -340,6 +342,7 @@ def history(  # pylint: disable=too-many-locals
             commit=format_hexsha(l.commit_hexsha),
             author=l.author,
             author_email=l.author_email,
+            message=l.message,
         )
         for o in artifacts.values()
         for l in o.stages
