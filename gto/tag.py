@@ -204,6 +204,7 @@ def version_from_tag(tag: git.Tag) -> BaseVersion:
         created_at=mtag.created_at,
         author=tag.tag.tagger.name,
         author_email=tag.tag.tagger.email,
+        message=tag.tag.message,
         commit_hexsha=tag.commit.hexsha,
         tag=tag.name,
     )
@@ -229,6 +230,7 @@ def promotion_from_tag(
                     created_at=mtag.created_at,
                     author=tag.tag.tagger.name,
                     author_email=tag.tag.tagger.email,
+                    message=tag.tag.message,
                     commit_hexsha=tag.commit.hexsha,
                 )
             )
@@ -240,6 +242,7 @@ def promotion_from_tag(
         created_at=mtag.created_at,
         author=tag.tag.tagger.name,
         author_email=tag.tag.tagger.email,
+        message=tag.tag.message,
         commit_hexsha=tag.commit.hexsha,
         tag=tag.name,
     )

@@ -79,9 +79,11 @@ def test_register(repo_with_artifact):
         must_exist=False,
     )
     repo.index.commit("Irrelevant action to create a git commit")
-    gto.api.register(repo.working_dir, name, "HEAD")
+    message = "Some message"
+    gto.api.register(repo.working_dir, name, "HEAD", message=message)
     latest = gto.api.find_latest_version(repo.working_dir, name)
     assert latest.name == vname2
+    assert latest.message == message
 
 
 def test_promote(repo_with_artifact: Tuple[git.Repo, str]):
@@ -89,8 +91,14 @@ def test_promote(repo_with_artifact: Tuple[git.Repo, str]):
     stage = "staging"
     repo.create_tag("v1.0.0")
     repo.create_tag("wrong-tag-unrelated")
+    message = "some msg"
     gto.api.promote(
-        repo.working_dir, name, stage, promote_ref="HEAD", name_version="v0.0.1"
+        repo.working_dir,
+        name,
+        stage,
+        promote_ref="HEAD",
+        name_version="v0.0.1",
+        message=message,
     )
     promotion = gto.api.find_promotion(repo.working_dir, name, stage)
     author = repo.commit().author.name
@@ -103,6 +111,7 @@ def test_promote(repo_with_artifact: Tuple[git.Repo, str]):
             stage=stage,
             author=author,
             author_email=author_email,
+            message=message,
             commit_hexsha=repo.commit().hexsha,
         ),
         {"created_at", "promotions", "tag"},

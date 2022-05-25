@@ -409,6 +409,9 @@ def register(
     version: Optional[str] = Option(
         None, "--version", "--ver", help="Version name in SemVer format"
     ),
+    message: Optional[str] = Option(
+        None, "--message", "-m", help="Message to annotate git tag with"
+    ),
     bump_major: bool = Option(
         False, "--bump-major", is_flag=True, help="Bump major version"
     ),
@@ -439,6 +442,7 @@ def register(
         name=name,
         ref=ref or "HEAD",
         version=version,
+        message=message,
         bump_major=bump_major,
         bump_minor=bump_minor,
         bump_patch=bump_patch,
@@ -456,6 +460,9 @@ def promote(
         None,
         "--version",
         help="If you provide REF, this will be used to name new version",
+    ),
+    message: Optional[str] = Option(
+        None, "--message", "-m", help="Message to annotate git tag with"
     ),
     simple: bool = Option(
         False,
@@ -506,6 +513,7 @@ def promote(
         promote_version,
         ref,
         name_version,
+        message=message,
         simple=simple,
         force=force,
         skip_registration=skip_registration,

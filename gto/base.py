@@ -19,6 +19,7 @@ class BasePromotion(BaseModel):
     created_at: datetime
     author: str
     author_email: Optional[str]  # remove as optional later
+    message: Optional[str]  # remove as optional later
     commit_hexsha: str
     tag: str
 
@@ -29,6 +30,7 @@ class BaseVersion(BaseModel):
     created_at: datetime
     author: str
     author_email: Optional[str]  # remove as optional later
+    message: Optional[str]  # remove as optional later
     commit_hexsha: str
     discovered: bool = False
     tag: Optional[str] = None
