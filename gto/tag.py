@@ -1,4 +1,3 @@
-import logging
 from datetime import datetime
 from enum import Enum
 from typing import FrozenSet, Iterable, Optional, Union
@@ -292,9 +291,9 @@ class TagVersionManager(TagManager):
             art_name = parse_name(ref)[NAME]
             version_name = parse_name(ref)[VERSION]
         except (KeyError, ValueError, IndexError):
-            logging.warning(
-                "Provided ref doesn't exist or it is not a tag that registers a version"
-            )
+            # logging.warning(
+            #     "Provided ref doesn't exist or it is not a tag that registers a version"
+            # )
             return {}
         return {
             name: version
@@ -321,9 +320,9 @@ class TagStageManager(TagManager):
             _ = parse_name(ref)[STAGE]
             art_name = parse_name(ref)[NAME]
         except (KeyError, ValueError, IndexError):
-            logging.warning(
-                "Provided ref doesn't exist or it is not a tag that promotes to an stage"
-            )
+            # logging.warning(
+            #     "Provided ref doesn't exist or it is not a tag that promotes to an stage"
+            # )
             return {}
         return {
             name: promotion

@@ -14,7 +14,7 @@ from typer.core import TyperCommand, TyperGroup
 
 import gto
 from gto.exceptions import GTOException, WrongArgs
-from gto.ui import EMOJI_FAIL, EMOJI_GTO, bold, cli_echo, color, echo
+from gto.ui import EMOJI_FAIL, EMOJI_GTO, EMOJI_OK, bold, cli_echo, color, echo
 from gto.utils import format_echo, make_ready_to_serialize
 
 
@@ -584,6 +584,7 @@ def parse_tag(
 def check_ref(
     repo: str = option_repo,
     ref: str = Argument(..., help="Git reference to analyze"),
+    json: bool = Option(False, "--json", is_flag=True, help="Output in JSON format"),
 ):
     """Find out the artifact version registered/promoted with ref
 
@@ -592,7 +593,19 @@ def check_ref(
         $ gto check-ref rf#prod
     """
     result = gto.api.check_ref(repo, ref)
-    format_echo(result, "json")
+    if json:
+        format_echo(result, "json")
+    else:
+        if result["version"]:
+            v = list(result["version"].values())[0]
+            echo(
+                f"""{EMOJI_OK} Version "{v["name"]}" of artifact "{v["artifact"]}" was registered"""
+            )
+        if result["stage"]:
+            s = list(result["stage"].values())[0]
+            echo(
+                f"""{EMOJI_OK} Version "{s["version"]}" of artifact "{s["artifact"]}" was promoted to "{s["stage"]}" stage"""
+            )
 
 
 @gto_command(section=CommandGroups.querying)
