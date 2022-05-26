@@ -80,6 +80,7 @@ class BaseArtifact(BaseModel):
         include_non_explicit=False,
         include_discovered=False,
         sort=VersionSort.SemVer,
+        ascending=False,
     ) -> List[BaseVersion]:
         sort = sort if isinstance(sort, VersionSort) else VersionSort[sort]
         all_versions = [
@@ -116,6 +117,8 @@ class BaseArtifact(BaseModel):
                 ),
                 key=lambda x: x.created_at,
             )
+        if ascending:
+            versions.reverse()
         return versions
 
     def get_latest_version(
@@ -147,7 +150,7 @@ class BaseArtifact(BaseModel):
                 #     stages[promotion.stage] = stages.get(promotion.stage) or promotion
         if all:
             return stages
-        return {stage: promotions[0] for stage, promotions in stages.items()}
+        return {stage: promotions[-1] for stage, promotions in stages.items()}
 
     def add_version(self, version: BaseVersion):
         self.versions.append(version)

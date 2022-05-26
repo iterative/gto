@@ -292,10 +292,6 @@ def _show_versions(
     return versions_, "keys"
 
 
-def _is_ascending(sort):
-    return sort in {"asc", "Asc", "ascending", "Ascending"}
-
-
 def describe(
     repo: Union[str, Repo], name: str, rev: str = None
 ) -> List[EnrichmentInfo]:
@@ -316,7 +312,7 @@ def history(  # pylint: disable=too-many-locals
     # action: str = None,
     all_branches=False,
     all_commits=False,
-    sort: str = "desc",
+    ascending: bool = False,
     table: bool = False,
     truncate_hexsha: bool = False,
 ):
@@ -387,7 +383,7 @@ def history(  # pylint: disable=too-many-locals
         commits + registration + promotion,
         key=lambda x: (x["timestamp"], events_order[x["event"]]),
     )
-    if _is_ascending(sort):
+    if ascending:
         events.reverse()
     if artifact:
         events = [event for event in events if event["artifact"] == artifact]
