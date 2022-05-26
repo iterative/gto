@@ -30,6 +30,16 @@ def test_api(showcase):
     assert isinstance(nn_version, BaseVersion)
     author = repo.commit().author.name
     author_email = repo.commit().author.email
+
+    skip_keys_registration = {
+        "created_at",
+        "promotions",
+        "enrichments",
+        "tag",
+        "message",
+    }
+    skip_keys_promotion = {"created_at", "tag", "message"}
+
     _check_obj(
         nn_version,
         dict(
@@ -40,7 +50,7 @@ def test_api(showcase):
             commit_hexsha=first_commit.hexsha,
             discovered=False,
         ),
-        {"created_at", "promotions", "enrichments", "tag"},
+        skip_keys=skip_keys_registration,
     )
     assert len(nn_artifact.stages) == 1
     nn_promotion = nn_artifact.stages[0]
@@ -55,7 +65,7 @@ def test_api(showcase):
             author_email=author_email,
             commit_hexsha=first_commit.hexsha,
         ),
-        {"created_at", "tag"},
+        skip_keys=skip_keys_promotion,
     )
 
     rf_artifact = artifacts["rf"]
@@ -75,7 +85,7 @@ def test_api(showcase):
             commit_hexsha=first_commit.hexsha,
             discovered=False,
         ),
-        {"created_at", "promotions", "enrichments", "tag"},
+        skip_keys=skip_keys_registration,
     )
     _check_obj(
         rf_ver2,
@@ -87,7 +97,7 @@ def test_api(showcase):
             commit_hexsha=second_commit.hexsha,
             discovered=False,
         ),
-        {"created_at", "promotions", "enrichments", "tag"},
+        skip_keys=skip_keys_registration,
     )
 
     assert len(rf_artifact.stages) == 4
@@ -105,7 +115,7 @@ def test_api(showcase):
             author_email=author_email,
             commit_hexsha=first_commit.hexsha,
         ),
-        {"created_at", "tag"},
+        skip_keys=skip_keys_promotion,
     )
     _check_obj(
         rf_l4,
@@ -117,7 +127,7 @@ def test_api(showcase):
             author_email=author_email,
             commit_hexsha=second_commit.hexsha,
         ),
-        {"created_at", "tag"},
+        skip_keys=skip_keys_promotion,
     )
     _check_obj(
         rf_l3,
@@ -129,5 +139,5 @@ def test_api(showcase):
             author_email=author_email,
             commit_hexsha=second_commit.hexsha,
         ),
-        {"created_at", "tag"},
+        skip_keys=skip_keys_promotion,
     )

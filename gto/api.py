@@ -70,6 +70,7 @@ def register(
     name: str,
     ref: str,
     version: str = None,
+    message: str = None,
     bump_major: bool = False,
     bump_minor: bool = False,
     bump_patch: bool = False,
@@ -80,6 +81,7 @@ def register(
         name=name,
         ref=ref,
         version=version,
+        message=message,
         bump_major=bump_major,
         bump_minor=bump_minor,
         bump_patch=bump_patch,
@@ -94,6 +96,7 @@ def promote(
     promote_version: str = None,
     promote_ref: str = None,
     name_version: str = None,
+    message: str = None,
     simple: bool = False,
     force: bool = False,
     skip_registration: bool = False,
@@ -106,6 +109,7 @@ def promote(
         promote_version,
         promote_ref,
         name_version,
+        message=message,
         simple=simple,
         force=force,
         skip_registration=skip_registration,
@@ -306,6 +310,7 @@ def history(  # pylint: disable=too-many-locals
             commit=format_hexsha(v.commit_hexsha),
             author=reg.repo.commit(v.commit_hexsha).author.name,
             author_email=reg.repo.commit(v.commit_hexsha).author.email,
+            message=reg.repo.commit(v.commit_hexsha).message,
         )
         for o in artifacts.values()
         for v in o.get_versions(include_non_explicit=True, include_discovered=True)
@@ -320,6 +325,7 @@ def history(  # pylint: disable=too-many-locals
             commit=format_hexsha(v.commit_hexsha),
             author=v.author,
             author_email=v.author_email,
+            message=v.message,
             # enrichments=[e.source for e in v.enrichments],
         )
         for o in artifacts.values()
@@ -336,6 +342,7 @@ def history(  # pylint: disable=too-many-locals
             commit=format_hexsha(l.commit_hexsha),
             author=l.author,
             author_email=l.author_email,
+            message=l.message,
         )
         for o in artifacts.values()
         for l in o.stages

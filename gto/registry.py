@@ -94,6 +94,7 @@ class GitRegistry(BaseModel):
         name,
         ref,
         version=None,
+        message=None,
         bump_major=False,
         bump_minor=False,
         bump_patch=False,
@@ -144,7 +145,7 @@ class GitRegistry(BaseModel):
             name,
             version,
             ref,
-            message=f"Registering artifact {name} version {version}",
+            message=message or f"Registering artifact {name} version {version}",
         )
         registered_version = self.find_artifact(name).find_version(
             name=version, raise_if_not_found=True
@@ -162,6 +163,7 @@ class GitRegistry(BaseModel):
         promote_version=None,
         promote_ref=None,
         name_version=None,
+        message=None,
         simple=False,
         force=False,
         skip_registration=False,
@@ -207,7 +209,8 @@ class GitRegistry(BaseModel):
             name,
             stage,
             ref=promote_ref,
-            message=f"Promoting {name} version {promote_version} to stage {stage}",
+            message=message
+            or f"Promoting {name} version {promote_version} to stage {stage}",
             simple=simple,
         )
         promotion = (

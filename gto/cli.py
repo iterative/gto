@@ -14,7 +14,7 @@ from typer.core import TyperCommand, TyperGroup
 
 import gto
 from gto.exceptions import GTOException, WrongArgs
-from gto.ui import EMOJI_FAIL, EMOJI_GTO, bold, cli_echo, color, echo
+from gto.ui import EMOJI_FAIL, EMOJI_GTO, EMOJI_OK, bold, cli_echo, color, echo
 from gto.utils import format_echo, make_ready_to_serialize
 
 
@@ -409,6 +409,9 @@ def register(
     version: Optional[str] = Option(
         None, "--version", "--ver", help="Version name in SemVer format"
     ),
+    message: Optional[str] = Option(
+        None, "--message", "-m", help="Message to annotate git tag with"
+    ),
     bump_major: bool = Option(
         False, "--bump-major", is_flag=True, help="Bump major version"
     ),
@@ -439,6 +442,7 @@ def register(
         name=name,
         ref=ref or "HEAD",
         version=version,
+        message=message,
         bump_major=bump_major,
         bump_minor=bump_minor,
         bump_patch=bump_patch,
@@ -456,6 +460,9 @@ def promote(
         None,
         "--version",
         help="If you provide REF, this will be used to name new version",
+    ),
+    message: Optional[str] = Option(
+        None, "--message", "-m", help="Message to annotate git tag with"
     ),
     simple: bool = Option(
         False,
@@ -506,6 +513,7 @@ def promote(
         promote_version,
         ref,
         name_version,
+        message=message,
         simple=simple,
         force=force,
         skip_registration=skip_registration,
@@ -576,6 +584,7 @@ def parse_tag(
 def check_ref(
     repo: str = option_repo,
     ref: str = Argument(..., help="Git reference to analyze"),
+    json: bool = Option(False, "--json", is_flag=True, help="Output in JSON format"),
 ):
     """Find out the artifact version registered/promoted with ref
 
@@ -584,7 +593,19 @@ def check_ref(
         $ gto check-ref rf#prod
     """
     result = gto.api.check_ref(repo, ref)
-    format_echo(result, "json")
+    if json:
+        format_echo(result, "json")
+    else:
+        if result["version"]:
+            v = list(result["version"].values())[0]
+            echo(
+                f"""{EMOJI_OK} Version "{v["name"]}" of artifact "{v["artifact"]}" was registered"""
+            )
+        if result["stage"]:
+            s = list(result["stage"].values())[0]
+            echo(
+                f"""{EMOJI_OK} Version "{s["version"]}" of artifact "{s["artifact"]}" was promoted to "{s["stage"]}" stage"""
+            )
 
 
 @gto_command(section=CommandGroups.querying)
