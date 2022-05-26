@@ -5,7 +5,7 @@ import git
 from pydantic import BaseModel
 
 from gto.config import RegistryConfig
-from gto.constants import Action
+from gto.constants import Action, VersionSort
 from gto.ext import Enrichment
 from gto.versions import SemVer
 
@@ -75,42 +75,79 @@ class BaseArtifact(BaseModel):
         stages = ", ".join(f"'{l}'" for l in self.unique_stages)
         return f"Artifact(versions=[{versions}], stages=[{stages}])"
 
-    def get_latest_version(self, registered=False) -> Optional[BaseVersion]:
-        versions = sorted(
-            (
-                v
-                for v in self.versions
-                if not v.discovered and (not registered or v.is_registered)
-            ),
-            key=lambda x: x.created_at,
+    def get_versions(
+        self,
+        include_non_explicit=False,
+        include_discovered=False,
+        sort=VersionSort.SemVer,
+    ) -> List[BaseVersion]:
+        sort = sort if isinstance(sort, VersionSort) else VersionSort[sort]
+        all_versions = [
+            v
+            for v in self.versions
+            if (v.is_registered and not v.discovered)
+            or (include_discovered and v.discovered)
+            or (include_non_explicit and not v.is_registered)
+        ]
+        if sort == VersionSort.SemVer:
+            # sorting SemVer versions in a right way
+            versions = sorted(
+                (v for v in all_versions if not v.discovered and v.is_registered),
+                key=lambda x: x.version,
+            )
+            # sorting hexsha versions alphabetically
+            if include_non_explicit:
+                versions.extend(
+                    sorted(
+                        (
+                            v
+                            for v in all_versions
+                            if not v.discovered and not v.is_registered
+                        ),
+                        key=lambda x: x.name,
+                    )
+                )
+        else:
+            versions = sorted(
+                (
+                    v
+                    for v in all_versions
+                    if not v.discovered and (include_non_explicit or v.is_registered)
+                ),
+                key=lambda x: x.created_at,
+            )
+        return versions
+
+    def get_latest_version(
+        self, registered_only=False, sort=VersionSort.SemVer
+    ) -> Optional[BaseVersion]:
+        versions = self.get_versions(
+            include_non_explicit=not registered_only, sort=sort
         )
         if versions:
             return versions[-1]
         return None
 
-    def get_promotions(self) -> Dict[str, BasePromotion]:
-        stages: Dict[str, BasePromotion] = {}
-        # semver
-        versions = sorted(
-            (v for v in self.versions if v.is_registered),
-            key=lambda x: x.version,
-            reverse=True,
+    def get_promotions(
+        self, all=False, registered_only=False, sort=VersionSort.SemVer
+    ) -> Dict[str, Union[BasePromotion, List[BasePromotion]]]:
+        versions = self.get_versions(
+            include_non_explicit=not registered_only, sort=sort
         )
-        # TODO: regular commits - these should be sorted by stage tag creation maybe?
-        # E.g. when you created "rf#prod" tag, then you created a version.
-        # It's probably should be a flag on CLI that will tell how to sort promoted for return.
-        versions.extend(
-            sorted(
-                (v for v in self.versions if not v.is_registered),
-                key=lambda x: x.created_at,
-                reverse=True,
-            )
-        )
+        if sort == VersionSort.Timestamp:
+            # for this sort we need to sort not versions, as above ^
+            # but promotions themselves
+            raise NotImplementedError("Sorting by timestamp is not implemented yet")
+        stages = {}  # type: ignore
         for version in versions:
             promotion = version.stage
             if promotion:
-                stages[promotion.stage] = stages.get(promotion.stage) or promotion
-        return stages
+                stages[promotion.stage] = stages.get(promotion.stage, []) + [promotion]
+                # else:
+                #     stages[promotion.stage] = stages.get(promotion.stage) or promotion
+        if all:
+            return stages
+        return {stage: promotions[0] for stage, promotions in stages.items()}
 
     def add_version(self, version: BaseVersion):
         self.versions.append(version)
@@ -158,15 +195,6 @@ class BaseArtifact(BaseModel):
     #     allow_multiple: Literal[True] = ...,
     # ) -> List[BaseVersion]:
     #     ...
-
-    def get_versions(self, include_non_explicit=False, include_discovered=False):
-        return [
-            v
-            for v in self.versions
-            if (v.is_registered and not v.discovered)
-            or (include_discovered and v.discovered)
-            or (include_non_explicit and not v.is_registered)
-        ]
 
     def find_version(
         self,
@@ -245,9 +273,13 @@ class BaseRegistryState(BaseModel):
             .commit_hexsha
         )
 
-    def which(self, name, stage, raise_if_not_found=True):
+    def which(
+        self, name, stage, raise_if_not_found=True, all=False, registered_only=False
+    ):
         """Return stage active in specific stage"""
-        promoted = self.find_artifact(name).get_promotions()
+        promoted = self.find_artifact(name).get_promotions(
+            all=all, registered_only=registered_only
+        )
         if stage in promoted:
             return promoted[stage]
         if raise_if_not_found:

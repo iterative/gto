@@ -124,7 +124,7 @@ class GitRegistry(BaseModel):
                 )
         else:
             # if version name wasn't provided but there were some, bump the last one
-            last_version = found_artifact.get_latest_version(registered=True)
+            last_version = found_artifact.get_latest_version(registered_only=True)
             if last_version:
                 version = (
                     SemVer(last_version.name)
@@ -235,13 +235,20 @@ class GitRegistry(BaseModel):
     def find_commit(self, name, version):
         return self.get_state().find_commit(name, version)
 
-    def which(self, name, stage, raise_if_not_found=True):
+    def which(
+        self, name, stage, raise_if_not_found=True, all=False, registered_only=False
+    ):
         """Return stage active in specific stage"""
-        return self.get_state().which(name, stage, raise_if_not_found)
+        return self.get_state().which(
+            name, stage, raise_if_not_found, all=all, registered_only=registered_only
+        )
 
-    def latest(self, name: str):
+    def latest(self, name: str, all: bool = False, registered: bool = True):
         """Return latest active version for artifact"""
-        return self.get_state().find_artifact(name).get_latest_version(registered=True)
+        artifact = self.get_state().find_artifact(name)
+        if all:
+            return artifact.sort_versions(registered=registered)
+        return artifact.get_latest_version(registered_only=registered)
 
     def get_stages(self, allowed: bool = False):
         """Return list of stages in the registry.
@@ -250,9 +257,5 @@ class GitRegistry(BaseModel):
         if allowed:
             return self.config.stages
         return sorted(
-            {
-                stage
-                for o in self.get_artifacts().values()
-                for stage in o.get_promotions()
-            }
+            {stage for o in self.get_artifacts().values() for stage in o.unique_stages}
         )

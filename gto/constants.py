@@ -18,3 +18,8 @@ NUMBER = "number"
 class Action(Enum):
     REGISTER = "register"
     PROMOTE = "promote"
+
+
+class VersionSort(Enum):
+    SemVer = "semver"
+    Timestamp = "timestamp"

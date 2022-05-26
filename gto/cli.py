@@ -197,6 +197,7 @@ option_all_branches = Option(
 option_all_commits = Option(
     False, "-A", "--all-commits", is_flag=True, help="Read all commits"
 )
+option_all = Option(False, "--all", "-a", help="Return all versions sorted")
 
 
 class Format(str, Enum):
@@ -265,6 +266,13 @@ option_table = Option(
     is_flag=True,
     help="Print output in table format",
     show_default=True,
+)
+option_registered_only = Option(
+    False,
+    "--registered-only",
+    "--ro",
+    is_flag=True,
+    help="Show only registered versions",
 )
 
 
@@ -546,6 +554,9 @@ def which(
     name: str = arg_name,
     stage: str = arg_stage,
     ref: bool = option_ref_bool,
+    all: bool = option_all,
+    registered_only: bool = option_registered_only,
+    sort: str = option_sort,
 ):
     """Find the latest artifact version in a given stage
 
@@ -555,9 +566,15 @@ def which(
         Print git tag that did the promotion:
         $ gto which nn prod --ref
     """
-    version = gto.api.find_promotion(repo, name, stage)
+    version = gto.api.find_versions_in_stage(
+        repo, name, stage, all=all, registered_only=registered_only
+    )
     if version:
-        if ref:
+        if all:
+            if sort != "desc":
+                version.reverse()
+            format_echo([v.version for v in version], "lines")
+        elif ref:
             echo(version.tag or version.commit_hexsha)
         else:
             echo(version.version)
@@ -617,6 +634,7 @@ def show(
     json: bool = option_json,
     plain: bool = option_plain,
     name_only: bool = option_name_only,
+    registered_only: bool = option_registered_only,
 ):
     """Show the registry state
 
@@ -640,10 +658,11 @@ def show(
             name=name,
             all_branches=all_branches,
             all_commits=all_commits,
+            registered_only=registered_only,
             table=False,
         )
         if name_only:
-            format_echo(output, "lines")
+            format_echo([v["name"] for v in output], "lines")
         else:
             format_echo(output, "json")
     else:
@@ -653,6 +672,7 @@ def show(
                 name=name,
                 all_branches=all_branches,
                 all_commits=all_commits,
+                registered_only=registered_only,
                 table=True,
                 truncate_hexsha=True,
             ),
