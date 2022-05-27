@@ -543,7 +543,7 @@ def which(
     ref: bool = option_ref_bool,
     all: bool = option_all,
     registered_only: bool = option_registered_only,
-    ascending: bool = option_ascending,
+    # ascending: bool = option_ascending,
 ):
     """Find the latest artifact version in a given stage
 
@@ -558,8 +558,8 @@ def which(
     )
     if version:
         if all:
-            if ascending:
-                version.reverse()
+            # if ascending:
+            #     version.reverse()
             format_echo([v.version for v in version], "lines")
         elif ref:
             echo(version.tag or version.commit_hexsha)

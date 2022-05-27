@@ -383,7 +383,7 @@ def history(  # pylint: disable=too-many-locals
         commits + registration + promotion,
         key=lambda x: (x["timestamp"], events_order[x["event"]]),
     )
-    if ascending:
+    if not ascending:
         events.reverse()
     if artifact:
         events = [event for event in events if event["artifact"] == artifact]
