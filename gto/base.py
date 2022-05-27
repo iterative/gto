@@ -58,6 +58,51 @@ class BaseVersion(BaseModel):
         return version
 
 
+def sort_versions(
+    versions,
+    sort=VersionSort.SemVer,
+    ascending=False,
+    version="name",
+    timestamp="created_at",
+):
+    def get(obj, key):
+        if isinstance(obj, dict):
+            return obj[key]
+        if isinstance(obj, BaseModel):
+            return getattr(obj, key)
+        raise NotImplementedError("Can sort either dict or BaseModel")
+
+    sort = sort if isinstance(sort, VersionSort) else VersionSort[sort]
+    if sort == VersionSort.SemVer:
+        # sorting SemVer versions in a right way
+        sorted_versions = sorted(
+            (v for v in versions if v.is_registered),
+            key=lambda x: SemVer(get(x, version)),
+        )[:: 1 if ascending else -1]
+        # sorting hexsha versions alphabetically
+        sorted_versions.extend(
+            sorted(
+                (v for v in versions if not v.is_registered and not v.discovered),
+                key=lambda x: get(x, version),
+            )[:: 1 if ascending else -1]
+        )
+        # sorting discovered hexsha versions alphabetically
+        sorted_versions.extend(
+            sorted(
+                (v for v in versions if v.discovered),
+                key=lambda x: get(x, version),
+            )[:: 1 if ascending else -1]
+        )
+    else:
+        sorted_versions = sorted(
+            versions,
+            key=lambda x: get(x, timestamp),
+        )[:: 1 if ascending else -1]
+    if ascending:
+        sorted_versions.reverse()
+    return sorted_versions
+
+
 class BaseArtifact(BaseModel):
     name: str
     versions: List[BaseVersion]
@@ -75,42 +120,6 @@ class BaseArtifact(BaseModel):
         stages = ", ".join(f"'{l}'" for l in self.unique_stages)
         return f"Artifact(versions=[{versions}], stages=[{stages}])"
 
-    @staticmethod
-    def sort_versions(
-        versions,
-        sort=VersionSort.SemVer,
-        ascending=False,
-    ):
-        sort = sort if isinstance(sort, VersionSort) else VersionSort[sort]
-        if sort == VersionSort.SemVer:
-            # sorting SemVer versions in a right way
-            sorted_versions = sorted(
-                (v for v in versions if v.is_registered),
-                key=lambda x: x.version,
-            )[:: 1 if ascending else -1]
-            # sorting hexsha versions alphabetically
-            sorted_versions.extend(
-                sorted(
-                    (v for v in versions if not v.is_registered and not v.discovered),
-                    key=lambda x: x.name,
-                )[:: 1 if ascending else -1]
-            )
-            # sorting discovered hexsha versions alphabetically
-            sorted_versions.extend(
-                sorted(
-                    (v for v in versions if v.discovered),
-                    key=lambda x: x.name,
-                )[:: 1 if ascending else -1]
-            )
-        else:
-            sorted_versions = sorted(
-                versions,
-                key=lambda x: x.created_at,
-            )[:: 1 if ascending else -1]
-        if ascending:
-            sorted_versions.reverse()
-        return sorted_versions
-
     def get_versions(
         self,
         include_non_explicit=False,
@@ -125,7 +134,7 @@ class BaseArtifact(BaseModel):
             or (include_discovered and v.discovered)
             or (include_non_explicit and not v.is_registered)
         ]
-        return self.sort_versions(versions, sort=sort, ascending=ascending)
+        return sort_versions(versions, sort=sort, ascending=ascending)
 
     def get_latest_version(
         self, registered_only=False, sort=VersionSort.SemVer
