@@ -124,14 +124,24 @@ def parse_tag(name: str):
 def find_latest_version(
     repo: Union[str, Repo],
     name: str,
+    all: bool = False,
+    registered: bool = True,
 ):
     """Return latest version for artifact"""
-    return GitRegistry.from_repo(repo).latest(name)
+    return GitRegistry.from_repo(repo).latest(name, all=all, registered=registered)
 
 
-def find_promotion(repo: Union[str, Repo], name: str, stage: str):
+def find_versions_in_stage(
+    repo: Union[str, Repo],
+    name: str,
+    stage: str,
+    all: bool = False,
+    registered_only: bool = False,
+):
     """Return version of artifact with specific stage active"""
-    return GitRegistry.from_repo(repo).which(name, stage, raise_if_not_found=False)
+    return GitRegistry.from_repo(repo).which(
+        name, stage, raise_if_not_found=False, all=all, registered_only=registered_only
+    )
 
 
 def check_ref(repo: Union[str, Repo], ref: str):
@@ -155,6 +165,7 @@ def show(
     all_branches=False,
     all_commits=False,
     truncate_hexsha=False,
+    registered_only=False,
 ):
     return (
         _show_versions(
@@ -162,6 +173,7 @@ def show(
             name=name,
             all_branches=all_branches,
             all_commits=all_commits,
+            registered_only=registered_only,
             table=table,
             truncate_hexsha=truncate_hexsha,
         )
@@ -170,6 +182,7 @@ def show(
             repo,
             all_branches=all_branches,
             all_commits=all_commits,
+            registered_only=registered_only,
             table=table,
             truncate_hexsha=truncate_hexsha,
         )
@@ -180,21 +193,27 @@ def _show_registry(
     repo: Union[str, Repo],
     all_branches=False,
     all_commits=False,
+    registered_only=False,
     table: bool = False,
     truncate_hexsha: bool = False,  # pylint: disable=unused-argument
 ):
     """Show current registry state"""
 
+    def format_hexsha(hexsha):
+        return hexsha[:7] if truncate_hexsha else hexsha
+
     reg = GitRegistry.from_repo(repo)
     stages = list(reg.get_stages())
     models_state = {
         o.name: {
-            "version": o.get_latest_version(registered=True).name
-            if o.get_latest_version(registered=True)
+            "version": format_hexsha(o.get_latest_version(registered_only=True).name)
+            if o.get_latest_version(registered_only=True)
             else None,
             "stage": {
-                name: o.get_promotions()[name].version
-                if name in o.get_promotions()
+                name: format_hexsha(
+                    o.get_promotions(registered_only=registered_only)[name].version
+                )
+                if name in o.get_promotions(registered_only=registered_only)
                 else None
                 for name in stages
             },
@@ -221,6 +240,7 @@ def _show_versions(
     raw: bool = False,
     all_branches=False,
     all_commits=False,
+    registered_only=False,
     table: bool = False,
     truncate_hexsha: bool = False,
 ):
@@ -238,7 +258,9 @@ def _show_versions(
             name,
             all_branches=all_branches,
             all_commits=all_commits,
-        ).get_versions(include_non_explicit=True, include_discovered=True)
+        ).get_versions(
+            include_non_explicit=not registered_only, include_discovered=True
+        )
     ]
     if not table:
         return versions
@@ -251,7 +273,15 @@ def _show_versions(
             v["stage"] = v["stage"]["stage"]
         v["commit_hexsha"] = format_hexsha(v["commit_hexsha"])
         v["ref"] = v["tag"] or v["commit_hexsha"]
-        for key in "enrichments", "discovered", "tag", "commit_hexsha", "name":
+        for key in (
+            "enrichments",
+            "discovered",
+            "tag",
+            "commit_hexsha",
+            "name",
+            "message",
+            "author_email",
+        ):
             v.pop(key)
         # v["enrichments"] = [e["source"] for e in v["enrichments"]]
         v = OrderedDict(
@@ -260,10 +290,6 @@ def _show_versions(
         )
         versions_.append(v)
     return versions_, "keys"
-
-
-def _is_ascending(sort):
-    return sort in {"asc", "Asc", "ascending", "Ascending"}
 
 
 def describe(
@@ -286,7 +312,7 @@ def history(  # pylint: disable=too-many-locals
     # action: str = None,
     all_branches=False,
     all_commits=False,
-    sort: str = "desc",
+    ascending: bool = False,
     table: bool = False,
     truncate_hexsha: bool = False,
 ):
@@ -357,7 +383,7 @@ def history(  # pylint: disable=too-many-locals
         commits + registration + promotion,
         key=lambda x: (x["timestamp"], events_order[x["event"]]),
     )
-    if _is_ascending(sort):
+    if ascending:
         events.reverse()
     if artifact:
         events = [event for event in events if event["artifact"] == artifact]

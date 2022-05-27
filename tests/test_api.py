@@ -100,7 +100,7 @@ def test_promote(repo_with_artifact: Tuple[git.Repo, str]):
         name_version="v0.0.1",
         message=message,
     )
-    promotion = gto.api.find_promotion(repo.working_dir, name, stage)
+    promotion = gto.api.find_versions_in_stage(repo.working_dir, name, stage)
     author = repo.commit().author.name
     author_email = repo.commit().author.email
     _check_obj(
@@ -133,5 +133,5 @@ def test_promote_skip_registration(repo_with_artifact):
     gto.api.promote(
         repo.working_dir, name, stage, promote_ref="HEAD", skip_registration=True
     )
-    promotion = gto.api.find_promotion(repo.working_dir, name, stage)
+    promotion = gto.api.find_versions_in_stage(repo.working_dir, name, stage)
     assert not SemVer.is_valid(promotion.version)
