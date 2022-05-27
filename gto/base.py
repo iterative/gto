@@ -76,20 +76,13 @@ def sort_versions(
     if sort == VersionSort.SemVer:
         # sorting SemVer versions in a right way
         sorted_versions = sorted(
-            (v for v in versions if v.is_registered),
+            (v for v in versions if SemVer.is_valid(get(v, version))),
             key=lambda x: SemVer(get(x, version)),
         )[:: 1 if ascending else -1]
         # sorting hexsha versions alphabetically
         sorted_versions.extend(
             sorted(
-                (v for v in versions if not v.is_registered and not v.discovered),
-                key=lambda x: get(x, version),
-            )[:: 1 if ascending else -1]
-        )
-        # sorting discovered hexsha versions alphabetically
-        sorted_versions.extend(
-            sorted(
-                (v for v in versions if v.discovered),
+                (v for v in versions if not SemVer.is_valid(get(v, version))),
                 key=lambda x: get(x, version),
             )[:: 1 if ascending else -1]
         )
@@ -98,8 +91,8 @@ def sort_versions(
             versions,
             key=lambda x: get(x, timestamp),
         )[:: 1 if ascending else -1]
-    if ascending:
-        sorted_versions.reverse()
+    # if ascending:
+    #     sorted_versions.reverse()
     return sorted_versions
 
 
