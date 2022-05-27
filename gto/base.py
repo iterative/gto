@@ -75,6 +75,42 @@ class BaseArtifact(BaseModel):
         stages = ", ".join(f"'{l}'" for l in self.unique_stages)
         return f"Artifact(versions=[{versions}], stages=[{stages}])"
 
+    @staticmethod
+    def sort_versions(
+        versions,
+        sort=VersionSort.SemVer,
+        ascending=False,
+    ):
+        sort = sort if isinstance(sort, VersionSort) else VersionSort[sort]
+        if sort == VersionSort.SemVer:
+            # sorting SemVer versions in a right way
+            sorted_versions = sorted(
+                (v for v in versions if v.is_registered),
+                key=lambda x: x.version,
+            )[:: 1 if ascending else -1]
+            # sorting hexsha versions alphabetically
+            sorted_versions.extend(
+                sorted(
+                    (v for v in versions if not v.is_registered and not v.discovered),
+                    key=lambda x: x.name,
+                )[:: 1 if ascending else -1]
+            )
+            # sorting discovered hexsha versions alphabetically
+            sorted_versions.extend(
+                sorted(
+                    (v for v in versions if v.discovered),
+                    key=lambda x: x.name,
+                )[:: 1 if ascending else -1]
+            )
+        else:
+            sorted_versions = sorted(
+                versions,
+                key=lambda x: x.created_at,
+            )[:: 1 if ascending else -1]
+        if ascending:
+            sorted_versions.reverse()
+        return sorted_versions
+
     def get_versions(
         self,
         include_non_explicit=False,
@@ -82,44 +118,14 @@ class BaseArtifact(BaseModel):
         sort=VersionSort.SemVer,
         ascending=False,
     ) -> List[BaseVersion]:
-        sort = sort if isinstance(sort, VersionSort) else VersionSort[sort]
-        all_versions = [
+        versions = [
             v
             for v in self.versions
             if (v.is_registered and not v.discovered)
             or (include_discovered and v.discovered)
             or (include_non_explicit and not v.is_registered)
         ]
-        if sort == VersionSort.SemVer:
-            # sorting SemVer versions in a right way
-            versions = sorted(
-                (v for v in all_versions if not v.discovered and v.is_registered),
-                key=lambda x: x.version,
-            )
-            # sorting hexsha versions alphabetically
-            if include_non_explicit:
-                versions.extend(
-                    sorted(
-                        (
-                            v
-                            for v in all_versions
-                            if not v.discovered and not v.is_registered
-                        ),
-                        key=lambda x: x.name,
-                    )
-                )
-        else:
-            versions = sorted(
-                (
-                    v
-                    for v in all_versions
-                    if not v.discovered and (include_non_explicit or v.is_registered)
-                ),
-                key=lambda x: x.created_at,
-            )
-        if ascending:
-            versions.reverse()
-        return versions
+        return self.sort_versions(versions, sort=sort, ascending=ascending)
 
     def get_latest_version(
         self, registered_only=False, sort=VersionSort.SemVer
@@ -128,7 +134,7 @@ class BaseArtifact(BaseModel):
             include_non_explicit=not registered_only, sort=sort
         )
         if versions:
-            return versions[-1]
+            return versions[0]
         return None
 
     def get_promotions(
@@ -146,11 +152,9 @@ class BaseArtifact(BaseModel):
             promotion = version.stage
             if promotion:
                 stages[promotion.stage] = stages.get(promotion.stage, []) + [promotion]
-                # else:
-                #     stages[promotion.stage] = stages.get(promotion.stage) or promotion
         if all:
             return stages
-        return {stage: promotions[-1] for stage, promotions in stages.items()}
+        return {stage: promotions[0] for stage, promotions in stages.items()}
 
     def add_version(self, version: BaseVersion):
         self.versions.append(version)

@@ -106,7 +106,7 @@ def test_commands(showcase):
     _check_successful_cmd(
         "which",
         ["-r", path, "rf", "production", "--all", "--ascending"],
-        "v1.2.4\nv1.2.3\n",
+        "v1.2.3\nv1.2.4\n",
     )
     _check_successful_cmd(
         "which",
