@@ -248,12 +248,12 @@ def promotion_from_tag(
 
 
 def index_tag(
-    artifact: BaseArtifact, tag: git.Tag, version_required: bool
+    artifact: BaseArtifact, tag: git.TagReference, version_required: bool
 ) -> BaseArtifact:
-    mtag = parse_tag(tag)
-    if mtag.action == Action.REGISTER:
+    mtag = parse_name(tag.tag.tag)
+    if mtag["action"] == Action.REGISTER:
         artifact.add_version(version_from_tag(tag))
-    if mtag.action == Action.PROMOTE:
+    if mtag["action"] == Action.PROMOTE:
         artifact.add_promotion(promotion_from_tag(artifact, tag, version_required))
     return artifact
 
@@ -262,12 +262,13 @@ class TagManager(BaseManager):  # pylint: disable=abstract-method
     def update_state(self, state: BaseRegistryState) -> BaseRegistryState:
         # tags are sorted and then indexed by timestamp
         # this is important to check that history is not broken
-        tags = [parse_tag(t) for t in find(repo=self.repo, action=self.actions)]
-        for tag in tags:
+        for tag in find(repo=self.repo, action=self.actions):
             state.update_artifact(
                 index_tag(
-                    state.find_artifact(tag.name, create_new=True),
-                    tag.tag,
+                    state.find_artifact(
+                        parse_name(tag.tag.tag)["name"], create_new=True
+                    ),
+                    tag,
                     version_required=False,
                 )
             )
