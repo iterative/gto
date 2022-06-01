@@ -116,7 +116,7 @@ class Index(BaseModel):
         if name in self and not update:
             raise ArtifactExists(name)
         if (
-            must_exist
+            path
             and find_repeated_path(
                 path, [a.path for n, a in self.state.items() if n != name]
             )

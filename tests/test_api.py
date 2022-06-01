@@ -5,7 +5,7 @@ import git
 import pytest
 
 import gto
-from gto.exceptions import WrongArgs
+from gto.exceptions import PathIsUsed, WrongArgs
 from gto.versions import SemVer
 from tests.utils import _check_obj
 
@@ -34,6 +34,8 @@ def test_add_remove(empty_git_repo: Tuple[git.Repo, Callable]):
     gto.api.annotate(
         repo.working_dir, name, type=type, path=path, must_exist=must_exist
     )
+    with pytest.raises(PathIsUsed):
+        gto.api.annotate(repo.working_dir, "other-name", path=path)
     index = gto.api.get_index(repo.working_dir).get_index()
     assert name in index
     _check_obj(
