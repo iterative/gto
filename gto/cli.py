@@ -737,6 +737,13 @@ def stages(
         help="Show allowed stages from config",
         show_default=True,
     ),
+    used: bool = Option(
+        False,
+        "--used",
+        is_flag=True,
+        help="Show stages that were ever used (from all git tags)",
+        show_default=True,
+    ),
 ):
     """Print list of stages used in the registry
 
@@ -744,7 +751,7 @@ def stages(
         $ gto stages
         $ gto stages --allowed
     """
-    format_echo(gto.api.get_stages(repo, allowed=allowed), "lines")
+    format_echo(gto.api.get_stages(repo, allowed=allowed, used=used), "lines")
 
 
 @gto_command(hidden=True)

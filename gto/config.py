@@ -42,11 +42,11 @@ class EnrichmentConfig(BaseModel):
 
 class NoFileConfig(BaseSettings):
     INDEX: str = "artifacts.yaml"
-    TYPE_ALLOWED: List[str] = []
-    STAGE_ALLOWED: List[str] = []
+    TYPE_ALLOWED: List[str] = []  # TODO: make Optional
+    STAGE_ALLOWED: Optional[List[str]]
     LOG_LEVEL: str = "INFO"
     DEBUG: bool = False
-    ENRICHMENTS: List[EnrichmentConfig] = []
+    ENRICHMENTS: List[EnrichmentConfig] = []  # TODO: make Optional
     AUTOLOAD_ENRICHMENTS: bool = True
     CONFIG_FILE_NAME: Optional[str] = CONFIG_FILE_NAME
     EMOJIS: bool = True
@@ -72,7 +72,7 @@ class NoFileConfig(BaseSettings):
         return res
 
     @property
-    def stages(self) -> List[str]:
+    def stages(self) -> Optional[List[str]]:
         return self.STAGE_ALLOWED
 
     @validator("TYPE_ALLOWED")
@@ -83,8 +83,9 @@ class NoFileConfig(BaseSettings):
 
     @validator("STAGE_ALLOWED")
     def stages_are_valid(cls, v):
-        for name in v:
-            assert_name_is_valid(name)
+        if v:
+            for name in v:
+                assert_name_is_valid(name)
         return v
 
 

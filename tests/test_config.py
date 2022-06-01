@@ -5,22 +5,24 @@ import git
 import pytest
 from typer.testing import CliRunner
 
-from gto.api import annotate
+from gto.api import annotate, get_stages
 from gto.cli import app
 from gto.config import CONFIG_FILE_NAME
 from gto.exceptions import UnknownType
 from gto.index import init_index_manager
 from gto.registry import GitRegistry
 
+CONFIG_CONTENT = """
+type_allowed: [model, dataset]
+stage_allowed: [dev, prod]
+"""
+
 
 @pytest.fixture
 def init_repo(empty_git_repo: Tuple[git.Repo, Callable]):
     repo, write_file = empty_git_repo
 
-    write_file(
-        CONFIG_FILE_NAME,
-        "type_allowed: [model, dataset]",
-    )
+    write_file(CONFIG_FILE_NAME, CONFIG_CONTENT)
     return repo
 
 
@@ -41,6 +43,12 @@ def test_adding_allowed_type(init_repo):
 def test_adding_not_allowed_type(init_repo):
     with pytest.raises(UnknownType):
         annotate(init_repo, "name", type="unknown")
+
+
+def test_stages(init_repo):
+    assert get_stages(init_repo) == ["dev", "prod"]
+    assert get_stages(init_repo, allowed=True) == ["dev", "prod"]
+    assert get_stages(init_repo, used=True) == []
 
 
 def test_config_is_not_needed(empty_git_repo: Tuple[git.Repo, Callable], request):
