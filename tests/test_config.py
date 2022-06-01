@@ -7,7 +7,7 @@ from typer.testing import CliRunner
 
 from gto.api import annotate
 from gto.cli import app
-from gto.config import CONFIG_FILE_NAME
+from gto.config import CONFIG_FILE_NAME, check_name_is_valid
 from gto.exceptions import UnknownType
 from gto.index import init_index_manager
 from gto.registry import GitRegistry
@@ -55,3 +55,39 @@ def test_config_is_not_needed(empty_git_repo: Tuple[git.Repo, Callable], request
     result = runner.invoke(app, ["--help"])
     os.chdir(request.config.invocation_dir)
     assert result.exit_code == 0
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "nn",
+        "m1",
+        "model-prod",
+        "model-prod-v1",
+        "namespace/model",
+    ],
+)
+def test_check_name_is_valid(name):
+    assert check_name_is_valid(name)
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "",
+        "m",
+        "1",
+        "m/",
+        "/m",
+        "1nn",
+        "###",
+        "@@@",
+        "-model",
+        "model-",
+        "model@1",
+        "model#1",
+        "@namespace/model",
+    ],
+)
+def test_check_name_is_invalid(name):
+    assert not check_name_is_valid(name)
