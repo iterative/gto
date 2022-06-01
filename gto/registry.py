@@ -234,6 +234,10 @@ class GitRegistry(BaseModel):
 
     def check_ref(self, ref: str):
         "Find out what was registered/promoted in this ref"
+        if ref.startswith("refs/tags/"):
+            ref = ref[len("refs/tags/") :]
+        if ref.startswith("refs/heads/"):
+            ref = self.repo.commit(ref).hexsha
         return {
             "version": self.version_manager.check_ref(ref, self.get_state()),
             "stage": self.stage_manager.check_ref(ref, self.get_state()),
