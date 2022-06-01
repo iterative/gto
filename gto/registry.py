@@ -232,16 +232,20 @@ class GitRegistry(BaseModel):
             )
         return promotion
 
-    def check_ref(self, ref: str):
-        "Find out what was registered/promoted in this ref"
+    def _check_ref(self, ref, state):
         if ref.startswith("refs/tags/"):
             ref = ref[len("refs/tags/") :]
         if ref.startswith("refs/heads/"):
             ref = self.repo.commit(ref).hexsha
         return {
-            "version": self.version_manager.check_ref(ref, self.get_state()),
-            "stage": self.stage_manager.check_ref(ref, self.get_state()),
+            "version": self.version_manager.check_ref(ref, state),
+            "stage": self.stage_manager.check_ref(ref, state),
         }
+
+    def check_ref(self, ref: str):
+        "Find out what was registered/promoted in this ref"
+        state = self.get_state()
+        return self._check_ref(ref, state)
 
     def find_commit(self, name, version):
         return self.get_state().find_commit(name, version)
