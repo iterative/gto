@@ -360,18 +360,18 @@ def history(  # pylint: disable=too-many-locals
 
     promotion = [
         OrderedDict(
-            timestamp=l.created_at,
+            timestamp=p.created_at,
             artifact=o.name,
             event="promotion",
-            version=format_hexsha(l.version),
-            stage=l.stage,
-            commit=format_hexsha(l.commit_hexsha),
-            author=l.author,
-            author_email=l.author_email,
-            message=l.message,
+            version=format_hexsha(p.version),
+            stage=p.stage,
+            commit=format_hexsha(p.commit_hexsha),
+            author=p.author,
+            author_email=p.author_email,
+            message=p.message,
         )
         for o in artifacts.values()
-        for l in o.stages
+        for p in o.stages
     ]
 
     events_order = {

@@ -372,7 +372,7 @@ def annotate(
     """Update artifact metadata annotations
 
     Examples:
-       $ gto enrich nn --type model --path models/neural_network.h5
+       $ gto annotate nn --type model --path models/neural_network.h5
     """
     gto.api.annotate(
         repo,

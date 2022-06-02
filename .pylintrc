@@ -165,7 +165,7 @@ disable=print-statement,
         redefined-builtin, # TODO
         wrong-import-order, # handeled by isort,
         cannot-enumerate-pytest-fixtures, # TODO
-        invalid-name,
+        invalid-name
 
 # Enable the message, report, category or checker with the given id(s). You can
 # either give multiple identifier separated by comma (,) or put this option

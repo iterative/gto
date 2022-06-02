@@ -6,7 +6,12 @@ from git import InvalidGitRepositoryError, NoSuchPathError, Repo
 from pydantic import BaseModel
 
 from gto.base import BasePromotion, BaseRegistryState
-from gto.config import CONFIG_FILE_NAME, RegistryConfig, read_registry_config
+from gto.config import (
+    CONFIG_FILE_NAME,
+    RegistryConfig,
+    assert_name_is_valid,
+    read_registry_config,
+)
 from gto.exceptions import (
     NoRepo,
     VersionAlreadyRegistered,
@@ -101,6 +106,7 @@ class GitRegistry(BaseModel):
         stdout=False,
     ):
         """Register artifact version"""
+        assert_name_is_valid(name)
         version_args = sum(
             bool(i) for i in (version, bump_major, bump_minor, bump_patch)
         )
@@ -170,6 +176,7 @@ class GitRegistry(BaseModel):
         stdout=False,
     ) -> BasePromotion:
         """Assign stage to specific artifact version"""
+        assert_name_is_valid(name)
         self.config.assert_stage(stage)
         if not (promote_version is None) ^ (promote_ref is None):
             raise WrongArgs("One and only one of (version, ref) must be specified.")
