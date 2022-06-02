@@ -42,11 +42,11 @@ class EnrichmentConfig(BaseModel):
 
 class NoFileConfig(BaseSettings):
     INDEX: str = "artifacts.yaml"
-    TYPES: List[str] = []  # TODO: make Optional
+    TYPES: Optional[List[str]]
     STAGES: Optional[List[str]]
     LOG_LEVEL: str = "INFO"
     DEBUG: bool = False
-    ENRICHMENTS: List[EnrichmentConfig] = []  # TODO: make Optional
+    ENRICHMENTS: List[EnrichmentConfig] = []
     AUTOLOAD_ENRICHMENTS: bool = True
     CONFIG_FILE_NAME: Optional[str] = CONFIG_FILE_NAME
     EMOJIS: bool = True
@@ -56,13 +56,13 @@ class NoFileConfig(BaseSettings):
 
     def assert_type(self, name):
         assert_name_is_valid(name)
-        if self.TYPES and name not in self.TYPES:
+        if self.TYPES is not None and name not in self.TYPES:
             raise UnknownType(name, self.TYPES)
 
     def assert_stage(self, name):
         assert_name_is_valid(name)
-        if self.stages and name not in self.stages:
-            raise UnknownStage(name, self.stages)
+        if self.STAGES is not None and name not in self.STAGES:
+            raise UnknownStage(name, self.STAGES)
 
     @property
     def enrichments(self) -> Dict[str, Enrichment]:
@@ -71,14 +71,11 @@ class NoFileConfig(BaseSettings):
             return {**find_enrichments(), **res}
         return res
 
-    @property
-    def stages(self) -> Optional[List[str]]:
-        return self.STAGES
-
     @validator("TYPES")
     def types_are_valid(cls, v):
-        for name in v:
-            assert_name_is_valid(name)
+        if v:
+            for name in v:
+                assert_name_is_valid(name)
         return v
 
     @validator("STAGES")

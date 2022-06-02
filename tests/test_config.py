@@ -17,6 +17,11 @@ types: [model, dataset]
 stages: [dev, prod]
 """
 
+PROHIBIT_CONFIG_CONTENT = """
+types: []
+stages: []
+"""
+
 
 @pytest.fixture
 def init_repo(empty_git_repo: Tuple[git.Repo, Callable]):
@@ -63,3 +68,21 @@ def test_config_is_not_needed(empty_git_repo: Tuple[git.Repo, Callable], request
     result = runner.invoke(app, ["--help"])
     os.chdir(request.config.invocation_dir)
     assert result.exit_code == 0
+
+
+@pytest.fixture
+def init_repo_prohibit(empty_git_repo: Tuple[git.Repo, Callable]):
+    repo, write_file = empty_git_repo
+
+    write_file(CONFIG_FILE_NAME, PROHIBIT_CONFIG_CONTENT)
+    return repo
+
+
+def test_prohibit_config_type(init_repo_prohibit):
+    with pytest.raises(UnknownType):
+        annotate(init_repo_prohibit, "name", type="model")
+
+
+def test_empty_config_type(empty_git_repo):
+    repo, _ = empty_git_repo
+    annotate(repo, "name", type="model")

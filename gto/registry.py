@@ -251,7 +251,7 @@ class GitRegistry(BaseModel):
         return artifact.get_latest_version(registered_only=registered)
 
     def _get_allowed_stages(self):
-        return self.config.stages
+        return self.config.STAGES
 
     def _get_used_stages(self):
         return sorted(
