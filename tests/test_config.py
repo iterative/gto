@@ -75,9 +75,10 @@ def test_register_incorrect_name(init_repo):
         register(init_repo, "###", ref="HEAD")
 
 
-# def test_register_incorrect_version(init_repo):
-#     with pytest.raises(ValidationError):
-#         register(init_repo, "model", ref="HEAD", version="###")
+@pytest.mark.xfail
+def test_register_incorrect_version(init_repo):
+    with pytest.raises(ValidationError):
+        register(init_repo, "model", ref="HEAD", version="###")
 
 
 def test_promote_incorrect_name(init_repo):
@@ -115,6 +116,12 @@ def init_repo_prohibit(empty_git_repo: Tuple[git.Repo, Callable]):
 def test_prohibit_config_type(init_repo_prohibit):
     with pytest.raises(UnknownType):
         annotate(init_repo_prohibit, "name", type="model")
+
+
+@pytest.mark.xfail
+def test_prohibit_config_promote_incorrect_stage(init_repo):
+    with pytest.raises(ValidationError):
+        promote(init_repo, "model", promote_ref="HEAD", stage="dev")
 
 
 def test_empty_config_type(empty_git_repo):
