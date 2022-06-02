@@ -33,8 +33,8 @@ def _get_state(repo: Union[str, Repo]):
     return GitRegistry.from_repo(repo).get_state()
 
 
-def get_stages(repo: Union[str, Repo], allowed: bool = False):
-    return GitRegistry.from_repo(repo).get_stages(allowed=allowed)
+def get_stages(repo: Union[str, Repo], allowed: bool = False, used: bool = False):
+    return GitRegistry.from_repo(repo).get_stages(allowed=allowed, used=used)
 
 
 # TODO: make this work the same as CLI version

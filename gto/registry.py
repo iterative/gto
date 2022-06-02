@@ -265,12 +265,26 @@ class GitRegistry(BaseModel):
             return artifact.sort_versions(registered=registered)
         return artifact.get_latest_version(registered_only=registered)
 
-    def get_stages(self, allowed: bool = False):
-        """Return list of stages in the registry.
-        If "allowed", return stages that are allowed in config.
-        """
-        if allowed:
-            return self.config.stages
+    def _get_allowed_stages(self):
+        return self.config.STAGES
+
+    def _get_used_stages(self):
         return sorted(
             {stage for o in self.get_artifacts().values() for stage in o.unique_stages}
         )
+
+    def get_stages(self, allowed: bool = False, used: bool = False):
+        """Return list of stages in the registry.
+        If "allowed", return stages that are allowed in config.
+        If "used", return stages that were used in registry.
+        """
+        assert not (allowed and used), """Either "allowed" or "used" can be set"""
+        if allowed:
+            return self._get_allowed_stages()
+        if used:
+            return self._get_used_stages()
+        # if stages in config are set, return them
+        if self._get_allowed_stages() is not None:
+            return self._get_allowed_stages()
+        # if stages aren't set in config, return those in use
+        return self._get_used_stages()
