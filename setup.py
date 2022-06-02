@@ -5,7 +5,6 @@ from setuptools import find_packages, setup
 install_requires = [
     "gitpython",
     "typer",
-    "rich",
     "pydantic",
     "ruamel.yaml",
     "semver==3.0.0-dev.3",

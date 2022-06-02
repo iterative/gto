@@ -3,14 +3,12 @@ from collections import defaultdict
 from enum import Enum  # , EnumMeta, _EnumDict
 from functools import partial, wraps
 from gettext import gettext
-from time import sleep
 from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
 import click
 import typer
 from click import Abort, ClickException, Command, Context, HelpFormatter
 from click.exceptions import Exit
-from git import Repo
 from typer import Argument, Option, Typer
 from typer.core import TyperCommand, TyperGroup
 
@@ -744,152 +742,6 @@ def print_index(repo: str = option_repo):
     format_echo(index, "json")
 
 
-def plot_artifact_card(repo: Repo, name, infos):
-    import json
-    from datetime import datetime
-
-    from rich import print
-    from rich.align import Align
-    from rich.console import Console
-    from rich.layout import Layout
-    from rich.live import Live
-    from rich.panel import Panel
-    from rich.text import Text
-
-    annotation = infos[GTO].get_object().dict(exclude_defaults=True)
-    mlem = infos[MLEM].get_object().dict(exclude_defaults=True) if MLEM in infos else {}
-
-    if isinstance(repo, str):
-        repo = Repo(repo)
-
-    HEADER = "header"
-    HEADER_LEFT = "header_left"
-    HEADER_RIGHT = "header_right"
-    MAIN = "main"
-    LEFT = "left"
-    RIGHT = "right"
-    FOOTER = "footer"
-    RIGHT_UPPER = "right_upper"
-    RIGHT_LOWER = "right_lower"
-
-    def format_title(name):
-        return f"""\n[bold]{name}[/bold]\n\n"""
-
-    layout = Layout()
-    layout.split(
-        Layout(name=HEADER, size=12),
-        Layout(ratio=1, name=MAIN),
-        Layout(size=3, name=FOOTER),
-    )
-
-    layout[HEADER].split_row(
-        Layout(name=HEADER_LEFT, ratio=2), Layout(name=HEADER_RIGHT)
-    )
-
-    layout[MAIN].split_row(Layout(name=LEFT), Layout(name=RIGHT))
-
-    layout[RIGHT].split_column(
-        Layout(name=RIGHT_UPPER), Layout(name=RIGHT_LOWER, ratio=2)
-    )
-
-    layout[HEADER_LEFT].update(
-        Panel(
-            format_title("Artifact")
-            + f"""name [green]{name}[/green], type [purple]{annotation.get("type", "")}[/purple]"""
-            f"""\n\nrepo [blue]{repo.remote().url}[/blue], branch [green]{repo.active_branch}[/green], path [purple]{annotation.get("path", "")}[/purple]"""
-            f"""\n\ndescription: [blue]{annotation.get("description", "")}[/blue]"""
-        )
-    )
-
-    show = gto.api.show(repo, all_branches=True, all_commits=True)[name]
-
-    layout[HEADER_RIGHT].update(
-        Panel(
-            format_title("GTO")
-            + f"""Latest: [green]{show.get("version", "")}[/green]"""
-            + """\n\nStages:\n"""
-            + "\n".join(
-                [
-                    f"""  [green]{stage}: {version}[/green]"""
-                    for stage, version in show.get("stage", {}).items()
-                ]
-            )
-        )
-    )
-
-    requirements = [
-        f"""{req["module"]}=={req["version"]}""" for req in mlem.get("requirements", "")
-    ]
-    methods = list(mlem["model_type"]["methods"])
-    layout[LEFT].update(
-        Panel(
-            format_title("MLEM") + f"""type: [green]{mlem["object_type"]}[/green]"""
-            f"""\n\nframework: [purple]{mlem["model_type"]["type"]}[/purple]"""
-            f"""\n\ndescription: {mlem["description"]}"""
-            f"""\n\ntags: [blue]{mlem.get("tags", "")}[/blue]"""
-            f"""\n\nrequirements: [purple]{requirements}[/purple]"""
-            f"""\n\nmethods: [violet]{methods}[/violet]"""
-        )
-    )
-
-    layout[RIGHT_UPPER].update(
-        Panel(
-            format_title("DVC")
-            + f"""hash: abcde12345\n\nsize: 5mb\n\nremote: s3://my-bucket"""
-        )
-    )
-
-    history = gto.api.history(
-        repo,
-        name,
-        all_branches=True,
-        all_commits=True,
-        # sort=sort,
-        table=False,
-    )
-    history = "\n".join(
-        [
-            (
-                f"""{event["author"]} made [green]{event["event"]}[/green] """
-                + (
-                    f"""of [blue]{event["version"]}[/blue] """
-                    if "version" in event
-                    else ""
-                )
-                + (
-                    f"""to [purple]{event["stage"]}[/purple] """
-                    if "stage" in event
-                    else ""
-                )
-                + f"""at {event["timestamp"]}"""
-                + "\n"
-            )
-            for event in history
-        ]
-    )
-
-    layout[RIGHT_LOWER].update(Panel(format_title("History") + f"""{history}"""))
-
-    layout[FOOTER].update(
-        Align.center(
-            Text(
-                """Hit Ctrl+C to exit""",
-                justify="center",
-            ),
-            vertical="middle",
-        )
-    )
-
-    # layout["header"].update(Panel(name))
-
-    with Live(layout, screen=True, redirect_stderr=False) as live:
-        try:
-            while True:
-                sleep(1)
-        except KeyboardInterrupt:
-            pass
-
-
 @gto_command(section=CommandGroups.enriching)
 def describe(
     repo: str = option_repo,
@@ -923,7 +775,15 @@ def describe(
             for _, info in infos.items():
                 format_echo(info.get_object().dict(exclude_defaults=True), "json")
         else:
-            plot_artifact_card(repo, name, infos)
+            annotation = infos[GTO].get_object().dict(exclude_defaults=True)
+            mlem = (
+                infos[MLEM].get_object().dict(exclude_defaults=True)
+                if MLEM in infos
+                else {}
+            )
+            format_echo(annotation, "json")
+            format_echo(mlem, "json")
+            raise NotImplementedError("Human-readable output should be here")
         return
     d = infos[GTO].get_object().dict(exclude_defaults=True)
     if type:
