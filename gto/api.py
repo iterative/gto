@@ -147,15 +147,7 @@ def find_versions_in_stage(
 def check_ref(repo: Union[str, Repo], ref: str):
     """Find out what have been registered/promoted in the provided ref"""
     reg = GitRegistry.from_repo(repo)
-    if ref.startswith("refs/tags/"):
-        ref = ref[len("refs/tags/") :]
-    if ref.startswith("refs/heads/"):
-        ref = reg.repo.commit(ref).hexsha
-    result = reg.check_ref(ref)
-    return {
-        action: {name: version.dict() for name, version in found.items()}
-        for action, found in result.items()
-    }
+    return reg.check_ref(ref)
 
 
 def show(

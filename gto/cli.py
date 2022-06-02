@@ -596,7 +596,10 @@ def check_ref(
         $ gto check-ref rf@v1.0.0
         $ gto check-ref rf#prod
     """
-    result = gto.api.check_ref(repo, ref)
+    result = {
+        action: {name: version.dict() for name, version in found.items()}
+        for action, found in gto.api.check_ref(repo, ref).items()
+    }
     if json:
         format_echo(result, "json")
     else:
