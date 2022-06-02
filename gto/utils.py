@@ -70,11 +70,14 @@ def format_echo(result, format, format_table=None, if_empty="", missing_value="-
             else if_empty
         )
     elif format == "lines":
-        for line in result:
-            click.echo(line)
+        if result:
+            for line in result:
+                click.echo(line)
     else:
         raise NotImplementedError(f"Format {format} is not implemented")
 
 
 def resolve_ref(repo: git.Repo, ref: Optional[str] = None):
+    # this becomes pretty slow if called many times
+    # may need optimization if we will
     return repo.refs[ref].commit if (ref and ref in repo.refs) else repo.commit(ref)

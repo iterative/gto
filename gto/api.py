@@ -33,8 +33,8 @@ def _get_state(repo: Union[str, Repo]):
     return GitRegistry.from_repo(repo).get_state()
 
 
-def get_stages(repo: Union[str, Repo], allowed: bool = False):
-    return GitRegistry.from_repo(repo).get_stages(allowed=allowed)
+def get_stages(repo: Union[str, Repo], allowed: bool = False, used: bool = False):
+    return GitRegistry.from_repo(repo).get_stages(allowed=allowed, used=used)
 
 
 # TODO: make this work the same as CLI version
@@ -70,6 +70,7 @@ def register(
     name: str,
     ref: str,
     version: str = None,
+    message: str = None,
     bump_major: bool = False,
     bump_minor: bool = False,
     bump_patch: bool = False,
@@ -80,6 +81,7 @@ def register(
         name=name,
         ref=ref,
         version=version,
+        message=message,
         bump_major=bump_major,
         bump_minor=bump_minor,
         bump_patch=bump_patch,
@@ -94,6 +96,7 @@ def promote(
     promote_version: str = None,
     promote_ref: str = None,
     name_version: str = None,
+    message: str = None,
     simple: bool = False,
     force: bool = False,
     skip_registration: bool = False,
@@ -106,6 +109,7 @@ def promote(
         promote_version,
         promote_ref,
         name_version,
+        message=message,
         simple=simple,
         force=force,
         skip_registration=skip_registration,
@@ -120,28 +124,30 @@ def parse_tag(name: str):
 def find_latest_version(
     repo: Union[str, Repo],
     name: str,
+    all: bool = False,
+    registered: bool = True,
 ):
     """Return latest version for artifact"""
-    return GitRegistry.from_repo(repo).latest(name)
+    return GitRegistry.from_repo(repo).latest(name, all=all, registered=registered)
 
 
-def find_promotion(repo: Union[str, Repo], name: str, stage: str):
+def find_versions_in_stage(
+    repo: Union[str, Repo],
+    name: str,
+    stage: str,
+    all: bool = False,
+    registered_only: bool = False,
+):
     """Return version of artifact with specific stage active"""
-    return GitRegistry.from_repo(repo).which(name, stage, raise_if_not_found=False)
+    return GitRegistry.from_repo(repo).which(
+        name, stage, raise_if_not_found=False, all=all, registered_only=registered_only
+    )
 
 
 def check_ref(repo: Union[str, Repo], ref: str):
     """Find out what have been registered/promoted in the provided ref"""
     reg = GitRegistry.from_repo(repo)
-    if ref.startswith("refs/tags/"):
-        ref = ref[len("refs/tags/") :]
-    if ref.startswith("refs/heads/"):
-        ref = reg.repo.commit(ref).hexsha
-    result = reg.check_ref(ref)
-    return {
-        action: {name: version.dict() for name, version in found.items()}
-        for action, found in result.items()
-    }
+    return reg.check_ref(ref)
 
 
 def show(
@@ -150,6 +156,8 @@ def show(
     table: bool = False,
     all_branches=False,
     all_commits=False,
+    truncate_hexsha=False,
+    registered_only=False,
 ):
     return (
         _show_versions(
@@ -157,14 +165,18 @@ def show(
             name=name,
             all_branches=all_branches,
             all_commits=all_commits,
+            registered_only=registered_only,
             table=table,
+            truncate_hexsha=truncate_hexsha,
         )
         if name
         else _show_registry(
             repo,
             all_branches=all_branches,
             all_commits=all_commits,
+            registered_only=registered_only,
             table=table,
+            truncate_hexsha=truncate_hexsha,
         )
     )
 
@@ -173,20 +185,27 @@ def _show_registry(
     repo: Union[str, Repo],
     all_branches=False,
     all_commits=False,
+    registered_only=False,
     table: bool = False,
+    truncate_hexsha: bool = False,  # pylint: disable=unused-argument
 ):
     """Show current registry state"""
+
+    def format_hexsha(hexsha):
+        return hexsha[:7] if truncate_hexsha else hexsha
 
     reg = GitRegistry.from_repo(repo)
     stages = list(reg.get_stages())
     models_state = {
         o.name: {
-            "version": o.get_latest_version(registered=True).name
-            if o.get_latest_version(registered=True)
+            "version": format_hexsha(o.get_latest_version(registered_only=True).name)
+            if o.get_latest_version(registered_only=True)
             else None,
             "stage": {
-                name: o.get_promotions()[name].version
-                if name in o.get_promotions()
+                name: format_hexsha(
+                    o.get_promotions(registered_only=registered_only)[name].version
+                )
+                if name in o.get_promotions(registered_only=registered_only)
                 else None
                 for name in stages
             },
@@ -213,9 +232,15 @@ def _show_versions(
     raw: bool = False,
     all_branches=False,
     all_commits=False,
+    registered_only=False,
     table: bool = False,
+    truncate_hexsha: bool = False,
 ):
     """List versions of artifact"""
+
+    def format_hexsha(hexsha):
+        return hexsha[:7] if truncate_hexsha else hexsha
+
     reg = GitRegistry.from_repo(repo)
     if raw:
         return reg.find_artifact(name).versions
@@ -225,7 +250,9 @@ def _show_versions(
             name,
             all_branches=all_branches,
             all_commits=all_commits,
-        ).get_versions(include_non_explicit=True, include_discovered=True)
+        ).get_versions(
+            include_non_explicit=not registered_only, include_discovered=True
+        )
     ]
     if not table:
         return versions
@@ -233,12 +260,20 @@ def _show_versions(
     first_keys = ["artifact", "version", "stage"]
     versions_ = []
     for v in versions:
-        v["version"] = v["name"][:7]
+        v["version"] = format_hexsha(v["name"])
         if v["stage"]:
             v["stage"] = v["stage"]["stage"]
-        v["commit_hexsha"] = v["commit_hexsha"][:7]
-        v["ref"] = v["tag"] or v["commit_hexsha"][:7]
-        for key in "enrichments", "discovered", "tag", "commit_hexsha", "name":
+        v["commit_hexsha"] = format_hexsha(v["commit_hexsha"])
+        v["ref"] = v["tag"] or v["commit_hexsha"]
+        for key in (
+            "enrichments",
+            "discovered",
+            "tag",
+            "commit_hexsha",
+            "name",
+            "message",
+            "author_email",
+        ):
             v.pop(key)
         # v["enrichments"] = [e["source"] for e in v["enrichments"]]
         v = OrderedDict(
@@ -247,10 +282,6 @@ def _show_versions(
         )
         versions_.append(v)
     return versions_, "keys"
-
-
-def _is_ascending(sort):
-    return sort in {"asc", "Asc", "ascending", "Ascending"}
 
 
 def describe(
@@ -267,14 +298,15 @@ def describe(
     raise NotImplementedError
 
 
-def history(
+def history(  # pylint: disable=too-many-locals
     repo: Union[str, Repo],
     artifact: str = None,
     # action: str = None,
     all_branches=False,
     all_commits=False,
-    sort: str = "desc",
+    ascending: bool = False,
     table: bool = False,
+    truncate_hexsha: bool = False,
 ):
 
     reg = GitRegistry.from_repo(repo)
@@ -283,6 +315,9 @@ def history(
         all_commits=all_commits,
     )
 
+    def format_hexsha(hexsha):
+        return hexsha[:7] if truncate_hexsha else hexsha
+
     commits = [
         OrderedDict(
             timestamp=datetime.fromtimestamp(
@@ -290,8 +325,10 @@ def history(
             ),
             artifact=o.name,
             event="commit",
-            commit=v.commit_hexsha[:7],
+            commit=format_hexsha(v.commit_hexsha),
             author=reg.repo.commit(v.commit_hexsha).author.name,
+            author_email=reg.repo.commit(v.commit_hexsha).author.email,
+            message=reg.repo.commit(v.commit_hexsha).message,
         )
         for o in artifacts.values()
         for v in o.get_versions(include_non_explicit=True, include_discovered=True)
@@ -302,9 +339,11 @@ def history(
             timestamp=v.created_at,
             artifact=o.name,
             event="registration",
-            version=v.name[:7],
-            commit=v.commit_hexsha[:7],
+            version=format_hexsha(v.name),
+            commit=format_hexsha(v.commit_hexsha),
             author=v.author,
+            author_email=v.author_email,
+            message=v.message,
             # enrichments=[e.source for e in v.enrichments],
         )
         for o in artifacts.values()
@@ -313,16 +352,18 @@ def history(
 
     promotion = [
         OrderedDict(
-            timestamp=l.created_at,
+            timestamp=p.created_at,
             artifact=o.name,
             event="promotion",
-            version=l.version[:7],
-            stage=l.stage,
-            commit=l.commit_hexsha[:7],
-            author=l.author,
+            version=format_hexsha(p.version),
+            stage=p.stage,
+            commit=format_hexsha(p.commit_hexsha),
+            author=p.author,
+            author_email=p.author_email,
+            message=p.message,
         )
         for o in artifacts.values()
-        for l in o.stages
+        for p in o.stages
     ]
 
     events_order = {
@@ -334,7 +375,7 @@ def history(
         commits + registration + promotion,
         key=lambda x: (x["timestamp"], events_order[x["event"]]),
     )
-    if _is_ascending(sort):
+    if not ascending:
         events.reverse()
     if artifact:
         events = [event for event in events if event["artifact"] == artifact]

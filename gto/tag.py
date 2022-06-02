@@ -1,4 +1,3 @@
-import logging
 from datetime import datetime
 from enum import Enum
 from typing import FrozenSet, Iterable, Optional, Union
@@ -203,6 +202,8 @@ def version_from_tag(tag: git.Tag) -> BaseVersion:
         name=mtag.version,
         created_at=mtag.created_at,
         author=tag.tag.tagger.name,
+        author_email=tag.tag.tagger.email,
+        message=tag.tag.message,
         commit_hexsha=tag.commit.hexsha,
         tag=tag.name,
     )
@@ -227,6 +228,8 @@ def promotion_from_tag(
                     name=tag.commit.hexsha,
                     created_at=mtag.created_at,
                     author=tag.tag.tagger.name,
+                    author_email=tag.tag.tagger.email,
+                    message=tag.tag.message,
                     commit_hexsha=tag.commit.hexsha,
                 )
             )
@@ -237,18 +240,20 @@ def promotion_from_tag(
         stage=mtag.stage,
         created_at=mtag.created_at,
         author=tag.tag.tagger.name,
+        author_email=tag.tag.tagger.email,
+        message=tag.tag.message,
         commit_hexsha=tag.commit.hexsha,
         tag=tag.name,
     )
 
 
 def index_tag(
-    artifact: BaseArtifact, tag: git.Tag, version_required: bool
+    artifact: BaseArtifact, tag: git.TagReference, version_required: bool
 ) -> BaseArtifact:
-    mtag = parse_tag(tag)
-    if mtag.action == Action.REGISTER:
+    mtag = parse_name(tag.tag.tag)
+    if mtag["action"] == Action.REGISTER:
         artifact.add_version(version_from_tag(tag))
-    if mtag.action == Action.PROMOTE:
+    if mtag["action"] == Action.PROMOTE:
         artifact.add_promotion(promotion_from_tag(artifact, tag, version_required))
     return artifact
 
@@ -257,12 +262,13 @@ class TagManager(BaseManager):  # pylint: disable=abstract-method
     def update_state(self, state: BaseRegistryState) -> BaseRegistryState:
         # tags are sorted and then indexed by timestamp
         # this is important to check that history is not broken
-        tags = [parse_tag(t) for t in find(repo=self.repo, action=self.actions)]
-        for tag in tags:
+        for tag in find(repo=self.repo, action=self.actions):
             state.update_artifact(
                 index_tag(
-                    state.find_artifact(tag.name, create_new=True),
-                    tag.tag,
+                    state.find_artifact(
+                        parse_name(tag.tag.tag)["name"], create_new=True
+                    ),
+                    tag,
                     version_required=False,
                 )
             )
@@ -286,9 +292,9 @@ class TagVersionManager(TagManager):
             art_name = parse_name(ref)[NAME]
             version_name = parse_name(ref)[VERSION]
         except (KeyError, ValueError, IndexError):
-            logging.warning(
-                "Provided ref doesn't exist or it is not a tag that registers a version"
-            )
+            # logging.warning(
+            #     "Provided ref doesn't exist or it is not a tag that registers a version"
+            # )
             return {}
         return {
             name: version
@@ -315,9 +321,9 @@ class TagStageManager(TagManager):
             _ = parse_name(ref)[STAGE]
             art_name = parse_name(ref)[NAME]
         except (KeyError, ValueError, IndexError):
-            logging.warning(
-                "Provided ref doesn't exist or it is not a tag that promotes to an stage"
-            )
+            # logging.warning(
+            #     "Provided ref doesn't exist or it is not a tag that promotes to an stage"
+            # )
             return {}
         return {
             name: promotion

@@ -6,7 +6,12 @@ from git import InvalidGitRepositoryError, NoSuchPathError, Repo
 from pydantic import BaseModel
 
 from gto.base import BasePromotion, BaseRegistryState
-from gto.config import CONFIG_FILE_NAME, RegistryConfig, read_registry_config
+from gto.config import (
+    CONFIG_FILE_NAME,
+    RegistryConfig,
+    assert_name_is_valid,
+    read_registry_config,
+)
 from gto.exceptions import (
     NoRepo,
     VersionAlreadyRegistered,
@@ -94,12 +99,14 @@ class GitRegistry(BaseModel):
         name,
         ref,
         version=None,
+        message=None,
         bump_major=False,
         bump_minor=False,
         bump_patch=False,
         stdout=False,
     ):
         """Register artifact version"""
+        assert_name_is_valid(name)
         version_args = sum(
             bool(i) for i in (version, bump_major, bump_minor, bump_patch)
         )
@@ -123,7 +130,7 @@ class GitRegistry(BaseModel):
                 )
         else:
             # if version name wasn't provided but there were some, bump the last one
-            last_version = found_artifact.get_latest_version(registered=True)
+            last_version = found_artifact.get_latest_version(registered_only=True)
             if last_version:
                 version = (
                     SemVer(last_version.name)
@@ -144,7 +151,7 @@ class GitRegistry(BaseModel):
             name,
             version,
             ref,
-            message=f"Registering artifact {name} version {version}",
+            message=message or f"Registering artifact {name} version {version}",
         )
         registered_version = self.find_artifact(name).find_version(
             name=version, raise_if_not_found=True
@@ -162,12 +169,14 @@ class GitRegistry(BaseModel):
         promote_version=None,
         promote_ref=None,
         name_version=None,
+        message=None,
         simple=False,
         force=False,
         skip_registration=False,
         stdout=False,
     ) -> BasePromotion:
         """Assign stage to specific artifact version"""
+        assert_name_is_valid(name)
         self.config.assert_stage(stage)
         if not (promote_version is None) ^ (promote_ref is None):
             raise WrongArgs("One and only one of (version, ref) must be specified.")
@@ -207,7 +216,8 @@ class GitRegistry(BaseModel):
             name,
             stage,
             ref=promote_ref,
-            message=f"Promoting {name} version {promote_version} to stage {stage}",
+            message=message
+            or f"Promoting {name} version {promote_version} to stage {stage}",
             simple=simple,
         )
         promotion = (
@@ -222,34 +232,59 @@ class GitRegistry(BaseModel):
             )
         return promotion
 
+    def _check_ref(self, ref, state):
+        if ref.startswith("refs/tags/"):
+            ref = ref[len("refs/tags/") :]
+        if ref.startswith("refs/heads/"):
+            ref = self.repo.commit(ref).hexsha
+        return {
+            "version": self.version_manager.check_ref(ref, state),
+            "stage": self.stage_manager.check_ref(ref, state),
+        }
+
     def check_ref(self, ref: str):
         "Find out what was registered/promoted in this ref"
-        return {
-            "version": self.version_manager.check_ref(ref, self.get_state()),
-            "stage": self.stage_manager.check_ref(ref, self.get_state()),
-        }
+        state = self.get_state()
+        return self._check_ref(ref, state)
 
     def find_commit(self, name, version):
         return self.get_state().find_commit(name, version)
 
-    def which(self, name, stage, raise_if_not_found=True):
+    def which(
+        self, name, stage, raise_if_not_found=True, all=False, registered_only=False
+    ):
         """Return stage active in specific stage"""
-        return self.get_state().which(name, stage, raise_if_not_found)
+        return self.get_state().which(
+            name, stage, raise_if_not_found, all=all, registered_only=registered_only
+        )
 
-    def latest(self, name: str):
+    def latest(self, name: str, all: bool = False, registered: bool = True):
         """Return latest active version for artifact"""
-        return self.get_state().find_artifact(name).get_latest_version(registered=True)
+        artifact = self.get_state().find_artifact(name)
+        if all:
+            return artifact.sort_versions(registered=registered)
+        return artifact.get_latest_version(registered_only=registered)
 
-    def get_stages(self, allowed: bool = False):
+    def _get_allowed_stages(self):
+        return self.config.STAGES
+
+    def _get_used_stages(self):
+        return sorted(
+            {stage for o in self.get_artifacts().values() for stage in o.unique_stages}
+        )
+
+    def get_stages(self, allowed: bool = False, used: bool = False):
         """Return list of stages in the registry.
         If "allowed", return stages that are allowed in config.
+        If "used", return stages that were used in registry.
         """
+        assert not (allowed and used), """Either "allowed" or "used" can be set"""
         if allowed:
-            return self.config.stages
-        return sorted(
-            {
-                stage
-                for o in self.get_artifacts().values()
-                for stage in o.get_promotions()
-            }
-        )
+            return self._get_allowed_stages()
+        if used:
+            return self._get_used_stages()
+        # if stages in config are set, return them
+        if self._get_allowed_stages() is not None:
+            return self._get_allowed_stages()
+        # if stages aren't set in config, return those in use
+        return self._get_used_stages()

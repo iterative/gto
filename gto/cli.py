@@ -1,6 +1,5 @@
 import logging
 from collections import defaultdict
-from enum import Enum  # , EnumMeta, _EnumDict
 from functools import partial, wraps
 from gettext import gettext
 from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
@@ -15,7 +14,7 @@ from typer.core import TyperCommand, TyperGroup
 import gto
 from gto.constants import DESCRIPTION, GTO, MLEM, PATH, TYPE
 from gto.exceptions import GTOException, WrongArgs
-from gto.ui import EMOJI_FAIL, EMOJI_GTO, bold, cli_echo, color, echo
+from gto.ui import EMOJI_FAIL, EMOJI_GTO, EMOJI_OK, bold, cli_echo, color, echo
 from gto.utils import format_echo, make_ready_to_serialize
 
 
@@ -186,6 +185,7 @@ app = Typer(
 arg_name = Argument(..., help="Artifact name")
 arg_version = Argument(..., help="Artifact version")
 arg_stage = Argument(..., help="Stage to promote to")
+
 option_rev = Option(None, "--rev", help="Repo revision to use", show_default=True)
 option_repo = Option(".", "-r", "--repo", help="Repository to use", show_default=True)
 option_all_branches = Option(
@@ -198,25 +198,13 @@ option_all_branches = Option(
 option_all_commits = Option(
     False, "-A", "--all-commits", is_flag=True, help="Read all commits"
 )
-
-
-class Format(str, Enum):
-    json = "json"
-    yaml = "yaml"
-
-
-class FormatDF(str, Enum):
-    json = "json"
-    yaml = "yaml"
-    table = "table"
-
-
+option_all = Option(False, "--all", "-a", help="Return all versions sorted")
 option_name = Option(None, "--name", "-n", help="Artifact name", show_default=True)
-option_sort = Option(
-    "desc",
-    "--sort",
-    "-s",
-    help="Desc for recent first, Asc for older first",
+option_ascending = Option(
+    False,
+    "--ascending",
+    "--asc",
+    help="Show new first",
     show_default=True,
 )
 option_expected = Option(
@@ -266,6 +254,13 @@ option_table = Option(
     is_flag=True,
     help="Print output in table format",
     show_default=True,
+)
+option_registered_only = Option(
+    False,
+    "--registered-only",
+    "--ro",
+    is_flag=True,
+    help="Show only registered versions",
 )
 
 
@@ -378,7 +373,7 @@ def annotate(
     """Update artifact metadata annotations
 
     Examples:
-       $ gto enrich nn --type model --path models/neural_network.h5
+       $ gto annotate nn --type model --path models/neural_network.h5
     """
     gto.api.annotate(
         repo,
@@ -410,6 +405,9 @@ def register(
     version: Optional[str] = Option(
         None, "--version", "--ver", help="Version name in SemVer format"
     ),
+    message: Optional[str] = Option(
+        None, "--message", "-m", help="Message to annotate git tag with"
+    ),
     bump_major: bool = Option(
         False, "--bump-major", is_flag=True, help="Bump major version"
     ),
@@ -440,6 +438,7 @@ def register(
         name=name,
         ref=ref or "HEAD",
         version=version,
+        message=message,
         bump_major=bump_major,
         bump_minor=bump_minor,
         bump_patch=bump_patch,
@@ -457,6 +456,9 @@ def promote(
         None,
         "--version",
         help="If you provide REF, this will be used to name new version",
+    ),
+    message: Optional[str] = Option(
+        None, "--message", "-m", help="Message to annotate git tag with"
     ),
     simple: bool = Option(
         False,
@@ -507,6 +509,7 @@ def promote(
         promote_version,
         ref,
         name_version,
+        message=message,
         simple=simple,
         force=force,
         skip_registration=skip_registration,
@@ -539,6 +542,9 @@ def which(
     name: str = arg_name,
     stage: str = arg_stage,
     ref: bool = option_ref_bool,
+    all: bool = option_all,
+    registered_only: bool = option_registered_only,
+    # ascending: bool = option_ascending,
 ):
     """Find the latest artifact version in a given stage
 
@@ -548,9 +554,15 @@ def which(
         Print git tag that did the promotion:
         $ gto which nn prod --ref
     """
-    version = gto.api.find_promotion(repo, name, stage)
+    version = gto.api.find_versions_in_stage(
+        repo, name, stage, all=all, registered_only=registered_only
+    )
     if version:
-        if ref:
+        if all:
+            # if ascending:
+            #     version.reverse()
+            format_echo([v.version for v in version], "lines")
+        elif ref:
             echo(version.tag or version.commit_hexsha)
         else:
             echo(version.version)
@@ -577,6 +589,7 @@ def parse_tag(
 def check_ref(
     repo: str = option_repo,
     ref: str = Argument(..., help="Git reference to analyze"),
+    json: bool = Option(False, "--json", is_flag=True, help="Output in JSON format"),
 ):
     """Find out the artifact version registered/promoted with ref
 
@@ -584,8 +597,23 @@ def check_ref(
         $ gto check-ref rf@v1.0.0
         $ gto check-ref rf#prod
     """
-    result = gto.api.check_ref(repo, ref)
-    format_echo(result, "json")
+    result = {
+        action: {name: version.dict() for name, version in found.items()}
+        for action, found in gto.api.check_ref(repo, ref).items()
+    }
+    if json:
+        format_echo(result, "json")
+    else:
+        if result["version"]:
+            v = list(result["version"].values())[0]
+            echo(
+                f"""{EMOJI_OK} Version "{v["name"]}" of artifact "{v["artifact"]}" was registered"""
+            )
+        if result["stage"]:
+            s = list(result["stage"].values())[0]
+            echo(
+                f"""{EMOJI_OK} Version "{s["version"]}" of artifact "{s["artifact"]}" was promoted to "{s["stage"]}" stage"""
+            )
 
 
 @gto_command(section=CommandGroups.querying)
@@ -597,6 +625,7 @@ def show(
     json: bool = option_json,
     plain: bool = option_plain,
     name_only: bool = option_name_only,
+    registered_only: bool = option_registered_only,
 ):
     """Show the registry state
 
@@ -620,10 +649,11 @@ def show(
             name=name,
             all_branches=all_branches,
             all_commits=all_commits,
+            registered_only=registered_only,
             table=False,
         )
         if name_only:
-            format_echo(output, "lines")
+            format_echo([v["name"] for v in output], "lines")
         else:
             format_echo(output, "json")
     else:
@@ -633,7 +663,9 @@ def show(
                 name=name,
                 all_branches=all_branches,
                 all_commits=all_commits,
+                registered_only=registered_only,
                 table=True,
+                truncate_hexsha=True,
             ),
             format="table",
             format_table="plain" if plain else "fancy_outline",
@@ -659,7 +691,7 @@ def history(
     all_commits: bool = option_all_commits,
     json: bool = option_json,
     plain: bool = option_plain,
-    sort: str = option_sort,
+    ascending: bool = option_ascending,
 ):
     """Show a journal of registry operations
 
@@ -677,7 +709,7 @@ def history(
                 name,
                 all_branches=all_branches,
                 all_commits=all_commits,
-                sort=sort,
+                ascending=ascending,
                 table=False,
             ),
             format="json",
@@ -689,8 +721,9 @@ def history(
                 name,
                 all_branches=all_branches,
                 all_commits=all_commits,
-                sort=sort,
+                ascending=ascending,
                 table=True,
+                truncate_hexsha=True,
             ),
             format="table",
             format_table="plain" if plain else "fancy_outline",
@@ -708,6 +741,14 @@ def stages(
         help="Show allowed stages from config",
         show_default=True,
     ),
+    used: bool = Option(
+        False,
+        "--used",
+        is_flag=True,
+        help="Show stages that were ever used (from all git tags)",
+        show_default=True,
+    ),
+    json: bool = option_json,
 ):
     """Print list of stages used in the registry
 
@@ -715,7 +756,11 @@ def stages(
         $ gto stages
         $ gto stages --allowed
     """
-    format_echo(gto.api.get_stages(repo, allowed=allowed), "lines")
+    result = gto.api.get_stages(repo, allowed=allowed, used=used)
+    if json:
+        format_echo(result, "json")
+    else:
+        format_echo(result, "lines")
 
 
 @gto_command(hidden=True)

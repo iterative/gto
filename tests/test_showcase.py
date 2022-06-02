@@ -29,16 +29,28 @@ def test_api(showcase):
     nn_version = nn_artifact.versions[0]
     assert isinstance(nn_version, BaseVersion)
     author = repo.commit().author.name
+    author_email = repo.commit().author.email
+
+    skip_keys_registration = {
+        "created_at",
+        "promotions",
+        "enrichments",
+        "tag",
+        "message",
+    }
+    skip_keys_promotion = {"created_at", "tag", "message"}
+
     _check_obj(
         nn_version,
         dict(
             artifact="nn",
             name="v0.0.1",
             author=author,
+            author_email=author_email,
             commit_hexsha=first_commit.hexsha,
             discovered=False,
         ),
-        {"created_at", "promotions", "enrichments", "tag"},
+        skip_keys=skip_keys_registration,
     )
     assert len(nn_artifact.stages) == 1
     nn_promotion = nn_artifact.stages[0]
@@ -50,9 +62,10 @@ def test_api(showcase):
             version="v0.0.1",
             stage="staging",
             author=author,
+            author_email=author_email,
             commit_hexsha=first_commit.hexsha,
         ),
-        {"created_at", "tag"},
+        skip_keys=skip_keys_promotion,
     )
 
     rf_artifact = artifacts["rf"]
@@ -68,10 +81,11 @@ def test_api(showcase):
             artifact="rf",
             name="v1.2.3",
             author=author,
+            author_email=author_email,
             commit_hexsha=first_commit.hexsha,
             discovered=False,
         ),
-        {"created_at", "promotions", "enrichments", "tag"},
+        skip_keys=skip_keys_registration,
     )
     _check_obj(
         rf_ver2,
@@ -79,14 +93,15 @@ def test_api(showcase):
             artifact="rf",
             name="v1.2.4",
             author=author,
+            author_email=author_email,
             commit_hexsha=second_commit.hexsha,
             discovered=False,
         ),
-        {"created_at", "promotions", "enrichments", "tag"},
+        skip_keys=skip_keys_registration,
     )
 
     assert len(rf_artifact.stages) == 4
-    assert all(isinstance(l, BasePromotion) for l in rf_artifact.stages)
+    assert all(isinstance(p, BasePromotion) for p in rf_artifact.stages)
     rf_l1, _ = rf_ver1.promotions
     rf_l3, rf_l4 = rf_ver2.promotions
 
@@ -97,9 +112,10 @@ def test_api(showcase):
             version="v1.2.3",
             stage="production",
             author=author,
+            author_email=author_email,
             commit_hexsha=first_commit.hexsha,
         ),
-        {"created_at", "tag"},
+        skip_keys=skip_keys_promotion,
     )
     _check_obj(
         rf_l4,
@@ -108,9 +124,10 @@ def test_api(showcase):
             version="v1.2.4",
             stage="production",
             author=author,
+            author_email=author_email,
             commit_hexsha=second_commit.hexsha,
         ),
-        {"created_at", "tag"},
+        skip_keys=skip_keys_promotion,
     )
     _check_obj(
         rf_l3,
@@ -119,7 +136,8 @@ def test_api(showcase):
             version="v1.2.4",
             stage="staging",
             author=author,
+            author_email=author_email,
             commit_hexsha=second_commit.hexsha,
         ),
-        {"created_at", "tag"},
+        skip_keys=skip_keys_promotion,
     )

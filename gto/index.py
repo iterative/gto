@@ -7,12 +7,13 @@ from pathlib import Path
 from typing import IO, Dict, FrozenSet, Generator, List, Optional, Union
 
 import git
-from pydantic import BaseModel, parse_obj_as
+from pydantic import BaseModel, parse_obj_as, validator
 
 from gto.base import BaseManager, BaseRegistryState, BaseVersion
 from gto.config import (
     CONFIG_FILE_NAME,
     RegistryConfig,
+    assert_name_is_valid,
     read_registry_config,
     yaml,
 )
@@ -87,6 +88,14 @@ class Index(BaseModel):
     state: State = {}  # TODO should not be populated until load() is called
     frozen: bool = False
 
+    @validator("state")
+    def state_is_valid(cls, v):  # pylint: disable=no-self-argument, no-self-use
+        for name, artifact in v.items():
+            assert_name_is_valid(name)
+            if artifact.type:
+                assert_name_is_valid(artifact.type)
+        return v
+
     def __contains__(self, item):
         return item in self.state
 
@@ -101,7 +110,10 @@ class Index(BaseModel):
         if isinstance(path_or_file, str):
             with open(path_or_file, "r", encoding="utf8") as file:
                 return parse_obj_as(State, yaml.load(file))
-        return parse_obj_as(State, yaml.load(path_or_file))
+        state = parse_obj_as(State, yaml.load(path_or_file))
+        for key in state:
+            assert_name_is_valid(key)
+        return state
 
     def write_state(self, path_or_file: Union[str, IO]):
         if isinstance(path_or_file, str):
@@ -116,7 +128,7 @@ class Index(BaseModel):
         if name in self and not update:
             raise ArtifactExists(name)
         if (
-            must_exist
+            path
             and find_repeated_path(
                 path, [a.path for n, a in self.state.items() if n != name]
             )
@@ -140,6 +152,7 @@ class Index(BaseModel):
                 labels=labels,
                 description=description,
             )
+        self.state_is_valid(self.state)
         return self.state[name]
 
     @not_frozen
@@ -268,7 +281,7 @@ class RepoIndexManager(FileIndexManager):
             for commit in traverse_commit(branch.commit)
         }
         return {
-            commit.hexsha: self.get_commit_index(commit.hexsha)  # type: ignore
+            commit.hexsha: self.get_commit_index(commit)  # type: ignore
             for commit in commits
             if self.config.INDEX in commit.tree
         }
@@ -337,7 +350,11 @@ class EnrichmentManager(BaseManager):
         # processing registered artifacts and versions first
         for artifact in state.get_artifacts().values():
             for version in artifact.versions:
-                enrichments = self.describe(artifact.name, rev=version.commit_hexsha)
+                enrichments = self.describe(
+                    artifact.name,
+                    # faster to make git.Reference here
+                    rev=self.repo.commit(version.commit_hexsha),
+                )
                 artifact.update_enrichments(
                     version=version.name, enrichments=enrichments
                 )
@@ -359,6 +376,7 @@ class EnrichmentManager(BaseManager):
                             name=commit.hexsha,
                             created_at=datetime.fromtimestamp(commit.committed_date),
                             author=commit.author.name,
+                            author_email=commit.author.email,
                             commit_hexsha=commit.hexsha,
                             discovered=True,
                         )
@@ -398,7 +416,7 @@ class GTOEnrichment(Enrichment):
     source = "gto"
 
     def discover(  # pylint: disable=no-self-use
-        self, repo, rev: Optional[str]
+        self, repo, rev: Optional[Union[git.Reference, str]]
     ) -> Dict[str, GTOInfo]:
         index = RepoIndexManager.from_repo(repo).get_commit_index(rev)
         if index:
@@ -409,7 +427,7 @@ class GTOEnrichment(Enrichment):
         return {}
 
     def describe(  # pylint: disable=no-self-use
-        self, repo, obj: str, rev: Optional[str]
+        self, repo, obj: str, rev: Optional[Union[git.Reference, str]]
     ) -> Optional[GTOInfo]:
         index = RepoIndexManager.from_repo(repo).get_commit_index(rev)
         if index and obj in index.state:
