@@ -5,11 +5,14 @@ from setuptools import find_packages, setup
 install_requires = [
     "gitpython",
     "typer",
+    "rich",
     "pydantic",
     "ruamel.yaml",
     "semver==3.0.0-dev.3",
     "entrypoints",
     "tabulate==0.8.9",
+    "mlem",  # TODO: remove before merge
+    "dvc",  # TODO: remove berore merge
 ]
 
 
@@ -56,7 +59,7 @@ setup_args = dict(  # noqa: C408
         "console_scripts": ["gto = gto.cli:app"],
         "gto.enrichment": [
             "mlem = gto.ext_mlem:MlemEnrichment",
-            # "dvc = gto.ext_dvc:DVCEnrichment",
+            "dvc = gto.ext_dvc:DVCEnrichment",
             # "cli = gto.ext:CLIEnrichment",
             "gto = gto.index:GTOEnrichment",
         ],

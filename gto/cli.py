@@ -12,7 +12,7 @@ from typer import Argument, Option, Typer
 from typer.core import TyperCommand, TyperGroup
 
 import gto
-from gto.constants import DESCRIPTION, GTO, MLEM, PATH, TYPE
+from gto.constants import DESCRIPTION, GTO, PATH, TYPE
 from gto.exceptions import GTOException, WrongArgs
 from gto.ui import EMOJI_FAIL, EMOJI_GTO, EMOJI_OK, bold, cli_echo, color, echo
 from gto.utils import format_echo, make_ready_to_serialize
@@ -817,18 +817,17 @@ def describe(
         infos = {source: infos[source]}
     if not type and not path and not description:
         if json:
-            for _, info in infos.items():
-                format_echo(info.get_object().dict(exclude_defaults=True), "json")
-        else:
-            annotation = infos[GTO].get_object().dict(exclude_defaults=True)
-            mlem = (
-                infos[MLEM].get_object().dict(exclude_defaults=True)
-                if MLEM in infos
-                else {}
+            format_echo(
+                {
+                    source: info.get_object().dict(exclude_defaults=True)
+                    for source, info in infos.items()
+                },
+                "json",
             )
-            format_echo(annotation, "json")
-            format_echo(mlem, "json")
-            raise NotImplementedError("Human-readable output should be here")
+        else:
+            for enrichment_source, info in infos.items():
+                format_echo([enrichment_source.upper()], "lines")
+                format_echo([info.get_human_readable()], "lines")
         return
     d = infos[GTO].get_object().dict(exclude_defaults=True)
     if type:

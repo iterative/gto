@@ -4,7 +4,7 @@ from typing import Optional
 from git import Repo
 from mlem.core.errors import MlemObjectNotFound
 from mlem.core.metadata import load_meta
-from mlem.core.objects import DatasetMeta, MlemMeta, ModelMeta
+from mlem.core.objects import MlemData, MlemModel, MlemObject
 from pydantic import BaseModel
 
 from gto.ext import Enrichment, EnrichmentInfo
@@ -12,7 +12,7 @@ from gto.ext import Enrichment, EnrichmentInfo
 
 class MlemInfo(EnrichmentInfo):
     source = "mlem"
-    meta: MlemMeta
+    meta: MlemObject
 
     def get_object(self) -> BaseModel:
         return self.meta
@@ -20,9 +20,9 @@ class MlemInfo(EnrichmentInfo):
     def get_human_readable(self) -> str:
         # TODO: create `.describe` method in MlemMeta https://github.com/iterative/mlem/issues/98
         description = f"""Mlem {self.meta.object_type}"""
-        if isinstance(self.meta, ModelMeta):
+        if isinstance(self.meta, MlemModel):
             description += f": {self.meta.model_type.type}"
-        if isinstance(self.meta, DatasetMeta):
+        if isinstance(self.meta, MlemData):
             description += f": {self.meta.dataset.dataset_type.type}"
         return description
 
@@ -34,6 +34,6 @@ class MlemEnrichment(Enrichment):
         try:
             if isinstance(repo, Repo):
                 repo = repo.working_dir
-            return MlemInfo(meta=load_meta(obj, repo=repo))  # rev=rev
+            return MlemInfo(meta=load_meta(obj, project=repo))  # rev=rev
         except MlemObjectNotFound:
             return None

@@ -45,6 +45,7 @@ class Enrichment(BaseModel, ABC):
 
 
 # class CLIEnrichmentInfo(EnrichmentInfo):
+#     source: str = "cli"  # should be detected
 #     data: Dict
 #     repr: str
 
@@ -56,6 +57,7 @@ class Enrichment(BaseModel, ABC):
 
 
 # class CLIEnrichment(Enrichment):
+#     source: str = "cli"  # should be detected
 #     cmd: str
 #     info_type: Union[str, Type[EnrichmentInfo]] = CLIEnrichmentInfo
 
