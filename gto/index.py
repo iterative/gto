@@ -7,12 +7,13 @@ from pathlib import Path
 from typing import IO, Dict, FrozenSet, Generator, List, Optional, Union
 
 import git
-from pydantic import BaseModel, parse_obj_as
+from pydantic import BaseModel, parse_obj_as, validator
 
 from gto.base import BaseManager, BaseRegistryState, BaseVersion
 from gto.config import (
     CONFIG_FILE_NAME,
     RegistryConfig,
+    assert_name_is_valid,
     read_registry_config,
     yaml,
 )
@@ -87,6 +88,14 @@ class Index(BaseModel):
     state: State = {}  # TODO should not be populated until load() is called
     frozen: bool = False
 
+    @validator("state")
+    def state_is_valid(cls, v):  # pylint: disable=no-self-argument, no-self-use
+        for name, artifact in v.items():
+            assert_name_is_valid(name)
+            if artifact.type:
+                assert_name_is_valid(artifact.type)
+        return v
+
     def __contains__(self, item):
         return item in self.state
 
@@ -101,7 +110,10 @@ class Index(BaseModel):
         if isinstance(path_or_file, str):
             with open(path_or_file, "r", encoding="utf8") as file:
                 return parse_obj_as(State, yaml.load(file))
-        return parse_obj_as(State, yaml.load(path_or_file))
+        state = parse_obj_as(State, yaml.load(path_or_file))
+        for key in state:
+            assert_name_is_valid(key)
+        return state
 
     def write_state(self, path_or_file: Union[str, IO]):
         if isinstance(path_or_file, str):
@@ -140,6 +152,7 @@ class Index(BaseModel):
                 labels=labels,
                 description=description,
             )
+        self.state_is_valid(self.state)
         return self.state[name]
 
     @not_frozen

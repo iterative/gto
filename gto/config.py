@@ -22,7 +22,7 @@ CONFIG_FILE_NAME = ".gto"
 
 
 def check_name_is_valid(name):
-    return bool(re.match(r"[a-zA-Z0-9-/]*$", name))
+    return bool(re.match(r"[a-z][a-z0-9-/]*[a-z0-9]$", name))
 
 
 def assert_name_is_valid(name):
