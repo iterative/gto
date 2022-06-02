@@ -102,15 +102,17 @@ class BaseArtifact(BaseModel):
 
     @property
     def stages(self):
-        return [l for v in self.versions for l in v.promotions]
+        return [
+            promotion for version in self.versions for promotion in version.promotions
+        ]
 
     @property
     def unique_stages(self):
-        return {l.stage for l in self.stages}
+        return {promotion.stage for promotion in self.stages}
 
     def __repr__(self) -> str:
         versions = ", ".join(f"'{v.name}'" for v in self.versions)
-        stages = ", ".join(f"'{l}'" for l in self.unique_stages)
+        stages = ", ".join(f"'{p}'" for p in self.unique_stages)
         return f"Artifact(versions=[{versions}], stages=[{stages}])"
 
     def get_versions(
@@ -273,7 +275,7 @@ class BaseRegistryState(BaseModel):
 
     @property
     def unique_stages(self):
-        return sorted({l for o in self.artifacts.values() for l in o.unique_stages})
+        return sorted({p for o in self.artifacts.values() for p in o.unique_stages})
 
     def find_commit(self, name, version):
         return (

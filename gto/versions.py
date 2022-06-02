@@ -39,7 +39,7 @@ class SemVer(AbstractVersion):
         try:
             cls.parse(version)
             return True
-        except (InvalidVersion, ValueError, IndexError) as _:
+        except (InvalidVersion, ValueError, IndexError) as _:  # noqa: F841
             return False
 
     @classmethod
