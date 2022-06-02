@@ -42,8 +42,8 @@ class EnrichmentConfig(BaseModel):
 
 class NoFileConfig(BaseSettings):
     INDEX: str = "artifacts.yaml"
-    TYPE_ALLOWED: List[str] = []  # TODO: make Optional
-    STAGE_ALLOWED: Optional[List[str]]
+    TYPES: List[str] = []  # TODO: make Optional
+    STAGES: Optional[List[str]]
     LOG_LEVEL: str = "INFO"
     DEBUG: bool = False
     ENRICHMENTS: List[EnrichmentConfig] = []  # TODO: make Optional
@@ -56,8 +56,8 @@ class NoFileConfig(BaseSettings):
 
     def assert_type(self, name):
         assert_name_is_valid(name)
-        if self.TYPE_ALLOWED and name not in self.TYPE_ALLOWED:
-            raise UnknownType(name, self.TYPE_ALLOWED)
+        if self.TYPES and name not in self.TYPES:
+            raise UnknownType(name, self.TYPES)
 
     def assert_stage(self, name):
         assert_name_is_valid(name)
@@ -73,15 +73,15 @@ class NoFileConfig(BaseSettings):
 
     @property
     def stages(self) -> Optional[List[str]]:
-        return self.STAGE_ALLOWED
+        return self.STAGES
 
-    @validator("TYPE_ALLOWED")
+    @validator("TYPES")
     def types_are_valid(cls, v):
         for name in v:
             assert_name_is_valid(name)
         return v
 
-    @validator("STAGE_ALLOWED")
+    @validator("STAGES")
     def stages_are_valid(cls, v):
         if v:
             for name in v:

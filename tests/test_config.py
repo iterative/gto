@@ -13,8 +13,8 @@ from gto.index import init_index_manager
 from gto.registry import GitRegistry
 
 CONFIG_CONTENT = """
-type_allowed: [model, dataset]
-stage_allowed: [dev, prod]
+types: [model, dataset]
+stages: [dev, prod]
 """
 
 
@@ -28,12 +28,12 @@ def init_repo(empty_git_repo: Tuple[git.Repo, Callable]):
 
 def test_config_load_index(init_repo):
     index = init_index_manager(init_repo)
-    assert index.config.TYPE_ALLOWED == ["model", "dataset"]
+    assert index.config.TYPES == ["model", "dataset"]
 
 
 def test_config_load_registry(init_repo):
     registry = GitRegistry.from_repo(init_repo)
-    assert registry.config.TYPE_ALLOWED == ["model", "dataset"]
+    assert registry.config.TYPES == ["model", "dataset"]
 
 
 def test_adding_allowed_type(init_repo):
