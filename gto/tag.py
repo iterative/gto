@@ -183,16 +183,26 @@ def find(
     return tags
 
 
-def create_tag(repo, name, ref, message):
+def create_tag(
+    repo: git.Repo,
+    name: str,
+    ref: str,
+    message: str,
+    GIT_COMMITTER_NAME: str = None,
+    GIT_COMMITTER_EMAIL: str = None,
+):
     if all(c.hexsha != ref for c in repo.iter_commits()):
         raise RefNotFound(ref=ref)
     if name in repo.refs:
         raise TagExists(name=name)
-    repo.create_tag(
-        name,
-        ref=ref,
-        message=message,
-    )
+
+    env = {}
+    if GIT_COMMITTER_NAME:
+        env["GIT_COMMITTER_NAME"] = GIT_COMMITTER_NAME
+    if GIT_COMMITTER_EMAIL:
+        env["GIT_COMMITTER_EMAIL"] = GIT_COMMITTER_EMAIL
+
+    repo.git.tag(["-a", name, "-m", message, ref], env=env)
 
 
 def version_from_tag(tag: git.Tag) -> BaseVersion:
@@ -278,12 +288,22 @@ class TagManager(BaseManager):  # pylint: disable=abstract-method
 class TagVersionManager(TagManager):
     actions: FrozenSet[Action] = frozenset((Action.REGISTER,))
 
-    def register(self, name, version, ref, message):
+    def register(
+        self,
+        name,
+        version,
+        ref,
+        message,
+        GIT_COMMITTER_NAME: Optional[str] = None,
+        GIT_COMMITTER_EMAIL: Optional[str] = None,
+    ):
         create_tag(
             self.repo,
             name_tag(Action.REGISTER, name, version=version, repo=self.repo),
             ref=ref,
             message=message,
+            GIT_COMMITTER_NAME=GIT_COMMITTER_NAME,
+            GIT_COMMITTER_EMAIL=GIT_COMMITTER_EMAIL,
         )
 
     def check_ref(self, ref: str, state: BaseRegistryState):
@@ -307,12 +327,23 @@ class TagVersionManager(TagManager):
 class TagStageManager(TagManager):
     actions: FrozenSet[Action] = frozenset((Action.PROMOTE,))
 
-    def promote(self, name, stage, ref, message, simple):
+    def promote(
+        self,
+        name,
+        stage,
+        ref,
+        message,
+        simple,
+        GIT_COMMITTER_NAME: Optional[str] = None,
+        GIT_COMMITTER_EMAIL: Optional[str] = None,
+    ):
         create_tag(
             self.repo,
             name_tag(Action.PROMOTE, name, stage=stage, repo=self.repo, simple=simple),
             ref=ref,
             message=message,
+            GIT_COMMITTER_NAME=GIT_COMMITTER_NAME,
+            GIT_COMMITTER_EMAIL=GIT_COMMITTER_EMAIL,
         )
 
     def check_ref(self, ref: str, state: BaseRegistryState):
