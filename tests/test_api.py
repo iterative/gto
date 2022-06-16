@@ -1,4 +1,6 @@
 """TODO: add more tests for API"""
+import os
+from contextlib import contextmanager
 from typing import Callable, Tuple
 
 import git
@@ -137,3 +139,51 @@ def test_promote_skip_registration(repo_with_artifact):
     )
     promotion = gto.api.find_versions_in_stage(repo.working_dir, name, stage)
     assert not SemVer.is_valid(promotion.version)
+
+
+@contextmanager
+def environ(**overrides):
+    old = {name: os.environ[name] for name in overrides if name in os.environ}
+    to_del = set(overrides) - set(old)
+    try:
+        os.environ.update(overrides)
+        yield
+    finally:
+        os.environ.update(old)
+        for name in to_del:
+            os.environ.pop(name, None)
+
+
+def test_check_ref(repo_with_artifact: Tuple[git.Repo, Callable]):
+    repo, name = repo_with_artifact  # pylint: disable=unused-variable
+
+    NAME = "model"
+    VERSION = "v1.2.3"
+    GIT_AUTHOR_NAME = "Alexander Guschin"
+    GIT_AUTHOR_EMAIL = "aguschin@iterative.ai"
+    GIT_COMMITTER_NAME = "Oliwav"
+    GIT_COMMITTER_EMAIL = "oliwav@iterative.ai"
+
+    with environ(
+        GIT_AUTHOR_NAME=GIT_AUTHOR_NAME,
+        GIT_AUTHOR_EMAIL=GIT_AUTHOR_EMAIL,
+        GIT_COMMITTER_NAME=GIT_COMMITTER_NAME,
+        GIT_COMMITTER_EMAIL=GIT_COMMITTER_EMAIL,
+    ):
+        gto.api.register(repo, name=NAME, ref="HEAD", version=VERSION)
+
+    info = gto.api.check_ref(repo, f"{NAME}@{VERSION}")["version"][NAME]
+    _check_obj(
+        info,
+        {
+            "artifact": NAME,
+            "name": VERSION,
+            "author": GIT_COMMITTER_NAME,
+            "author_email": GIT_COMMITTER_EMAIL,
+            "discovered": False,
+            "tag": f"{NAME}@{VERSION}",
+            "promotions": [],
+            "enrichments": [],
+        },
+        skip_keys={"commit_hexsha", "created_at", "message"},
+    )
