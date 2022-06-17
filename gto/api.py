@@ -75,8 +75,8 @@ def register(
     bump_minor: bool = False,
     bump_patch: bool = False,
     stdout: bool = False,
-    GIT_COMMITTER_NAME: Optional[str] = None,
-    GIT_COMMITTER_EMAIL: Optional[str] = None,
+    author: Optional[str] = None,
+    author_email: Optional[str] = None,
 ):
     """Register new artifact version"""
     return GitRegistry.from_repo(repo).register(
@@ -88,8 +88,8 @@ def register(
         bump_minor=bump_minor,
         bump_patch=bump_patch,
         stdout=stdout,
-        GIT_COMMITTER_NAME=GIT_COMMITTER_NAME,
-        GIT_COMMITTER_EMAIL=GIT_COMMITTER_EMAIL,
+        author=author,
+        author_email=author_email,
     )
 
 
@@ -105,8 +105,8 @@ def promote(
     force: bool = False,
     skip_registration: bool = False,
     stdout: bool = False,
-    GIT_COMMITTER_NAME: Optional[str] = None,
-    GIT_COMMITTER_EMAIL: Optional[str] = None,
+    author: Optional[str] = None,
+    author_email: Optional[str] = None,
 ):
     """Assign stage to specific artifact version"""
     return GitRegistry.from_repo(repo).promote(
@@ -120,8 +120,8 @@ def promote(
         force=force,
         skip_registration=skip_registration,
         stdout=stdout,
-        GIT_COMMITTER_NAME=GIT_COMMITTER_NAME,
-        GIT_COMMITTER_EMAIL=GIT_COMMITTER_EMAIL,
+        author=author,
+        author_email=author_email,
     )
 
 

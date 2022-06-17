@@ -84,21 +84,21 @@ def test_register(repo_with_artifact):
     )
     repo.index.commit("Irrelevant action to create a git commit")
     message = "Some message"
-    GIT_COMMITTER_NAME = "GTO"
-    GIT_COMMITTER_EMAIL = "gto@iterative.ai"
+    author = "GTO"
+    author_email = "gto@iterative.ai"
     gto.api.register(
         repo.working_dir,
         name,
         "HEAD",
         message=message,
-        GIT_COMMITTER_NAME=GIT_COMMITTER_NAME,
-        GIT_COMMITTER_EMAIL=GIT_COMMITTER_EMAIL,
+        author=author,
+        author_email=author_email,
     )
     latest = gto.api.find_latest_version(repo.working_dir, name)
     assert latest.name == vname2
     assert latest.message == message
-    assert latest.author == GIT_COMMITTER_NAME
-    assert latest.author_email == GIT_COMMITTER_EMAIL
+    assert latest.author == author
+    assert latest.author_email == author_email
 
 
 def test_promote(repo_with_artifact: Tuple[git.Repo, str]):
@@ -107,8 +107,8 @@ def test_promote(repo_with_artifact: Tuple[git.Repo, str]):
     repo.create_tag("v1.0.0")
     repo.create_tag("wrong-tag-unrelated")
     message = "some msg"
-    GIT_COMMITTER_NAME = "GTO"
-    GIT_COMMITTER_EMAIL = "gto@iterative.ai"
+    author = "GTO"
+    author_email = "gto@iterative.ai"
     gto.api.promote(
         repo.working_dir,
         name,
@@ -116,8 +116,8 @@ def test_promote(repo_with_artifact: Tuple[git.Repo, str]):
         promote_ref="HEAD",
         name_version="v0.0.1",
         message=message,
-        GIT_COMMITTER_NAME=GIT_COMMITTER_NAME,
-        GIT_COMMITTER_EMAIL=GIT_COMMITTER_EMAIL,
+        author=author,
+        author_email=author_email,
     )
     promotion = gto.api.find_versions_in_stage(repo.working_dir, name, stage)
     _check_obj(
@@ -126,8 +126,8 @@ def test_promote(repo_with_artifact: Tuple[git.Repo, str]):
             artifact=name,
             version="v0.0.1",
             stage=stage,
-            author=GIT_COMMITTER_NAME,
-            author_email=GIT_COMMITTER_EMAIL,
+            author=author,
+            author_email=author_email,
             message=message,
             commit_hexsha=repo.commit().hexsha,
         ),

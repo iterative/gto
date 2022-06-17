@@ -294,16 +294,16 @@ class TagVersionManager(TagManager):
         version,
         ref,
         message,
-        GIT_COMMITTER_NAME: Optional[str] = None,
-        GIT_COMMITTER_EMAIL: Optional[str] = None,
+        author: Optional[str] = None,
+        author_email: Optional[str] = None,
     ):
         create_tag(
             self.repo,
             name_tag(Action.REGISTER, name, version=version, repo=self.repo),
             ref=ref,
             message=message,
-            GIT_COMMITTER_NAME=GIT_COMMITTER_NAME,
-            GIT_COMMITTER_EMAIL=GIT_COMMITTER_EMAIL,
+            GIT_COMMITTER_NAME=author,
+            GIT_COMMITTER_EMAIL=author_email,
         )
 
     def check_ref(self, ref: str, state: BaseRegistryState):
@@ -334,16 +334,16 @@ class TagStageManager(TagManager):
         ref,
         message,
         simple,
-        GIT_COMMITTER_NAME: Optional[str] = None,
-        GIT_COMMITTER_EMAIL: Optional[str] = None,
+        author: Optional[str] = None,
+        author_email: Optional[str] = None,
     ):
         create_tag(
             self.repo,
             name_tag(Action.PROMOTE, name, stage=stage, repo=self.repo, simple=simple),
             ref=ref,
             message=message,
-            GIT_COMMITTER_NAME=GIT_COMMITTER_NAME,
-            GIT_COMMITTER_EMAIL=GIT_COMMITTER_EMAIL,
+            GIT_COMMITTER_NAME=author,
+            GIT_COMMITTER_EMAIL=author_email,
         )
 
     def check_ref(self, ref: str, state: BaseRegistryState):

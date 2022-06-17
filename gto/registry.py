@@ -104,8 +104,8 @@ class GitRegistry(BaseModel):
         bump_minor=False,
         bump_patch=False,
         stdout=False,
-        GIT_COMMITTER_NAME: Optional[str] = None,
-        GIT_COMMITTER_EMAIL: Optional[str] = None,
+        author: Optional[str] = None,
+        author_email: Optional[str] = None,
     ):
         """Register artifact version"""
         assert_name_is_valid(name)
@@ -154,8 +154,8 @@ class GitRegistry(BaseModel):
             version,
             ref,
             message=message or f"Registering artifact {name} version {version}",
-            GIT_COMMITTER_NAME=GIT_COMMITTER_NAME,
-            GIT_COMMITTER_EMAIL=GIT_COMMITTER_EMAIL,
+            author=author,
+            author_email=author_email,
         )
         registered_version = self.find_artifact(name).find_version(
             name=version, raise_if_not_found=True
@@ -178,8 +178,8 @@ class GitRegistry(BaseModel):
         force=False,
         skip_registration=False,
         stdout=False,
-        GIT_COMMITTER_NAME: Optional[str] = None,
-        GIT_COMMITTER_EMAIL: Optional[str] = None,
+        author: Optional[str] = None,
+        author_email: Optional[str] = None,
     ) -> BasePromotion:
         """Assign stage to specific artifact version"""
         assert_name_is_valid(name)
@@ -225,8 +225,8 @@ class GitRegistry(BaseModel):
             message=message
             or f"Promoting {name} version {promote_version} to stage {stage}",
             simple=simple,
-            GIT_COMMITTER_NAME=GIT_COMMITTER_NAME,
-            GIT_COMMITTER_EMAIL=GIT_COMMITTER_EMAIL,
+            author=author,
+            author_email=author_email,
         )
         promotion = (
             self.get_state()
