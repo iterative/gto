@@ -430,7 +430,7 @@ def register(
         $ gto register nn --version v1.0.0
 
         Choose a part to bump version by:
-        $ gto register nn --bump minor
+        $ gto register nn --bump-minor
     """
     gto.api.register(
         repo=repo,
@@ -489,7 +489,7 @@ def promote(
         $ gto promote nn prod abcd123 --version v1.0.0
 
         Promote without increment
-        $ gto promote nn prod --ref HEAD --simple
+        $ gto promote nn prod HEAD --simple
     """
     if ref is not None:
         name_version = version
