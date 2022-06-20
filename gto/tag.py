@@ -191,8 +191,10 @@ def create_tag(
     GIT_COMMITTER_NAME: str = None,
     GIT_COMMITTER_EMAIL: str = None,
 ):
-    if all(c.hexsha != ref for c in repo.iter_commits()):
-        raise RefNotFound(ref=ref)
+    try:
+        repo.commit(ref)
+    except (ValueError, git.BadName) as e:
+        raise RefNotFound(ref=ref) from e
     if name in repo.refs:
         raise TagExists(name=name)
 
