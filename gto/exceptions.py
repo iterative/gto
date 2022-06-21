@@ -28,7 +28,7 @@ class WrongConfig(GTOException):
 
 
 class NoFile(GTOException):
-    _message = "No file/folder found in '{path}' for checkouted commit"
+    _message = "No file/folder found in '{path}' for checked out commit"
 
     def __init__(self, path) -> None:
         self.message = self._message.format(path=path)

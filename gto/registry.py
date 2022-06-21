@@ -1,5 +1,5 @@
 import os
-from typing import Union
+from typing import Optional, Union
 
 import git
 from git import InvalidGitRepositoryError, NoSuchPathError, Repo
@@ -94,7 +94,7 @@ class GitRegistry(BaseModel):
             name, create_new=create_new  # type: ignore
         )
 
-    def register(
+    def register(  # pylint: disable=too-many-locals
         self,
         name,
         ref,
@@ -104,6 +104,8 @@ class GitRegistry(BaseModel):
         bump_minor=False,
         bump_patch=False,
         stdout=False,
+        author: Optional[str] = None,
+        author_email: Optional[str] = None,
     ):
         """Register artifact version"""
         assert_name_is_valid(name)
@@ -152,6 +154,8 @@ class GitRegistry(BaseModel):
             version,
             ref,
             message=message or f"Registering artifact {name} version {version}",
+            author=author,
+            author_email=author_email,
         )
         registered_version = self.find_artifact(name).find_version(
             name=version, raise_if_not_found=True
@@ -162,7 +166,7 @@ class GitRegistry(BaseModel):
             )
         return registered_version
 
-    def promote(
+    def promote(  # pylint: disable=too-many-locals
         self,
         name,
         stage,
@@ -174,6 +178,8 @@ class GitRegistry(BaseModel):
         force=False,
         skip_registration=False,
         stdout=False,
+        author: Optional[str] = None,
+        author_email: Optional[str] = None,
     ) -> BasePromotion:
         """Assign stage to specific artifact version"""
         assert_name_is_valid(name)
@@ -219,6 +225,8 @@ class GitRegistry(BaseModel):
             message=message
             or f"Promoting {name} version {promote_version} to stage {stage}",
             simple=simple,
+            author=author,
+            author_email=author_email,
         )
         promotion = (
             self.get_state()

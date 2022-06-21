@@ -13,6 +13,7 @@ install_requires = [
     "tabulate==0.8.9",
     "mlem",  # TODO: remove before merge
     "dvc",  # TODO: remove berore merge
+    "funcy",
 ]
 
 

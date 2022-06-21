@@ -2,7 +2,8 @@
 import pytest
 
 from gto.constants import Action
-from gto.tag import ActionSign, name_tag, parse_name
+from gto.exceptions import RefNotFound, TagExists
+from gto.tag import ActionSign, create_tag, name_tag, parse_name
 
 
 def test_name_tag(empty_git_repo):
@@ -58,3 +59,20 @@ def test_parse_name():
 )
 def test_parse_wrong_names(tag_name):
     assert not parse_name(tag_name, raise_on_fail=False)
+
+
+def test_create_tag_bad_ref(repo_with_commit):
+    repo, _ = repo_with_commit
+    with pytest.raises(RefNotFound):
+        create_tag(repo, "name", ref="wrongref", message="msg")
+    with pytest.raises(RefNotFound):
+        create_tag(
+            repo, "name", ref="679dd96f8f22bef6505b9646803bf3c2afe94692", message="msg"
+        )
+
+
+def test_create_tag_repeated_tagname(repo_with_commit):
+    repo, _ = repo_with_commit
+    create_tag(repo, "name", ref="HEAD", message="msg")
+    with pytest.raises(TagExists):
+        create_tag(repo, "name", ref="HEAD", message="msg")

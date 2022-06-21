@@ -59,9 +59,10 @@ def find_repeated_path(
     """
     path = Path(path).resolve()
     for p in paths:
-        p = Path(p).resolve()
-        if p == path or p in path.parents or path in p.parents:
-            return p
+        if p:
+            p = Path(p).resolve()
+            if p == path or p in path.parents or path in p.parents:
+                return p
     return None
 
 
