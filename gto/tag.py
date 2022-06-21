@@ -188,8 +188,8 @@ def create_tag(
     name: str,
     ref: str,
     message: str,
-    GIT_COMMITTER_NAME: str = None,
-    GIT_COMMITTER_EMAIL: str = None,
+    tagger: str = None,
+    tagger_email: str = None,
 ):
     try:
         repo.commit(ref)
@@ -199,10 +199,10 @@ def create_tag(
         raise TagExists(name=name)
 
     env = {}
-    if GIT_COMMITTER_NAME:
-        env["GIT_COMMITTER_NAME"] = GIT_COMMITTER_NAME
-    if GIT_COMMITTER_EMAIL:
-        env["GIT_COMMITTER_EMAIL"] = GIT_COMMITTER_EMAIL
+    if tagger:
+        env["GIT_COMMITTER_NAME"] = tagger
+    if tagger_email:
+        env["GIT_COMMITTER_EMAIL"] = tagger_email
 
     repo.git.tag(["-a", name, "-m", message, ref], env=env)
 
@@ -304,8 +304,8 @@ class TagVersionManager(TagManager):
             name_tag(Action.REGISTER, name, version=version, repo=self.repo),
             ref=ref,
             message=message,
-            GIT_COMMITTER_NAME=author,
-            GIT_COMMITTER_EMAIL=author_email,
+            tagger=author,
+            tagger_email=author_email,
         )
 
     def check_ref(self, ref: str, state: BaseRegistryState):
@@ -344,8 +344,8 @@ class TagStageManager(TagManager):
             name_tag(Action.PROMOTE, name, stage=stage, repo=self.repo, simple=simple),
             ref=ref,
             message=message,
-            GIT_COMMITTER_NAME=author,
-            GIT_COMMITTER_EMAIL=author_email,
+            tagger=author,
+            tagger_email=author_email,
         )
 
     def check_ref(self, ref: str, state: BaseRegistryState):
