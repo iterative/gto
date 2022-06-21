@@ -90,7 +90,6 @@ $ gto annotate awesome-model --type model --path s3://awesome/model.pkl
 awesome-model:
     type: model
     path: "s3://awesome/model.pkl"
-    virtual: true
 ```
 
 > Don't forget to commit `artifacts.yaml` with Git to associate it with the latest artifact version and stage in any copy of the repo.
