@@ -11,6 +11,7 @@ install_requires = [
     "semver==3.0.0-dev.3",
     "entrypoints",
     "tabulate==0.8.9",
+    "funcy",
 ]
 
 
