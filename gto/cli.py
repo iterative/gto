@@ -842,5 +842,43 @@ def describe(
     echo(d[arg])
 
 
+@gto_command(section=CommandGroups.enriching)
+def discover(
+    repo: str = option_repo,
+    # TODO
+    # name: str = arg_name,  # instead of name there should be path
+    # ask a single source for discovery:
+    # source: str = Argument(None, help="Source of the artifact"),
+    # what should be first - name or source?
+    # "gto discover some/path" or "gto discover dvc"?
+    rev: str = option_rev,
+    json: bool = option_json,
+):
+    """Display enrichments for an artifact
+
+    Examples:
+        $ gto discover --repo . --rev main
+    """
+    infos = gto.api.discover(repo=repo, rev=rev)
+    if not infos:
+        return
+    # if source:
+    #     # can optimize this reading only required enrichments
+    #     infos = {source: infos[source]}
+    if json:
+        format_echo(
+            {
+                source: info.get_object().dict(exclude_defaults=True)
+                for source, info in infos.items()
+            },
+            "json",
+        )
+    else:
+        for enrichment_source, info in infos.items():
+            format_echo([enrichment_source.upper()], "lines")
+            format_echo([info.get_human_readable()], "lines")
+    return
+
+
 if __name__ == "__main__":
     app()

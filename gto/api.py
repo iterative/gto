@@ -9,8 +9,8 @@ from gto.exceptions import WrongArgs
 from gto.ext import EnrichmentInfo
 from gto.index import (
     EnrichmentManager,
-    FileIndexManager,
-    RepoIndexManager,
+    FileAnnotationsManager,
+    RepoAnnotationsManager,
     init_index_manager,
 )
 from gto.registry import GitRegistry
@@ -22,10 +22,10 @@ from gto.tag import parse_name_reference
 def get_index(repo: Union[str, Repo], file=False):
     """Get index state"""
     if file:
-        return FileIndexManager.from_path(
+        return FileAnnotationsManager.from_path(
             path=repo if isinstance(repo, str) else repo.working_dir
         )
-    return RepoIndexManager.from_repo(repo)
+    return RepoAnnotationsManager.from_repo(repo)
 
 
 def _get_state(repo: Union[str, Repo]):
@@ -304,6 +304,11 @@ def describe(
             raise WrongArgs("Should not specify revision if you pass git tag")
         return EnrichmentManager.from_repo(repo).describe(name=parsed[NAME], rev=name)
     raise NotImplementedError
+
+
+def discover(repo: Union[str, Repo], rev: str = None):
+    """Find potential artifacts"""
+    return EnrichmentManager.from_repo(repo).discover(rev=rev)
 
 
 def history(  # pylint: disable=too-many-locals

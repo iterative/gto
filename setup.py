@@ -11,8 +11,6 @@ install_requires = [
     "semver==3.0.0-dev.3",
     "entrypoints",
     "tabulate==0.8.9",
-    "mlem",  # TODO: remove before merge
-    "dvc",  # TODO: remove berore merge
     "funcy",
 ]
 

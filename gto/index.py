@@ -43,7 +43,7 @@ State = Dict[str, Artifact]
 
 def not_frozen(func):
     @wraps(func)
-    def inner(self: "Index", *args, **kwargs):
+    def inner(self: "Annotations", *args, **kwargs):
         if self.frozen:
             raise ValueError(f"Cannot {func.__name__}: {self.__class__} is frozen")
         return func(self, *args, **kwargs)
@@ -85,7 +85,7 @@ def traverse_commit(commit: git.Commit) -> Generator[git.Commit, None, None]:
         yield from traverse_commit(parent)
 
 
-class Index(BaseModel):
+class Annotations(BaseModel):
     state: State = {}  # TODO should not be populated until load() is called
     frozen: bool = False
 
@@ -163,12 +163,12 @@ class Index(BaseModel):
         del self.state[name]
 
 
-class BaseIndexManager(BaseModel, ABC):
-    current: Optional[Index]
+class BaseAnnotationsManager(BaseModel, ABC):
+    current: Optional[Annotations]
     config: RegistryConfig
 
     @abstractmethod
-    def get_index(self) -> Index:
+    def get_index(self) -> Annotations:
         raise NotImplementedError
 
     @abstractmethod
@@ -176,7 +176,7 @@ class BaseIndexManager(BaseModel, ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def get_history(self) -> Dict[str, Index]:
+    def get_history(self) -> Dict[str, Annotations]:
         raise NotImplementedError
 
     def add(self, name, type, path, must_exist, labels, description, update):
@@ -207,7 +207,7 @@ class BaseIndexManager(BaseModel, ABC):
         self.update()
 
 
-class FileIndexManager(BaseIndexManager):
+class FileAnnotationsManager(BaseAnnotationsManager):
     path: str = ""
 
     @classmethod
@@ -219,18 +219,18 @@ class FileIndexManager(BaseIndexManager):
     def index_path(self):
         return str(Path(self.path) / self.config.INDEX)
 
-    def get_index(self) -> Index:
+    def get_index(self) -> Annotations:
         if os.path.exists(self.index_path()):
-            self.current = Index.read(self.index_path())
+            self.current = Annotations.read(self.index_path())
         if not self.current:
-            self.current = Index()
+            self.current = Annotations()
         return self.current
 
     def update(self):
         if self.current is not None:
             self.current.write_state(self.index_path())
 
-    def get_history(self) -> Dict[str, Index]:
+    def get_history(self) -> Dict[str, Annotations]:
         raise NotImplementedError("Not a git repo: history is not available")
 
 
@@ -238,7 +238,7 @@ ArtifactCommits = Dict[str, Artifact]
 ArtifactsCommits = Dict[str, ArtifactCommits]
 
 
-class RepoIndexManager(FileIndexManager):
+class RepoAnnotationsManager(FileAnnotationsManager):
     repo: git.Repo
 
     @classmethod
@@ -263,11 +263,11 @@ class RepoIndexManager(FileIndexManager):
 
     def get_commit_index(
         self, ref: Union[str, git.Reference, None], allow_to_not_exist: bool = True
-    ) -> Optional[Index]:
+    ) -> Optional[Annotations]:
         if not ref or isinstance(ref, str):
             ref = resolve_ref(self.repo, ref)
         if self.config.INDEX in ref.tree:
-            return Index.read(
+            return Annotations.read(
                 (ref.tree / self.config.INDEX).data_stream,
                 frozen=True,
             )
@@ -275,7 +275,7 @@ class RepoIndexManager(FileIndexManager):
             return None
         raise ValueError(f"No Index exists at {ref}")
 
-    def get_history(self) -> Dict[str, Index]:
+    def get_history(self) -> Dict[str, Annotations]:
         commits = {
             commit
             for branch in self.repo.heads
@@ -328,6 +328,9 @@ class EnrichmentManager(BaseManager):
                 if enrichment_data is not None:
                     res[enrichment_data.source] = enrichment_data
         return res
+
+    def discover(self, rev):
+        raise NotImplementedError("WIP")
 
     def get_commits(self, all_branches=False, all_commits=False):
         if not self.repo.refs:
@@ -394,9 +397,9 @@ class EnrichmentManager(BaseManager):
 
 def init_index_manager(path):
     try:
-        return RepoIndexManager.from_repo(path)
+        return RepoAnnotationsManager.from_repo(path)
     except NoRepo:
-        return FileIndexManager.from_path(path)
+        return FileAnnotationsManager.from_path(path)
 
 
 class GTOInfo(EnrichmentInfo):
@@ -419,7 +422,7 @@ class GTOEnrichment(Enrichment):
     def discover(  # pylint: disable=no-self-use
         self, repo, rev: Optional[Union[git.Reference, str]]
     ) -> Dict[str, GTOInfo]:
-        index = RepoIndexManager.from_repo(repo).get_commit_index(rev)
+        index = RepoAnnotationsManager.from_repo(repo).get_commit_index(rev)
         if index:
             return {
                 name: GTOInfo(artifact=artifact)
@@ -430,7 +433,7 @@ class GTOEnrichment(Enrichment):
     def describe(  # pylint: disable=no-self-use
         self, repo, obj: str, rev: Optional[Union[git.Reference, str]]
     ) -> Optional[GTOInfo]:
-        index = RepoIndexManager.from_repo(repo).get_commit_index(rev)
+        index = RepoAnnotationsManager.from_repo(repo).get_commit_index(rev)
         if index and obj in index.state:
             return GTOInfo(artifact=index.state[obj])
         return None

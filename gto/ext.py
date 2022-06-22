@@ -91,7 +91,13 @@ class Enrichment(BaseModel, ABC):
 @lru_cache()
 def _find_enrichments():
     eps = entrypoints.get_group_named(ENRICHMENT_ENRTYPOINT)
-    return {k: ep.load() for k, ep in eps.items()}
+    loaded = {}
+    for k, ep in eps.items():
+        try:
+            loaded[k] = ep.load()
+        except ImportError:
+            pass
+    return loaded
 
 
 @lru_cache()
