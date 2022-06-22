@@ -1,9 +1,12 @@
 # pylint: disable=unused-variable
+from typing import Callable, Tuple
+
+import git
 import pytest
 
 from gto.constants import Action
 from gto.exceptions import RefNotFound, TagExists
-from gto.tag import ActionSign, create_tag, name_tag, parse_name
+from gto.tag import ActionSign, create_tag, find, name_tag, parse_name
 
 
 def test_name_tag(empty_git_repo):
@@ -76,3 +79,9 @@ def test_create_tag_repeated_tagname(repo_with_commit):
     create_tag(repo, "name", ref="HEAD", message="msg")
     with pytest.raises(TagExists):
         create_tag(repo, "name", ref="HEAD", message="msg")
+
+
+def test_lightweight_tag(repo_with_commit: Tuple[git.Repo, Callable]):
+    repo, _ = repo_with_commit
+    repo.create_tag("lightweight-tag@v0.0.1")
+    assert find(repo=repo) == []

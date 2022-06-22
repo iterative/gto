@@ -167,7 +167,11 @@ def find(
     if tags is None:
         if repo is None:
             raise MissingArg(arg="repo")
-        tags = [t for t in repo.tags if parse_name(t.name, raise_on_fail=False)]
+        tags = [
+            t
+            for t in repo.tags
+            if parse_name(t.name, raise_on_fail=False) and t.tag is not None
+        ]
     if action:
         tags = [t for t in tags if parse_name(t.name)[ACTION] in action]
     if name:
