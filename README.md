@@ -238,8 +238,8 @@ To configure GTO, use file `.gto` in the root of your repo or use environment va
 
 ```ini
 # .gto config file
-type_allowed: [model, dataset]  # list of allowed types
-stage_allowed: [dev, stage, prod]  # list of allowed Stages
+types: [model, dataset]  # list of allowed types
+stages: [dev, stage, prod]  # list of allowed Stages
 ```
 
 ```console
