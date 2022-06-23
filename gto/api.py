@@ -5,7 +5,7 @@ from typing import List, Optional, Union
 from git import Repo
 
 from gto.constants import NAME, STAGE, VERSION
-from gto.exceptions import WrongArgs
+from gto.exceptions import NoRepo, WrongArgs
 from gto.ext import EnrichmentInfo
 from gto.index import (
     EnrichmentManager,
@@ -17,6 +17,14 @@ from gto.registry import GitRegistry
 from gto.tag import NAME_REFERENCE
 from gto.tag import parse_name as parse_tag_name
 from gto.tag import parse_name_reference
+
+
+def is_gto_repo(repo: Union[str, Repo]):
+    """Check if repo is a gto repo"""
+    try:
+        return GitRegistry.from_repo(repo).is_gto_repo()
+    except NoRepo:
+        return False
 
 
 def get_index(repo: Union[str, Repo], file=False):

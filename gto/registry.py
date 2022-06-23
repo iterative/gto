@@ -54,6 +54,15 @@ class GitRegistry(BaseModel):
             enrichment_manager=EnrichmentManager(repo=repo, config=config),
         )
 
+    def is_gto_repo(self):
+        if self.config.config_file_exists():
+            return True
+        if self.config.check_index_exist(self.repo.working_dir):
+            return True
+        if self.get_state() != BaseRegistryState():
+            return True
+        return False
+
     def get_state(
         self,
         all_branches=False,

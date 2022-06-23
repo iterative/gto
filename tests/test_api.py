@@ -200,3 +200,25 @@ def test_check_ref(repo_with_artifact: Tuple[git.Repo, Callable]):
         },
         skip_keys={"commit_hexsha", "created_at", "message"},
     )
+
+
+def test_is_not_gto_repo(empty_git_repo):
+    repo, _ = empty_git_repo  # pylint: disable=unused-variable
+    assert not gto.api.is_gto_repo(repo.working_dir)
+
+
+def test_is_gto_repo_because_of_config(init_showcase_semver):
+    repo, _ = init_showcase_semver  # pylint: disable=unused-variable
+    assert gto.api.is_gto_repo(repo.working_dir)
+
+
+def test_is_gto_repo_because_of_registered_artifact(repo_with_commit):
+    repo, _ = repo_with_commit  # pylint: disable=unused-variable
+    gto.api.register(repo, "model", "HEAD", "v1.0.0")
+    assert gto.api.is_gto_repo(repo)
+
+
+def test_is_gto_repo_because_of_artifacts_yaml(empty_git_repo):
+    repo, write_file = empty_git_repo
+    write_file("artifacts.yaml", "{}")
+    assert gto.api.is_gto_repo(repo)
