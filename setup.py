@@ -10,7 +10,7 @@ install_requires = [
     "ruamel.yaml",
     "semver==3.0.0-dev.3",
     "entrypoints",
-    "tabulate==0.8.9",
+    "tabulate==0.8.10",
     "funcy",
 ]
 
