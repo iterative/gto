@@ -1,4 +1,5 @@
 # pylint: disable=no-self-use, no-self-argument, inconsistent-return-statements, invalid-name, import-outside-toplevel
+import pathlib
 import re
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -86,6 +87,10 @@ class NoFileConfig(BaseSettings):
                 assert_name_is_valid(name)
         return v
 
+    def check_index_exist(self, repo: str):
+        index = pathlib.Path(repo) / pathlib.Path(self.INDEX)
+        return index.exists() and index.is_file()
+
 
 def _set_location_init_source(init_source: InitSettingsSource):
     def inner(settings: "RegistryConfig"):
@@ -133,6 +138,10 @@ class RegistryConfig(NoFileConfig):
                 config_settings_source,
                 file_secret_settings,
             )
+
+    def config_file_exists(self):
+        config = pathlib.Path(self.CONFIG_FILE_NAME)
+        return config.exists() and config.is_file()
 
 
 def read_registry_config(config_file_name):

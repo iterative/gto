@@ -1,3 +1,4 @@
+# pylint: disable=unused-variable, protected-access
 """TODO: add more tests for API"""
 import os
 from contextlib import contextmanager
@@ -13,32 +14,32 @@ from tests.utils import _check_obj
 
 
 def test_empty_index(empty_git_repo: Tuple[git.Repo, Callable]):
-    repo, write_file = empty_git_repo  # pylint: disable=unused-variable
-    index = gto.api.get_index(repo.working_dir)
+    repo, write_file = empty_git_repo
+    index = gto.api._get_index(repo.working_dir)
     assert len(index.artifact_centric_representation()) == 0
 
 
 def test_empty_state(empty_git_repo: Tuple[git.Repo, Callable]):
-    repo, write_file = empty_git_repo  # pylint: disable=unused-variable
-    state = gto.api._get_state(repo.working_dir)  # pylint: disable=protected-access
+    repo, write_file = empty_git_repo
+    state = gto.api._get_state(repo.working_dir)
     assert len(state.artifacts) == 0
 
 
 def test_api_info_commands_empty_repo(empty_git_repo: Tuple[git.Repo, Callable]):
-    repo, write_file = empty_git_repo  # pylint: disable=unused-variable
+    repo, write_file = empty_git_repo
     gto.api.show(repo.working_dir)
     gto.api.history(repo.working_dir)
 
 
 def test_add_remove(empty_git_repo: Tuple[git.Repo, Callable]):
-    repo, write_file = empty_git_repo  # pylint: disable=unused-variable
+    repo, write_file = empty_git_repo
     name, type, path, must_exist = "new-artifact", "new-type", "new/path", False
     gto.api.annotate(
         repo.working_dir, name, type=type, path=path, must_exist=must_exist
     )
     with pytest.raises(PathIsUsed):
         gto.api.annotate(repo.working_dir, "other-name", path=path)
-    index = gto.api.get_index(repo.working_dir).get_index()
+    index = gto.api._get_index(repo.working_dir).get_index()
     assert name in index
     _check_obj(
         index.state[name],
@@ -52,14 +53,14 @@ def test_add_remove(empty_git_repo: Tuple[git.Repo, Callable]):
         [],
     )
     gto.api.remove(repo.working_dir, name)
-    index = gto.api.get_index(repo.working_dir).get_index()
+    index = gto.api._get_index(repo.working_dir).get_index()
     assert name not in index
 
 
 @pytest.fixture
 def repo_with_artifact(init_showcase_semver):
     repo: git.Repo
-    repo, write_file = init_showcase_semver  # pylint: disable=unused-variable
+    repo, write_file = init_showcase_semver
     name, type, path, must_exist = "new-artifact", "new-type", "new/path", False
     gto.api.annotate(
         repo.working_dir, name, type=type, path=path, must_exist=must_exist
@@ -168,7 +169,7 @@ def environ(**overrides):
 
 
 def test_check_ref(repo_with_artifact: Tuple[git.Repo, Callable]):
-    repo, name = repo_with_artifact  # pylint: disable=unused-variable
+    repo, name = repo_with_artifact
 
     NAME = "model"
     VERSION = "v1.2.3"
@@ -200,3 +201,25 @@ def test_check_ref(repo_with_artifact: Tuple[git.Repo, Callable]):
         },
         skip_keys={"commit_hexsha", "created_at", "message"},
     )
+
+
+def test_is_not_gto_repo(empty_git_repo):
+    repo, _ = empty_git_repo
+    assert not gto.api._is_gto_repo(repo.working_dir)
+
+
+def test_is_gto_repo_because_of_config(init_showcase_semver):
+    repo, _ = init_showcase_semver
+    assert gto.api._is_gto_repo(repo.working_dir)
+
+
+def test_is_gto_repo_because_of_registered_artifact(repo_with_commit):
+    repo, _ = repo_with_commit
+    gto.api.register(repo, "model", "HEAD", "v1.0.0")
+    assert gto.api._is_gto_repo(repo)
+
+
+def test_is_gto_repo_because_of_artifacts_yaml(empty_git_repo):
+    repo, write_file = empty_git_repo
+    write_file("artifacts.yaml", "{}")
+    assert gto.api._is_gto_repo(repo)

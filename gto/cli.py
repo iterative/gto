@@ -782,7 +782,9 @@ def print_index(repo: str = option_repo):
     Examples:
         $ gto print-index
     """
-    index = gto.api.get_index(repo).artifact_centric_representation()
+    index = gto.api._get_index(  # pylint: disable=protected-access
+        repo
+    ).artifact_centric_representation()
     format_echo(index, "json")
 
 
