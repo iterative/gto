@@ -19,7 +19,7 @@ from gto.tag import parse_name as parse_tag_name
 from gto.tag import parse_name_reference
 
 
-def is_gto_repo(repo: Union[str, Repo]):
+def _is_gto_repo(repo: Union[str, Repo]):
     """Check if repo is a gto repo"""
     try:
         return GitRegistry.from_repo(repo).is_gto_repo()
@@ -27,7 +27,7 @@ def is_gto_repo(repo: Union[str, Repo]):
         return False
 
 
-def get_index(repo: Union[str, Repo], file=False):
+def _get_index(repo: Union[str, Repo], file=False):
     """Get index state"""
     if file:
         return FileIndexManager.from_path(

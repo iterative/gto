@@ -6,7 +6,7 @@ import pytest
 from typer.main import get_command_from_info
 from typer.testing import CliRunner
 
-from gto.api import get_index
+from gto.api import _get_index
 from gto.cli import app
 
 from .utils import _check_obj
@@ -181,7 +181,9 @@ def test_annotate(empty_git_repo: Tuple[git.Repo, Callable]):
         ],
         "",
     )
-    artifact = get_index(repo.working_dir, file=True).get_index().state[name]
+    artifact = (
+        _get_index(repo.working_dir, file=True).get_index().state[name]
+    )  # pylint: disable=protected-access
     _check_obj(
         artifact,
         dict(
