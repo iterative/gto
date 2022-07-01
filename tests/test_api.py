@@ -224,17 +224,21 @@ def test_check_ref_multiple_showcase(showcase):
     for tag in tags:
         info = list(gto.api.check_ref(repo, tag.name)[STAGE].values())[0]
         assert info.tag == tag.name
-        print(info.dict(), tag.name)
 
 
 def test_check_ref_catch_the_bug(repo_with_artifact: Tuple[git.Repo, Callable]):
     repo, name = repo_with_artifact
     NAME = "artifact"
     gto.api.register(repo, NAME, "HEAD")
-    gto.api.promote(repo, NAME, "staging", promote_ref="HEAD")
-    gto.api.promote(repo, NAME, "prod", promote_ref="HEAD")
-    info = gto.api.check_ref(repo, f"{NAME}#staging#1")[STAGE][NAME]
-    assert info.tag == f"{NAME}#staging#1"
+    promotion1 = gto.api.promote(repo, NAME, "staging", promote_ref="HEAD")
+    promotion2 = gto.api.promote(repo, NAME, "prod", promote_ref="HEAD")
+    promotion3 = gto.api.promote(repo, NAME, "dev", promote_ref="HEAD")
+    for promotion, tag in zip(
+        [promotion1, promotion2, promotion3],
+        [f"{NAME}#staging#1", f"{NAME}#prod#2", f"{NAME}#dev#3"],
+    ):
+        info = gto.api.check_ref(repo, tag)[STAGE][NAME]
+        assert info.tag == promotion.tag == tag
 
 
 def test_is_not_gto_repo(empty_git_repo):

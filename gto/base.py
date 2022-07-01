@@ -263,7 +263,7 @@ class BaseRegistryState(BaseModel):
     def get_artifacts(self):
         return self.artifacts
 
-    def find_artifact(self, name: str, create_new=False):
+    def find_artifact(self, name: str, create_new=False) -> BaseArtifact:
         if not name:
             raise ValueError("Artifact name is required")
         if name not in self.artifacts:
@@ -271,7 +271,7 @@ class BaseRegistryState(BaseModel):
                 self.artifacts[name] = BaseArtifact(name=name, versions=[])
             else:
                 raise ArtifactNotFound(name)
-        return self.artifacts.get(name)
+        return self.artifacts[name]
 
     @property
     def unique_stages(self):

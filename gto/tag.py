@@ -342,15 +342,17 @@ class TagStageManager(TagManager):
         simple,
         author: Optional[str] = None,
         author_email: Optional[str] = None,
-    ):
+    ) -> str:
+        tag = name_tag(Action.PROMOTE, name, stage=stage, repo=self.repo, simple=simple)
         create_tag(
             self.repo,
-            name_tag(Action.PROMOTE, name, stage=stage, repo=self.repo, simple=simple),
+            tag,
             ref=ref,
             message=message,
             tagger=author,
             tagger_email=author_email,
         )
+        return tag
 
     def check_ref(self, ref: str, state: BaseRegistryState):
         try:
@@ -366,7 +368,5 @@ class TagStageManager(TagManager):
             name: promotion
             for name, artifact in state.get_artifacts().items()
             for promotion in artifact.stages
-            if name == art_name
-            and promotion.commit_hexsha == tag.commit.hexsha
-            and promotion.created_at == datetime.fromtimestamp(tag.tag.tagged_date)
+            if name == art_name and promotion.tag == tag.name
         }
