@@ -188,7 +188,7 @@ def test_check_ref_detailed(repo_with_artifact: Tuple[git.Repo, Callable]):
     ):
         gto.api.register(repo, name=NAME, ref="HEAD", version=SEMVER)
 
-    info = gto.api.check_ref(repo, f"{NAME}@{SEMVER}")[SEMVER][NAME]
+    info = gto.api.check_ref(repo, f"{NAME}@{SEMVER}")[VERSION][NAME]
     _check_obj(
         info,
         {
