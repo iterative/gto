@@ -8,7 +8,9 @@ import git
 import pytest
 
 import gto
+from gto.constants import STAGE, VERSION, Action
 from gto.exceptions import PathIsUsed, WrongArgs
+from gto.tag import find
 from gto.versions import SemVer
 from tests.utils import _check_obj
 
@@ -168,11 +170,11 @@ def environ(**overrides):
             os.environ.pop(name, None)
 
 
-def test_check_ref(repo_with_artifact: Tuple[git.Repo, Callable]):
+def test_check_ref_detailed(repo_with_artifact: Tuple[git.Repo, Callable]):
     repo, name = repo_with_artifact
 
     NAME = "model"
-    VERSION = "v1.2.3"
+    SEMVER = "v1.2.3"
     GIT_AUTHOR_NAME = "Alexander Guschin"
     GIT_AUTHOR_EMAIL = "aguschin@iterative.ai"
     GIT_COMMITTER_NAME = "Oliwav"
@@ -184,23 +186,55 @@ def test_check_ref(repo_with_artifact: Tuple[git.Repo, Callable]):
         GIT_COMMITTER_NAME=GIT_COMMITTER_NAME,
         GIT_COMMITTER_EMAIL=GIT_COMMITTER_EMAIL,
     ):
-        gto.api.register(repo, name=NAME, ref="HEAD", version=VERSION)
+        gto.api.register(repo, name=NAME, ref="HEAD", version=SEMVER)
 
-    info = gto.api.check_ref(repo, f"{NAME}@{VERSION}")["version"][NAME]
+    info = gto.api.check_ref(repo, f"{NAME}@{SEMVER}")[SEMVER][NAME]
     _check_obj(
         info,
         {
             "artifact": NAME,
-            "name": VERSION,
+            "name": SEMVER,
             "author": GIT_COMMITTER_NAME,
             "author_email": GIT_COMMITTER_EMAIL,
             "discovered": False,
-            "tag": f"{NAME}@{VERSION}",
+            "tag": f"{NAME}@{SEMVER}",
             "promotions": [],
             "enrichments": [],
         },
         skip_keys={"commit_hexsha", "created_at", "message"},
     )
+
+
+def test_check_ref_multiple_showcase(showcase):
+    repo: git.Repo
+    (
+        path,
+        repo,
+        write_file,
+        first_commit,
+        second_commit,
+    ) = showcase
+
+    tags = find(repo=repo, action=Action.REGISTER)
+    for tag in tags:
+        info = list(gto.api.check_ref(repo, tag.name)[VERSION].values())[0]
+        assert info.tag == tag.name
+
+    tags = find(repo=repo, action=Action.PROMOTE)
+    for tag in tags:
+        info = list(gto.api.check_ref(repo, tag.name)[STAGE].values())[0]
+        assert info.tag == tag.name
+        print(info.dict(), tag.name)
+
+
+def test_check_ref_catch_the_bug(repo_with_artifact: Tuple[git.Repo, Callable]):
+    repo, name = repo_with_artifact
+    NAME = "artifact"
+    gto.api.register(repo, NAME, "HEAD")
+    gto.api.promote(repo, NAME, "staging", promote_ref="HEAD")
+    gto.api.promote(repo, NAME, "prod", promote_ref="HEAD")
+    info = gto.api.check_ref(repo, f"{NAME}#staging#1")[STAGE][NAME]
+    assert info.tag == f"{NAME}#staging#1"
 
 
 def test_is_not_gto_repo(empty_git_repo):
