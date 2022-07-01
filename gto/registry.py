@@ -227,7 +227,11 @@ class GitRegistry(BaseModel):
             and found_version.stage.stage == stage
         ):
             raise WrongArgs(f"Version is already in stage '{stage}'")
-        self.stage_manager.promote(  # type: ignore
+        # TODO: getting tag name as a result and using it
+        # is leaking implementation details in base module
+        # it's roughly ok to have until we add other implementations
+        # beside tag-based promotions
+        tag = self.stage_manager.promote(  # type: ignore
             name,
             stage,
             ref=promote_ref,
@@ -237,12 +241,7 @@ class GitRegistry(BaseModel):
             author=author,
             author_email=author_email,
         )
-        promotion = (
-            self.get_state()
-            .find_artifact(name)
-            .find_version_at_commit(promote_ref)
-            .stage
-        )
+        promotion = self.stage_manager.check_ref(tag, self.get_state())[name]
         if stdout:
             echo(
                 f"Created git tag '{promotion.tag}' that promotes '{promotion.version}'"
@@ -279,7 +278,7 @@ class GitRegistry(BaseModel):
         """Return latest active version for artifact"""
         artifact = self.get_state().find_artifact(name)
         if all:
-            return artifact.sort_versions(registered=registered)
+            return artifact.get_versions(include_non_explicit=not registered)
         return artifact.get_latest_version(registered_only=registered)
 
     def _get_allowed_stages(self):
