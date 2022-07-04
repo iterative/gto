@@ -69,6 +69,11 @@ def repo_with_artifact(init_showcase_semver):
     )
     repo.index.add(["artifacts.yaml"])
     repo.index.commit("Added index")
+    gto.api.annotate(
+        repo.working_dir, name, type=type, path="path", must_exist=must_exist
+    )
+    repo.index.add(["artifacts.yaml"])
+    repo.index.commit("Added index")
     return repo, name
 
 
@@ -155,6 +160,18 @@ def test_promote_skip_registration(repo_with_artifact):
     )
     promotion = gto.api.find_versions_in_stage(repo.working_dir, name, stage)
     assert not SemVer.is_valid(promotion.version)
+
+
+def test_promote_force_is_needed(repo_with_artifact):
+    repo, name = repo_with_artifact
+    gto.api.promote(repo, name, "staging", promote_ref="HEAD")
+    gto.api.promote(repo, name, "staging", promote_ref="HEAD^1")
+    with pytest.raises(WrongArgs):
+        gto.api.promote(repo, name, "staging", promote_ref="HEAD")
+    with pytest.raises(WrongArgs):
+        gto.api.promote(repo, name, "staging", promote_ref="HEAD^1")
+    gto.api.promote(repo, name, "staging", promote_ref="HEAD", force=True)
+    gto.api.promote(repo, name, "staging", promote_ref="HEAD^1", force=True)
 
 
 @contextmanager
