@@ -1,5 +1,8 @@
 from enum import Enum
 
+GTO = "gto"
+MLEM = "mlem"
+
 REF = "ref"
 # COMMIT = "commit"
 TAG = "tag"
@@ -7,12 +10,14 @@ TAG = "tag"
 # FILE = "file"
 
 ACTION = "action"
-TYPE = "type"
 NAME = "name"
-PATH = "path"
 VERSION = "version"
 STAGE = "stage"
 NUMBER = "number"
+
+TYPE = "type"
+PATH = "path"
+DESCRIPTION = "description"
 
 
 class Action(Enum):

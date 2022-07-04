@@ -6,14 +6,14 @@ import pytest
 from gto import CONFIG
 from gto.index import (
     Artifact,
-    RepoIndexManager,
+    RepoAnnotationsManager,
     check_if_path_exists,
     find_repeated_path,
 )
 
 
 def init_index(path):
-    return RepoIndexManager.from_repo(path)
+    return RepoAnnotationsManager.from_repo(path)
 
 
 @pytest.fixture
@@ -35,7 +35,7 @@ def test_git_index_add_virtual(git_index_repo):
     )
 
     new_index = init_index(repo.git_dir)
-    assert isinstance(new_index, RepoIndexManager)
+    assert isinstance(new_index, RepoAnnotationsManager)
     index_value = new_index.get_index()
     assert index_value.state["nn"] == Artifact(path="pp", type="tt", virtual=True)
 
@@ -52,7 +52,7 @@ def test_git_index_remove_virtual(git_index_repo):
     )
 
     new_index = init_index(repo.git_dir)
-    assert isinstance(new_index, RepoIndexManager)
+    assert isinstance(new_index, RepoAnnotationsManager)
 
     new_index.remove("aa")
     index_value = new_index.get_index()

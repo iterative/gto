@@ -45,6 +45,7 @@ class Enrichment(BaseModel, ABC):
 
 
 # class CLIEnrichmentInfo(EnrichmentInfo):
+#     source: str = "cli"  # should be detected
 #     data: Dict
 #     repr: str
 
@@ -56,6 +57,7 @@ class Enrichment(BaseModel, ABC):
 
 
 # class CLIEnrichment(Enrichment):
+#     source: str = "cli"  # should be detected
 #     cmd: str
 #     info_type: Union[str, Type[EnrichmentInfo]] = CLIEnrichmentInfo
 
@@ -89,7 +91,13 @@ class Enrichment(BaseModel, ABC):
 @lru_cache()
 def _find_enrichments():
     eps = entrypoints.get_group_named(ENRICHMENT_ENRTYPOINT)
-    return {k: ep.load() for k, ep in eps.items()}
+    loaded = {}
+    for k, ep in eps.items():
+        try:
+            loaded[k] = ep.load()
+        except ImportError:
+            pass
+    return loaded
 
 
 @lru_cache()

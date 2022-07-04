@@ -1,6 +1,6 @@
 from collections import OrderedDict
 from datetime import datetime
-from typing import List, Optional, Union
+from typing import Dict, List, Optional, Union
 
 from git import Repo
 
@@ -9,8 +9,8 @@ from gto.exceptions import NoRepo, WrongArgs
 from gto.ext import EnrichmentInfo
 from gto.index import (
     EnrichmentManager,
-    FileIndexManager,
-    RepoIndexManager,
+    FileAnnotationsManager,
+    RepoAnnotationsManager,
     init_index_manager,
 )
 from gto.registry import GitRegistry
@@ -30,10 +30,10 @@ def _is_gto_repo(repo: Union[str, Repo]):
 def _get_index(repo: Union[str, Repo], file=False):
     """Get index state"""
     if file:
-        return FileIndexManager.from_path(
+        return FileAnnotationsManager.from_path(
             path=repo if isinstance(repo, str) else repo.working_dir
         )
-    return RepoIndexManager.from_repo(repo)
+    return RepoAnnotationsManager.from_repo(repo)
 
 
 def _get_state(repo: Union[str, Repo]):
@@ -302,7 +302,7 @@ def _show_versions(
 
 def describe(
     repo: Union[str, Repo], name: str, rev: str = None
-) -> List[EnrichmentInfo]:
+) -> Dict[str, EnrichmentInfo]:
     """Find enrichments for the artifact"""
     ref_type, parsed = parse_name_reference(name)
     if ref_type == NAME_REFERENCE.NAME:
@@ -312,6 +312,11 @@ def describe(
             raise WrongArgs("Should not specify revision if you pass git tag")
         return EnrichmentManager.from_repo(repo).describe(name=parsed[NAME], rev=name)
     raise NotImplementedError
+
+
+def discover(repo: Union[str, Repo], rev: str = None):
+    """Find potential artifacts"""
+    return EnrichmentManager.from_repo(repo).discover(rev=rev)
 
 
 def history(  # pylint: disable=too-many-locals

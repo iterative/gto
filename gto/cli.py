@@ -12,6 +12,7 @@ from typer import Argument, Option, Typer
 from typer.core import TyperCommand, TyperGroup
 
 import gto
+from gto.constants import DESCRIPTION, GTO, PATH, TYPE
 from gto.exceptions import GTOException, WrongArgs
 from gto.ui import EMOJI_FAIL, EMOJI_GTO, EMOJI_OK, bold, cli_echo, color, echo
 from gto.utils import format_echo, make_ready_to_serialize
@@ -792,16 +793,20 @@ def print_index(repo: str = option_repo):
 def describe(
     repo: str = option_repo,
     name: str = arg_name,
+    source: str = Argument(None, help="Source of the artifact"),
     rev: str = option_rev,
     type: Optional[bool] = option_type_bool,
     path: Optional[bool] = option_path_bool,
     description: Optional[bool] = option_description_bool,
+    json: bool = option_json,
 ):
     """Display enrichments for an artifact
 
     Examples:
         $ gto describe nn --rev HEAD
         $ gto describe nn@v0.0.1
+        $ gto describe nn --type
+        $ gto describe nn mlem
     """
     assert (
         sum(bool(i) for i in (type, path, description)) <= 1
@@ -809,21 +814,72 @@ def describe(
     infos = gto.api.describe(repo=repo, name=name, rev=rev)
     if not infos:
         return
-    d = infos[0].get_object().dict(exclude_defaults=True)
+    if source:
+        # can optimize this reading only required enrichments
+        infos = {source: infos[source]}
+    if not type and not path and not description:
+        if json:
+            format_echo(
+                {
+                    source: info.get_object().dict(exclude_defaults=True)
+                    for source, info in infos.items()
+                },
+                "json",
+            )
+        else:
+            for enrichment_source, info in infos.items():
+                format_echo([enrichment_source.upper()], "lines")
+                format_echo([info.get_human_readable()], "lines")
+        return
+    d = infos[GTO].get_object().dict(exclude_defaults=True)
     if type:
-        if "type" not in d:
-            raise WrongArgs("No type in enrichment")
-        echo(d["type"])
+        arg = TYPE
     elif path:
-        if "path" not in d:
-            raise WrongArgs("No path in enrichment")
-        echo(d["path"])
+        arg = PATH
     elif description:
-        if "description" not in d:
-            raise WrongArgs("No description in enrichment")
-        echo(d["description"])
+        arg = DESCRIPTION
+
+    if arg not in d:
+        raise WrongArgs(f"No {arg} in enrichment")
+    echo(d[arg])
+
+
+@gto_command(section=CommandGroups.enriching)
+def discover(
+    repo: str = option_repo,
+    # TODO
+    # name: str = arg_name,  # instead of name there should be path
+    # ask a single source for discovery:
+    # source: str = Argument(None, help="Source of the artifact"),
+    # what should be first - name or source?
+    # "gto discover some/path" or "gto discover dvc"?
+    rev: str = option_rev,
+    json: bool = option_json,
+):
+    """Display enrichments for an artifact
+
+    Examples:
+        $ gto discover --repo . --rev main
+    """
+    infos = gto.api.discover(repo=repo, rev=rev)
+    if not infos:
+        return
+    # if source:
+    #     # can optimize this reading only required enrichments
+    #     infos = {source: infos[source]}
+    if json:
+        format_echo(
+            {
+                source: info.get_object().dict(exclude_defaults=True)
+                for source, info in infos.items()
+            },
+            "json",
+        )
     else:
-        format_echo(d, "json")
+        for enrichment_source, info in infos.items():
+            format_echo([enrichment_source.upper()], "lines")
+            format_echo([info.get_human_readable()], "lines")
+    return
 
 
 if __name__ == "__main__":
