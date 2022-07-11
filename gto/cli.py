@@ -12,7 +12,7 @@ from typer import Argument, Option, Typer
 from typer.core import TyperCommand, TyperGroup
 
 import gto
-from gto.exceptions import GTOException, WrongArgs
+from gto.exceptions import GTOException, NotImplementedInGTO, WrongArgs
 from gto.ui import EMOJI_FAIL, EMOJI_GTO, EMOJI_OK, bold, cli_echo, color, echo
 from gto.utils import format_echo, make_ready_to_serialize
 
@@ -588,7 +588,18 @@ def parse_tag(
 def check_ref(
     repo: str = option_repo,
     ref: str = Argument(..., help="Git reference to analyze"),
-    json: bool = Option(False, "--json", is_flag=True, help="Output in JSON format"),
+    json: bool = option_json,
+    registration: bool = Option(
+        False, "--registration", is_flag=True, help="Check if ref registers a version"
+    ),
+    promotion: bool = Option(
+        False, "--promotion", is_flag=True, help="Check if ref promotes a version"
+    ),
+    name: bool = Option(False, "--name", is_flag=True, help="Output artifact name"),
+    version: bool = Option(
+        False, "--version", is_flag=True, help="Output artifact version"
+    ),
+    stage: bool = Option(False, "--stage", is_flag=True, help="Output artifact stage"),
 ):
     """Find out the artifact version registered/promoted with ref
 
@@ -596,23 +607,44 @@ def check_ref(
         $ gto check-ref rf@v1.0.0
         $ gto check-ref rf#prod
     """
+    assert (
+        sum(bool(i) for i in (json, registration, promotion, name, version, stage)) <= 1
+    ), "Only one output formatting flags is allowed"
     result = {
         action: {name: version.dict() for name, version in found.items()}
         for action, found in gto.api.check_ref(repo, ref).items()
     }
+    version_dict = list(result["version"].values())[0] if result["version"] else {}
+    stage_dict = list(result["stage"].values())[0] if result["stage"] else {}
     if json:
         format_echo(result, "json")
-    else:
-        if result["version"]:
-            v = list(result["version"].values())[0]
-            echo(
-                f"""{EMOJI_OK} Version "{v["name"]}" of artifact "{v["artifact"]}" was registered"""
+    elif name:
+        if version_dict:
+            echo(version_dict["artifact"])
+        if stage_dict:
+            echo(stage_dict["artifact"])
+    elif version:
+        if version_dict:
+            echo(version_dict["name"])
+        if stage_dict:
+            echo(stage_dict["version"])
+    elif stage:
+        if version_dict:
+            raise NotImplementedInGTO(
+                "--stage is not implemented for version promotion git tag"
             )
-        if result["stage"]:
-            s = list(result["stage"].values())[0]
-            echo(
-                f"""{EMOJI_OK} Version "{s["version"]}" of artifact "{s["artifact"]}" was promoted to "{s["stage"]}" stage"""
-            )
+        if stage_dict:
+            echo(stage_dict["stage"])
+    elif (registration or not promotion) and version_dict:
+        echo(
+            f"""{EMOJI_OK} Version "{version_dict["name"]}" of artifact """
+            f""""{version_dict["artifact"]}" was registered"""
+        )
+    elif (promotion or not registration) and stage_dict:
+        echo(
+            f"""{EMOJI_OK} Version "{stage_dict["version"]}" of artifact """
+            f""""{stage_dict["artifact"]}" was promoted to "{stage_dict["stage"]}" stage"""
+        )
 
 
 @gto_command(section=CommandGroups.querying)
