@@ -605,7 +605,8 @@ def check_ref(
 
     Examples:
         $ gto check-ref rf@v1.0.0
-        $ gto check-ref rf#prod
+        $ gto check-ref rf#prod --name
+        $ gto check-ref rf#prod --version
     """
     assert (
         sum(bool(i) for i in (json, registration, promotion, name, version, stage)) <= 1
