@@ -152,12 +152,6 @@ def test_commands(showcase):
         ["-r", path, "rf@v1.2.4", "--version"],
         "v1.2.4\n",
     )
-    # todo: implement feature and uncomment
-    # _check_successful_cmd(
-    #     "check-ref",
-    #     ["-r", path, "rf@v1.2.4", "--stage"],
-    #     "",  # this is not yet implemented
-    # )
     _check_successful_cmd(
         "check-ref",
         ["-r", path, "rf@v1.2.4", "--promotion"],
