@@ -173,3 +173,7 @@ class TagExists(GTOException):
 
 class ValidationError(GTOException):
     pass
+
+
+class NotImplementedInGTO(GTOException):
+    pass

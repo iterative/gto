@@ -16,7 +16,7 @@ def _check_successful_cmd(cmd: str, args: list, expected_stdout: Optional[str]):
     runner = CliRunner()
     result = runner.invoke(app, [cmd] + args)
     assert result.exit_code == 0, (result.output, result.exception)
-    if expected_stdout:
+    if expected_stdout is not None:
         if len(expected_stdout):
             assert len(result.output) > 0, "Output is empty, but should not be"
         assert result.output == expected_stdout
@@ -26,7 +26,7 @@ def _check_failing_cmd(cmd: str, args: list, expected_stderr: str):
     runner = CliRunner()
     result = runner.invoke(app, [cmd] + args)
     assert result.exit_code != 0, (result.output, result.exception)
-    if expected_stderr:
+    if expected_stderr is not None:
         assert len(result.output) > 0, "Output is empty, but should not be"
     assert result.output == expected_stderr
 
@@ -130,6 +130,47 @@ def test_commands(showcase):
         "history",
         ["-r", path],
         None,
+    )
+    # check-ref
+    _check_successful_cmd(
+        "check-ref",
+        ["-r", path, "rf#production#3", "--name"],
+        "rf\n",
+    )
+    _check_successful_cmd(
+        "check-ref",
+        ["-r", path, "rf#production#3", "--stage"],
+        "production\n",
+    )
+    _check_successful_cmd(
+        "check-ref",
+        ["-r", path, "rf#production#3", "--version"],
+        "v1.2.4\n",  # since this version was promoted
+    )
+    _check_successful_cmd(
+        "check-ref",
+        ["-r", path, "rf@v1.2.4", "--version"],
+        "v1.2.4\n",
+    )
+    _check_successful_cmd(
+        "check-ref",
+        ["-r", path, "rf@v1.2.4", "--promotion"],
+        "",  # since this tag doesn't promote to any stage
+    )
+    _check_successful_cmd(
+        "check-ref",
+        ["-r", path, "rf@v1.2.4", "--registration"],
+        '✅  Version "v1.2.4" of artifact "rf" was registered\n',
+    )
+    _check_successful_cmd(
+        "check-ref",
+        ["-r", path, "rf#production#3", "--registration"],
+        "",
+    )
+    _check_successful_cmd(
+        "check-ref",
+        ["-r", path, "rf#production#3", "--promotion"],
+        '✅  Version "v1.2.4" of artifact "rf" was promoted to "production" stage\n',
     )
 
 
