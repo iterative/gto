@@ -238,9 +238,11 @@ To configure GTO, use file `.gto` in the root of your repo or use environment va
 
 ```ini
 # .gto config file
-types: [model, dataset]  # list of allowed types
+types: [model, dataset]  # list of allowed Types
 stages: [dev, stage, prod]  # list of allowed Stages
 ```
+
+When allowed Stages or Types are specified, GTO will check commands you run and error out if you provided a value that doesn't exist in the config. Note, that GTO applies the config from the workspace, so if want to apply the config from `main` branch, you need to check out it first with `git checkout main`.
 
 ```console
 $ GTO_EMOJIS=false gto show
