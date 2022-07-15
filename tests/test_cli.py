@@ -38,7 +38,10 @@ def app_cmd():
 
 @pytest.fixture
 def app_cli_cmd(app_cmd):
-    return (get_command_from_info(c) for c in app_cmd)
+    return (
+        get_command_from_info(c, pretty_exceptions_short=False, rich_markup_mode="rich")
+        for c in app_cmd
+    )
 
 
 def test_commands_help(app_cli_cmd):

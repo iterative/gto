@@ -37,7 +37,7 @@ class GtoCliMixin(Command):
         aliases: List[str] = None,
         **kwargs,
     ):
-        super().__init__(name, **kwargs)
+        super().__init__(name=name, **kwargs)
         self.examples = examples
         self.section = section
         self.aliases = aliases
@@ -75,7 +75,7 @@ def _extract_examples(
     return help_str[examples + len("Examples:") + 1 :], help_str[:examples]
 
 
-class GtoCommand(TyperCommand, GtoCliMixin):
+class GtoCommand(GtoCliMixin, TyperCommand):
     def __init__(
         self,
         name: Optional[str],
@@ -86,7 +86,7 @@ class GtoCommand(TyperCommand, GtoCliMixin):
     ):
         examples, help = _extract_examples(help)
         super().__init__(
-            name,
+            name=name,
             section=section,
             aliases=aliases,
             examples=examples,
@@ -95,7 +95,7 @@ class GtoCommand(TyperCommand, GtoCliMixin):
         )
 
 
-class GtoGroup(TyperGroup, GtoCliMixin):
+class GtoGroup(GtoCliMixin, TyperGroup):
     order = [
         CommandGroups.querying,
         CommandGroups.modifying,
