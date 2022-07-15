@@ -326,7 +326,7 @@ $ pip install --upgrade pip setuptools wheel ".[tests]"
 ### 3. Run
 
 ```console
-$ pytest --basetemp=pytest-cache
+$ pytest --basetemp=.pytest-cache
 ```
 
 This will create `pytest-cache/` directory with some fixtures that can serve as
@@ -335,7 +335,7 @@ examples.
 Notably, check out this dir:
 
 ```console
-$ cd pytest-cache/test_api0/
+$ cd .pytest-cache/test_api0/
 $ gto show -v
 ```
 
