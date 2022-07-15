@@ -6,10 +6,13 @@
 
 Git Tag Ops. Turn your Git repository into an Artifact Registry:
 
-* Registry: Track new artifacts and their versions for releases and significant changes.
-* Lifecycle Management: Promote or roll back versions among a structured set of stages.
-* GitOps: Signal CI/CD automation or other downstream systems to act upon these lifecycle updates.
-* Enrichments: Annotate and query artifact metadata with additional information.
+- Registry: Track new artifacts and their versions for releases and significant
+  changes.
+- Lifecycle Management: Promote or roll back versions among a structured set of
+  stages.
+- GitOps: Signal CI/CD automation or other downstream systems to act upon these
+  lifecycle updates.
+- Enrichments: Annotate and query artifact metadata with additional information.
 
 GTO works by creating annotated Git tags in a standard format.
 
@@ -21,16 +24,19 @@ GTO works by creating annotated Git tags in a standard format.
 $ python -m pip install gto
 ```
 
-[This package](https://pypi.org/project/gto/) will install the `gto` command-line interface (CLI) and make the Python API available for use in code.
+[This package](https://pypi.org/project/gto/) will install the `gto`
+command-line interface (CLI) and make the Python API available for use in code.
 
 There's no need to set up any services or databases :)
 
 ## Getting started
 
-> Note: We will cover CLI usage, but every command has a corresponding Python API counterpart in the [`gto.api`](/iterative/gto/blob/main/gto/api.py) module.
+> Note: We will cover CLI usage, but every command has a corresponding Python
+> API counterpart in the [`gto.api`](/iterative/gto/blob/main/gto/api.py)
+> module.
 
-In this document we'll use this example repo: https://github.com/iterative/example-gto.
-Let's clone it first:
+In this document we'll use this example repo:
+https://github.com/iterative/example-gto. Let's clone it first:
 
 ```console
 $ git clone https://github.com/iterative/example-gto.git
@@ -39,7 +45,9 @@ $ cd example-gto
 
 ### Versioning
 
-To register a new artifact or a new version, use `gto register`. This is usually done to mark significant changes to the artifact (such as a release or a deprecation).
+To register a new artifact or a new version, use `gto register`. This is usually
+done to mark significant changes to the artifact (such as a release or a
+deprecation).
 
 ```console
 $ gto register awesome-model
@@ -48,15 +56,20 @@ Created git tag 'awesome-model@v0.0.1' that registers a new version
 
 <details summary="What happens under the hood?">
 
-GTO creates a special Git tag for the artifact version, in a standard format: `{artifact_name}@{version_number}`.
+GTO creates a special Git tag for the artifact version, in a standard format:
+`{artifact_name}@{version_number}`.
 
-The version is now associated to the current Git commit (`HEAD`). You can have several versions in a given commit, ordered by their automatic version numbers.
+The version is now associated to the current Git commit (`HEAD`). You can have
+several versions in a given commit, ordered by their automatic version numbers.
 
 </details>
 
 ### Promoting
 
-Promote a specific artifact version to a lifecycle stage with `gto promote`. Stages can be seen as the status of your artifact, signaling readiness for usage by downstream systems, e.g. via CI/CD or web hooks. For example: redeploy an ML model.
+Promote a specific artifact version to a lifecycle stage with `gto promote`.
+Stages can be seen as the status of your artifact, signaling readiness for usage
+by downstream systems, e.g. via CI/CD or web hooks. For example: redeploy an ML
+model.
 
 ```console
 $ gto promote awesome-model prod
@@ -65,21 +78,32 @@ Created git tag 'awesome-model#prod#1' that promotes 'v0.0.1'
 
 <details summary="What happens under the hood?">
 
-GTO creates a special Git tag for the artifact promotion, in a standard format: `{artifact_name}#{stage}#{e}`.
+GTO creates a special Git tag for the artifact promotion, in a standard format:
+`{artifact_name}#{stage}#{e}`.
 
-The event is now associated to the latest version of the artifact. There can be multiple events for a given version, ordered by an automatic incremental event number (`{e}`). This will keep the history of your promotions.
+The event is now associated to the latest version of the artifact. There can be
+multiple events for a given version, ordered by an automatic incremental event
+number (`{e}`). This will keep the history of your promotions.
 
-Note: if you prefer, you can use simple promotion tag format without the incremental `{e}`, but this will disable the `gto history` command. This is because promoting an artifact where a promotion tag already existed will require deleting the existing tag.
+Note: if you prefer, you can use simple promotion tag format without the
+incremental `{e}`, but this will disable the `gto history` command. This is
+because promoting an artifact where a promotion tag already existed will require
+deleting the existing tag.
 
 </details>
 
 ### Annotating
 
-So far we've seen how to register and promote artifact versions, but we still don't have much information about them. What about the type of artifact (dataset, model, etc.) or the file path to find it in the working tree?
+So far we've seen how to register and promote artifact versions, but we still
+don't have much information about them. What about the type of artifact
+(dataset, model, etc.) or the file path to find it in the working tree?
 
-For simple projects (e.g. single artifact) we can assume the details in a downstream system. But for more advanced cases, we should codify them in the registry itself.
+For simple projects (e.g. single artifact) we can assume the details in a
+downstream system. But for more advanced cases, we should codify them in the
+registry itself.
 
-To annotate an artifact, use `gto annotate`. GTO writes to an `artifacts.yaml` file to save this metadata. Feel free to modify the file directly!
+To annotate an artifact, use `gto annotate`. GTO writes to an `artifacts.yaml`
+file to save this metadata. Feel free to modify the file directly!
 
 ```console
 $ gto annotate awesome-model --type model --path s3://awesome/model.pkl
@@ -88,21 +112,33 @@ $ gto annotate awesome-model --type model --path s3://awesome/model.pkl
 ```yaml
 # artifacts.yaml
 awesome-model:
-    type: model
-    path: "s3://awesome/model.pkl"
+  type: model
+  path: "s3://awesome/model.pkl"
 ```
 
-> Don't forget to commit `artifacts.yaml` with Git to associate it with the latest artifact version and stage in any copy of the repo.
+> Don't forget to commit `artifacts.yaml` with Git to associate it with the
+> latest artifact version and stage in any copy of the repo.
 
-By default GTO saves artifact as `virtual`. Use the `--must_exist` flag to tell GTO the artifact file is committed to Git.
+By default GTO saves artifact as `virtual`. Use the `--must_exist` flag to tell
+GTO the artifact file is committed to Git.
 
 <details summary="Virtual vs. Physical artifacts">
 
-- Physical files/directories are committed to the repo. When you register a new version or promote it, Git guarantees that it's immutable -- you can return a year later and get the same artifact by providing a version.
+- Physical files/directories are committed to the repo. When you register a new
+  version or promote it, Git guarantees that it's immutable -- you can return a
+  year later and get the same artifact by providing a version.
 
-- Virtual artifacts could be an external path (e.g. `s3://mybucket/myfile`) or a local path to a metafile representing an externally stored artifact file (as [with DVC](https://dvc.org/doc/start/data-management)). In this case, GTO can't pin versions to a physical state of the artifact and guarantee it's immutability later, e.g. if `s3://mybucket/myfile` changes the registry won't know it, nor have a way to recover the original file.
+- Virtual artifacts could be an external path (e.g. `s3://mybucket/myfile`) or a
+  local path to a metafile representing an externally stored artifact file (as
+  [with DVC](https://dvc.org/doc/start/data-management)). In this case, GTO
+  can't pin versions to a physical state of the artifact and guarantee it's
+  immutability later, e.g. if `s3://mybucket/myfile` changes the registry won't
+  know it, nor have a way to recover the original file.
 
-> In future versions, we will support additional enrichments: useful information that other tools like [DVC](https://dvc.org/) and [MLEM](https://mlem.ai/) can provide about the artifacts. This will allow treating DVC repo outputs as usual artifacts instead of `virtual` ones.
+> In future versions, we will support additional enrichments: useful information
+> that other tools like [DVC](https://dvc.org/) and [MLEM](https://mlem.ai/) can
+> provide about the artifacts. This will allow treating DVC repo outputs as
+> usual artifacts instead of `virtual` ones.
 
 </details>
 
@@ -112,7 +148,8 @@ Let's look at the usage of the `gto show` and `gto history`.
 
 ### Show the current state
 
-This is the entire state of the registry: all artifacts, their latest versions, and what is promoted to stages right now.
+This is the entire state of the registry: all artifacts, their latest versions,
+and what is promoted to stages right now.
 
 ```console
 $ gto show
@@ -126,7 +163,9 @@ $ gto show
 ╘═══════════════╧══════════╧════════╧═════════╧════════════╛
 ```
 
-Here we'll see both artifacts that have Git tags only and those annotated in `artifacts.yaml`. Use `--all-branches` or `--all-commits` to read `artifacts.yaml` from more commits than just `HEAD`.
+Here we'll see both artifacts that have Git tags only and those annotated in
+`artifacts.yaml`. Use `--all-branches` or `--all-commits` to read
+`artifacts.yaml` from more commits than just `HEAD`.
 
 Add an artifact name to print all og its versions instead:
 
@@ -142,7 +181,8 @@ $ gto show churn
 
 ### See the history of an artifact
 
-`gto history` will print a journal of the events that happened to an artifact. This allows you to audit the changes.
+`gto history` will print a journal of the events that happened to an artifact.
+This allows you to audit the changes.
 
 ```console
 $ gto history churn
@@ -160,11 +200,14 @@ $ gto history churn
 
 ## Consuming the registry downstream
 
-Let's look at integrating with GTO via Git as well as using the `gto check-ref`, `gto latest`, `gto which`, and `gto describe` utility commands downstream.
+Let's look at integrating with GTO via Git as well as using the `gto check-ref`,
+`gto latest`, `gto which`, and `gto describe` utility commands downstream.
 
 ### Act on new versions and promotions in CI
 
-To act upon annotations (Git tags), you can create simple CI workflow. With [GitHub Actions](https://github.com/features/actions) for example, it can look like this:
+To act upon annotations (Git tags), you can create simple CI workflow. With
+[GitHub Actions](https://github.com/features/actions) for example, it can look
+like this:
 
 ```yaml
 name: Act on versions or promotions of the "churn" actifact
@@ -174,7 +217,11 @@ on:
       - "churn*"
 ```
 
-When CI is triggered, you can use the Git reference to determine the version of the artifact. In GH Actions, you can use the `GITHUB_REF` environment variable (check out our [example workflow](/gto/blob/main/.github/workflows/check-test-release.yml)). You can parse tags manually or use `gto check-ref`:
+When CI is triggered, you can use the Git reference to determine the version of
+the artifact. In GH Actions, you can use the `GITHUB_REF` environment variable
+(check out our
+[example workflow](/gto/blob/main/.github/workflows/check-test-release.yml)).
+You can parse tags manually or use `gto check-ref`:
 
 ```console
 $ gto check-ref awesome-model@v0.0.1
@@ -196,7 +243,8 @@ $ gto check-ref awesome-model@v0.0.1
 
 ### Getting the right version
 
-To get the latest artifact version, its path, and Git reference, use `gto latest`:
+To get the latest artifact version, its path, and Git reference, use
+`gto latest`:
 
 ```console
 $ gto latest churn
@@ -206,7 +254,8 @@ $ gto latest churn --ref
 churn@v3.1.0
 ```
 
-To get the version that is currently promoted to an environment (stage), use  `gto which`:
+To get the version that is currently promoted to an environment (stage), use
+`gto which`:
 
 ```console
 $ gto which churn prod
@@ -234,7 +283,8 @@ $ gto describe churn
 
 ## Configuration
 
-To configure GTO, use file `.gto` in the root of your repo or use environment variables (note the `GTO_` prefix):
+To configure GTO, use file `.gto` in the root of your repo or use environment
+variables (note the `GTO_` prefix):
 
 ```ini
 # .gto config file
@@ -242,7 +292,10 @@ types: [model, dataset]  # list of allowed Types
 stages: [dev, stage, prod]  # list of allowed Stages
 ```
 
-When allowed Stages or Types are specified, GTO will check commands you run and error out if you provided a value that doesn't exist in the config. Note, that GTO applies the config from the workspace, so if want to apply the config from `main` branch, you need to check out it first with `git checkout main`.
+When allowed Stages or Types are specified, GTO will check commands you run and
+error out if you provided a value that doesn't exist in the config. Note, that
+GTO applies the config from the workspace, so if want to apply the config from
+`main` branch, you need to check out it first with `git checkout main`.
 
 ```console
 $ GTO_EMOJIS=false gto show
@@ -276,7 +329,8 @@ $ pip install --upgrade pip setuptools wheel ".[tests]"
 $ pytest --basetemp=pytest-cache
 ```
 
-This will create `pytest-cache/` directory with some fixtures that can serve as examples.
+This will create `pytest-cache/` directory with some fixtures that can serve as
+examples.
 
 Notably, check out this dir:
 
@@ -285,6 +339,7 @@ $ cd pytest-cache/test_api0/
 $ gto show -v
 ```
 
-The code that generates this folder could be found [in this fixture](https://github.com/iterative/gto/blob/main/tests/conftest.py#L58).
+The code that generates this folder could be found
+[in this fixture](https://github.com/iterative/gto/blob/main/tests/conftest.py#L58).
 
 To continue experimenting, call `gto --help`
