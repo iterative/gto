@@ -41,7 +41,10 @@ def app_cmd():
 @pytest.fixture
 def app_cli_cmd(app_cmd):
     if version.parse(typer.__version__) < version.parse("0.6.0"):
-        return (get_command_from_info(c) for c in app_cmd)
+        return (
+            get_command_from_info(c)  # pylint: disable=unexpected-keyword-arg
+            for c in app_cmd
+        )
     return (
         get_command_from_info(  # pylint: disable=unexpected-keyword-arg
             c,
