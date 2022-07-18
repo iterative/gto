@@ -176,6 +176,22 @@ GTO the artifact file is committed to Git.
 
 </details>
 
+### Deprecating
+
+Sometimes you need to need to mark the artifact as "deprecated", usually meaning it's outdated and will no longer be developed. To do this, you could run:
+
+```console
+$ gto deprecate awesome-model
+```
+
+Generally, the artifact is considered to be deprecated either if
+1. There is a `awesome-model@deprecated` git tag
+2. There are no git tags for the artifact and it doesn't appear in `artifacts.yaml` in the workspace (i.e. in the check outed commit).
+
+### Removing
+
+TODO
+
 ## Using the registry locally
 
 Let's look at the usage of the `gto show` and `gto history`.
