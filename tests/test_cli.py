@@ -3,6 +3,8 @@ from typing import Callable, Optional, Tuple
 
 import git
 import pytest
+import typer
+from packaging import version
 from typer.main import get_command_from_info
 from typer.testing import CliRunner
 
@@ -38,7 +40,18 @@ def app_cmd():
 
 @pytest.fixture
 def app_cli_cmd(app_cmd):
-    return (get_command_from_info(c) for c in app_cmd)
+    if version.parse(typer.__version__) < version.parse("0.6.0"):
+        return (
+            get_command_from_info(c) for c in app_cmd  # pylint: disable=missing-kwoa
+        )
+    return (
+        get_command_from_info(  # pylint: disable=unexpected-keyword-arg
+            c,
+            pretty_exceptions_short=False,
+            rich_markup_mode="rich",
+        )
+        for c in app_cmd
+    )
 
 
 def test_commands_help(app_cli_cmd):
