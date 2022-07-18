@@ -42,7 +42,7 @@ def app_cmd():
 def app_cli_cmd(app_cmd):
     if version.parse(typer.__version__) < version.parse("0.6.0"):
         return (
-            get_command_from_info(c)  # pylint: disable=unexpected-keyword-arg
+            get_command_from_info(c)  # pylint: disable=missing-kwoa
             for c in app_cmd
         )
     return (
