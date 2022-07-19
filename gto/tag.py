@@ -167,11 +167,21 @@ def find(
     if tags is None:
         if repo is None:
             raise MissingArg(arg="repo")
-        tags = [
-            t
-            for t in repo.tags
-            if parse_name(t.name, raise_on_fail=False) and t.tag is not None
-        ]
+        # # pygit2
+        # import re, pygit2
+        # regex = re.compile('^refs/tags/')
+        # pygit2_repo = pygit2.Repository(repo.working_dir)
+        # tags = [
+        #     pygit2_repo.revparse_single(t)
+        #     for t in pygit2_repo.references if regex.match(t)
+        # ]
+        # tags = [
+        #     t for t in tags
+        #     if parse_name(t.name, raise_on_fail=False)
+        #     and t.tagger.time is not None
+        # ]
+        # gitpython
+        tags = [t for t in repo.tags if parse_name(t.name, raise_on_fail=False)]
     if action:
         tags = [t for t in tags if parse_name(t.name)[ACTION] in action]
     if name:
@@ -180,6 +190,8 @@ def find(
         tags = [t for t in tags if parse_name(t.name).get(VERSION) == version]
     if stage:
         tags = [t for t in tags if parse_name(t.name).get(STAGE) == stage]
+    # remove lightweight tags - better to do later so the function is faster
+    tags = [t for t in tags if t.tag is not None]
     if sort == "by_time":
         tags = sorted(tags, key=lambda t: t.tag.tagged_date)
     else:
