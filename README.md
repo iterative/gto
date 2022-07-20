@@ -100,12 +100,21 @@ $ gto unlabel awesome-model prod
 Created git tag 'awesome-model#prod#2!' that removes label 'prod' from 'v0.0.1'
 ```
 
-<details summary="What happens under the hood?">
+<details summary="Some details and options">
 
 GTO creates a special Git tag in a standard format:
 `{artifact_name}#{stage}#{e}!`.
 
 Note, that later you can create this label again, if you need to, by calling `$ gto label`.
+
+You also may want to delete the git tag instead of creating a new one. This is useful if you don't want to keep extra tags in you Git repo, don't need history and don't want to trigger a CI/CD or another downstream system. For that, you can use:
+
+```console
+$ gto unlabel --delete
+Deleted git tag 'awesome-model#prod#1' that added label 'prod' to 'v0.0.1'
+To push the changes upsteam, run:
+git push origin awesome-model#prod#1 --delete
+```
 
 </details>
 
