@@ -8,10 +8,10 @@ Git Tag Ops. Turn your Git repository into an Artifact Registry:
 
 - Registry: Track new artifacts and their versions for releases and significant
   changes.
-- Lifecycle Management: Promote or roll back versions among a structured set of
-  stages.
+- Lifecycle Management: Create actionable labels for versions marking status of
+  artifact or it's readiness to be consumed by a specific environment.
 - GitOps: Signal CI/CD automation or other downstream systems to act upon these
-  lifecycle updates.
+  new versions and lifecycle updates.
 - Enrichments: Annotate and query artifact metadata with additional information.
 
 GTO works by creating annotated Git tags in a standard format.
@@ -64,31 +64,31 @@ several versions in a given commit, ordered by their automatic version numbers.
 
 </details>
 
-### Promoting
+### Create a label
 
-Promote a specific artifact version to a lifecycle stage with `gto promote`.
-Stages can be seen as the status of your artifact, signaling readiness for usage
-by downstream systems, e.g. via CI/CD or web hooks. For example: redeploy an ML
-model.
+Create an actionable label for a specific artifact version with `gto label`.
+Labels can mark it's readiness to be consumed by a specific downsteam system.
+You can plug in a real downsteam system via CI/CD or web hooks. For example:
+redeploy an ML model.
 
 ```console
-$ gto promote awesome-model prod
-Created git tag 'awesome-model#prod#1' that promotes 'v0.0.1'
+$ gto label awesome-model prod
+Created git tag 'awesome-model#prod#1' that adds label 'prod' to 'v0.0.1'
 ```
 
 <details summary="What happens under the hood?">
 
-GTO creates a special Git tag for the artifact promotion, in a standard format:
+GTO creates a special Git tag in a standard format:
 `{artifact_name}#{stage}#{e}`.
 
 The event is now associated to the latest version of the artifact. There can be
 multiple events for a given version, ordered by an automatic incremental event
-number (`{e}`). This will keep the history of your promotions.
+number (`{e}`). This will keep the history of your labels creation.
 
-Note: if you prefer, you can use simple promotion tag format without the
-incremental `{e}`, but this will disable the `gto history` command. This is
-because promoting an artifact where a promotion tag already existed will require
-deleting the existing tag.
+Note: if you prefer, you can use simple label tag format without the incremental
+`{e}`, but this will disable the `gto history` command. This is because labeling
+an artifact version where a label tag already existed will require deleting the
+existing tag.
 
 </details>
 
@@ -125,7 +125,7 @@ GTO the artifact file is committed to Git.
 <details summary="Virtual vs. Physical artifacts">
 
 - Physical files/directories are committed to the repo. When you register a new
-  version or promote it, Git guarantees that it's immutable -- you can return a
+  version or label it, Git guarantees that it's immutable -- you can return a
   year later and get the same artifact by providing a version.
 
 - Virtual artifacts could be an external path (e.g. `s3://mybucket/myfile`) or a
@@ -149,15 +149,15 @@ Let's look at the usage of the `gto show` and `gto history`.
 ### Show the current state
 
 This is the entire state of the registry: all artifacts, their latest versions,
-and what is promoted to stages right now.
+and the greatest versions for each label.
 
 ```console
 $ gto show
 ╒═══════════════╤══════════╤════════╤═════════╤════════════╕
 │ name          │ latest   │ #dev   │ #prod   │ #staging   │
 ╞═══════════════╪══════════╪════════╪═════════╪════════════╡
-│ churn         │ v3.1.0   │ -      │ v3.0.0  │ v3.1.0     │
-│ segment       │ v0.4.1   │ v0.4.1 │ -       │ -          │
+│ churn         │ v3.1.0   │ v3.0.0 │ v3.0.0  │ v3.1.0     │
+│ segment       │ v0.4.1   │ v0.4.1 │ -       │ v0.4.1     │
 │ cv-class      │ v0.1.13  │ -      │ -       │ -          │
 │ awesome-model │ v0.0.1   │ -      │ v0.0.1  │ -          │
 ╘═══════════════╧══════════╧════════╧═════════╧════════════╛
@@ -167,7 +167,7 @@ Here we'll see both artifacts that have Git tags only and those annotated in
 `artifacts.yaml`. Use `--all-branches` or `--all-commits` to read
 `artifacts.yaml` from more commits than just `HEAD`.
 
-Add an artifact name to print all og its versions instead:
+Add an artifact name to print all of its versions instead:
 
 ```console
 $ gto show churn
@@ -177,6 +177,28 @@ $ gto show churn
 │ churn      │ v3.0.0    │ prod    │ 2022-04-08 23:46:58 │ Alexander Guschin │ churn@v3.0.0 │
 │ churn      │ v3.1.0    │ staging │ 2022-04-13 14:53:38 │ Alexander Guschin │ churn@v3.1.0 │
 ╘════════════╧═══════════╧═════════╧═════════════════════╧═══════════════════╧══════════════╛
+```
+
+#### Enabling Stages/Kanban workflow
+
+In some cases, you would like to have a latest label for an artifact version to
+replace all the previous labels. In this case the version will have a single
+label. This resembles Kanban workflow, when you "move" your artifact version
+from one column ("label1") to another ("label2"). This is how MLFlow and some
+other Model Registries works.
+
+To achieve this, you can use `--last-label-for-version` flag (or `--last` for short):
+
+```console
+$ gto show --last
+╒═══════════════╤══════════╤════════╤═════════╤════════════╕
+│ name          │ latest   │ #dev   │ #prod   │ #staging   │
+╞═══════════════╪══════════╪════════╪═════════╪════════════╡
+│ churn         │ v3.1.0   │ -      │ v3.0.0  │ v3.1.0     │
+│ segment       │ v0.4.1   │ v0.4.1 │ -       │ -          │
+│ cv-class      │ v0.1.13  │ -      │ -       │ -          │
+│ awesome-model │ v0.0.1   │ -      │ v0.0.1  │ -          │
+╘═══════════════╧══════════╧════════╧═════════╧════════════╛
 ```
 
 ### See the history of an artifact
@@ -265,6 +287,18 @@ $ gto which churn prod --ref
 churn#prod#2
 ```
 
+<details summary="Kanban/Stages workflow">
+If you prefer Kanban/Stages workflow described above, you could use `--last` flag:
+
+```console
+$ gto which churn prod --last
+v3.1.0
+```
+
+This will take into account the last label for a version only.
+
+</details>
+
 To get details about an artifact (from `artifacts.yaml`) use `gto describe`:
 
 ```console
@@ -272,11 +306,7 @@ $ gto describe churn
 ```
 
 ```yaml
-{
-    "type": "model",
-    "path": "models/churn.pkl",
-    "virtual": false
-}
+{ "type": "model", "path": "models/churn.pkl", "virtual": false }
 ```
 
 > The output is in JSON format for ease of parsing programatically.
