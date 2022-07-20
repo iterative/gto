@@ -67,9 +67,8 @@ several versions in a given commit, ordered by their automatic version numbers.
 ### Create a label
 
 Create an actionable label for a specific artifact version with `gto label`.
-Labels can mark it's readiness to be consumed by a specific downsteam system.
-You can plug in a real downsteam system via CI/CD or web hooks. For example:
-redeploy an ML model.
+Labels can mark it's readiness for a specific consumer. You can plug in a real
+downsteam system via CI/CD or web hooks. For example: redeploy an ML model.
 
 ```console
 $ gto label awesome-model prod
@@ -89,6 +88,24 @@ Note: if you prefer, you can use simple label tag format without the incremental
 `{e}`, but this will disable the `gto history` command. This is because labeling
 an artifact version where a label tag already existed will require deleting the
 existing tag.
+
+</details>
+
+### Remove a label
+
+Sometimes you need to mark an artifact version no longer ready for a specific consumer, and maybe signal a downstream system about this. You can use `gto unlabel` for that:
+
+```console
+$ gto unlabel awesome-model prod
+Created git tag 'awesome-model#prod#2!' that removes label 'prod' from 'v0.0.1'
+```
+
+<details summary="What happens under the hood?">
+
+GTO creates a special Git tag in a standard format:
+`{artifact_name}#{stage}#{e}!`.
+
+Note, that later you can create this label again, if you need to, by calling `$ gto label`.
 
 </details>
 
@@ -187,7 +204,8 @@ label. This resembles Kanban workflow, when you "move" your artifact version
 from one column ("label1") to another ("label2"). This is how MLFlow and some
 other Model Registries works.
 
-To achieve this, you can use `--last-label-for-version` flag (or `--last` for short):
+To achieve this, you can use `--last-label-for-version` flag (or `--last` for
+short):
 
 ```console
 $ gto show --last
