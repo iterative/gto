@@ -156,7 +156,7 @@ class BaseArtifact(BaseModel):
                 if a.stage not in stages:
                     stages[a.stage] = []
                 if a.version not in [i.version for i in stages[a.stage]]:
-                    stages[a.stage].extend(a)
+                    stages[a.stage].append(a)
         return stages  # type: ignore
 
     def add_version(self, version: BaseVersion):
