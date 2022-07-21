@@ -141,3 +141,4 @@ def test_api(showcase):
         ),
         skip_keys=skip_keys_promotion,
     )
+    assert gto.api.find_versions_in_stage(repo, "rf", "staging", all=True) == [rf_l3]

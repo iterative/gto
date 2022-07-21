@@ -48,13 +48,12 @@ class BaseVersion(BaseModel):
         return SemVer(self.name)
 
     @property
-    def stage(self):
-        promotions = sorted(self.promotions, key=lambda p: p.created_at)
-        return promotions[-1] if promotions else None
+    def assignments(self):
+        return sorted(self.promotions, key=lambda p: p.created_at)
 
     def dict_status(self):
         version = self.dict(exclude={"promotions"})
-        version["stage"] = self.stage.dict() if self.stage else None
+        version["stage"] = self.assignments.dict() if self.assignments else None
         return version
 
 
@@ -142,7 +141,7 @@ class BaseArtifact(BaseModel):
         return None
 
     def get_promotions(
-        self, all=False, registered_only=False, sort=VersionSort.SemVer
+        self, registered_only=False, sort=VersionSort.SemVer
     ) -> Dict[str, Union[BasePromotion, List[BasePromotion]]]:
         versions = self.get_versions(
             include_non_explicit=not registered_only, sort=sort
@@ -151,14 +150,14 @@ class BaseArtifact(BaseModel):
             # for this sort we need to sort not versions, as above ^
             # but promotions themselves
             raise NotImplementedError("Sorting by timestamp is not implemented yet")
-        stages = {}  # type: ignore
+        stages: Dict[str, List[BasePromotion]] = {}
         for version in versions:
-            promotion = version.stage
-            if promotion:
-                stages[promotion.stage] = stages.get(promotion.stage, []) + [promotion]
-        if all:
-            return stages
-        return {stage: promotions[0] for stage, promotions in stages.items()}
+            for a in version.assignments:
+                if a.stage not in stages:
+                    stages[a.stage] = []
+                if a.version not in [i.version for i in stages[a.stage]]:
+                    stages[a.stage].extend(a)
+        return stages  # type: ignore
 
     def add_version(self, version: BaseVersion):
         self.versions.append(version)
@@ -289,10 +288,10 @@ class BaseRegistryState(BaseModel):
     ):
         """Return stage active in specific stage"""
         promoted = self.find_artifact(name).get_promotions(
-            all=all, registered_only=registered_only
+            registered_only=registered_only
         )
         if stage in promoted:
-            return promoted[stage]
+            return promoted[stage] if all else promoted[stage][0]
         if raise_if_not_found:
             raise ValueError(f"Stage {stage} not found for {name}")
         return None

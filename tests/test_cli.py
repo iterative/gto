@@ -123,6 +123,11 @@ def test_commands(showcase):
     )
     _check_successful_cmd(
         "which",
+        ["-r", path, "rf", "staging", "--all"],
+        "v1.2.4\n",
+    )
+    _check_successful_cmd(
+        "which",
         ["-r", path, "rf", "production", "--ref"],
         "rf#production#3\n",
     )

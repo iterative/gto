@@ -223,8 +223,8 @@ class GitRegistry(BaseModel):
         if (
             not force
             and found_version
-            and found_version.stage
-            and found_version.stage.stage == stage
+            and found_version.assignments
+            and any(a.stage == stage for a in found_version.assignments)
         ):
             raise WrongArgs(f"Version is already in stage '{stage}'")
         # TODO: getting tag name as a result and using it

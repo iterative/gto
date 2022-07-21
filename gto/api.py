@@ -219,7 +219,7 @@ def _show_registry(
             else None,
             "stage": {
                 name: format_hexsha(
-                    o.get_promotions(registered_only=registered_only)[name].version
+                    o.get_promotions(registered_only=registered_only)[name][0].version
                 )
                 if name in o.get_promotions(registered_only=registered_only)
                 else None
