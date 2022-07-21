@@ -53,7 +53,7 @@ class BaseVersion(BaseModel):
 
     def dict_status(self):
         version = self.dict(exclude={"promotions"})
-        version["stage"] = (
+        version["assignments"] = (
             [a.dict() for a in self.assignments] if self.assignments else None
         )
         return version
@@ -145,7 +145,7 @@ class BaseArtifact(BaseModel):
     def get_promotions(
         self,
         registered_only=False,
-        last_stage=False,  # pylint: disable=unused-argument
+        last_stage=False,
         sort=VersionSort.SemVer,
     ) -> Dict[str, Union[BasePromotion, List[BasePromotion]]]:
         versions = self.get_versions(
@@ -157,7 +157,9 @@ class BaseArtifact(BaseModel):
             raise NotImplementedError("Sorting by timestamp is not implemented yet")
         stages: Dict[str, List[BasePromotion]] = {}
         for version in versions:
-            for a in version.assignments:
+            for a in (
+                version.assignments[::-1][:1] if last_stage else version.assignments
+            ):
                 if a.stage not in stages:
                     stages[a.stage] = []
                 if a.version not in [i.version for i in stages[a.stage]]:

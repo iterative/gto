@@ -184,7 +184,7 @@ def show(
             all_branches=all_branches,
             all_commits=all_commits,
             registered_only=registered_only,
-            # last_stage=last_stage,
+            last_stage=last_stage,
             table=table,
             truncate_hexsha=truncate_hexsha,
         )
@@ -206,9 +206,9 @@ def _show_registry(
     all_branches=False,
     all_commits=False,
     registered_only=False,
-    last_stage: bool = False,  # pylint: disable=unused-argument
+    last_stage: bool = False,
     table: bool = False,
-    truncate_hexsha: bool = False,  # pylint: disable=unused-argument
+    truncate_hexsha: bool = False,
 ):
     """Show current registry state"""
 
@@ -224,9 +224,14 @@ def _show_registry(
             else None,
             "stage": {
                 name: format_hexsha(
-                    o.get_promotions(registered_only=registered_only)[name][0].version
+                    o.get_promotions(
+                        registered_only=registered_only, last_stage=last_stage
+                    )[name][0].version
                 )
-                if name in o.get_promotions(registered_only=registered_only)
+                if name
+                in o.get_promotions(
+                    registered_only=registered_only, last_stage=last_stage
+                )
                 else None
                 for name in stages
             },
@@ -247,13 +252,14 @@ def _show_registry(
     return result, headers
 
 
-def _show_versions(
+def _show_versions(  # pylint: disable=too-many-locals
     repo: Union[str, Repo],
     name: str,
     raw: bool = False,
     all_branches=False,
     all_commits=False,
     registered_only=False,
+    last_stage: bool = False,
     table: bool = False,
     truncate_hexsha: bool = False,
 ):
@@ -282,7 +288,14 @@ def _show_versions(
     versions_ = []
     for v in versions:
         v["version"] = format_hexsha(v["name"])
-        v["stage"] = ", ".join(distinct(s["stage"] for s in v["stage"][::-1]))
+        v["stage"] = ", ".join(
+            distinct(
+                s["stage"]
+                for s in (
+                    v["assignments"][::-1][:1] if last_stage else v["assignments"][::-1]
+                )
+            )
+        )
         v["commit_hexsha"] = format_hexsha(v["commit_hexsha"])
         v["ref"] = v["tag"] or v["commit_hexsha"]
         for key in (
@@ -293,6 +306,7 @@ def _show_versions(
             "name",
             "message",
             "author_email",
+            "assignments",
         ):
             v.pop(key)
         # v["enrichments"] = [e["source"] for e in v["enrichments"]]
