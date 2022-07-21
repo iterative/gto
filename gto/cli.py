@@ -658,6 +658,9 @@ def show(
     plain: bool = option_plain,
     name_only: bool = option_name_only,
     registered_only: bool = option_registered_only,
+    last_stage: bool = Option(
+        False, "--ls", "--last-stage", help="Show only the last stage for each version"
+    ),
 ):
     """Show the registry state
 
@@ -682,6 +685,7 @@ def show(
             all_branches=all_branches,
             all_commits=all_commits,
             registered_only=registered_only,
+            last_stage=last_stage,
             table=False,
         )
         if name_only:
@@ -696,6 +700,7 @@ def show(
                 all_branches=all_branches,
                 all_commits=all_commits,
                 registered_only=registered_only,
+                last_stage=last_stage,
                 table=True,
                 truncate_hexsha=True,
             ),

@@ -8,7 +8,7 @@ Git Tag Ops. Turn your Git repository into an Artifact Registry:
 
 - Registry: Track new artifacts and their versions for releases and significant
   changes.
-- Lifecycle Management: Create actionable labels for versions marking status of
+- Lifecycle Management: Create actionable stages for versions marking status of
   artifact or it's readiness to be consumed by a specific environment.
 - GitOps: Signal CI/CD automation or other downstream systems to act upon these
   new versions and lifecycle updates.
@@ -64,15 +64,15 @@ several versions in a given commit, ordered by their automatic version numbers.
 
 </details>
 
-### Create a label
+### Assing a stage
 
-Create an actionable label for a specific artifact version with `gto label`.
-Labels can mark it's readiness for a specific consumer. You can plug in a real
+Assing an actionable stage for a specific artifact version with `gto assing`.
+Stages can mark it's readiness for a specific consumer. You can plug in a real
 downsteam system via CI/CD or web hooks. For example: redeploy an ML model.
 
 ```console
-$ gto label awesome-model prod
-Created git tag 'awesome-model#prod#1' that adds label 'prod' to 'v0.0.1'
+$ gto assign awesome-model prod
+Created git tag 'awesome-model#prod#1' that adds stage 'prod' to 'v0.0.1'
 ```
 
 <details summary="What happens under the hood?">
@@ -82,22 +82,24 @@ GTO creates a special Git tag in a standard format:
 
 The event is now associated to the latest version of the artifact. There can be
 multiple events for a given version, ordered by an automatic incremental event
-number (`{e}`). This will keep the history of your labels creation.
+number (`{e}`). This will keep the history of your stages creation.
 
-Note: if you prefer, you can use simple label tag format without the incremental
-`{e}`, but this will disable the `gto history` command. This is because labeling
-an artifact version where a label tag already existed will require deleting the
-existing tag.
+Note: if you prefer, you can use simple stage tag format without the incremental
+`{e}`, but this will disable the `gto history` command. This is because
+assinging a stage to an artifact version where a stage tag already existed will
+require deleting the existing tag.
 
 </details>
 
-### Remove a label
+### Unassign a stage
 
-Sometimes you need to mark an artifact version no longer ready for a specific consumer, and maybe signal a downstream system about this. You can use `gto unlabel` for that:
+Sometimes you need to mark an artifact version no longer ready for a specific
+consumer, and maybe signal a downstream system about this. You can use
+`gto unassign` for that:
 
 ```console
-$ gto unlabel awesome-model prod
-Created git tag 'awesome-model#prod#2!' that removes label 'prod' from 'v0.0.1'
+$ gto unassign awesome-model prod
+Created git tag 'awesome-model#prod#2!' that unassignes stage 'prod' from 'v0.0.1'
 ```
 
 <details summary="Some details and options">
@@ -105,13 +107,17 @@ Created git tag 'awesome-model#prod#2!' that removes label 'prod' from 'v0.0.1'
 GTO creates a special Git tag in a standard format:
 `{artifact_name}#{stage}#{e}!`.
 
-Note, that later you can create this label again, if you need to, by calling `$ gto label`.
+Note, that later you can create this stage again, if you need to, by calling
+`$ gto assign`.
 
-You also may want to delete the git tag instead of creating a new one. This is useful if you don't want to keep extra tags in you Git repo, don't need history and don't want to trigger a CI/CD or another downstream system. For that, you can use:
+You also may want to delete the git tag instead of creating a new one. This is
+useful if you don't want to keep extra tags in you Git repo, don't need history
+and don't want to trigger a CI/CD or another downstream system. For that, you
+can use:
 
 ```console
-$ gto unlabel --delete
-Deleted git tag 'awesome-model#prod#1' that added label 'prod' to 'v0.0.1'
+$ gto unassign --delete
+Deleted git tag 'awesome-model#prod#1' that assigned 'prod' to 'v0.0.1'
 To push the changes upsteam, run:
 git push origin awesome-model#prod#1 --delete
 ```
@@ -151,8 +157,8 @@ GTO the artifact file is committed to Git.
 <details summary="Virtual vs. Physical artifacts">
 
 - Physical files/directories are committed to the repo. When you register a new
-  version or label it, Git guarantees that it's immutable -- you can return a
-  year later and get the same artifact by providing a version.
+  version or assign a stage to it, Git guarantees that it's immutable -- you can
+  return a year later and get the same artifact by providing a version.
 
 - Virtual artifacts could be an external path (e.g. `s3://mybucket/myfile`) or a
   local path to a metafile representing an externally stored artifact file (as
@@ -175,7 +181,7 @@ Let's look at the usage of the `gto show` and `gto history`.
 ### Show the current state
 
 This is the entire state of the registry: all artifacts, their latest versions,
-and the greatest versions for each label.
+and the greatest versions for each stage.
 
 ```console
 $ gto show
@@ -183,7 +189,7 @@ $ gto show
 │ name          │ latest   │ #dev   │ #prod   │ #staging   │
 ╞═══════════════╪══════════╪════════╪═════════╪════════════╡
 │ churn         │ v3.1.0   │ v3.0.0 │ v3.0.0  │ v3.1.0     │
-│ segment       │ v0.4.1   │ v0.4.1 │ -       │ v0.4.1     │
+│ segment       │ v0.4.1   │ v0.4.1 │ -       │ -          │
 │ cv-class      │ v0.1.13  │ -      │ -       │ -          │
 │ awesome-model │ v0.0.1   │ -      │ v0.0.1  │ -          │
 ╘═══════════════╧══════════╧════════╧═════════╧════════════╛
@@ -197,27 +203,26 @@ Add an artifact name to print all of its versions instead:
 
 ```console
 $ gto show churn
-╒════════════╤═══════════╤═════════╤═════════════════════╤═══════════════════╤══════════════╕
-│ artifact   │ version   │ stage   │ created_at          │ author            │ ref          │
-╞════════════╪═══════════╪═════════╪═════════════════════╪═══════════════════╪══════════════╡
-│ churn      │ v3.0.0    │ prod    │ 2022-04-08 23:46:58 │ Alexander Guschin │ churn@v3.0.0 │
-│ churn      │ v3.1.0    │ staging │ 2022-04-13 14:53:38 │ Alexander Guschin │ churn@v3.1.0 │
-╘════════════╧═══════════╧═════════╧═════════════════════╧═══════════════════╧══════════════╛
+╒════════════╤═══════════╤═══════════╤═════════════════════╤═══════════════════╤══════════════╕
+│ artifact   │ version   │ stage     │ created_at          │ author            │ ref          │
+╞════════════╪═══════════╪═══════════╪═════════════════════╪═══════════════════╪══════════════╡
+│ churn      │ v3.1.0    │ staging   │ 2022-07-13 15:25:41 │ Alexander Guschin │ churn@v3.1.0 │
+│ churn      │ v3.0.0    │ prod, dev │ 2022-07-09 00:19:01 │ Alexander Guschin │ churn@v3.0.0 │
+╘════════════╧═══════════╧═══════════╧═════════════════════╧═══════════════════╧══════════════╛
 ```
 
 #### Enabling Stages/Kanban workflow
 
-In some cases, you would like to have a latest label for an artifact version to
-replace all the previous labels. In this case the version will have a single
-label. This resembles Kanban workflow, when you "move" your artifact version
-from one column ("label1") to another ("label2"). This is how MLFlow and some
+In some cases, you would like to have a latest stage for an artifact version to
+replace all the previous stages. In this case the version will have a single
+stage. This resembles Kanban workflow, when you "move" your artifact version
+from one column ("stage-1") to another ("stage-2"). This is how MLFlow and some
 other Model Registries works.
 
-To achieve this, you can use `--last-label-for-version` flag (or `--last` for
-short):
+To achieve this, you can use `--last-stage` flag (or `--ls` for short):
 
 ```console
-$ gto show --last
+$ gto show --ls
 ╒═══════════════╤══════════╤════════╤═════════╤════════════╕
 │ name          │ latest   │ #dev   │ #prod   │ #staging   │
 ╞═══════════════╪══════════╪════════╪═════════╪════════════╡
@@ -238,12 +243,13 @@ $ gto history churn
 ╒═════════════════════╤════════════╤══════════════╤═══════════╤═════════╤══════════╤═══════════════════╕
 │ timestamp           │ artifact   │ event        │ version   │ stage   │ commit   │ author            │
 ╞═════════════════════╪════════════╪══════════════╪═══════════╪═════════╪══════════╪═══════════════════╡
-│ 2022-04-07 20:00:18 │ churn      │ commit       │ -         │ -       │ 54d6d39  │ Alexander Guschin │
-│ 2022-04-08 23:46:58 │ churn      │ registration │ v3.0.0    │ -       │ 54d6d39  │ Alexander Guschin │
-│ 2022-04-12 11:06:58 │ churn      │ commit       │ -         │ -       │ 26cafe9  │ Alexander Guschin │
-│ 2022-04-13 14:53:38 │ churn      │ registration │ v3.1.0    │ -       │ 26cafe9  │ Alexander Guschin │
-│ 2022-04-14 18:40:18 │ churn      │ promotion    │ v3.1.0    │ staging │ 26cafe9  │ Alexander Guschin │
-│ 2022-04-15 22:26:58 │ churn      │ promotion    │ v3.0.0    │ prod    │ 54d6d39  │ Alexander Guschin │
+│ 2022-07-17 02:45:41 │ churn      │ promotion    │ v3.0.0    │ prod    │ 631520b  │ Alexander Guschin │
+│ 2022-07-15 22:59:01 │ churn      │ promotion    │ v3.1.0    │ staging │ be340cc  │ Alexander Guschin │
+│ 2022-07-14 19:12:21 │ churn      │ promotion    │ v3.0.0    │ dev     │ 631520b  │ Alexander Guschin │
+│ 2022-07-13 15:25:41 │ churn      │ registration │ v3.1.0    │ -       │ be340cc  │ Alexander Guschin │
+│ 2022-07-12 11:39:01 │ churn      │ commit       │ -         │ -       │ be340cc  │ Alexander Guschin │
+│ 2022-07-09 00:19:01 │ churn      │ registration │ v3.0.0    │ -       │ 631520b  │ Alexander Guschin │
+│ 2022-07-07 20:32:21 │ churn      │ commit       │ -         │ -       │ 631520b  │ Alexander Guschin │
 ╘═════════════════════╧════════════╧══════════════╧═══════════╧═════════╧══════════╧═══════════════════╛
 ```
 
@@ -307,22 +313,24 @@ To get the version that is currently promoted to an environment (stage), use
 `gto which`:
 
 ```console
-$ gto which churn prod
+$ gto which churn dev
 v3.0.0
 
-$ gto which churn prod --ref
-churn#prod#2
+$ gto which churn dev --ref
+churn#dev#1
 ```
 
 <details summary="Kanban/Stages workflow">
-If you prefer Kanban/Stages workflow described above, you could use `--last` flag:
+
+If you prefer Kanban/Stages workflow described above, you could use `--last`
+flag. This will take into account the last stage for a version only.
 
 ```console
-$ gto which churn prod --last
-v3.1.0
+$ gto which churn dev --last
 ```
 
-This will take into account the last label for a version only.
+Since the last stage for version `v3.0.0` was `prod`, this doesn't return
+anything.
 
 </details>
 
@@ -386,8 +394,8 @@ $ pip install --upgrade pip setuptools wheel ".[tests]"
 $ pytest --basetemp=pytest-basetemp
 ```
 
-This will create `pytest-basetemp/` directory with some fixtures that can serve as
-examples.
+This will create `pytest-basetemp/` directory with some fixtures that can serve
+as examples.
 
 Notably, check out this dir:
 

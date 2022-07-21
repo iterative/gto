@@ -14,6 +14,12 @@ def test_api(showcase):
         second_commit,
     ) = showcase
 
+    gto.api.show(repo)
+    gto.api.history(repo)
+    for name in "nn", "rf", "features":
+        gto.api.show(repo, name)
+        gto.api.history(repo, name)
+
     artifacts = gto.api._get_state(path).artifacts  # pylint: disable=protected-access
     assert set(artifacts.keys()) == {"nn", "rf", "features"}
     # assert isinstance(artifacts["features"], BaseArtifact)

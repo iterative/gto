@@ -53,7 +53,9 @@ class BaseVersion(BaseModel):
 
     def dict_status(self):
         version = self.dict(exclude={"promotions"})
-        version["stage"] = self.assignments.dict() if self.assignments else None
+        version["stage"] = (
+            [a.dict() for a in self.assignments] if self.assignments else None
+        )
         return version
 
 
@@ -141,7 +143,10 @@ class BaseArtifact(BaseModel):
         return None
 
     def get_promotions(
-        self, registered_only=False, sort=VersionSort.SemVer
+        self,
+        registered_only=False,
+        last_stage=False,  # pylint: disable=unused-argument
+        sort=VersionSort.SemVer,
     ) -> Dict[str, Union[BasePromotion, List[BasePromotion]]]:
         versions = self.get_versions(
             include_non_explicit=not registered_only, sort=sort

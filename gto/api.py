@@ -2,6 +2,7 @@ from collections import OrderedDict
 from datetime import datetime
 from typing import List, Optional, Union
 
+from funcy import distinct
 from git import Repo
 
 from gto.constants import NAME, STAGE, VERSION
@@ -169,11 +170,12 @@ def check_ref(repo: Union[str, Repo], ref: str):
 def show(
     repo: Union[str, Repo],
     name: Optional[str] = None,
-    table: bool = False,
     all_branches=False,
     all_commits=False,
     truncate_hexsha=False,
     registered_only=False,
+    last_stage=False,
+    table: bool = False,
 ):
     return (
         _show_versions(
@@ -182,6 +184,7 @@ def show(
             all_branches=all_branches,
             all_commits=all_commits,
             registered_only=registered_only,
+            # last_stage=last_stage,
             table=table,
             truncate_hexsha=truncate_hexsha,
         )
@@ -191,6 +194,7 @@ def show(
             all_branches=all_branches,
             all_commits=all_commits,
             registered_only=registered_only,
+            last_stage=last_stage,
             table=table,
             truncate_hexsha=truncate_hexsha,
         )
@@ -202,6 +206,7 @@ def _show_registry(
     all_branches=False,
     all_commits=False,
     registered_only=False,
+    last_stage: bool = False,  # pylint: disable=unused-argument
     table: bool = False,
     truncate_hexsha: bool = False,  # pylint: disable=unused-argument
 ):
@@ -277,8 +282,7 @@ def _show_versions(
     versions_ = []
     for v in versions:
         v["version"] = format_hexsha(v["name"])
-        if v["stage"]:
-            v["stage"] = v["stage"]["stage"]
+        v["stage"] = ", ".join(distinct(s["stage"] for s in v["stage"][::-1]))
         v["commit_hexsha"] = format_hexsha(v["commit_hexsha"])
         v["ref"] = v["tag"] or v["commit_hexsha"]
         for key in (

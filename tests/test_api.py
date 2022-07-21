@@ -77,6 +77,15 @@ def repo_with_artifact(init_showcase_semver):
     return repo, name
 
 
+def test_api_info_commands_repo_with_artifact(
+    repo_with_artifact: Tuple[git.Repo, Callable]
+):
+    repo, write_file = repo_with_artifact
+    gto.api.show(repo.working_dir)
+    gto.api.show(repo.working_dir, "new-artifact")
+    gto.api.history(repo.working_dir)
+
+
 def test_register(repo_with_artifact):
     repo, name = repo_with_artifact
     vname1, vname2 = "v1.0.0", "v1.0.1"
