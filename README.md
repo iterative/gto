@@ -211,13 +211,13 @@ $ gto show churn
 ╘════════════╧═══════════╧═══════════╧═════════════════════╧═══════════════════╧══════════════╛
 ```
 
-#### Enabling Stages/Kanban workflow
+#### Enabling Kanban workflow
 
 In some cases, you would like to have a latest stage for an artifact version to
 replace all the previous stages. In this case the version will have a single
 stage. This resembles Kanban workflow, when you "move" your artifact version
 from one column ("stage-1") to another ("stage-2"). This is how MLFlow and some
-other Model Registries works.
+other Model Registries work.
 
 To achieve this, you can use `--last-stage` flag (or `--ls` for short):
 
@@ -320,9 +320,9 @@ $ gto which churn dev --ref
 churn#dev#1
 ```
 
-<details summary="Kanban/Stages workflow">
+<details summary="Kanban workflow">
 
-If you prefer Kanban/Stages workflow described above, you could use `--last`
+If you prefer Kanban workflow described above, you could use `--last`
 flag. This will take into account the last stage for a version only.
 
 ```console
