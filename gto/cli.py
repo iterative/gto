@@ -183,7 +183,7 @@ app = Typer(
 
 arg_name = Argument(..., help="Artifact name")
 arg_version = Argument(..., help="Artifact version")
-arg_stage = Argument(..., help="Stage to promote to")
+arg_stage = Argument(..., help="Stage to assign")
 
 option_rev = Option(None, "--rev", help="Repo revision to use", show_default=True)
 option_repo = Option(".", "-r", "--repo", help="Repository to use", show_default=True)
@@ -272,10 +272,13 @@ def gto_callback(
 ):
     """\b
     Git Tag Ops. Turn your Git repository into an Artifact Registry:
-    * Register new versions of artifacts marking releases/significant changes
-    * Promote versions to ordered, named stages to track their lifecycles
-    * GitOps: signal CI/CD automation or downstream systems to act upon these actions
-    * Maintain and query artifact metadata / additional info with Enrichments machinery
+    * Registry: Track new artifacts and their versions for releases and significant
+    changes.
+    * Lifecycle Management: Create actionable stages for versions marking status of
+    artifact or it's readiness to be consumed by a specific environment.
+    * GitOps: Signal CI/CD automation or other downstream systems to act upon these
+    new versions and lifecycle updates.
+    * Enrichments: Annotate and query artifact metadata with additional information.
     """
     if ctx.invoked_subcommand is None and show_version:
         with cli_echo():
@@ -445,12 +448,12 @@ def register(
     )
 
 
-@gto_command(section=CommandGroups.modifying)
-def promote(
+@gto_command(section=CommandGroups.modifying, aliases=["promote"])
+def assign(
     repo: str = option_repo,
     name: str = arg_name,
     stage: str = arg_stage,
-    ref: Optional[str] = Argument(None, help="Git reference to promote"),
+    ref: Optional[str] = Argument(None, help="Git reference to use"),
     version: Optional[str] = Option(
         None,
         "--version",
@@ -466,7 +469,7 @@ def promote(
         help="Use simple notation, e.g. rf#prod instead of rf#prod-5",
     ),
     force: bool = Option(
-        False, help="Promote even if version is already in required Stage"
+        False, help="Assign even if version is already in required Stage"
     ),
     skip_registration: bool = Option(
         False,
@@ -479,33 +482,32 @@ def promote(
     """Move an artifact version to a specific stage
 
     Examples:
-        Promote "nn" to "prod" at specific ref:
-        $ gto promote nn prod abcd123
+        Assign "nn" to "prod" at specific ref:
+        $ gto assign nn prod abcd123
 
-        Promote specific version:
-        $ gto promote nn prod --version v1.0.0
+        Assign specific version:
+        $ gto assign nn prod --version v1.0.0
 
-        Promote at specific ref and name version explicitly:
-        $ gto promote nn prod abcd123 --version v1.0.0
+        Assign at specific ref and name version explicitly:
+        $ gto assign nn prod abcd123 --version v1.0.0
 
-        Promote without increment
-        $ gto promote nn prod HEAD --simple
+        Assign without increment
+        $ gto assign nn prod HEAD --simple
     """
     if ref is not None:
         name_version = version
-        promote_version = None
+        version = None
     elif version is not None:
         name_version = None
-        promote_version = version
     else:
         ref = "HEAD"
         name_version = None
-        promote_version = None
-    gto.api.promote(
+        version = None
+    gto.api.assign(
         repo,
         name,
         stage,
-        promote_version,
+        version,
         ref,
         name_version,
         message=message,
@@ -550,7 +552,7 @@ def which(
     Examples:
         $ gto which nn prod
 
-        Print git tag that did the promotion:
+        Print git tag that did the assignment:
         $ gto which nn prod --ref
     """
     version = gto.api.find_versions_in_stage(
@@ -592,8 +594,8 @@ def check_ref(
     registration: bool = Option(
         False, "--registration", is_flag=True, help="Check if ref registers a version"
     ),
-    promotion: bool = Option(
-        False, "--promotion", is_flag=True, help="Check if ref promotes a version"
+    assignment: bool = Option(
+        False, "--assignment", is_flag=True, help="Check if ref assigns a stage"
     ),
     name: bool = Option(False, "--name", is_flag=True, help="Output artifact name"),
     version: bool = Option(
@@ -601,7 +603,7 @@ def check_ref(
     ),
     stage: bool = Option(False, "--stage", is_flag=True, help="Output artifact stage"),
 ):
-    """Find out the artifact version registered/promoted with ref
+    """Find out the artifact version registered/assigned with ref
 
     Examples:
         $ gto check-ref rf@v1.0.0
@@ -609,7 +611,8 @@ def check_ref(
         $ gto check-ref rf#prod --version
     """
     assert (
-        sum(bool(i) for i in (json, registration, promotion, name, version, stage)) <= 1
+        sum(bool(i) for i in (json, registration, assignment, name, version, stage))
+        <= 1
     ), "Only one output formatting flags is allowed"
     result = {
         action: {name: version.dict() for name, version in found.items()}
@@ -632,19 +635,19 @@ def check_ref(
     elif stage:
         if version_dict:
             raise NotImplementedInGTO(
-                "--stage is not implemented for version promotion git tag"
+                "--stage is not implemented for version assignment git tag"
             )
         if stage_dict:
             echo(stage_dict["stage"])
-    elif (registration or not promotion) and version_dict:
+    elif (registration or not assignment) and version_dict:
         echo(
             f"""{EMOJI_OK} Version "{version_dict["name"]}" of artifact """
             f""""{version_dict["artifact"]}" was registered"""
         )
-    elif (promotion or not registration) and stage_dict:
+    elif (assignment or not registration) and stage_dict:
         echo(
-            f"""{EMOJI_OK} Version "{stage_dict["version"]}" of artifact """
-            f""""{stage_dict["artifact"]}" was promoted to "{stage_dict["stage"]}" stage"""
+            f"""{EMOJI_OK} Stage "{stage_dict["stage"]}" was assigned to version"""
+            f'''"{stage_dict["version"]}" of artifact "{stage_dict["artifact"]}"'''
         )
 
 

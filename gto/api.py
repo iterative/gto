@@ -5,7 +5,7 @@ from typing import List, Optional, Union
 from funcy import distinct
 from git import Repo
 
-from gto.constants import NAME, STAGE, VERSION
+from gto.constants import NAME, STAGE, VERSION, Event
 from gto.exceptions import NoRepo, WrongArgs
 from gto.ext import EnrichmentInfo
 from gto.index import (
@@ -102,12 +102,12 @@ def register(
     )
 
 
-def promote(
+def assign(
     repo: Union[str, Repo],
     name: str,
     stage: str,
-    promote_version: str = None,
-    promote_ref: str = None,
+    version: str = None,
+    ref: str = None,
     name_version: str = None,
     message: str = None,
     simple: bool = False,
@@ -118,11 +118,11 @@ def promote(
     author_email: Optional[str] = None,
 ):
     """Assign stage to specific artifact version"""
-    return GitRegistry.from_repo(repo).promote(
+    return GitRegistry.from_repo(repo).assign(
         name,
         stage,
-        promote_version,
-        promote_ref,
+        version,
+        ref,
         name_version,
         message=message,
         simple=simple,
@@ -162,7 +162,7 @@ def find_versions_in_stage(
 
 
 def check_ref(repo: Union[str, Repo], ref: str):
-    """Find out what have been registered/promoted in the provided ref"""
+    """Find out what have been registered/assigned in the provided ref"""
     reg = GitRegistry.from_repo(repo)
     return reg.check_ref(ref)
 
@@ -224,12 +224,12 @@ def _show_registry(
             else None,
             "stage": {
                 name: format_hexsha(
-                    o.get_promotions(
+                    o.get_assignments(
                         registered_only=registered_only, last_stage=last_stage
                     )[name][0].version
                 )
                 if name
-                in o.get_promotions(
+                in o.get_assignments(
                     registered_only=registered_only, last_stage=last_stage
                 )
                 else None
@@ -358,7 +358,7 @@ def history(  # pylint: disable=too-many-locals
                 reg.repo.commit(v.commit_hexsha).committed_date
             ),
             artifact=o.name,
-            event="commit",
+            event=Event.COMMIT,
             commit=format_hexsha(v.commit_hexsha),
             author=reg.repo.commit(v.commit_hexsha).author.name,
             author_email=reg.repo.commit(v.commit_hexsha).author.email,
@@ -372,7 +372,7 @@ def history(  # pylint: disable=too-many-locals
         OrderedDict(
             timestamp=v.created_at,
             artifact=o.name,
-            event="registration",
+            event=Event.REGISTRATION,
             version=format_hexsha(v.name),
             commit=format_hexsha(v.commit_hexsha),
             author=v.author,
@@ -384,11 +384,11 @@ def history(  # pylint: disable=too-many-locals
         for v in o.get_versions()
     ]
 
-    promotion = [
+    assignment = [
         OrderedDict(
             timestamp=p.created_at,
             artifact=o.name,
-            event="promotion",
+            event=Event.ASSIGNMENT,
             version=format_hexsha(p.version),
             stage=p.stage,
             commit=format_hexsha(p.commit_hexsha),
@@ -401,12 +401,12 @@ def history(  # pylint: disable=too-many-locals
     ]
 
     events_order = {
-        "commit": 1,
-        "registration": 2,
-        "promotion": 3,
+        Event.COMMIT: 1,
+        Event.REGISTRATION: 2,
+        Event.ASSIGNMENT: 3,
     }
     events = sorted(
-        commits + registration + promotion,
+        commits + registration + assignment,
         key=lambda x: (x["timestamp"], events_order[x["event"]]),
     )
     if not ascending:

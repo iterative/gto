@@ -1,7 +1,7 @@
 """TODO: break this file into multiple test/files"""
 # pylint: disable=unused-variable, too-many-locals, too-many-statements
 import gto
-from gto.base import BaseArtifact, BasePromotion, BaseVersion
+from gto.base import BaseArtifact, BaseAssignment, BaseVersion
 from tests.utils import _check_obj
 
 
@@ -39,12 +39,12 @@ def test_api(showcase):
 
     skip_keys_registration = {
         "created_at",
-        "promotions",
+        "assignments",
         "enrichments",
         "tag",
         "message",
     }
-    skip_keys_promotion = {"created_at", "tag", "message"}
+    skip_keys_assignment = {"created_at", "tag", "message"}
 
     _check_obj(
         nn_version,
@@ -59,10 +59,10 @@ def test_api(showcase):
         skip_keys=skip_keys_registration,
     )
     assert len(nn_artifact.stages) == 1
-    nn_promotion = nn_artifact.stages[0]
-    assert isinstance(nn_promotion, BasePromotion)
+    nn_assignment = nn_artifact.stages[0]
+    assert isinstance(nn_assignment, BaseAssignment)
     _check_obj(
-        nn_promotion,
+        nn_assignment,
         dict(
             artifact="nn",
             version="v0.0.1",
@@ -71,7 +71,7 @@ def test_api(showcase):
             author_email=author_email,
             commit_hexsha=first_commit.hexsha,
         ),
-        skip_keys=skip_keys_promotion,
+        skip_keys=skip_keys_assignment,
     )
 
     rf_artifact = artifacts["rf"]
@@ -107,9 +107,9 @@ def test_api(showcase):
     )
 
     assert len(rf_artifact.stages) == 4
-    assert all(isinstance(p, BasePromotion) for p in rf_artifact.stages)
-    rf_l1, _ = rf_ver1.promotions
-    rf_l3, rf_l4 = rf_ver2.promotions
+    assert all(isinstance(p, BaseAssignment) for p in rf_artifact.stages)
+    rf_l1, _ = rf_ver1.assignments
+    rf_l3, rf_l4 = rf_ver2.assignments
 
     _check_obj(
         rf_l1,
@@ -121,7 +121,7 @@ def test_api(showcase):
             author_email=author_email,
             commit_hexsha=first_commit.hexsha,
         ),
-        skip_keys=skip_keys_promotion,
+        skip_keys=skip_keys_assignment,
     )
     _check_obj(
         rf_l4,
@@ -133,7 +133,7 @@ def test_api(showcase):
             author_email=author_email,
             commit_hexsha=second_commit.hexsha,
         ),
-        skip_keys=skip_keys_promotion,
+        skip_keys=skip_keys_assignment,
     )
     _check_obj(
         rf_l3,
@@ -145,6 +145,6 @@ def test_api(showcase):
             author_email=author_email,
             commit_hexsha=second_commit.hexsha,
         ),
-        skip_keys=skip_keys_promotion,
+        skip_keys=skip_keys_assignment,
     )
     assert gto.api.find_versions_in_stage(repo, "rf", "staging", all=True) == [rf_l3]

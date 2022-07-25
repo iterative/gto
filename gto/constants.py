@@ -17,7 +17,13 @@ NUMBER = "number"
 
 class Action(Enum):
     REGISTER = "register"
-    PROMOTE = "promote"
+    ASSIGN = "assign"
+
+
+class Event(Enum):
+    COMMIT = "commit"
+    REGISTRATION = "registration"
+    ASSIGNMENT = "assignment"
 
 
 class VersionSort(Enum):

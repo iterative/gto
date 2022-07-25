@@ -66,7 +66,7 @@ several versions in a given commit, ordered by their automatic version numbers.
 
 ### Assing a stage
 
-Assing an actionable stage for a specific artifact version with `gto assing`.
+Assing an actionable stage for a specific artifact version with `gto assign`.
 Stages can mark it's readiness for a specific consumer. You can plug in a real
 downsteam system via CI/CD or web hooks. For example: redeploy an ML model.
 
@@ -86,7 +86,7 @@ number (`{e}`). This will keep the history of your stages creation.
 
 Note: if you prefer, you can use simple stage tag format without the incremental
 `{e}`, but this will disable the `gto history` command. This is because
-assinging a stage to an artifact version where a stage tag already existed will
+assigning a stage to an artifact version where a stage tag already existed will
 require deleting the existing tag.
 
 </details>
@@ -99,7 +99,7 @@ consumer, and maybe signal a downstream system about this. You can use
 
 ```console
 $ gto unassign awesome-model prod
-Created git tag 'awesome-model#prod#2!' that unassignes stage 'prod' from 'v0.0.1'
+Created git tag 'awesome-model#prod#2!' that unassigns stage 'prod' from 'v0.0.1'
 ```
 
 <details summary="Some details and options">
@@ -126,9 +126,9 @@ git push origin awesome-model#prod#1 --delete
 
 ### Annotating
 
-So far we've seen how to register and promote artifact versions, but we still
-don't have much information about them. What about the type of artifact
-(dataset, model, etc.) or the file path to find it in the working tree?
+So far we've seen how to register and assign a stage to an artifact versions,
+but we still don't have much information about them. What about the type of
+artifact (dataset, model, etc.) or the file path to find it in the working tree?
 
 For simple projects (e.g. single artifact) we can assume the details in a
 downstream system. But for more advanced cases, we should codify them in the
@@ -243,9 +243,9 @@ $ gto history churn
 ╒═════════════════════╤════════════╤══════════════╤═══════════╤═════════╤══════════╤═══════════════════╕
 │ timestamp           │ artifact   │ event        │ version   │ stage   │ commit   │ author            │
 ╞═════════════════════╪════════════╪══════════════╪═══════════╪═════════╪══════════╪═══════════════════╡
-│ 2022-07-17 02:45:41 │ churn      │ promotion    │ v3.0.0    │ prod    │ 631520b  │ Alexander Guschin │
-│ 2022-07-15 22:59:01 │ churn      │ promotion    │ v3.1.0    │ staging │ be340cc  │ Alexander Guschin │
-│ 2022-07-14 19:12:21 │ churn      │ promotion    │ v3.0.0    │ dev     │ 631520b  │ Alexander Guschin │
+│ 2022-07-17 02:45:41 │ churn      │ assignment    │ v3.0.0    │ prod    │ 631520b  │ Alexander Guschin │
+│ 2022-07-15 22:59:01 │ churn      │ assignment    │ v3.1.0    │ staging │ be340cc  │ Alexander Guschin │
+│ 2022-07-14 19:12:21 │ churn      │ assignment    │ v3.0.0    │ dev     │ 631520b  │ Alexander Guschin │
 │ 2022-07-13 15:25:41 │ churn      │ registration │ v3.1.0    │ -       │ be340cc  │ Alexander Guschin │
 │ 2022-07-12 11:39:01 │ churn      │ commit       │ -         │ -       │ be340cc  │ Alexander Guschin │
 │ 2022-07-09 00:19:01 │ churn      │ registration │ v3.0.0    │ -       │ 631520b  │ Alexander Guschin │
@@ -258,14 +258,14 @@ $ gto history churn
 Let's look at integrating with GTO via Git as well as using the `gto check-ref`,
 `gto latest`, `gto which`, and `gto describe` utility commands downstream.
 
-### Act on new versions and promotions in CI
+### Act on new versions and stage assignments in CI
 
 To act upon annotations (Git tags), you can create simple CI workflow. With
 [GitHub Actions](https://github.com/features/actions) for example, it can look
 like this:
 
 ```yaml
-name: Act on versions or promotions of the "churn" actifact
+name: Act on versions or stage assignments of the "churn" actifact
 on:
   push:
     tags:
@@ -309,7 +309,7 @@ $ gto latest churn --ref
 churn@v3.1.0
 ```
 
-To get the version that is currently promoted to an environment (stage), use
+To get the version that is currently assigned to an environment (stage), use
 `gto which`:
 
 ```console
@@ -322,8 +322,8 @@ churn#dev#1
 
 <details summary="Kanban workflow">
 
-If you prefer Kanban workflow described above, you could use `--last`
-flag. This will take into account the last stage for a version only.
+If you prefer Kanban workflow described above, you could use `--last` flag. This
+will take into account the last stage for a version only.
 
 ```console
 $ gto which churn dev --last

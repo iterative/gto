@@ -10,8 +10,8 @@ from gto.versions import SemVer
 
 from .base import (
     BaseArtifact,
+    BaseAssignment,
     BaseManager,
-    BasePromotion,
     BaseRegistryState,
     BaseVersion,
 )
@@ -27,7 +27,7 @@ from .exceptions import (
 
 ActionSign = {
     Action.REGISTER: "@",
-    Action.PROMOTE: "#",
+    Action.ASSIGN: "#",
 }
 
 
@@ -42,7 +42,7 @@ def name_tag(
     if action == Action.REGISTER:
         return f"{name}{ActionSign[action]}{version}"
 
-    if action == Action.PROMOTE:
+    if action == Action.ASSIGN:
         if simple:
             return f"{name}{ActionSign[action]}{stage}"
         if repo is None:
@@ -53,7 +53,7 @@ def name_tag(
             if (
                 parsed
                 and (parsed[NAME] == name)
-                and (parsed[ACTION] == Action.PROMOTE)
+                and (parsed[ACTION] == Action.ASSIGN)
                 and (NUMBER in parsed)
             ):
                 numbers.append(parsed[NUMBER])
@@ -80,8 +80,8 @@ def _parse_register(name: str, raise_on_fail: bool = True):
     return {}
 
 
-def _parse_promote(name: str, raise_on_fail: bool = True):
-    parsed = name.split(ActionSign[Action.PROMOTE])
+def _parse_assign(name: str, raise_on_fail: bool = True):
+    parsed = name.split(ActionSign[Action.ASSIGN])
     if (
         check_name_is_valid(parsed[0])
         and check_name_is_valid(parsed[1])
@@ -89,13 +89,13 @@ def _parse_promote(name: str, raise_on_fail: bool = True):
     ):
         if len(parsed) == 2:
             return {
-                ACTION: Action.PROMOTE,
+                ACTION: Action.ASSIGN,
                 NAME: parsed[0],
                 STAGE: parsed[1],
             }
         if len(parsed) == 3:
             return {
-                ACTION: Action.PROMOTE,
+                ACTION: Action.ASSIGN,
                 NAME: parsed[0],
                 STAGE: parsed[1],
                 NUMBER: int(parsed[2]),
@@ -113,8 +113,8 @@ def parse_name(name: str, raise_on_fail: bool = True):
     if ActionSign[Action.REGISTER] in name:
         return _parse_register(name, raise_on_fail=raise_on_fail)
 
-    if ActionSign[Action.PROMOTE] in name:
-        return _parse_promote(name, raise_on_fail=raise_on_fail)
+    if ActionSign[Action.ASSIGN] in name:
+        return _parse_assign(name, raise_on_fail=raise_on_fail)
 
     if raise_on_fail:
         raise InvalidTagName(name)
@@ -225,9 +225,9 @@ def version_from_tag(tag: git.Tag) -> BaseVersion:
     )
 
 
-def promotion_from_tag(
+def assignment_from_tag(
     artifact: BaseArtifact, tag: git.Tag, version_required: bool
-) -> BasePromotion:
+) -> BaseAssignment:
     mtag = parse_tag(tag)
     if version_required:
         version = artifact.find_version(
@@ -250,7 +250,7 @@ def promotion_from_tag(
                 )
             )
             version = tag.commit.hexsha
-    return BasePromotion(
+    return BaseAssignment(
         artifact=mtag.name,
         version=version,
         stage=mtag.stage,
@@ -269,8 +269,8 @@ def index_tag(
     mtag = parse_name(tag.tag.tag)
     if mtag["action"] == Action.REGISTER:
         artifact.add_version(version_from_tag(tag))
-    if mtag["action"] == Action.PROMOTE:
-        artifact.add_promotion(promotion_from_tag(artifact, tag, version_required))
+    if mtag["action"] == Action.ASSIGN:
+        artifact.add_assignment(assignment_from_tag(artifact, tag, version_required))
     return artifact
 
 
@@ -331,9 +331,9 @@ class TagVersionManager(TagManager):
 
 
 class TagStageManager(TagManager):
-    actions: FrozenSet[Action] = frozenset((Action.PROMOTE,))
+    actions: FrozenSet[Action] = frozenset((Action.ASSIGN,))
 
-    def promote(
+    def assign(
         self,
         name,
         stage,
@@ -343,7 +343,7 @@ class TagStageManager(TagManager):
         author: Optional[str] = None,
         author_email: Optional[str] = None,
     ) -> str:
-        tag = name_tag(Action.PROMOTE, name, stage=stage, repo=self.repo, simple=simple)
+        tag = name_tag(Action.ASSIGN, name, stage=stage, repo=self.repo, simple=simple)
         create_tag(
             self.repo,
             tag,
@@ -360,13 +360,10 @@ class TagStageManager(TagManager):
             _ = parse_name(ref)[STAGE]
             art_name = parse_name(ref)[NAME]
         except (KeyError, ValueError, IndexError):
-            # logging.warning(
-            #     "Provided ref doesn't exist or it is not a tag that promotes to an stage"
-            # )
             return {}
         return {
-            name: promotion
+            name: assignment
             for name, artifact in state.get_artifacts().items()
-            for promotion in artifact.stages
-            if name == art_name and promotion.tag == tag.name
+            for assignment in artifact.stages
+            if name == art_name and assignment.tag == tag.name
         }

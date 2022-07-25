@@ -163,7 +163,7 @@ def test_commands(showcase):
     _check_successful_cmd(
         "check-ref",
         ["-r", path, "rf#production#3", "--version"],
-        "v1.2.4\n",  # since this version was promoted
+        "v1.2.4\n",
     )
     _check_successful_cmd(
         "check-ref",
@@ -172,8 +172,8 @@ def test_commands(showcase):
     )
     _check_successful_cmd(
         "check-ref",
-        ["-r", path, "rf@v1.2.4", "--promotion"],
-        "",  # since this tag doesn't promote to any stage
+        ["-r", path, "rf@v1.2.4", "--assignment"],
+        "",  # since this tag doesn't assign any stage
     )
     _check_successful_cmd(
         "check-ref",
@@ -187,8 +187,8 @@ def test_commands(showcase):
     )
     _check_successful_cmd(
         "check-ref",
-        ["-r", path, "rf#production#3", "--promotion"],
-        '✅  Version "v1.2.4" of artifact "rf" was promoted to "production" stage\n',
+        ["-r", path, "rf#production#3", "--assignment"],
+        '✅  Stage "production" was assigned to version"v1.2.4" of artifact "rf"\n',
     )
 
 
@@ -290,25 +290,25 @@ def test_register(repo_with_commit: Tuple[git.Repo, Callable]):
     )
 
 
-def test_promote(repo_with_commit: Tuple[git.Repo, Callable]):
+def test_assign(repo_with_commit: Tuple[git.Repo, Callable]):
     repo, write_file = repo_with_commit
 
     _check_successful_cmd(
-        "promote",
+        "assign",
         ["-r", repo.working_dir, "nn1", "prod", "HEAD"],
         "Created git tag 'nn1@v0.0.1' that registers a new version\n"
-        "Created git tag 'nn1#prod#1' that promotes 'v0.0.1'\n",
+        "Created git tag 'nn1#prod#1' that assigns 'prod' to 'v0.0.1'\n",
     )
 
-    # this check depends on the previous promotion
+    # this check depends on the previous assignment
     _check_failing_cmd(
-        "promote",
+        "assign",
         ["-r", repo.working_dir, "nn1", "stage", "HEAD", "--version", "v1.0.0"],
         "❌ Can't register 'v1.0.0', since 'v0.0.1' is registered already at this ref\n",
     )
 
     _check_failing_cmd(
-        "promote",
+        "assign",
         ["-r", repo.working_dir, "nn2", "prod", "HEAD", "--version", "1.0.0"],
         "❌ Version '1.0.0' is not valid. Example of valid version: 'v1.0.0'\n",
     )
