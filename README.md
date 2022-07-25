@@ -8,10 +8,10 @@ Git Tag Ops. Turn your Git repository into an Artifact Registry:
 
 - Registry: Track new artifacts and their versions for releases and significant
   changes.
-- Lifecycle Management: Promote or roll back versions among a structured set of
-  stages.
+- Lifecycle Management: Create actionable stages for versions marking status of
+  artifact or it's readiness to be consumed by a specific environment.
 - GitOps: Signal CI/CD automation or other downstream systems to act upon these
-  lifecycle updates.
+  new versions and lifecycle updates.
 - Enrichments: Annotate and query artifact metadata with additional information.
 
 GTO works by creating annotated Git tags in a standard format.
@@ -64,39 +64,73 @@ several versions in a given commit, ordered by their automatic version numbers.
 
 </details>
 
-### Promoting
+### Assing a stage
 
-Promote a specific artifact version to a lifecycle stage with `gto promote`.
-Stages can be seen as the status of your artifact, signaling readiness for usage
-by downstream systems, e.g. via CI/CD or web hooks. For example: redeploy an ML
-model.
+Assing an actionable stage for a specific artifact version with `gto assign`.
+Stages can mark it's readiness for a specific consumer. You can plug in a real
+downsteam system via CI/CD or web hooks. For example: redeploy an ML model.
 
 ```console
-$ gto promote awesome-model prod
-Created git tag 'awesome-model#prod#1' that promotes 'v0.0.1'
+$ gto assign awesome-model prod
+Created git tag 'awesome-model#prod#1' that adds stage 'prod' to 'v0.0.1'
 ```
 
 <details summary="What happens under the hood?">
 
-GTO creates a special Git tag for the artifact promotion, in a standard format:
+GTO creates a special Git tag in a standard format:
 `{artifact_name}#{stage}#{e}`.
 
 The event is now associated to the latest version of the artifact. There can be
 multiple events for a given version, ordered by an automatic incremental event
-number (`{e}`). This will keep the history of your promotions.
+number (`{e}`). This will keep the history of your stages creation.
 
-Note: if you prefer, you can use simple promotion tag format without the
-incremental `{e}`, but this will disable the `gto history` command. This is
-because promoting an artifact where a promotion tag already existed will require
-deleting the existing tag.
+Note: if you prefer, you can use simple stage tag format without the incremental
+`{e}`, but this will disable the `gto history` command. This is because
+assigning a stage to an artifact version where a stage tag already existed will
+require deleting the existing tag.
+
+</details>
+
+### Unassign a stage
+
+Note: this functionality is in development and will be introduced soon.
+
+Sometimes you need to mark an artifact version no longer ready for a specific
+consumer, and maybe signal a downstream system about this. You can use
+`gto unassign` for that:
+
+```console
+$ gto unassign awesome-model prod
+Created git tag 'awesome-model#prod#2!' that unassigns stage 'prod' from 'v0.0.1'
+```
+
+<details summary="Some details and options">
+
+GTO creates a special Git tag in a standard format:
+`{artifact_name}#{stage}#{e}!`.
+
+Note, that later you can create this stage again, if you need to, by calling
+`$ gto assign`.
+
+You also may want to delete the git tag instead of creating a new one. This is
+useful if you don't want to keep extra tags in you Git repo, don't need history
+and don't want to trigger a CI/CD or another downstream system. For that, you
+can use:
+
+```console
+$ gto unassign --delete
+Deleted git tag 'awesome-model#prod#1' that assigned 'prod' to 'v0.0.1'
+To push the changes upsteam, run:
+git push origin awesome-model#prod#1 --delete
+```
 
 </details>
 
 ### Annotating
 
-So far we've seen how to register and promote artifact versions, but we still
-don't have much information about them. What about the type of artifact
-(dataset, model, etc.) or the file path to find it in the working tree?
+So far we've seen how to register and assign a stage to an artifact versions,
+but we still don't have much information about them. What about the type of
+artifact (dataset, model, etc.) or the file path to find it in the working tree?
 
 For simple projects (e.g. single artifact) we can assume the details in a
 downstream system. But for more advanced cases, we should codify them in the
@@ -125,8 +159,8 @@ GTO the artifact file is committed to Git.
 <details summary="Virtual vs. Physical artifacts">
 
 - Physical files/directories are committed to the repo. When you register a new
-  version or promote it, Git guarantees that it's immutable -- you can return a
-  year later and get the same artifact by providing a version.
+  version or assign a stage to it, Git guarantees that it's immutable -- you can
+  return a year later and get the same artifact by providing a version.
 
 - Virtual artifacts could be an external path (e.g. `s3://mybucket/myfile`) or a
   local path to a metafile representing an externally stored artifact file (as
@@ -149,14 +183,14 @@ Let's look at the usage of the `gto show` and `gto history`.
 ### Show the current state
 
 This is the entire state of the registry: all artifacts, their latest versions,
-and what is promoted to stages right now.
+and the greatest versions for each stage.
 
 ```console
 $ gto show
 ╒═══════════════╤══════════╤════════╤═════════╤════════════╕
 │ name          │ latest   │ #dev   │ #prod   │ #staging   │
 ╞═══════════════╪══════════╪════════╪═════════╪════════════╡
-│ churn         │ v3.1.0   │ -      │ v3.0.0  │ v3.1.0     │
+│ churn         │ v3.1.0   │ v3.0.0 │ v3.0.0  │ v3.1.0     │
 │ segment       │ v0.4.1   │ v0.4.1 │ -       │ -          │
 │ cv-class      │ v0.1.13  │ -      │ -       │ -          │
 │ awesome-model │ v0.0.1   │ -      │ v0.0.1  │ -          │
@@ -167,16 +201,38 @@ Here we'll see both artifacts that have Git tags only and those annotated in
 `artifacts.yaml`. Use `--all-branches` or `--all-commits` to read
 `artifacts.yaml` from more commits than just `HEAD`.
 
-Add an artifact name to print all og its versions instead:
+Add an artifact name to print all of its versions instead:
 
 ```console
 $ gto show churn
-╒════════════╤═══════════╤═════════╤═════════════════════╤═══════════════════╤══════════════╕
-│ artifact   │ version   │ stage   │ created_at          │ author            │ ref          │
-╞════════════╪═══════════╪═════════╪═════════════════════╪═══════════════════╪══════════════╡
-│ churn      │ v3.0.0    │ prod    │ 2022-04-08 23:46:58 │ Alexander Guschin │ churn@v3.0.0 │
-│ churn      │ v3.1.0    │ staging │ 2022-04-13 14:53:38 │ Alexander Guschin │ churn@v3.1.0 │
-╘════════════╧═══════════╧═════════╧═════════════════════╧═══════════════════╧══════════════╛
+╒════════════╤═══════════╤═══════════╤═════════════════════╤═══════════════════╤══════════════╕
+│ artifact   │ version   │ stage     │ created_at          │ author            │ ref          │
+╞════════════╪═══════════╪═══════════╪═════════════════════╪═══════════════════╪══════════════╡
+│ churn      │ v3.1.0    │ staging   │ 2022-07-13 15:25:41 │ Alexander Guschin │ churn@v3.1.0 │
+│ churn      │ v3.0.0    │ prod, dev │ 2022-07-09 00:19:01 │ Alexander Guschin │ churn@v3.0.0 │
+╘════════════╧═══════════╧═══════════╧═════════════════════╧═══════════════════╧══════════════╛
+```
+
+#### Enabling Kanban workflow
+
+In some cases, you would like to have a latest stage for an artifact version to
+replace all the previous stages. In this case the version will have a single
+stage. This resembles Kanban workflow, when you "move" your artifact version
+from one column ("stage-1") to another ("stage-2"). This is how MLFlow and some
+other Model Registries work.
+
+To achieve this, you can use `--last-stage` flag (or `--ls` for short):
+
+```console
+$ gto show --ls
+╒═══════════════╤══════════╤════════╤═════════╤════════════╕
+│ name          │ latest   │ #dev   │ #prod   │ #staging   │
+╞═══════════════╪══════════╪════════╪═════════╪════════════╡
+│ churn         │ v3.1.0   │ -      │ v3.0.0  │ v3.1.0     │
+│ segment       │ v0.4.1   │ v0.4.1 │ -       │ -          │
+│ cv-class      │ v0.1.13  │ -      │ -       │ -          │
+│ awesome-model │ v0.0.1   │ -      │ v0.0.1  │ -          │
+╘═══════════════╧══════════╧════════╧═════════╧════════════╛
 ```
 
 ### See the history of an artifact
@@ -189,12 +245,13 @@ $ gto history churn
 ╒═════════════════════╤════════════╤══════════════╤═══════════╤═════════╤══════════╤═══════════════════╕
 │ timestamp           │ artifact   │ event        │ version   │ stage   │ commit   │ author            │
 ╞═════════════════════╪════════════╪══════════════╪═══════════╪═════════╪══════════╪═══════════════════╡
-│ 2022-04-07 20:00:18 │ churn      │ commit       │ -         │ -       │ 54d6d39  │ Alexander Guschin │
-│ 2022-04-08 23:46:58 │ churn      │ registration │ v3.0.0    │ -       │ 54d6d39  │ Alexander Guschin │
-│ 2022-04-12 11:06:58 │ churn      │ commit       │ -         │ -       │ 26cafe9  │ Alexander Guschin │
-│ 2022-04-13 14:53:38 │ churn      │ registration │ v3.1.0    │ -       │ 26cafe9  │ Alexander Guschin │
-│ 2022-04-14 18:40:18 │ churn      │ promotion    │ v3.1.0    │ staging │ 26cafe9  │ Alexander Guschin │
-│ 2022-04-15 22:26:58 │ churn      │ promotion    │ v3.0.0    │ prod    │ 54d6d39  │ Alexander Guschin │
+│ 2022-07-17 02:45:41 │ churn      │ assignment    │ v3.0.0    │ prod    │ 631520b  │ Alexander Guschin │
+│ 2022-07-15 22:59:01 │ churn      │ assignment    │ v3.1.0    │ staging │ be340cc  │ Alexander Guschin │
+│ 2022-07-14 19:12:21 │ churn      │ assignment    │ v3.0.0    │ dev     │ 631520b  │ Alexander Guschin │
+│ 2022-07-13 15:25:41 │ churn      │ registration │ v3.1.0    │ -       │ be340cc  │ Alexander Guschin │
+│ 2022-07-12 11:39:01 │ churn      │ commit       │ -         │ -       │ be340cc  │ Alexander Guschin │
+│ 2022-07-09 00:19:01 │ churn      │ registration │ v3.0.0    │ -       │ 631520b  │ Alexander Guschin │
+│ 2022-07-07 20:32:21 │ churn      │ commit       │ -         │ -       │ 631520b  │ Alexander Guschin │
 ╘═════════════════════╧════════════╧══════════════╧═══════════╧═════════╧══════════╧═══════════════════╛
 ```
 
@@ -203,14 +260,14 @@ $ gto history churn
 Let's look at integrating with GTO via Git as well as using the `gto check-ref`,
 `gto latest`, `gto which`, and `gto describe` utility commands downstream.
 
-### Act on new versions and promotions in CI
+### Act on new versions and stage assignments in CI
 
 To act upon annotations (Git tags), you can create simple CI workflow. With
 [GitHub Actions](https://github.com/features/actions) for example, it can look
 like this:
 
 ```yaml
-name: Act on versions or promotions of the "churn" actifact
+name: Act on versions or stage assignments of the "churn" actifact
 on:
   push:
     tags:
@@ -254,16 +311,30 @@ $ gto latest churn --ref
 churn@v3.1.0
 ```
 
-To get the version that is currently promoted to an environment (stage), use
+To get the version that is currently assigned to an environment (stage), use
 `gto which`:
 
 ```console
-$ gto which churn prod
+$ gto which churn dev
 v3.0.0
 
-$ gto which churn prod --ref
-churn#prod#2
+$ gto which churn dev --ref
+churn#dev#1
 ```
+
+<details summary="Kanban workflow">
+
+If you prefer Kanban workflow described above, you could use `--last` flag. This
+will take into account the last stage for a version only.
+
+```console
+$ gto which churn dev --last
+```
+
+Since the last stage for version `v3.0.0` was `prod`, this doesn't return
+anything.
+
+</details>
 
 To get details about an artifact (from `artifacts.yaml`) use `gto describe`:
 
@@ -272,11 +343,7 @@ $ gto describe churn
 ```
 
 ```yaml
-{
-    "type": "model",
-    "path": "models/churn.pkl",
-    "virtual": false
-}
+{ "type": "model", "path": "models/churn.pkl", "virtual": false }
 ```
 
 > The output is in JSON format for ease of parsing programatically.
@@ -326,16 +393,16 @@ $ pip install --upgrade pip setuptools wheel ".[tests]"
 ### 3. Run
 
 ```console
-$ pytest --basetemp=.pytest-cache
+$ pytest --basetemp=pytest-basetemp
 ```
 
-This will create `pytest-cache/` directory with some fixtures that can serve as
-examples.
+This will create `pytest-basetemp/` directory with some fixtures that can serve
+as examples.
 
 Notably, check out this dir:
 
 ```console
-$ cd .pytest-cache/test_api0/
+$ cd pytest-basetemp/test_api0/
 $ gto show -v
 ```
 

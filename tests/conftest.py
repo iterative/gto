@@ -85,13 +85,13 @@ def showcase(
     # bump version automatically
     gto.api.register(path, "rf", "HEAD")
 
-    gto.api.promote(path, "nn", "staging", promote_version=nn_vname)
-    gto.api.promote(path, "rf", "production", promote_version=rf_vname)
-    sleep(1)  # this is needed to ensure right order of promotions in later checks
+    gto.api.assign(path, "nn", "staging", version=nn_vname)
+    gto.api.assign(path, "rf", "production", version=rf_vname)
+    sleep(1)  # this is needed to ensure right order of assignments in later checks
     # the problem is git tags doesn't have miliseconds precision, so we need to wait a bit
-    gto.api.promote(path, "rf", "staging", promote_ref="HEAD")
+    gto.api.assign(path, "rf", "staging", ref="HEAD")
     sleep(1)
-    gto.api.promote(path, "rf", "production", promote_ref=repo.head.ref.commit.hexsha)
+    gto.api.assign(path, "rf", "production", ref=repo.head.ref.commit.hexsha)
     sleep(1)
-    gto.api.promote(path, "rf", "production", promote_version=rf_vname, force=True)
+    gto.api.assign(path, "rf", "production", version=rf_vname, force=True)
     return path, repo, write_file, first_commit, second_commit

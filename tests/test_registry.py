@@ -16,7 +16,7 @@ EXPECTED_REGISTRY_TAG_TAG_STATE = {
                     "commit_hexsha": "d1d973669cade722f2900e75379cee42fe6b0244",
                     "discovered": False,
                     "tag": "nn@v0.0.1",
-                    "promotions": [
+                    "assignments": [
                         {
                             "artifact": "nn",
                             "version": "v0.0.1",
@@ -55,7 +55,7 @@ EXPECTED_REGISTRY_TAG_TAG_STATE = {
                     "commit_hexsha": "d1d973669cade722f2900e75379cee42fe6b0244",
                     "discovered": False,
                     "tag": "rf@v1.2.3",
-                    "promotions": [
+                    "assignments": [
                         {
                             "artifact": "rf",
                             "version": "v1.2.3",
@@ -100,7 +100,7 @@ EXPECTED_REGISTRY_TAG_TAG_STATE = {
                     "commit_hexsha": "16b7b77f1219ea3c10ae5beeb8473fb49cbd8c13",
                     "discovered": False,
                     "tag": "rf@v1.2.4",
-                    "promotions": [
+                    "assignments": [
                         {
                             "artifact": "rf",
                             "version": "v1.2.4",
@@ -172,8 +172,8 @@ def _check_state(appread_state, expected_state, exclude):
             appread_state["artifacts"][name]["versions"],
             expected_state["artifacts"][name]["versions"],
         ):
-            for a, e in zip(appeared["promotions"], expected["promotions"]):
-                _check_dict(a, e, exclude["promotions"])
+            for a, e in zip(appeared["assignments"], expected["assignments"]):
+                _check_dict(a, e, exclude["assignments"])
 
 
 def test_registry_state_tag_tag(showcase):
@@ -189,11 +189,11 @@ def test_registry_state_tag_tag(showcase):
             "author_email",
             "created_at",
             "commit_hexsha",
-            "promotions",
+            "assignments",
             "enrichments",
             "message",
         ],
-        "promotions": [
+        "assignments": [
             "author",
             "author_email",
             "created_at",

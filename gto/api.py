@@ -2,9 +2,10 @@ from collections import OrderedDict
 from datetime import datetime
 from typing import List, Optional, Union
 
+from funcy import distinct
 from git import Repo
 
-from gto.constants import NAME, STAGE, VERSION
+from gto.constants import NAME, STAGE, VERSION, Event
 from gto.exceptions import NoRepo, WrongArgs
 from gto.ext import EnrichmentInfo
 from gto.index import (
@@ -101,12 +102,12 @@ def register(
     )
 
 
-def promote(
+def assign(
     repo: Union[str, Repo],
     name: str,
     stage: str,
-    promote_version: str = None,
-    promote_ref: str = None,
+    version: str = None,
+    ref: str = None,
     name_version: str = None,
     message: str = None,
     simple: bool = False,
@@ -117,11 +118,11 @@ def promote(
     author_email: Optional[str] = None,
 ):
     """Assign stage to specific artifact version"""
-    return GitRegistry.from_repo(repo).promote(
+    return GitRegistry.from_repo(repo).assign(
         name,
         stage,
-        promote_version,
-        promote_ref,
+        version,
+        ref,
         name_version,
         message=message,
         simple=simple,
@@ -161,7 +162,7 @@ def find_versions_in_stage(
 
 
 def check_ref(repo: Union[str, Repo], ref: str):
-    """Find out what have been registered/promoted in the provided ref"""
+    """Find out what have been registered/assigned in the provided ref"""
     reg = GitRegistry.from_repo(repo)
     return reg.check_ref(ref)
 
@@ -169,11 +170,12 @@ def check_ref(repo: Union[str, Repo], ref: str):
 def show(
     repo: Union[str, Repo],
     name: Optional[str] = None,
-    table: bool = False,
     all_branches=False,
     all_commits=False,
     truncate_hexsha=False,
     registered_only=False,
+    last_stage=False,
+    table: bool = False,
 ):
     return (
         _show_versions(
@@ -182,6 +184,7 @@ def show(
             all_branches=all_branches,
             all_commits=all_commits,
             registered_only=registered_only,
+            last_stage=last_stage,
             table=table,
             truncate_hexsha=truncate_hexsha,
         )
@@ -191,6 +194,7 @@ def show(
             all_branches=all_branches,
             all_commits=all_commits,
             registered_only=registered_only,
+            last_stage=last_stage,
             table=table,
             truncate_hexsha=truncate_hexsha,
         )
@@ -202,8 +206,9 @@ def _show_registry(
     all_branches=False,
     all_commits=False,
     registered_only=False,
+    last_stage: bool = False,
     table: bool = False,
-    truncate_hexsha: bool = False,  # pylint: disable=unused-argument
+    truncate_hexsha: bool = False,
 ):
     """Show current registry state"""
 
@@ -219,9 +224,14 @@ def _show_registry(
             else None,
             "stage": {
                 name: format_hexsha(
-                    o.get_promotions(registered_only=registered_only)[name].version
+                    o.get_assignments(
+                        registered_only=registered_only, last_stage=last_stage
+                    )[name][0].version
                 )
-                if name in o.get_promotions(registered_only=registered_only)
+                if name
+                in o.get_assignments(
+                    registered_only=registered_only, last_stage=last_stage
+                )
                 else None
                 for name in stages
             },
@@ -242,13 +252,14 @@ def _show_registry(
     return result, headers
 
 
-def _show_versions(
+def _show_versions(  # pylint: disable=too-many-locals
     repo: Union[str, Repo],
     name: str,
     raw: bool = False,
     all_branches=False,
     all_commits=False,
     registered_only=False,
+    last_stage: bool = False,
     table: bool = False,
     truncate_hexsha: bool = False,
 ):
@@ -277,8 +288,14 @@ def _show_versions(
     versions_ = []
     for v in versions:
         v["version"] = format_hexsha(v["name"])
-        if v["stage"]:
-            v["stage"] = v["stage"]["stage"]
+        v["stage"] = ", ".join(
+            distinct(
+                s["stage"]
+                for s in (
+                    v["assignments"][::-1][:1] if last_stage else v["assignments"][::-1]
+                )
+            )
+        )
         v["commit_hexsha"] = format_hexsha(v["commit_hexsha"])
         v["ref"] = v["tag"] or v["commit_hexsha"]
         for key in (
@@ -289,6 +306,7 @@ def _show_versions(
             "name",
             "message",
             "author_email",
+            "assignments",
         ):
             v.pop(key)
         # v["enrichments"] = [e["source"] for e in v["enrichments"]]
@@ -340,7 +358,7 @@ def history(  # pylint: disable=too-many-locals
                 reg.repo.commit(v.commit_hexsha).committed_date
             ),
             artifact=o.name,
-            event="commit",
+            event=Event.COMMIT,
             commit=format_hexsha(v.commit_hexsha),
             author=reg.repo.commit(v.commit_hexsha).author.name,
             author_email=reg.repo.commit(v.commit_hexsha).author.email,
@@ -354,7 +372,7 @@ def history(  # pylint: disable=too-many-locals
         OrderedDict(
             timestamp=v.created_at,
             artifact=o.name,
-            event="registration",
+            event=Event.REGISTRATION,
             version=format_hexsha(v.name),
             commit=format_hexsha(v.commit_hexsha),
             author=v.author,
@@ -366,11 +384,11 @@ def history(  # pylint: disable=too-many-locals
         for v in o.get_versions()
     ]
 
-    promotion = [
+    assignment = [
         OrderedDict(
             timestamp=p.created_at,
             artifact=o.name,
-            event="promotion",
+            event=Event.ASSIGNMENT,
             version=format_hexsha(p.version),
             stage=p.stage,
             commit=format_hexsha(p.commit_hexsha),
@@ -383,12 +401,12 @@ def history(  # pylint: disable=too-many-locals
     ]
 
     events_order = {
-        "commit": 1,
-        "registration": 2,
-        "promotion": 3,
+        Event.COMMIT: 1,
+        Event.REGISTRATION: 2,
+        Event.ASSIGNMENT: 3,
     }
     events = sorted(
-        commits + registration + promotion,
+        commits + registration + assignment,
         key=lambda x: (x["timestamp"], events_order[x["event"]]),
     )
     if not ascending:

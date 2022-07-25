@@ -5,7 +5,7 @@ import git
 from git import InvalidGitRepositoryError, NoSuchPathError, Repo
 from pydantic import BaseModel
 
-from gto.base import BasePromotion, BaseRegistryState
+from gto.base import BaseAssignment, BaseRegistryState
 from gto.config import (
     CONFIG_FILE_NAME,
     RegistryConfig,
@@ -124,7 +124,7 @@ class GitRegistry(BaseModel):
         if version_args > 1:
             raise WrongArgs("Need to specify either version or single bump argument")
         ref = self.repo.commit(ref).hexsha
-        # TODO: add the same check for other actions, to promote and etc
+        # TODO: add the same check for other actions, to assign and etc
         # also we need to check integrity of the index+state
         found_artifact = self.find_artifact(name, create_new=True)
         # check that this commit don't have a version already
@@ -175,12 +175,12 @@ class GitRegistry(BaseModel):
             )
         return registered_version
 
-    def promote(  # pylint: disable=too-many-locals
+    def assign(  # pylint: disable=too-many-locals
         self,
         name,
         stage,
-        promote_version=None,
-        promote_ref=None,
+        version=None,
+        ref=None,
         name_version=None,
         message=None,
         simple=False,
@@ -189,64 +189,62 @@ class GitRegistry(BaseModel):
         stdout=False,
         author: Optional[str] = None,
         author_email: Optional[str] = None,
-    ) -> BasePromotion:
+    ) -> BaseAssignment:
         """Assign stage to specific artifact version"""
         assert_name_is_valid(name)
         self.config.assert_stage(stage)
-        if not (promote_version is None) ^ (promote_ref is None):
+        if not (version is None) ^ (ref is None):
             raise WrongArgs("One and only one of (version, ref) must be specified.")
         if name_version and skip_registration:
             raise WrongArgs(
                 "You either need to supply version name or skip registration"
             )
-        if promote_ref:
-            promote_ref = self.repo.commit(promote_ref).hexsha
+        if ref:
+            ref = self.repo.commit(ref).hexsha
         found_artifact = self.find_artifact(name, create_new=True)
-        if promote_version:
+        if version:
             found_version = found_artifact.find_version(
-                name=promote_version, raise_if_not_found=False
+                name=version, raise_if_not_found=False
             )
             if not found_version:
-                raise WrongArgs(f"Version '{promote_version}' is not registered")
-            promote_ref = self.find_commit(name, promote_version)
+                raise WrongArgs(f"Version '{version}' is not registered")
+            ref = self.find_commit(name, version)
         else:
-            found_version = found_artifact.find_version(commit_hexsha=promote_ref)
+            found_version = found_artifact.find_version(commit_hexsha=ref)
             if found_version:
                 if name_version:
                     raise WrongArgs(
                         f"Can't register '{SemVer(name_version).version}', since '{found_version.name}' is registered already at this ref"
                     )
             elif not skip_registration:
-                self.register(
-                    name, version=name_version, ref=promote_ref, stdout=stdout
-                )
+                self.register(name, version=name_version, ref=ref, stdout=stdout)
         if (
             not force
             and found_version
-            and found_version.stage
-            and found_version.stage.stage == stage
+            and found_version.assignments
+            and any(a.stage == stage for a in found_version.assignments)
         ):
             raise WrongArgs(f"Version is already in stage '{stage}'")
         # TODO: getting tag name as a result and using it
         # is leaking implementation details in base module
         # it's roughly ok to have until we add other implementations
-        # beside tag-based promotions
-        tag = self.stage_manager.promote(  # type: ignore
+        # beside tag-based assignments
+        tag = self.stage_manager.assign(  # type: ignore
             name,
             stage,
-            ref=promote_ref,
+            ref=ref,
             message=message
-            or f"Promoting {name} version {promote_version} to stage {stage}",
+            or f"Assigning stage {stage} to artifact {name} version {version}",
             simple=simple,
             author=author,
             author_email=author_email,
         )
-        promotion = self.stage_manager.check_ref(tag, self.get_state())[name]
+        assignment = self.stage_manager.check_ref(tag, self.get_state())[name]
         if stdout:
             echo(
-                f"Created git tag '{promotion.tag}' that promotes '{promotion.version}'"
+                f"Created git tag '{assignment.tag}' that assigns '{stage}' to '{assignment.version}'"
             )
-        return promotion
+        return assignment
 
     def _check_ref(self, ref, state):
         if ref.startswith("refs/tags/"):
@@ -259,7 +257,7 @@ class GitRegistry(BaseModel):
         }
 
     def check_ref(self, ref: str):
-        "Find out what was registered/promoted in this ref"
+        "Find out what was registered/assigned in this ref"
         state = self.get_state()
         return self._check_ref(ref, state)
 

@@ -12,7 +12,7 @@ from gto.versions import SemVer
 from .exceptions import ArtifactNotFound, ManyVersions, VersionRequired
 
 
-class BasePromotion(BaseModel):
+class BaseAssignment(BaseModel):
     artifact: str
     version: str
     stage: str
@@ -34,7 +34,7 @@ class BaseVersion(BaseModel):
     commit_hexsha: str
     discovered: bool = False
     tag: Optional[str] = None
-    promotions: List[BasePromotion] = []
+    assignments: List[BaseAssignment] = []
     enrichments: List[Enrichment] = []
 
     @property
@@ -47,14 +47,15 @@ class BaseVersion(BaseModel):
         # TODO: this should be read from config, how to pass it down here?
         return SemVer(self.name)
 
-    @property
-    def stage(self):
-        promotions = sorted(self.promotions, key=lambda p: p.created_at)
-        return promotions[-1] if promotions else None
+    def add_assignment(self, assignment: BaseAssignment):
+        self.assignments.append(assignment)
+        self.assignments.sort(key=lambda p: p.created_at)
 
     def dict_status(self):
-        version = self.dict(exclude={"promotions"})
-        version["stage"] = self.stage.dict() if self.stage else None
+        version = self.dict(exclude={"assignments"})
+        version["assignments"] = (
+            [a.dict() for a in self.assignments] if self.assignments else None
+        )
         return version
 
 
@@ -103,12 +104,14 @@ class BaseArtifact(BaseModel):
     @property
     def stages(self):
         return [
-            promotion for version in self.versions for promotion in version.promotions
+            assignment
+            for version in self.versions
+            for assignment in version.assignments
         ]
 
     @property
     def unique_stages(self):
-        return {promotion.stage for promotion in self.stages}
+        return {assignment.stage for assignment in self.stages}
 
     def __repr__(self) -> str:
         versions = ", ".join(f"'{v.name}'" for v in self.versions)
@@ -141,32 +144,35 @@ class BaseArtifact(BaseModel):
             return versions[0]
         return None
 
-    def get_promotions(
-        self, all=False, registered_only=False, sort=VersionSort.SemVer
-    ) -> Dict[str, Union[BasePromotion, List[BasePromotion]]]:
+    def get_assignments(
+        self,
+        registered_only=False,
+        last_stage=False,
+        sort=VersionSort.SemVer,
+    ) -> Dict[str, Union[BaseAssignment, List[BaseAssignment]]]:
         versions = self.get_versions(
             include_non_explicit=not registered_only, sort=sort
         )
         if sort == VersionSort.Timestamp:
             # for this sort we need to sort not versions, as above ^
-            # but promotions themselves
+            # but assignments themselves
             raise NotImplementedError("Sorting by timestamp is not implemented yet")
-        stages = {}  # type: ignore
+        stages: Dict[str, List[BaseAssignment]] = {}
         for version in versions:
-            promotion = version.stage
-            if promotion:
-                stages[promotion.stage] = stages.get(promotion.stage, []) + [promotion]
-        if all:
-            return stages
-        return {stage: promotions[0] for stage, promotions in stages.items()}
+            for a in (
+                version.assignments[::-1][:1] if last_stage else version.assignments
+            ):
+                if a.stage not in stages:
+                    stages[a.stage] = []
+                if a.version not in [i.version for i in stages[a.stage]]:
+                    stages[a.stage].append(a)
+        return stages  # type: ignore
 
     def add_version(self, version: BaseVersion):
         self.versions.append(version)
 
-    def add_promotion(self, promotion: BasePromotion):
-        self.find_version(name=promotion.version).promotions.append(  # type: ignore
-            promotion
-        )
+    def add_assignment(self, assignment: BaseAssignment):
+        self.find_version(name=assignment.version).add_assignment(assignment)  # type: ignore
 
     def update_enrichments(self, version, enrichments):
         self.find_version(
@@ -288,11 +294,11 @@ class BaseRegistryState(BaseModel):
         self, name, stage, raise_if_not_found=True, all=False, registered_only=False
     ):
         """Return stage active in specific stage"""
-        promoted = self.find_artifact(name).get_promotions(
-            all=all, registered_only=registered_only
+        assigned = self.find_artifact(name).get_assignments(
+            registered_only=registered_only
         )
-        if stage in promoted:
-            return promoted[stage]
+        if stage in assigned:
+            return assigned[stage] if all else assigned[stage][0]
         if raise_if_not_found:
             raise ValueError(f"Stage {stage} not found for {name}")
         return None
@@ -323,7 +329,7 @@ class BaseManager(BaseModel):
     # def register(self, name, version, ref, message):
     #     raise NotImplementedError
 
-    # def promote(self, name, stage, ref, message):
+    # def assign(self, name, stage, ref, message):
     #     raise NotImplementedError
 
     def check_ref(self, ref: str, state: BaseRegistryState):

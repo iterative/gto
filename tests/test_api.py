@@ -77,6 +77,15 @@ def repo_with_artifact(init_showcase_semver):
     return repo, name
 
 
+def test_api_info_commands_repo_with_artifact(
+    repo_with_artifact: Tuple[git.Repo, Callable]
+):
+    repo, write_file = repo_with_artifact
+    gto.api.show(repo.working_dir)
+    gto.api.show(repo.working_dir, "new-artifact")
+    gto.api.history(repo.working_dir)
+
+
 def test_register(repo_with_artifact):
     repo, name = repo_with_artifact
     vname1, vname2 = "v1.0.0", "v1.0.1"
@@ -109,7 +118,7 @@ def test_register(repo_with_artifact):
     assert latest.author_email == author_email
 
 
-def test_promote(repo_with_artifact: Tuple[git.Repo, str]):
+def test_assign(repo_with_artifact: Tuple[git.Repo, str]):
     repo, name = repo_with_artifact
     stage = "staging"
     repo.create_tag("v1.0.0")
@@ -117,19 +126,19 @@ def test_promote(repo_with_artifact: Tuple[git.Repo, str]):
     message = "some msg"
     author = "GTO"
     author_email = "gto@iterative.ai"
-    gto.api.promote(
+    gto.api.assign(
         repo.working_dir,
         name,
         stage,
-        promote_ref="HEAD",
+        ref="HEAD",
         name_version="v0.0.1",
         message=message,
         author=author,
         author_email=author_email,
     )
-    promotion = gto.api.find_versions_in_stage(repo.working_dir, name, stage)
+    assignment = gto.api.find_versions_in_stage(repo.working_dir, name, stage)
     _check_obj(
-        promotion,
+        assignment,
         dict(
             artifact=name,
             version="v0.0.1",
@@ -139,39 +148,37 @@ def test_promote(repo_with_artifact: Tuple[git.Repo, str]):
             message=message,
             commit_hexsha=repo.commit().hexsha,
         ),
-        {"created_at", "promotions", "tag"},
+        {"created_at", "assignments", "tag"},
     )
 
 
-def test_promote_skip_registration(repo_with_artifact):
+def test_assign_skip_registration(repo_with_artifact: Tuple[git.Repo, str]):
     repo, name = repo_with_artifact
     stage = "staging"
     with pytest.raises(WrongArgs):
-        gto.api.promote(
+        gto.api.assign(
             repo.working_dir,
             name,
             stage,
-            promote_ref="HEAD",
+            ref="HEAD",
             name_version="v0.0.1",
             skip_registration=True,
         )
-    gto.api.promote(
-        repo.working_dir, name, stage, promote_ref="HEAD", skip_registration=True
-    )
-    promotion = gto.api.find_versions_in_stage(repo.working_dir, name, stage)
-    assert not SemVer.is_valid(promotion.version)
+    gto.api.assign(repo.working_dir, name, stage, ref="HEAD", skip_registration=True)
+    assignment = gto.api.find_versions_in_stage(repo.working_dir, name, stage)
+    assert not SemVer.is_valid(assignment.version)
 
 
-def test_promote_force_is_needed(repo_with_artifact):
+def test_assign_force_is_needed(repo_with_artifact: Tuple[git.Repo, str]):
     repo, name = repo_with_artifact
-    gto.api.promote(repo, name, "staging", promote_ref="HEAD")
-    gto.api.promote(repo, name, "staging", promote_ref="HEAD^1")
+    gto.api.assign(repo, name, "staging", ref="HEAD")
+    gto.api.assign(repo, name, "staging", ref="HEAD^1")
     with pytest.raises(WrongArgs):
-        gto.api.promote(repo, name, "staging", promote_ref="HEAD")
+        gto.api.assign(repo, name, "staging", ref="HEAD")
     with pytest.raises(WrongArgs):
-        gto.api.promote(repo, name, "staging", promote_ref="HEAD^1")
-    gto.api.promote(repo, name, "staging", promote_ref="HEAD", force=True)
-    gto.api.promote(repo, name, "staging", promote_ref="HEAD^1", force=True)
+        gto.api.assign(repo, name, "staging", ref="HEAD^1")
+    gto.api.assign(repo, name, "staging", ref="HEAD", force=True)
+    gto.api.assign(repo, name, "staging", ref="HEAD^1", force=True)
 
 
 @contextmanager
@@ -215,7 +222,7 @@ def test_check_ref_detailed(repo_with_artifact: Tuple[git.Repo, Callable]):
             "author_email": GIT_COMMITTER_EMAIL,
             "discovered": False,
             "tag": f"{NAME}@{SEMVER}",
-            "promotions": [],
+            "assignments": [],
             "enrichments": [],
         },
         skip_keys={"commit_hexsha", "created_at", "message"},
@@ -237,7 +244,7 @@ def test_check_ref_multiple_showcase(showcase):
         info = list(gto.api.check_ref(repo, tag.name)[VERSION].values())[0]
         assert info.tag == tag.name
 
-    tags = find(repo=repo, action=Action.PROMOTE)
+    tags = find(repo=repo, action=Action.ASSIGN)
     for tag in tags:
         info = list(gto.api.check_ref(repo, tag.name)[STAGE].values())[0]
         assert info.tag == tag.name
@@ -247,15 +254,15 @@ def test_check_ref_catch_the_bug(repo_with_artifact: Tuple[git.Repo, Callable]):
     repo, name = repo_with_artifact
     NAME = "artifact"
     gto.api.register(repo, NAME, "HEAD")
-    promotion1 = gto.api.promote(repo, NAME, "staging", promote_ref="HEAD")
-    promotion2 = gto.api.promote(repo, NAME, "prod", promote_ref="HEAD")
-    promotion3 = gto.api.promote(repo, NAME, "dev", promote_ref="HEAD")
-    for promotion, tag in zip(
-        [promotion1, promotion2, promotion3],
+    assignment1 = gto.api.assign(repo, NAME, "staging", ref="HEAD")
+    assignment2 = gto.api.assign(repo, NAME, "prod", ref="HEAD")
+    assignment3 = gto.api.assign(repo, NAME, "dev", ref="HEAD")
+    for assignment, tag in zip(
+        [assignment1, assignment2, assignment3],
         [f"{NAME}#staging#1", f"{NAME}#prod#2", f"{NAME}#dev#3"],
     ):
         info = gto.api.check_ref(repo, tag)[STAGE][NAME]
-        assert info.tag == promotion.tag == tag
+        assert info.tag == assignment.tag == tag
 
 
 def test_is_not_gto_repo(empty_git_repo):

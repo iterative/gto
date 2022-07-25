@@ -16,12 +16,12 @@ def test_name_tag(empty_git_repo):
         == f"myartifact{ActionSign[Action.REGISTER]}v1"
     )
     assert (
-        name_tag(Action.PROMOTE, "myartifact", stage="stage", simple=True)
-        == f"myartifact{ActionSign[Action.PROMOTE]}stage"
+        name_tag(Action.ASSIGN, "myartifact", stage="stage", simple=True)
+        == f"myartifact{ActionSign[Action.ASSIGN]}stage"
     )
     assert (
-        name_tag(Action.PROMOTE, "myartifact", repo=repo, stage="stage", simple=False)
-        == f"myartifact{ActionSign[Action.PROMOTE]}stage{ActionSign[Action.PROMOTE]}1"
+        name_tag(Action.ASSIGN, "myartifact", repo=repo, stage="stage", simple=False)
+        == f"myartifact{ActionSign[Action.ASSIGN]}stage{ActionSign[Action.ASSIGN]}1"
     )
 
 
@@ -29,12 +29,12 @@ def test_parse_name():
     assert parse_name(f"path{ActionSign[Action.REGISTER]}v1.2.3") == dict(
         name="path", version="v1.2.3", action=Action.REGISTER
     )
-    assert parse_name(f"path{ActionSign[Action.PROMOTE]}stage") == dict(
-        name="path", action=Action.PROMOTE, stage="stage"
+    assert parse_name(f"path{ActionSign[Action.ASSIGN]}stage") == dict(
+        name="path", action=Action.ASSIGN, stage="stage"
     )
     assert parse_name(
-        f"path{ActionSign[Action.PROMOTE]}stage{ActionSign[Action.PROMOTE]}1"
-    ) == dict(name="path", action=Action.PROMOTE, stage="stage", number=1)
+        f"path{ActionSign[Action.ASSIGN]}stage{ActionSign[Action.ASSIGN]}1"
+    ) == dict(name="path", action=Action.ASSIGN, stage="stage", number=1)
 
 
 @pytest.mark.parametrize(

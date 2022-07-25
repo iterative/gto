@@ -5,7 +5,7 @@ import git
 import pytest
 from typer.testing import CliRunner
 
-from gto.api import annotate, get_stages, promote, register
+from gto.api import annotate, assign, get_stages, register
 from gto.cli import app
 from gto.config import CONFIG_FILE_NAME, check_name_is_valid
 from gto.exceptions import UnknownType, ValidationError
@@ -81,14 +81,14 @@ def test_register_incorrect_version(init_repo):
         register(init_repo, "model", ref="HEAD", version="###")
 
 
-def test_promote_incorrect_name(init_repo):
+def test_assign_incorrect_name(init_repo):
     with pytest.raises(ValidationError):
-        promote(init_repo, "###", promote_ref="HEAD", stage="dev")
+        assign(init_repo, "###", ref="HEAD", stage="dev")
 
 
-def test_promote_incorrect_stage(init_repo):
+def test_assign_incorrect_stage(init_repo):
     with pytest.raises(ValidationError):
-        promote(init_repo, "model", promote_ref="HEAD", stage="###")
+        assign(init_repo, "model", ref="HEAD", stage="###")
 
 
 def test_config_is_not_needed(empty_git_repo: Tuple[git.Repo, Callable], request):
@@ -119,9 +119,9 @@ def test_prohibit_config_type(init_repo_prohibit):
 
 
 @pytest.mark.xfail
-def test_prohibit_config_promote_incorrect_stage(init_repo):
+def test_prohibit_config_assign_incorrect_stage(init_repo):
     with pytest.raises(ValidationError):
-        promote(init_repo, "model", promote_ref="HEAD", stage="dev")
+        assign(init_repo, "model", ref="HEAD", stage="dev")
 
 
 def test_empty_config_type(empty_git_repo):
