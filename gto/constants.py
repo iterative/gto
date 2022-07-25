@@ -18,6 +18,7 @@ NUMBER = "number"
 class Action(Enum):
     REGISTER = "register"
     ASSIGN = "assign"
+    UNASSIGN = "unassign"
 
 
 class Event(Enum):

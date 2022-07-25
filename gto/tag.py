@@ -22,12 +22,14 @@ from .exceptions import (
     MissingArg,
     RefNotFound,
     TagExists,
+    TagNotFound,
     UnknownAction,
 )
 
 ActionSign = {
     Action.REGISTER: "@",
     Action.ASSIGN: "#",
+    Action.UNASSIGN: "!",
 }
 
 
@@ -42,9 +44,12 @@ def name_tag(
     if action == Action.REGISTER:
         return f"{name}{ActionSign[action]}{version}"
 
-    if action == Action.ASSIGN:
+    if action in (Action.ASSIGN, Action.UNASSIGN):
         if simple:
-            return f"{name}{ActionSign[action]}{stage}"
+            tag = f"{name}{ActionSign[action.ASSIGN]}{stage}"
+            if action == Action.UNASSIGN:
+                tag += ActionSign[Action.UNASSIGN]
+            return tag
         if repo is None:
             raise MissingArg(arg="repo")
         numbers = []
@@ -58,7 +63,10 @@ def name_tag(
             ):
                 numbers.append(parsed[NUMBER])
         new_number = max(numbers) + 1 if numbers else 1
-        return f"{name}{ActionSign[action]}{stage}{ActionSign[action]}{new_number}"
+        tag = f"{name}{ActionSign[Action.ASSIGN]}{stage}{ActionSign[Action.ASSIGN]}{new_number}"
+        if action == Action.UNASSIGN:
+            tag += ActionSign[Action.UNASSIGN]
+        return tag
     raise UnknownAction(action=action)
 
 
@@ -82,6 +90,10 @@ def _parse_register(name: str, raise_on_fail: bool = True):
 
 def _parse_assign(name: str, raise_on_fail: bool = True):
     parsed = name.split(ActionSign[Action.ASSIGN])
+    unassign = False
+    if parsed[-1][-1] == "!":
+        unassign = True
+        parsed[-1] = parsed[-1][:-1]
     if (
         check_name_is_valid(parsed[0])
         and check_name_is_valid(parsed[1])
@@ -89,13 +101,13 @@ def _parse_assign(name: str, raise_on_fail: bool = True):
     ):
         if len(parsed) == 2:
             return {
-                ACTION: Action.ASSIGN,
+                ACTION: Action.UNASSIGN if unassign else Action.ASSIGN,
                 NAME: parsed[0],
                 STAGE: parsed[1],
             }
         if len(parsed) == 3:
             return {
-                ACTION: Action.ASSIGN,
+                ACTION: Action.UNASSIGN if unassign else Action.ASSIGN,
                 NAME: parsed[0],
                 STAGE: parsed[1],
                 NUMBER: int(parsed[2]),
@@ -209,6 +221,13 @@ def create_tag(
         env["GIT_COMMITTER_EMAIL"] = tagger_email
 
     repo.git.tag(["-a", name, "-m", message, ref], env=env)
+
+
+def delete_tag(repo: git.Repo, name: str):
+    try:
+        repo.delete_tag(name)
+    except git.BadName as e:
+        raise TagNotFound(name=name) from e
 
 
 def version_from_tag(tag: git.Tag) -> BaseVersion:
@@ -344,6 +363,34 @@ class TagStageManager(TagManager):
         author_email: Optional[str] = None,
     ) -> str:
         tag = name_tag(Action.ASSIGN, name, stage=stage, repo=self.repo, simple=simple)
+        create_tag(
+            self.repo,
+            tag,
+            ref=ref,
+            message=message,
+            tagger=author,
+            tagger_email=author_email,
+        )
+        return tag
+
+    def unassign(
+        self,
+        name,
+        stage,
+        ref,
+        message,
+        simple,
+        delete,
+        author: Optional[str] = None,
+        author_email: Optional[str] = None,
+    ) -> str:
+        if delete:
+            return delete_tag(
+                self.repo, name_tag(Action.UNASSIGN, name, stage=stage, repo=self.repo)
+            )
+        tag = name_tag(
+            Action.UNASSIGN, name, stage=stage, repo=self.repo, simple=simple
+        )
         create_tag(
             self.repo,
             tag,

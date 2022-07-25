@@ -246,6 +246,66 @@ class GitRegistry(BaseModel):
             )
         return assignment
 
+    def unassign(
+        self,
+        name,
+        stage,
+        version=None,
+        ref=None,
+        message=None,
+        simple=False,
+        force=False,
+        delete=False,
+        stdout=False,
+        author: Optional[str] = None,
+        author_email: Optional[str] = None,
+    ) -> BaseAssignment:
+        """Assign stage to specific artifact version"""
+        assert_name_is_valid(name)
+        self.config.assert_stage(stage)
+        if not (version is None) ^ (ref is None):
+            raise WrongArgs("One and only one of (version, ref) must be specified.")
+        if ref:
+            ref = self.repo.commit(ref).hexsha
+        found_artifact = self.find_artifact(name)
+        found_version = found_artifact.find_version(
+            name=version, commit_hexsha=ref, raise_if_not_found=True
+        )
+        if (
+            not force
+            and found_version
+            and found_version.assignments
+            and all(a.stage != stage for a in found_version.assignments)
+        ):
+            raise WrongArgs(
+                f"Stage '{stage}' is not assigned to a version '{found_version.version}'"
+            )
+        if delete and (message or author or author_email or simple or force):
+            raise WrongArgs(
+                "Deleting a git tag doesn't require any of 'message', 'force', 'simple', 'author' or 'author_email'"
+            )
+        # TODO: getting tag name as a result and using it
+        # is leaking implementation details in base module
+        # it's roughly ok to have until we add other implementations
+        # beside tag-based assignments
+        tag = self.stage_manager.unassign(  # type: ignore
+            name,
+            stage,
+            ref=ref,
+            message=message
+            or f"Unassigning stage '{stage}' to artifact '{name}' version '{version}'",
+            simple=simple,
+            delete=delete,
+            author=author,
+            author_email=author_email,
+        )
+        assignment = self.stage_manager.check_ref(tag, self.get_state())[name]
+        if stdout:
+            echo(
+                f"Created git tag '{assignment.tag}' that unassigns '{stage}' from '{assignment.version}'"
+            )
+        return assignment
+
     def _check_ref(self, ref, state):
         if ref.startswith("refs/tags/"):
             ref = ref[len("refs/tags/") :]

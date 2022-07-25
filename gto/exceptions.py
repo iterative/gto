@@ -171,6 +171,14 @@ class TagExists(GTOException):
         super().__init__(self.message)
 
 
+class TagNotFound(GTOException):
+    message = "tag '{name}' is not found"
+
+    def __init__(self, name) -> None:
+        self.message = self.message.format(name=name)
+        super().__init__(self.message)
+
+
 class ValidationError(GTOException):
     pass
 
