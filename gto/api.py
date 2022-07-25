@@ -1,3 +1,4 @@
+import warnings
 from collections import OrderedDict
 from datetime import datetime
 from typing import List, Optional, Union
@@ -102,6 +103,42 @@ def register(
     )
 
 
+def promote(
+    repo: Union[str, Repo],
+    name: str,
+    stage: str,
+    promote_version: str = None,
+    promote_ref: str = None,
+    name_version: str = None,
+    message: str = None,
+    simple: bool = False,
+    force: bool = False,
+    skip_registration: bool = False,
+    stdout: bool = False,
+    author: Optional[str] = None,
+    author_email: Optional[str] = None,
+):
+    """Assign stage to specific artifact version"""
+    warnings.warn(
+        "`gto.api.promote` is deprecated and will be removed in future releases.",
+        category=DeprecationWarning,
+    )
+    return GitRegistry.from_repo(repo).assign(
+        name,
+        stage,
+        promote_version,
+        promote_ref,
+        name_version,
+        message=message,
+        simple=simple,
+        force=force,
+        skip_registration=skip_registration,
+        stdout=stdout,
+        author=author,
+        author_email=author_email,
+    )
+
+
 def assign(
     repo: Union[str, Repo],
     name: str,
@@ -128,6 +165,36 @@ def assign(
         simple=simple,
         force=force,
         skip_registration=skip_registration,
+        stdout=stdout,
+        author=author,
+        author_email=author_email,
+    )
+
+
+def unassign(
+    repo: Union[str, Repo],
+    name: str,
+    stage: str,
+    version: str = None,
+    ref: str = None,
+    message: str = None,
+    simple: bool = False,
+    force: bool = False,
+    delete: bool = False,
+    stdout: bool = False,
+    author: Optional[str] = None,
+    author_email: Optional[str] = None,
+):
+    """Assign stage to specific artifact version"""
+    return GitRegistry.from_repo(repo).unassign(
+        name,
+        stage,
+        version,
+        ref,
+        message=message,
+        simple=simple,
+        force=force,
+        delete=delete,
         stdout=stdout,
         author=author,
         author_email=author_email,

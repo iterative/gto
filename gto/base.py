@@ -18,6 +18,18 @@ class BaseAssignment(BaseModel):
     stage: str
     created_at: datetime
     author: str
+    author_email: Optional[str]  # TODO: remove as optional later
+    message: Optional[str]  # remove as optional later
+    commit_hexsha: str
+    tag: str
+
+
+class BaseUnassignment(BaseModel):
+    artifact: str
+    version: str
+    stage: str
+    created_at: datetime
+    author: str
     author_email: Optional[str]  # remove as optional later
     message: Optional[str]  # remove as optional later
     commit_hexsha: str
@@ -35,6 +47,7 @@ class BaseVersion(BaseModel):
     discovered: bool = False
     tag: Optional[str] = None
     assignments: List[BaseAssignment] = []
+    unassignments: List[BaseUnassignment] = []
     enrichments: List[Enrichment] = []
 
     @property
@@ -50,6 +63,10 @@ class BaseVersion(BaseModel):
     def add_assignment(self, assignment: BaseAssignment):
         self.assignments.append(assignment)
         self.assignments.sort(key=lambda p: p.created_at)
+
+    def add_unassignment(self, unassignment: BaseUnassignment):
+        self.unassignments.append(unassignment)
+        self.unassignments.sort(key=lambda p: p.created_at)
 
     def dict_status(self):
         version = self.dict(exclude={"assignments"})

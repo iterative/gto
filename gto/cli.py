@@ -181,10 +181,13 @@ app = Typer(
     add_completion=False,
 )
 
+# General Typer arguments and options
 arg_name = Argument(..., help="Artifact name")
 arg_version = Argument(..., help="Artifact version")
 arg_stage = Argument(..., help="Stage to assign")
+option_name = Option(None, "--name", "-n", help="Artifact name", show_default=True)
 
+# Typer options to control git-related operations
 option_rev = Option(None, "--rev", help="Repo revision to use", show_default=True)
 option_repo = Option(".", "-r", "--repo", help="Repository to use", show_default=True)
 option_all_branches = Option(
@@ -197,14 +200,27 @@ option_all_branches = Option(
 option_all_commits = Option(
     False, "-A", "--all-commits", is_flag=True, help="Read all commits"
 )
-option_all = Option(False, "--all", "-a", help="Return all versions sorted")
-option_name = Option(None, "--name", "-n", help="Artifact name", show_default=True)
-option_ascending = Option(
+option_message = Option(
+    None, "--message", "-m", help="Message to annotate git tag with"
+)
+option_force = Option(
+    False, help="Create a git tag even if it already exists and is in effect"
+)
+option_simple = Option(
     False,
-    "--ascending",
-    "--asc",
-    help="Show new first",
-    show_default=True,
+    "--simple",
+    is_flag=True,
+    help="Use simple notation, e.g. rf#prod instead of rf#prod-5",
+)
+
+# Typer options to control and filter the output
+option_all = Option(False, "--all", "-a", help="Return all versions sorted")
+option_registered_only = Option(
+    False,
+    "--registered-only",
+    "--ro",
+    is_flag=True,
+    help="Show only registered versions",
 )
 option_expected = Option(
     False,
@@ -212,6 +228,15 @@ option_expected = Option(
     "--expected",
     is_flag=True,
     help="Return exit code 1 if no result",
+    show_default=True,
+)
+
+# Typer options to format the output
+option_ascending = Option(
+    False,
+    "--ascending",
+    "--asc",
+    help="Show new first",
     show_default=True,
 )
 option_type_bool = Option(
@@ -253,13 +278,6 @@ option_table = Option(
     is_flag=True,
     help="Print output in table format",
     show_default=True,
-)
-option_registered_only = Option(
-    False,
-    "--registered-only",
-    "--ro",
-    is_flag=True,
-    help="Show only registered versions",
 )
 
 
@@ -407,9 +425,7 @@ def register(
     version: Optional[str] = Option(
         None, "--version", "--ver", help="Version name in SemVer format"
     ),
-    message: Optional[str] = Option(
-        None, "--message", "-m", help="Message to annotate git tag with"
-    ),
+    message: Optional[str] = option_message,
     bump_major: bool = Option(
         False, "--bump-major", is_flag=True, help="Bump major version"
     ),
@@ -459,18 +475,9 @@ def assign(
         "--version",
         help="If you provide REF, this will be used to name new version",
     ),
-    message: Optional[str] = Option(
-        None, "--message", "-m", help="Message to annotate git tag with"
-    ),
-    simple: bool = Option(
-        False,
-        "--simple",
-        is_flag=True,
-        help="Use simple notation, e.g. rf#prod instead of rf#prod-5",
-    ),
-    force: bool = Option(
-        False, help="Assign even if version is already in required Stage"
-    ),
+    message: Optional[str] = option_message,
+    simple: bool = option_simple,
+    force: bool = option_force,
     skip_registration: bool = Option(
         False,
         "--sr",
@@ -479,7 +486,7 @@ def assign(
         help="Don't register a version at specified commit",
     ),
 ):
-    """Move an artifact version to a specific stage
+    """Assign stage to specific artifact version
 
     Examples:
         Assign "nn" to "prod" at specific ref:
@@ -514,6 +521,53 @@ def assign(
         simple=simple,
         force=force,
         skip_registration=skip_registration,
+        stdout=True,
+    )
+
+
+@gto_command(section=CommandGroups.modifying)
+def unassign(
+    repo: str = option_repo,
+    name: str = arg_name,
+    stage: str = arg_stage,
+    ref: Optional[str] = Argument(None, help="Git reference to use"),
+    version: Optional[str] = Option(
+        None,
+        "--version",
+        help="Artifact version to unassign the stage from",
+    ),
+    message: Optional[str] = option_message,
+    simple: bool = option_simple,
+    force: bool = option_force,
+    delete: bool = Option(
+        False,
+        "-d",
+        "--delete",
+        is_flag=True,
+        help="Delete the git tag that did the assignment instead of creating the new one",
+    ),
+):
+    """Unassign stage from specific artifact version
+
+    Examples:
+        Unassign "prod" from "nn" at specific ref:
+        $ gto unassign nn prod abcd123
+
+        Unassign "prod" from "nn" at specific version:
+        $ gto unassign nn prod --version v1.0.0
+    """
+    if ref is None and version is None:
+        ref = "HEAD"
+    gto.api.unassign(
+        repo,
+        name,
+        stage,
+        version,
+        ref,
+        message=message,
+        simple=simple,
+        force=force,
+        delete=delete,
         stdout=True,
     )
 
