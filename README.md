@@ -93,6 +93,8 @@ require deleting the existing tag.
 
 ### Unassign a stage
 
+Note: this functionality is in development and will be introduced soon.
+
 Sometimes you need to mark an artifact version no longer ready for a specific
 consumer, and maybe signal a downstream system about this. You can use
 `gto unassign` for that:
