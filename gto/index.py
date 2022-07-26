@@ -1,7 +1,6 @@
 import os
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from datetime import datetime
 from functools import wraps
 from pathlib import Path
 from typing import IO, Dict, FrozenSet, Generator, List, Optional, Union
@@ -9,7 +8,7 @@ from typing import IO, Dict, FrozenSet, Generator, List, Optional, Union
 import git
 from pydantic import BaseModel, parse_obj_as, validator
 
-from gto.base import BaseManager, BaseRegistryState, BaseVersion
+from gto.base import BaseManager, BaseRegistryState
 from gto.config import (
     CONFIG_FILE_NAME,
     RegistryConfig,
@@ -352,12 +351,12 @@ class EnrichmentManager(BaseManager):
         for artifact in state.get_artifacts().values():
             for version in artifact.versions:
                 enrichments = self.describe(
-                    artifact.name,
+                    artifact.artifact,
                     # faster to make git.Reference here
                     rev=self.repo.commit(version.commit_hexsha),
                 )
                 artifact.update_enrichments(
-                    version=version.name, enrichments=enrichments
+                    version=version.version, enrichments=enrichments
                 )
                 state.update_artifact(artifact)
         for commit in self.get_commits(
@@ -366,24 +365,12 @@ class EnrichmentManager(BaseManager):
             for art_name in GTOEnrichment().discover(self.repo, commit):
                 enrichments = self.describe(art_name, rev=commit)
                 artifact = state.find_artifact(art_name, create_new=True)
-                version = artifact.find_version(commit_hexsha=commit.hexsha)
-                # TODO: duplicated in tag.py
-                if version:
-                    version = version.name
-                else:
-                    artifact.add_version(
-                        BaseVersion(
-                            artifact=art_name,
-                            name=commit.hexsha,
-                            created_at=datetime.fromtimestamp(commit.committed_date),
-                            author=commit.author.name,
-                            author_email=commit.author.email,
-                            commit_hexsha=commit.hexsha,
-                            discovered=True,
-                        )
-                    )
-                    version = commit.hexsha
-                artifact.update_enrichments(version=version, enrichments=enrichments)
+                version = artifact.find_version(
+                    commit_hexsha=commit.hexsha, create_new=True
+                )
+                artifact.update_enrichments(
+                    version=version.version, enrichments=enrichments
+                )
                 state.update_artifact(artifact)
         return state
 

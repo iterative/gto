@@ -91,7 +91,7 @@ def test_register(repo_with_artifact):
     vname1, vname2 = "v1.0.0", "v1.0.1"
     gto.api.register(repo.working_dir, name, "HEAD", vname1)
     latest = gto.api.find_latest_version(repo.working_dir, name)
-    assert latest.name == vname1
+    assert latest.version == vname1
     gto.api.annotate(
         repo.working_dir,
         "something-irrelevant",
@@ -112,7 +112,7 @@ def test_register(repo_with_artifact):
         author_email=author_email,
     )
     latest = gto.api.find_latest_version(repo.working_dir, name)
-    assert latest.name == vname2
+    assert latest.version == vname2
     assert latest.message == message
     assert latest.author == author
     assert latest.author_email == author_email

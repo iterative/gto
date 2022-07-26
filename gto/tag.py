@@ -9,11 +9,12 @@ from gto.config import assert_name_is_valid, check_name_is_valid
 from gto.versions import SemVer
 
 from .base import (
-    BaseArtifact,
-    BaseAssignment,
+    Artifact,
+    Assignment,
     BaseManager,
     BaseRegistryState,
-    BaseVersion,
+    Registration,
+    Version,
 )
 from .constants import ACTION, NAME, NUMBER, STAGE, TAG, VERSION, Action
 from .exceptions import (
@@ -230,11 +231,11 @@ def delete_tag(repo: git.Repo, name: str):
         raise TagNotFound(name=name) from e
 
 
-def version_from_tag(tag: git.Tag) -> BaseVersion:
+def registration_from_tag(tag: git.Tag) -> Version:
     mtag = parse_tag(tag)
-    return BaseVersion(
+    return Registration(
         artifact=mtag.name,
-        name=mtag.version,
+        version=mtag.version,
         created_at=mtag.created_at,
         author=tag.tag.tagger.name,
         author_email=tag.tag.tagger.email,
@@ -244,32 +245,12 @@ def version_from_tag(tag: git.Tag) -> BaseVersion:
     )
 
 
-def assignment_from_tag(
-    artifact: BaseArtifact, tag: git.Tag, version_required: bool
-) -> BaseAssignment:
+def assignment_from_tag(artifact: Artifact, tag: git.Tag) -> Assignment:
     mtag = parse_tag(tag)
-    if version_required:
-        version = artifact.find_version(
-            commit_hexsha=tag.commit.hexsha, raise_if_not_found=True
-        ).name  # type: ignore
-    else:
-        version = artifact.find_version(commit_hexsha=tag.commit.hexsha)
-        if version:
-            version = version.name  # type: ignore
-        else:
-            artifact.add_version(
-                BaseVersion(
-                    artifact=mtag.name,
-                    name=tag.commit.hexsha,
-                    created_at=mtag.created_at,
-                    author=tag.tag.tagger.name,
-                    author_email=tag.tag.tagger.email,
-                    message=tag.tag.message,
-                    commit_hexsha=tag.commit.hexsha,
-                )
-            )
-            version = tag.commit.hexsha
-    return BaseAssignment(
+    version = artifact.find_version(
+        commit_hexsha=tag.commit.hexsha, create_new=True
+    ).version  # type: ignore
+    return Assignment(
         artifact=mtag.name,
         version=version,
         stage=mtag.stage,
@@ -282,14 +263,12 @@ def assignment_from_tag(
     )
 
 
-def index_tag(
-    artifact: BaseArtifact, tag: git.TagReference, version_required: bool
-) -> BaseArtifact:
+def index_tag(artifact: Artifact, tag: git.TagReference) -> Artifact:
     mtag = parse_name(tag.tag.tag)
     if mtag["action"] == Action.REGISTER:
-        artifact.add_version(version_from_tag(tag))
+        artifact.add_event(registration_from_tag(tag))
     if mtag["action"] == Action.ASSIGN:
-        artifact.add_assignment(assignment_from_tag(artifact, tag, version_required))
+        artifact.add_event(assignment_from_tag(artifact, tag))
     return artifact
 
 
@@ -304,7 +283,6 @@ class TagManager(BaseManager):  # pylint: disable=abstract-method
                         parse_name(tag.tag.tag)["name"], create_new=True
                     ),
                     tag,
-                    version_required=False,
                 )
             )
         return state
@@ -345,7 +323,7 @@ class TagVersionManager(TagManager):
             name: version
             for name, artifact in state.get_artifacts().items()
             for version in artifact.versions
-            if name == art_name and version.name == version_name
+            if name == art_name and version.version == version_name
         }
 
 
@@ -411,6 +389,6 @@ class TagStageManager(TagManager):
         return {
             name: assignment
             for name, artifact in state.get_artifacts().items()
-            for assignment in artifact.stages
+            for assignment in artifact.assignments + artifact.unassignments
             if name == art_name and assignment.tag == tag.name
         }

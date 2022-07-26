@@ -588,7 +588,7 @@ def latest(
         if ref:
             echo(latest_version.tag or latest_version.commit_hexsha)
         else:
-            echo(latest_version.name)
+            echo(latest_version.version)
 
 
 @gto_command(section=CommandGroups.querying)

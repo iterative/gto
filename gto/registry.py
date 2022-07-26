@@ -5,7 +5,7 @@ import git
 from git import InvalidGitRepositoryError, NoSuchPathError, Repo
 from pydantic import BaseModel
 
-from gto.base import BaseAssignment, BaseRegistryState
+from gto.base import Assignment, BaseRegistryState
 from gto.config import (
     CONFIG_FILE_NAME,
     RegistryConfig,
@@ -71,12 +71,11 @@ class GitRegistry(BaseModel):
         state = BaseRegistryState()
         state = self.version_manager.update_state(state)
         state = self.stage_manager.update_state(state)
-        state = self.enrichment_manager.update_state(
-            state,
-            all_branches=all_branches,
-            all_commits=all_commits,
-        )
-        state.sort()
+        # state = self.enrichment_manager.update_state(
+        #     state,
+        #     all_branches=all_branches,
+        #     all_commits=all_commits,
+        # )
         return state
 
     def get_artifacts(
@@ -130,7 +129,7 @@ class GitRegistry(BaseModel):
         # check that this commit don't have a version already
         found_version = found_artifact.find_version(commit_hexsha=ref)
         if found_version is not None and found_version.is_registered:
-            raise VersionExistsForCommit(name, found_version.name)
+            raise VersionExistsForCommit(name, found_version.version)
         # if version name is provided, use it
         if version:
             if found_artifact.find_version(name=version) is not None:
@@ -144,7 +143,7 @@ class GitRegistry(BaseModel):
             last_version = found_artifact.get_latest_version(registered_only=True)
             if last_version:
                 version = (
-                    SemVer(last_version.name)
+                    SemVer(last_version.version)
                     .bump(
                         bump_major=bump_major,
                         bump_minor=bump_minor,
@@ -189,7 +188,7 @@ class GitRegistry(BaseModel):
         stdout=False,
         author: Optional[str] = None,
         author_email: Optional[str] = None,
-    ) -> BaseAssignment:
+    ) -> Assignment:
         """Assign stage to specific artifact version"""
         assert_name_is_valid(name)
         self.config.assert_stage(stage)
@@ -214,7 +213,7 @@ class GitRegistry(BaseModel):
             if found_version:
                 if name_version:
                     raise WrongArgs(
-                        f"Can't register '{SemVer(name_version).version}', since '{found_version.name}' is registered already at this ref"
+                        f"Can't register '{SemVer(name_version).version}', since '{found_version.version}' is registered already at this ref"
                     )
             elif not skip_registration:
                 self.register(name, version=name_version, ref=ref, stdout=stdout)
@@ -259,7 +258,7 @@ class GitRegistry(BaseModel):
         stdout=False,
         author: Optional[str] = None,
         author_email: Optional[str] = None,
-    ) -> BaseAssignment:
+    ) -> Assignment:
         """Assign stage to specific artifact version"""
         assert_name_is_valid(name)
         self.config.assert_stage(stage)

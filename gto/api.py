@@ -285,20 +285,18 @@ def _show_registry(
     reg = GitRegistry.from_repo(repo)
     stages = list(reg.get_stages())
     models_state = {
-        o.name: {
-            "version": format_hexsha(o.get_latest_version(registered_only=True).name)
+        o.artifact: {
+            "version": format_hexsha(o.get_latest_version(registered_only=True).version)
             if o.get_latest_version(registered_only=True)
             else None,
             "stage": {
                 name: format_hexsha(
-                    o.get_assignments(
+                    o.get_stages(
                         registered_only=registered_only, last_stage=last_stage
                     )[name][0].version
                 )
                 if name
-                in o.get_assignments(
-                    registered_only=registered_only, last_stage=last_stage
-                )
+                in o.get_stages(registered_only=registered_only, last_stage=last_stage)
                 else None
                 for name in stages
             },
@@ -424,7 +422,7 @@ def history(  # pylint: disable=too-many-locals
             timestamp=datetime.fromtimestamp(
                 reg.repo.commit(v.commit_hexsha).committed_date
             ),
-            artifact=o.name,
+            artifact=o.artifact,
             event=Event.COMMIT,
             commit=format_hexsha(v.commit_hexsha),
             author=reg.repo.commit(v.commit_hexsha).author.name,
@@ -438,9 +436,9 @@ def history(  # pylint: disable=too-many-locals
     registration = [
         OrderedDict(
             timestamp=v.created_at,
-            artifact=o.name,
+            artifact=o.artifact,
             event=Event.REGISTRATION,
-            version=format_hexsha(v.name),
+            version=format_hexsha(v.version),
             commit=format_hexsha(v.commit_hexsha),
             author=v.author,
             author_email=v.author_email,
@@ -454,7 +452,7 @@ def history(  # pylint: disable=too-many-locals
     assignment = [
         OrderedDict(
             timestamp=p.created_at,
-            artifact=o.name,
+            artifact=o.artifact,
             event=Event.ASSIGNMENT,
             version=format_hexsha(p.version),
             stage=p.stage,
@@ -464,7 +462,7 @@ def history(  # pylint: disable=too-many-locals
             message=p.message,
         )
         for o in artifacts.values()
-        for p in o.stages
+        for p in o.assignments
     ]
 
     events_order = {
