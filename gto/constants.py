@@ -1,10 +1,8 @@
 from enum import Enum
 
+COMMIT = "commit"
 REF = "ref"
-# COMMIT = "commit"
 TAG = "tag"
-# BRANCH = "branch"
-# FILE = "file"
 
 ACTION = "action"
 TYPE = "type"
@@ -19,12 +17,6 @@ class Action(Enum):
     REGISTER = "register"
     ASSIGN = "assign"
     UNASSIGN = "unassign"
-
-
-class Event(Enum):
-    COMMIT = "commit"
-    REGISTRATION = "registration"
-    ASSIGNMENT = "assignment"
 
 
 class VersionSort(Enum):

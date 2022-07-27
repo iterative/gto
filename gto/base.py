@@ -20,6 +20,8 @@ from .exceptions import (
 
 # EVENTS: deprecation, registration, deregistration, assignment, unassignment
 class BaseEvent(BaseModel):
+    priority: int
+    addition: bool
     # some fields here are implementation details of tag-based
     # if we add other approaches beside tags, we'll need to fix this
     artifact: str
@@ -32,27 +34,37 @@ class BaseEvent(BaseModel):
 
 
 class Creation(BaseEvent):
-    pass
+    priority = 0
+    addition = True
 
 
 class Deprecation(BaseEvent):
-    pass
+    priority = 5
+    addition = False
 
 
 class Registration(BaseEvent):
+    priority = 1
+    addition = True
     version: str
 
 
 class Deregistration(BaseEvent):
+    priority = 4
+    addition = False
     version: str
 
 
 class Assignment(BaseEvent):
+    priority = 2
+    addition = True
     version: str
     stage: str
 
 
 class Unassignment(BaseEvent):
+    priority = 3
+    addition = False
     version: str
     stage: str
 
@@ -64,7 +76,9 @@ class BaseObject(BaseModel):
     def add_event(self, event: BaseEvent):
         raise NotImplementedError()
 
-    def get_events(self, ascending: bool = False) -> Sequence[BaseEvent]:
+    def get_events(
+        self, direct=True, indirect=True, ascending: bool = False
+    ) -> Sequence[BaseEvent]:
         raise NotImplementedError()
 
     def is_active(self):
@@ -73,6 +87,35 @@ class BaseObject(BaseModel):
     @property
     def activated_at(self):
         raise NotImplementedError()
+
+    @property
+    def authoring_event(self):
+        addition_events = [
+            e for e in self.get_events(direct=True, indirect=False) if e.addition
+        ]
+        if addition_events:
+            return addition_events[0]
+        return self.get_events(direct=False, indirect=True)[0]
+
+    @property
+    def created_at(self):
+        return self.authoring_event.created_at
+
+    @property
+    def author(self):
+        return self.authoring_event.author
+
+    @property
+    def author_email(self):
+        return self.authoring_event.author_email
+
+    @property
+    def message(self):
+        return self.authoring_event.message
+
+    @property
+    def ref(self):
+        return self.authoring_event.tag
 
 
 class VStage(BaseObject):
@@ -85,17 +128,19 @@ class VStage(BaseObject):
     def add_event(self, event: BaseEvent):
         if isinstance(event, Assignment):
             self.assignments.append(event)
-            self.assignments.sort(key=lambda p: p.created_at)
+            self.assignments.sort(key=lambda e: e.created_at)
         elif isinstance(event, Unassignment):
             self.unassignments.append(event)
-            self.unassignments.sort(key=lambda p: p.created_at)
+            self.unassignments.sort(key=lambda e: e.created_at)
         else:
             raise NotImplementedInGTO(f"Unknown event {event} of class {type(event)}")
         return event
 
-    def get_events(self, ascending=False) -> Sequence[BaseEvent]:
+    def get_events(
+        self, direct=True, indirect=True, ascending=False
+    ) -> Sequence[BaseEvent]:  # pylint: disable=unused-argument
         return sorted(
-            self.assignments + self.unassignments, key=lambda e: e.created_at  # type: ignore
+            self.assignments + self.unassignments if direct else [], key=lambda e: e.created_at  # type: ignore
         )[:: 1 if ascending else -1]
 
     def is_active(self):
@@ -130,11 +175,14 @@ class Version(BaseObject):
             raise NotImplementedInGTO(f"Unknown event {event} of class {type(event)}")
         return event
 
-    def get_events(self, ascending=False):
+    def get_events(self, direct=True, indirect=True, ascending=False):
         return sorted(
-            self.registrations
-            + self.deregistrations
-            + [e for s in self.stages.values() for e in s.get_events()],
+            (self.registrations + self.deregistrations if direct else [])
+            + (
+                [e for s in self.stages.values() for e in s.get_events()]
+                if indirect
+                else []
+            ),
             key=lambda e: e.created_at,
         )[:: 1 if ascending else -1]
 
@@ -180,6 +228,9 @@ class Version(BaseObject):
     def dict_status(self):
         version = self.dict()
         version["stages"] = [stage.dict() for stage in self.get_vstages()]
+        version["created_at"] = self.created_at
+        version["author"] = self.author
+        version["ref"] = self.ref
         return version
 
 
@@ -245,11 +296,12 @@ class Artifact(BaseObject):
             raise NotImplementedInGTO(f"Unknown event {event} of class {type(event)}")
         return event
 
-    def get_events(self, ascending=False) -> Sequence[BaseEvent]:
+    def get_events(
+        self, direct=True, indirect=True, ascending=False
+    ) -> Sequence[BaseEvent]:
         return sorted(
-            self.creations
-            + self.deprecations  # type: ignore
-            + [e for v in self.versions for e in v.get_events()],
+            (self.creations + self.deprecations if direct else [])  # type: ignore
+            + ([e for v in self.versions for e in v.get_events()] if indirect else []),
             key=lambda e: e.created_at,
         )[:: 1 if ascending else -1]
 

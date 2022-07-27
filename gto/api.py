@@ -6,8 +6,8 @@ from typing import List, Optional, Union
 from funcy import distinct
 from git import Repo
 
-from gto.constants import NAME, STAGE, VERSION, Event
-from gto.exceptions import NoRepo, WrongArgs
+from gto.constants import COMMIT, NAME, STAGE, VERSION
+from gto.exceptions import NoRepo, NotImplementedInGTO, WrongArgs
 from gto.ext import EnrichmentInfo
 from gto.index import (
     EnrichmentManager,
@@ -360,23 +360,19 @@ def _show_versions(  # pylint: disable=too-many-locals
             )
         )
         v["commit_hexsha"] = format_hexsha(v["commit_hexsha"])
-        # TODO: won't work if len(registrations) > 1
-        v["ref"] = v["registrations"][0]["tag"] or v["commit_hexsha"]
-        v["message"] = v["registrations"][0]["message"]
-        v["author"] = v["registrations"][0]["author"]
+        if len(v["registrations"]) > 1:
+            raise NotImplementedInGTO(
+                "Multiple registrations are not supported currently. How you got in here?"
+            )
         for key in (
             "enrichments",
             "discovered",
             "commit_hexsha",
-            # "message",
-            # "author",
-            # "author_email",
             "stages",
             "registrations",
             "deregistrations",
         ):
             v.pop(key)
-        # v["enrichments"] = [e["source"] for e in v["enrichments"]]
         v = OrderedDict(
             [(key, v[key]) for key in first_keys]
             + [(key, v[key]) for key in v if key not in first_keys]
@@ -425,7 +421,8 @@ def history(  # pylint: disable=too-many-locals
                 reg.repo.commit(v.commit_hexsha).committed_date
             ),
             artifact=o.artifact,
-            event=Event.COMMIT,
+            event=COMMIT,
+            priority=-1,
             commit=format_hexsha(v.commit_hexsha),
             author=reg.repo.commit(v.commit_hexsha).author.name,
             author_email=reg.repo.commit(v.commit_hexsha).author.email,
@@ -435,46 +432,26 @@ def history(  # pylint: disable=too-many-locals
         for v in o.get_versions(include_non_explicit=True, include_discovered=True)
     ]
 
-    registration = [
+    events = [
         OrderedDict(
-            timestamp=v.activated_at,
-            artifact=o.artifact,
-            event=Event.REGISTRATION,
-            version=format_hexsha(v.version),
-            commit=format_hexsha(v.commit_hexsha),
-            author=v.author,
-            author_email=v.author_email,
-            message=v.message,
-            # enrichments=[e.source for e in v.enrichments],
+            timestamp=e.created_at,
+            artifact=e.artifact,
+            event=type(e).__name__.lower(),
+            priority=e.priority,
+            version=format_hexsha(e.version),
+            stage=getattr(e, "stage", None),
+            commit=format_hexsha(e.commit_hexsha),
+            author=e.author,
+            author_email=e.author_email,
+            message=e.message,
         )
         for o in artifacts.values()
-        for v in o.get_versions()
+        for e in o.get_events()
     ]
 
-    assignment = [
-        OrderedDict(
-            timestamp=p.created_at,
-            artifact=o.artifact,
-            event=Event.ASSIGNMENT,
-            version=format_hexsha(p.version),
-            stage=p.stage,
-            commit=format_hexsha(p.commit_hexsha),
-            author=p.author,
-            author_email=p.author_email,
-            message=p.message,
-        )
-        for o in artifacts.values()
-        for p in o.assignments
-    ]
-
-    events_order = {
-        Event.COMMIT: 1,
-        Event.REGISTRATION: 2,
-        Event.ASSIGNMENT: 3,
-    }
     events = sorted(
-        commits + registration + assignment,
-        key=lambda x: (x["timestamp"], events_order[x["event"]]),
+        commits + events,
+        key=lambda x: (x["timestamp"], x["priority"]),
     )
     if not ascending:
         events.reverse()
@@ -488,7 +465,6 @@ def history(  # pylint: disable=too-many-locals
         "event",
         VERSION,
         STAGE,
-        # "enrichments",
         "commit",
         "author",
     ]
