@@ -64,9 +64,9 @@ several versions in a given commit, ordered by their automatic version numbers.
 
 </details>
 
-### Assing a stage
+### Assign a stage
 
-Assing an actionable stage for a specific artifact version with `gto assign`.
+Assign an actionable stage for a specific artifact version with `gto assign`.
 Stages can mark it's readiness for a specific consumer. You can plug in a real
 downsteam system via CI/CD or web hooks. For example: redeploy an ML model.
 

@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Dict, FrozenSet, List, Optional, Union
+from typing import Dict, FrozenSet, List, Optional, Sequence, Union
 
 import git
 from pydantic import BaseModel
@@ -61,14 +61,17 @@ class Unassignment(BaseEvent):
 class BaseObject(BaseModel):
     artifact: str
 
+    def add_event(self, event: BaseEvent):
+        raise NotImplementedError()
+
+    def get_events(self, ascending: bool = False) -> Sequence[BaseEvent]:
+        raise NotImplementedError()
+
     def is_active(self):
         raise NotImplementedError()
 
     @property
     def activated_at(self):
-        raise NotImplementedError()
-
-    def get_events(self, ascending: bool = False) -> List[BaseEvent]:
         raise NotImplementedError()
 
 
@@ -78,15 +81,6 @@ class VStage(BaseObject):
     stage: str
     assignments: List[Assignment] = []
     unassignments: List[Unassignment] = []
-
-    def is_active(self):
-        return isinstance(self.get_events()[0], Assignment)
-
-    @property
-    def activated_at(self):
-        if isinstance(self.get_events()[0], Assignment):
-            return self.get_events()[0].created_at
-        return None
 
     def add_event(self, event: BaseEvent):
         if isinstance(event, Assignment):
@@ -99,10 +93,19 @@ class VStage(BaseObject):
             raise NotImplementedInGTO(f"Unknown event {event} of class {type(event)}")
         return event
 
-    def get_events(self, ascending=False) -> List[BaseEvent]:
+    def get_events(self, ascending=False) -> Sequence[BaseEvent]:
         return sorted(
-            self.assignments + self.unassignments, key=lambda e: e.created_at
+            self.assignments + self.unassignments, key=lambda e: e.created_at  # type: ignore
         )[:: 1 if ascending else -1]
+
+    def is_active(self):
+        return isinstance(self.get_events()[0], Assignment)
+
+    @property
+    def activated_at(self):
+        if isinstance(self.get_events()[0], Assignment):
+            return self.get_events()[0].created_at
+        return None
 
 
 class Version(BaseObject):
@@ -135,13 +138,16 @@ class Version(BaseObject):
             key=lambda e: e.created_at,
         )[:: 1 if ascending else -1]
 
+    def is_active(self):
+        if len(self.get_events()) == 0:
+            return True
+        return isinstance(self.get_events()[0], Registration)
+
     @property
-    def created_at(self):
+    def activated_at(self):
         # TODO: handle the case with deregistration?
         if self.registrations:
             return self.registrations[0].created_at
-        print(self.artifact, self.version, self.commit_hexsha)
-        print(self.stages)
         return self.get_events(ascending=True)[0].created_at
 
     @property
@@ -172,10 +178,8 @@ class Version(BaseObject):
         )[:: 1 if ascending else -1]
 
     def dict_status(self):
-        version = self.dict(exclude={"assignments"})
-        version["assignments"] = (
-            [a.dict() for a in self.assignments] if self.assignments else None
-        )
+        version = self.dict()
+        version["stages"] = [stage.dict() for stage in self.get_vstages()]
         return version
 
 
@@ -234,23 +238,36 @@ class Artifact(BaseObject):
         ):
             self.find_version(
                 event.version, commit_hexsha=event.commit_hexsha, create_new=True
-            ).add_event(event)
+            ).add_event(  # type: ignore
+                event
+            )
         else:
             raise NotImplementedInGTO(f"Unknown event {event} of class {type(event)}")
         return event
 
-    @property
-    def get_events(self, ascending=False) -> List[BaseEvent]:
+    def get_events(self, ascending=False) -> Sequence[BaseEvent]:
         return sorted(
             self.creations
-            + self.deprecations
+            + self.deprecations  # type: ignore
             + [e for v in self.versions for e in v.get_events()],
             key=lambda e: e.created_at,
         )[:: 1 if ascending else -1]
 
+    def is_active(self):
+        if len(self.get_events()) == 0:
+            return True
+        return isinstance(self.get_events()[0], Creation)
+
+    @property
+    def activated_at(self):
+        # TODO: handle the case with deprecation
+        if self.creations:
+            return self.creations[0].created_at
+        return self.get_events(ascending=True)[0].created_at
+
     @property
     def unique_stages(self):
-        return {assignment.stage for assignment in self.assignments}
+        return set(self.get_stages())
 
     def __repr__(self) -> str:
         versions = ", ".join(f"'{v.version}'" for v in self.versions)
@@ -363,7 +380,7 @@ class Artifact(BaseObject):
                 raise_if_not_found=True,
                 allow_multiple=True,
             )
-            if (v.created_at <= latest_datetime if latest_datetime else True)  # type: ignore
+            if (v.activated_at <= latest_datetime if latest_datetime else True)  # type: ignore
         ][-1]
 
 
@@ -383,8 +400,6 @@ class BaseRegistryState(BaseModel):
         return self.artifacts
 
     def find_artifact(self, name: str, create_new=False) -> Artifact:
-        if not name:
-            raise ValueError("Artifact name is required")
         if name not in self.artifacts:
             if create_new:
                 self.artifacts[name] = Artifact(artifact=name, versions=[])

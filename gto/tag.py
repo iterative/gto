@@ -14,7 +14,6 @@ from .base import (
     BaseManager,
     BaseRegistryState,
     Registration,
-    Version,
 )
 from .constants import ACTION, NAME, NUMBER, STAGE, TAG, VERSION, Action
 from .exceptions import (
@@ -47,7 +46,7 @@ def name_tag(
 
     if action in (Action.ASSIGN, Action.UNASSIGN):
         if simple:
-            tag = f"{name}{ActionSign[action.ASSIGN]}{stage}"
+            tag = f"{name}{ActionSign[Action.ASSIGN]}{stage}"
             if action == Action.UNASSIGN:
                 tag += ActionSign[Action.UNASSIGN]
             return tag
@@ -55,7 +54,7 @@ def name_tag(
             raise MissingArg(arg="repo")
         numbers = []
         for tag in repo.tags:
-            parsed = parse_name(tag.name, raise_on_fail=False)
+            parsed = parse_name(tag.name, raise_on_fail=False)  # type: ignore
             if (
                 parsed
                 and (parsed[NAME] == name)
@@ -231,7 +230,7 @@ def delete_tag(repo: git.Repo, name: str):
         raise TagNotFound(name=name) from e
 
 
-def registration_from_tag(tag: git.Tag) -> Version:
+def registration_from_tag(tag: git.Tag) -> Registration:
     mtag = parse_tag(tag)
     return Registration(
         artifact=mtag.name,

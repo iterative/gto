@@ -71,11 +71,11 @@ class GitRegistry(BaseModel):
         state = BaseRegistryState()
         state = self.version_manager.update_state(state)
         state = self.stage_manager.update_state(state)
-        # state = self.enrichment_manager.update_state(
-        #     state,
-        #     all_branches=all_branches,
-        #     all_commits=all_commits,
-        # )
+        state = self.enrichment_manager.update_state(
+            state,
+            all_branches=all_branches,
+            all_commits=all_commits,
+        )
         return state
 
     def get_artifacts(
@@ -245,7 +245,7 @@ class GitRegistry(BaseModel):
             )
         return assignment
 
-    def unassign(
+    def unassign(  # pylint: disable=too-many-locals
         self,
         name,
         stage,
@@ -279,7 +279,7 @@ class GitRegistry(BaseModel):
             raise WrongArgs(
                 f"Stage '{stage}' is not assigned to a version '{found_version.version}'"
             )
-        if delete and (message or author or author_email or simple or force):
+        if delete and any([message, author, author_email, simple, force]):
             raise WrongArgs(
                 "Deleting a git tag doesn't require any of 'message', 'force', 'simple', 'author' or 'author_email'"
             )

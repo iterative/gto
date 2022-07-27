@@ -352,26 +352,28 @@ def _show_versions(  # pylint: disable=too-many-locals
     first_keys = ["artifact", "version", "stage"]
     versions_ = []
     for v in versions:
-        v["version"] = format_hexsha(v["name"])
+        v["version"] = format_hexsha(v["version"])
         v["stage"] = ", ".join(
             distinct(
                 s["stage"]
-                for s in (
-                    v["assignments"][::-1][:1] if last_stage else v["assignments"][::-1]
-                )
+                for s in (v["stages"][::-1][:1] if last_stage else v["stages"][::-1])
             )
         )
         v["commit_hexsha"] = format_hexsha(v["commit_hexsha"])
-        v["ref"] = v["tag"] or v["commit_hexsha"]
+        # TODO: won't work if len(registrations) > 1
+        v["ref"] = v["registrations"][0]["tag"] or v["commit_hexsha"]
+        v["message"] = v["registrations"][0]["message"]
+        v["author"] = v["registrations"][0]["author"]
         for key in (
             "enrichments",
             "discovered",
-            "tag",
             "commit_hexsha",
-            "name",
-            "message",
-            "author_email",
-            "assignments",
+            # "message",
+            # "author",
+            # "author_email",
+            "stages",
+            "registrations",
+            "deregistrations",
         ):
             v.pop(key)
         # v["enrichments"] = [e["source"] for e in v["enrichments"]]
@@ -435,7 +437,7 @@ def history(  # pylint: disable=too-many-locals
 
     registration = [
         OrderedDict(
-            timestamp=v.created_at,
+            timestamp=v.activated_at,
             artifact=o.artifact,
             event=Event.REGISTRATION,
             version=format_hexsha(v.version),
