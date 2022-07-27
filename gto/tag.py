@@ -308,23 +308,6 @@ class TagVersionManager(TagManager):
             tagger_email=author_email,
         )
 
-    def check_ref(self, ref: str, state: BaseRegistryState):
-        try:
-            _ = self.repo.tags[ref]
-            art_name = parse_name(ref)[NAME]
-            version_name = parse_name(ref)[VERSION]
-        except (KeyError, ValueError, IndexError):
-            # logging.warning(
-            #     "Provided ref doesn't exist or it is not a tag that registers a version"
-            # )
-            return {}
-        return {
-            name: version
-            for name, artifact in state.get_artifacts().items()
-            for version in artifact.versions
-            if name == art_name and version.version == version_name
-        }
-
 
 class TagStageManager(TagManager):
     actions: FrozenSet[Action] = frozenset((Action.ASSIGN,))
@@ -377,17 +360,3 @@ class TagStageManager(TagManager):
             tagger_email=author_email,
         )
         return tag
-
-    def check_ref(self, ref: str, state: BaseRegistryState):
-        try:
-            tag = self.repo.tags[ref]
-            _ = parse_name(ref)[STAGE]
-            art_name = parse_name(ref)[NAME]
-        except (KeyError, ValueError, IndexError):
-            return {}
-        return {
-            name: assignment
-            for name, artifact in state.get_artifacts().items()
-            for assignment in artifact.assignments + artifact.unassignments
-            if name == art_name and assignment.tag == tag.name
-        }

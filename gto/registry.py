@@ -1,3 +1,4 @@
+import logging
 import os
 from typing import Optional, Union
 
@@ -12,14 +13,16 @@ from gto.config import (
     assert_name_is_valid,
     read_registry_config,
 )
+from gto.constants import NAME
 from gto.exceptions import (
     NoRepo,
+    NotImplementedInGTO,
     VersionAlreadyRegistered,
     VersionExistsForCommit,
     WrongArgs,
 )
 from gto.index import EnrichmentManager
-from gto.tag import TagStageManager, TagVersionManager
+from gto.tag import TagStageManager, TagVersionManager, parse_name
 from gto.ui import echo
 from gto.versions import SemVer
 
@@ -220,8 +223,8 @@ class GitRegistry(BaseModel):
         if (
             not force
             and found_version
-            and found_version.assignments
-            and any(a.stage == stage for a in found_version.assignments)
+            and found_version.stages
+            and any(s == stage for s in found_version.stages)
         ):
             raise WrongArgs(f"Version is already in stage '{stage}'")
         # TODO: getting tag name as a result and using it
@@ -238,12 +241,15 @@ class GitRegistry(BaseModel):
             author=author,
             author_email=author_email,
         )
-        assignment = self.stage_manager.check_ref(tag, self.get_state())[name]
+        event = self.check_ref(tag)
+        if len(event) > 1:
+            raise NotImplementedInGTO("Can't process a tag that caused multiple events")
+        event = event[0]
         if stdout:
             echo(
-                f"Created git tag '{assignment.tag}' that assigns '{stage}' to '{assignment.version}'"
+                f"Created git tag '{tag}' that assigns '{event.stage}' to '{event.version}'"
             )
-        return assignment
+        return event
 
     def unassign(  # pylint: disable=too-many-locals
         self,
@@ -273,8 +279,8 @@ class GitRegistry(BaseModel):
         if (
             not force
             and found_version
-            and found_version.assignments
-            and all(a.stage != stage for a in found_version.assignments)
+            and found_version.stages
+            and all(s != stage for s in found_version.stages)
         ):
             raise WrongArgs(
                 f"Stage '{stage}' is not assigned to a version '{found_version.version}'"
@@ -298,27 +304,36 @@ class GitRegistry(BaseModel):
             author=author,
             author_email=author_email,
         )
-        assignment = self.stage_manager.check_ref(tag, self.get_state())[name]
+        event = self.check_ref(tag)
+        if len(event) > 1:
+            raise NotImplementedInGTO("Can't process a tag that caused multiple events")
+        event = event[0]
         if stdout:
             echo(
-                f"Created git tag '{assignment.tag}' that unassigns '{stage}' from '{assignment.version}'"
+                f"Created git tag '{tag}' that unassigns '{event.stage}' from '{event.version}'"
             )
-        return assignment
-
-    def _check_ref(self, ref, state):
-        if ref.startswith("refs/tags/"):
-            ref = ref[len("refs/tags/") :]
-        if ref.startswith("refs/heads/"):
-            ref = self.repo.commit(ref).hexsha
-        return {
-            "version": self.version_manager.check_ref(ref, state),
-            "stage": self.stage_manager.check_ref(ref, state),
-        }
+        return event
 
     def check_ref(self, ref: str):
         "Find out what was registered/assigned in this ref"
+        try:
+            if ref.startswith("refs/tags/"):
+                ref = ref[len("refs/tags/") :]
+            if ref.startswith("refs/heads/"):
+                ref = self.repo.commit(ref).hexsha
+            _ = self.repo.tags[ref]
+            name = parse_name(ref)[NAME]  # optimization
+        except (KeyError, ValueError, IndexError):
+            logging.info("Provided ref doesn't exist or it is not of GTO format")
+            return []
         state = self.get_state()
-        return self._check_ref(ref, state)
+        return [
+            event
+            for aname, artifact in state.get_artifacts().items()
+            if aname == name
+            for event in artifact.get_events()
+            if event.tag == ref
+        ]
 
     def find_commit(self, name, version):
         return self.get_state().find_commit(name, version)

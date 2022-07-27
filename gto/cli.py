@@ -185,7 +185,6 @@ app = Typer(
 arg_name = Argument(..., help="Artifact name")
 arg_version = Argument(..., help="Artifact version")
 arg_stage = Argument(..., help="Stage to assign")
-option_name = Option(None, "--name", "-n", help="Artifact name", show_default=True)
 
 # Typer options to control git-related operations
 option_rev = Option(None, "--rev", help="Repo revision to use", show_default=True)
@@ -239,16 +238,22 @@ option_ascending = Option(
     help="Show new first",
     show_default=True,
 )
-option_type_bool = Option(
+option_show_name = Option(False, "--name", is_flag=True, help="Output artifact name")
+option_show_version = Option(
+    False, "--version", is_flag=True, help="Output artifact version"
+)
+option_show_event = Option(False, "--event", is_flag=True, help="Output the event")
+option_show_stage = Option(False, "--stage", is_flag=True, help="Output artifact stage")
+option_show_type = Option(
     False, "--type", is_flag=True, help="Show type", show_default=True
 )
-option_path_bool = Option(
+option_show_path = Option(
     False, "--path", is_flag=True, help="Show path", show_default=True
 )
-option_ref_bool = Option(
+option_show_ref = Option(
     False, "--ref", is_flag=True, help="Show ref", show_default=True
 )
-option_description_bool = Option(
+option_show_description = Option(
     False, "--description", is_flag=True, help="Show description", show_default=True
 )
 option_json = Option(
@@ -576,7 +581,7 @@ def unassign(
 def latest(
     repo: str = option_repo,
     name: str = arg_name,
-    ref: bool = option_ref_bool,
+    ref: bool = option_show_ref,
 ):
     """Find the latest version of artifact
 
@@ -596,7 +601,7 @@ def which(
     repo: str = option_repo,
     name: str = arg_name,
     stage: str = arg_stage,
-    ref: bool = option_ref_bool,
+    ref: bool = option_show_ref,
     all: bool = option_all,
     registered_only: bool = option_registered_only,
     # ascending: bool = option_ascending,
@@ -645,17 +650,10 @@ def check_ref(
     repo: str = option_repo,
     ref: str = Argument(..., help="Git reference to analyze"),
     json: bool = option_json,
-    registration: bool = Option(
-        False, "--registration", is_flag=True, help="Check if ref registers a version"
-    ),
-    assignment: bool = Option(
-        False, "--assignment", is_flag=True, help="Check if ref assigns a stage"
-    ),
-    name: bool = Option(False, "--name", is_flag=True, help="Output artifact name"),
-    version: bool = Option(
-        False, "--version", is_flag=True, help="Output artifact version"
-    ),
-    stage: bool = Option(False, "--stage", is_flag=True, help="Output artifact stage"),
+    name: bool = option_show_name,
+    version: bool = option_show_version,
+    event: bool = option_show_event,
+    stage: bool = option_show_stage,
 ):
     """Find out the artifact version registered/assigned with ref
 
@@ -665,44 +663,26 @@ def check_ref(
         $ gto check-ref rf#prod --version
     """
     assert (
-        sum(bool(i) for i in (json, registration, assignment, name, version, stage))
-        <= 1
+        sum(bool(i) for i in (json, event, name, version, stage)) <= 1
     ), "Only one output formatting flags is allowed"
-    result = {
-        action: {name: version.dict() for name, version in found.items()}
-        for action, found in gto.api.check_ref(repo, ref).items()
-    }
-    version_dict = list(result["version"].values())[0] if result["version"] else {}
-    stage_dict = list(result["stage"].values())[0] if result["stage"] else {}
+    result = gto.api.check_ref(repo, ref)
+    if len(result) > 1:
+        NotImplementedInGTO("Checking refs that created 1+ events is not supported")
+    found_event = result[0]
     if json:
-        format_echo(result, "json")
+        format_echo(found_event.dict_state(exclude={"priority", "addition"}), "json")
     elif name:
-        if version_dict:
-            echo(version_dict["artifact"])
-        if stage_dict:
-            echo(stage_dict["artifact"])
+        format_echo(found_event.artifact, "line")
     elif version:
-        if version_dict:
-            echo(version_dict["name"])
-        if stage_dict:
-            echo(stage_dict["version"])
+        if hasattr(found_event, "version"):
+            format_echo(found_event.version, "line")
     elif stage:
-        if version_dict:
-            raise NotImplementedInGTO(
-                "--stage is not implemented for version assignment git tag"
-            )
-        if stage_dict:
-            echo(stage_dict["stage"])
-    elif (registration or not assignment) and version_dict:
-        echo(
-            f"""{EMOJI_OK} Version "{version_dict["name"]}" of artifact """
-            f""""{version_dict["artifact"]}" was registered"""
-        )
-    elif (assignment or not registration) and stage_dict:
-        echo(
-            f"""{EMOJI_OK} Stage "{stage_dict["stage"]}" was assigned to version"""
-            f'''"{stage_dict["version"]}" of artifact "{stage_dict["artifact"]}"'''
-        )
+        if hasattr(found_event, "stage"):
+            format_echo(found_event.stage, "line")
+    elif event:
+        format_echo(found_event.event, "line")
+    else:
+        echo(f"{EMOJI_OK} {found_event}")
 
 
 @gto_command(section=CommandGroups.querying)
@@ -888,9 +868,9 @@ def describe(
     repo: str = option_repo,
     name: str = arg_name,
     rev: str = option_rev,
-    type: Optional[bool] = option_type_bool,
-    path: Optional[bool] = option_path_bool,
-    description: Optional[bool] = option_description_bool,
+    type: Optional[bool] = option_show_type,
+    path: Optional[bool] = option_show_path,
+    description: Optional[bool] = option_show_description,
 ):
     """Display enrichments for an artifact
 

@@ -4,6 +4,7 @@ COMMIT = "commit"
 REF = "ref"
 TAG = "tag"
 
+ARTIFACT = "artifact"
 ACTION = "action"
 TYPE = "type"
 NAME = "name"

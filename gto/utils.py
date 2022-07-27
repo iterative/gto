@@ -73,6 +73,9 @@ def format_echo(result, format, format_table=None, if_empty="", missing_value="-
         if result:
             for line in result:
                 click.echo(line)
+    elif format == "line":
+        if result:
+            click.echo(result)
     else:
         raise NotImplementedError(f"Format {format} is not implemented")
 

@@ -32,15 +32,30 @@ class BaseEvent(BaseModel):
     commit_hexsha: str
     tag: str
 
+    @property
+    def event(self):
+        return self.__class__.__name__.lower()
+
+    def dict_state(self, exclude=None):
+        state = self.dict(exclude=exclude)
+        state["event"] = self.event
+        return state
+
 
 class Creation(BaseEvent):
     priority = 0
     addition = True
 
+    def __str__(self):
+        return f'Artifact "{self.artifact}" was created'
+
 
 class Deprecation(BaseEvent):
     priority = 5
     addition = False
+
+    def __str__(self):
+        return f'Artifact "{self.artifact}" was deprecated'
 
 
 class Registration(BaseEvent):
@@ -48,11 +63,19 @@ class Registration(BaseEvent):
     addition = True
     version: str
 
+    def __str__(self):
+        return f'Version "{self.version}" of artifact "{self.artifact}" was registered'
+
 
 class Deregistration(BaseEvent):
     priority = 4
     addition = False
     version: str
+
+    def __str__(self):
+        return (
+            f'Version "{self.version}" of artifact "{self.artifact}" was deregistered'
+        )
 
 
 class Assignment(BaseEvent):
@@ -61,12 +84,18 @@ class Assignment(BaseEvent):
     version: str
     stage: str
 
+    def __str__(self) -> str:
+        return f'Stage "{self.stage}" was assigned to version "{self.version}" of artifact "{self.artifact}"'
+
 
 class Unassignment(BaseEvent):
     priority = 3
     addition = False
     version: str
     stage: str
+
+    def __str__(self) -> str:
+        return f'Stage "{self.stage}" was unassigned from version "{self.version}" of artifact "{self.artifact}"'
 
 
 # ENTITIES: Artifact, Version, Stage
@@ -225,7 +254,7 @@ class Version(BaseObject):
             key=lambda s: s.activated_at,
         )[:: 1 if ascending else -1]
 
-    def dict_status(self):
+    def dict_state(self):
         version = self.dict()
         version["stages"] = [stage.dict() for stage in self.get_vstages()]
         version["created_at"] = self.created_at
@@ -493,7 +522,4 @@ class BaseManager(BaseModel):
     def update_state(
         self, state: BaseRegistryState
     ) -> BaseRegistryState:  # pylint: disable=no-self-use
-        raise NotImplementedError
-
-    def check_ref(self, ref: str, state: BaseRegistryState):
         raise NotImplementedError

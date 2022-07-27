@@ -6,7 +6,7 @@ from typing import List, Optional, Union
 from funcy import distinct
 from git import Repo
 
-from gto.constants import COMMIT, NAME, STAGE, VERSION
+from gto.constants import ARTIFACT, COMMIT, NAME, STAGE, VERSION
 from gto.exceptions import NoRepo, NotImplementedInGTO, WrongArgs
 from gto.ext import EnrichmentInfo
 from gto.index import (
@@ -337,7 +337,7 @@ def _show_versions(  # pylint: disable=too-many-locals
     if raw:
         return reg.find_artifact(name).versions
     versions = [
-        v.dict_status()
+        v.dict_state()
         for v in reg.find_artifact(
             name,
             all_branches=all_branches,
@@ -355,8 +355,7 @@ def _show_versions(  # pylint: disable=too-many-locals
         v["version"] = format_hexsha(v["version"])
         v["stage"] = ", ".join(
             distinct(
-                s["stage"]
-                for s in (v["stages"][::-1][:1] if last_stage else v["stages"][::-1])
+                s["stage"] for s in (v["stages"][:1] if last_stage else v["stages"])
             )
         )
         v["commit_hexsha"] = format_hexsha(v["commit_hexsha"])
@@ -371,6 +370,7 @@ def _show_versions(  # pylint: disable=too-many-locals
             "stages",
             "registrations",
             "deregistrations",
+            "author",
         ):
             v.pop(key)
         v = OrderedDict(
@@ -395,7 +395,7 @@ def describe(
     raise NotImplementedError
 
 
-def history(  # pylint: disable=too-many-locals
+def history(
     repo: Union[str, Repo],
     artifact: str = None,
     # action: str = None,
@@ -444,6 +444,7 @@ def history(  # pylint: disable=too-many-locals
             author=e.author,
             author_email=e.author_email,
             message=e.message,
+            ref=e.tag,
         )
         for o in artifacts.values()
         for e in o.get_events()
@@ -461,12 +462,13 @@ def history(  # pylint: disable=too-many-locals
         return events
     keys_order = [
         "timestamp",
-        "artifact",
+        ARTIFACT,
         "event",
         VERSION,
         STAGE,
-        "commit",
-        "author",
+        COMMIT,
+        # "author",
+        "ref",
     ]
     keys_order = [c for c in keys_order if any(c in event for event in events)]
     events = [
