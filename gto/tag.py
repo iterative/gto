@@ -189,11 +189,7 @@ def find(
     if tags is None:
         if repo is None:
             raise MissingArg(arg="repo")
-        tags = [
-            t
-            for t in repo.tags
-            if parse_name(t.name, raise_on_fail=False) and t.tag is not None
-        ]
+        tags = [t for t in repo.tags if parse_name(t.name, raise_on_fail=False)]
     if action:
         tags = [t for t in tags if parse_name(t.name)[ACTION] in action]
     if name:
@@ -202,6 +198,8 @@ def find(
         tags = [t for t in tags if parse_name(t.name).get(VERSION) == version]
     if stage:
         tags = [t for t in tags if parse_name(t.name).get(STAGE) == stage]
+    # remove lightweight tags - better to do later so the function is faster
+    tags = [t for t in tags if t.tag is not None]
     if sort == "by_time":
         tags = sorted(tags, key=lambda t: t.tag.tagged_date)
     else:
