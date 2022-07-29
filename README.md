@@ -238,11 +238,11 @@ Note: this functionality is experimental and subject to change. If you find it
 useful, please share your feedback in GH issues to help us make it stable.
 
 In some cases, you want to see more than a single version assigned in a stage.
-For that, use `--lv` (short for `--last-assignments-per-version`), e.g. `-1` to
-show all versions.
+For that, use `--av` (short for `--assignments-per-version`), e.g. `-1` to show
+all versions.
 
 ```console
-$ gto show churn --lv -1
+$ gto show churn --av -1
 ╒════════════╤═══════════╤══════════════╤═════════════════════╤══════════════╕
 │ artifact   │ version   │ stage        │ created_at          │ ref          │
 ╞════════════╪═══════════╪══════════════╪═════════════════════╪══════════════╡
@@ -251,7 +251,7 @@ $ gto show churn --lv -1
 ╘════════════╧═══════════╧══════════════╧═════════════════════╧══════════════╛
 ```
 
-To enable this workflow, you need to supply the `--lv` argument to `gto show`
+To enable this workflow, you need to supply the `--av` argument to `gto show`
 and `gto which` commands. Other commands behave the same way regardless of the
 approach you choose.
 
@@ -266,11 +266,11 @@ stage. This resembles Kanban workflow, when you "move" your artifact version
 from one column ("stage-1") to another ("stage-2"). This is how MLFlow and some
 other Model Registries work.
 
-To achieve this, you can use `--la` flag (or `--last-versions-per-stage` for
-short) combined with `--lv`:
+To achieve this, you can use `--vs` flag (or `--versions-per-stage` for short)
+combined with `--av`:
 
 ```console
-$ gto show churn --la 1 --lv -1
+$ gto show churn --av 1 --vs -1
 ╒════════════╤═══════════╤═════════╤═════════════════════╤══════════════╕
 │ artifact   │ version   │ stage   │ created_at          │ ref          │
 ╞════════════╪═══════════╪═════════╪═════════════════════╪══════════════╡
@@ -279,9 +279,9 @@ $ gto show churn --la 1 --lv -1
 ╘════════════╧═══════════╧═════════╧═════════════════════╧══════════════╛
 ```
 
-To enable this workflow, you need to supply the `--lv` argument to `gto show`
-and `gto which` commands. Other commands behave the same way regardless of the
-approach you choose.
+To enable this workflow, you need to supply the `--vs` and `--av` arguments to
+`gto show` and `gto which` commands. Other commands behave the same way
+regardless of the approach you choose.
 
 ### See the history of an artifact
 

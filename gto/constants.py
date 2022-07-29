@@ -23,3 +23,7 @@ class Action(Enum):
 class VersionSort(Enum):
     SemVer = "semver"
     Timestamp = "timestamp"
+
+
+ASSIGNMENTS_PER_VERSION = -1
+VERSIONS_PER_STAGE = 1

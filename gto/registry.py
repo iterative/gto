@@ -342,11 +342,22 @@ class GitRegistry(BaseModel):
         return self.get_state().find_commit(name, version)
 
     def which(
-        self, name, stage, raise_if_not_found=True, all=False, registered_only=False
+        self,
+        name,
+        stage,
+        raise_if_not_found=True,
+        assignments_per_version=None,
+        versions_per_stage=None,
+        registered_only=False,
     ):
         """Return stage active in specific stage"""
         return self.get_state().which(
-            name, stage, raise_if_not_found, all=all, registered_only=registered_only
+            name,
+            stage,
+            raise_if_not_found,
+            assignments_per_version=assignments_per_version,
+            versions_per_stage=versions_per_stage,
+            registered_only=registered_only,
         )
 
     def latest(self, name: str, all: bool = False, registered: bool = True):

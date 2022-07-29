@@ -314,14 +314,14 @@ class Version(BaseObject):
             key=lambda s: s.activated_at,
         )[:: 1 if ascending else -1]
 
-    def dict_state(self, exclude=None, last_assignments_per_version=-1):
-        if last_assignments_per_version < -1:
-            raise WrongArgs("'last_assignments_per_version' must be >= -1")
+    def dict_state(self, exclude=None, assignments_per_version=None):
+        if assignments_per_version < -1:
+            raise WrongArgs("'assignments_per_version' must be >= -1")
         version = super().dict_state(exclude=exclude)
         version["discovered"] = self.discovered
         version["stages"] = [stage.dict_state() for stage in self.get_vstages()]
-        if last_assignments_per_version >= 0:
-            version["stages"] = version["stages"][:last_assignments_per_version]
+        if assignments_per_version >= 0:
+            version["stages"] = version["stages"][:assignments_per_version]
         return version
 
 
@@ -447,14 +447,14 @@ class Artifact(BaseObject):
     def get_vstages(
         self,
         registered_only=False,
-        last_assignments_per_version=-1,
-        last_versions_per_stage=1,
+        assignments_per_version=None,
+        versions_per_stage=None,
         sort=VersionSort.SemVer,
     ):
-        if last_assignments_per_version < -1:
-            raise WrongArgs("'last_assignments_per_version' must be >= -1")
-        if last_versions_per_stage < -1:
-            raise WrongArgs("'last_versions_per_stage' must be >=-1")
+        if assignments_per_version < -1:
+            raise WrongArgs("'assignments_per_version' must be >= -1")
+        if versions_per_stage < -1:
+            raise WrongArgs("'versions_per_stage' must be >=-1")
         versions = self.get_versions(
             include_non_explicit=not registered_only, sort=sort
         )
@@ -465,15 +465,15 @@ class Artifact(BaseObject):
         stages: Dict[str, List[VStage]] = {}
         for version in versions:
             for a in (
-                version.get_vstages(ascending=True)[:last_assignments_per_version]
-                if last_assignments_per_version > -1
+                version.get_vstages(ascending=True)[:assignments_per_version]
+                if assignments_per_version > -1
                 else version.get_vstages(ascending=True)
             ):
                 if a.stage not in stages:
                     stages[a.stage] = []
                 if (
-                    last_versions_per_stage > -1  # pylint: disable=chained-comparison
-                    and len(stages[a.stage]) >= last_versions_per_stage
+                    versions_per_stage > -1  # pylint: disable=chained-comparison
+                    and len(stages[a.stage]) >= versions_per_stage
                 ):
                     continue
                 if a.version not in [i.version for i in stages[a.stage]]:
@@ -568,12 +568,22 @@ class BaseRegistryState(BaseModel):
         )
 
     def which(
-        self, name, stage, raise_if_not_found=True, all=False, registered_only=False
+        self,
+        name,
+        stage,
+        raise_if_not_found=True,
+        assignments_per_version=None,
+        versions_per_stage=None,
+        registered_only=False,
     ):
         """Return stage active in specific stage"""
-        assigned = self.find_artifact(name).get_vstages(registered_only=registered_only)
+        assigned = self.find_artifact(name).get_vstages(
+            registered_only=registered_only,
+            assignments_per_version=assignments_per_version,
+            versions_per_stage=versions_per_stage,
+        )
         if stage in assigned:
-            return assigned[stage] if all else assigned[stage][0]
+            return assigned[stage]
         if raise_if_not_found:
             raise ValueError(f"Stage {stage} not found for {name}")
         return None

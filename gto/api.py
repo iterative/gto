@@ -5,7 +5,15 @@ from typing import List, Optional, Union
 from funcy import distinct
 from git import Repo
 
-from gto.constants import ARTIFACT, COMMIT, NAME, STAGE, VERSION
+from gto.constants import (
+    ARTIFACT,
+    ASSIGNMENTS_PER_VERSION,
+    COMMIT,
+    NAME,
+    STAGE,
+    VERSION,
+    VERSIONS_PER_STAGE,
+)
 from gto.exceptions import NoRepo, NotImplementedInGTO, WrongArgs
 from gto.ext import EnrichmentInfo
 from gto.index import (
@@ -218,12 +226,18 @@ def find_versions_in_stage(
     repo: Union[str, Repo],
     name: str,
     stage: str,
-    all: bool = False,
+    assignments_per_version=ASSIGNMENTS_PER_VERSION,
+    versions_per_stage=VERSIONS_PER_STAGE,
     registered_only: bool = False,
 ):
     """Return version of artifact with specific stage active"""
     return GitRegistry.from_repo(repo).which(
-        name, stage, raise_if_not_found=False, all=all, registered_only=registered_only
+        name,
+        stage,
+        raise_if_not_found=False,
+        assignments_per_version=assignments_per_version,
+        versions_per_stage=versions_per_stage,
+        registered_only=registered_only,
     )
 
 
@@ -240,8 +254,8 @@ def show(
     all_commits=False,
     truncate_hexsha=False,
     registered_only=False,
-    last_assignments_per_version=-1,
-    last_versions_per_stage=1,
+    assignments_per_version=ASSIGNMENTS_PER_VERSION,
+    versions_per_stage=1,
     table: bool = False,
 ):
     return (
@@ -251,8 +265,8 @@ def show(
             all_branches=all_branches,
             all_commits=all_commits,
             registered_only=registered_only,
-            last_assignments_per_version=last_assignments_per_version,
-            last_versions_per_stage=last_versions_per_stage,
+            assignments_per_version=assignments_per_version,
+            versions_per_stage=versions_per_stage,
             table=table,
             truncate_hexsha=truncate_hexsha,
         )
@@ -262,8 +276,8 @@ def show(
             all_branches=all_branches,
             all_commits=all_commits,
             registered_only=registered_only,
-            last_assignments_per_version=last_assignments_per_version,
-            last_versions_per_stage=last_versions_per_stage,
+            assignments_per_version=assignments_per_version,
+            versions_per_stage=versions_per_stage,
             table=table,
             truncate_hexsha=truncate_hexsha,
         )
@@ -275,8 +289,8 @@ def _show_registry(
     all_branches=False,
     all_commits=False,
     registered_only=False,
-    last_assignments_per_version: int = -1,
-    last_versions_per_stage: int = 1,
+    assignments_per_version: int = ASSIGNMENTS_PER_VERSION,
+    versions_per_stage: int = VERSIONS_PER_STAGE,
     table: bool = False,
     truncate_hexsha: bool = False,
 ):
@@ -298,15 +312,15 @@ def _show_registry(
                         format_hexsha(s.version)
                         for s in o.get_vstages(
                             registered_only=registered_only,
-                            last_assignments_per_version=last_assignments_per_version,
-                            last_versions_per_stage=last_versions_per_stage,
+                            assignments_per_version=assignments_per_version,
+                            versions_per_stage=versions_per_stage,
                         )[name]
                     ]
                 )
                 if name
                 in o.get_vstages(
                     registered_only=registered_only,
-                    last_assignments_per_version=last_assignments_per_version,
+                    assignments_per_version=assignments_per_version,
                 )
                 else None
                 for name in stages
@@ -335,8 +349,8 @@ def _show_versions(  # pylint: disable=too-many-locals
     all_branches=False,
     all_commits=False,
     registered_only=False,
-    last_assignments_per_version: int = -1,
-    last_versions_per_stage: int = 1,
+    assignments_per_version: int = None,
+    versions_per_stage: int = None,
     table: bool = False,
     truncate_hexsha: bool = False,
 ):
@@ -356,8 +370,8 @@ def _show_versions(  # pylint: disable=too-many-locals
     )
     stages = artifact.get_vstages(
         registered_only=registered_only,
-        last_assignments_per_version=last_assignments_per_version,
-        last_versions_per_stage=last_versions_per_stage,
+        assignments_per_version=assignments_per_version,
+        versions_per_stage=versions_per_stage,
     )
     versions = []
     for v in artifact.get_versions(

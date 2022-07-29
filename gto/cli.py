@@ -12,6 +12,7 @@ from typer import Argument, Option, Typer
 from typer.core import TyperCommand, TyperGroup
 
 import gto
+from gto.constants import ASSIGNMENTS_PER_VERSION, VERSIONS_PER_STAGE
 from gto.exceptions import GTOException, NotImplementedInGTO, WrongArgs
 from gto.ui import EMOJI_FAIL, EMOJI_GTO, EMOJI_OK, bold, cli_echo, color, echo
 from gto.utils import format_echo, make_ready_to_serialize
@@ -228,6 +229,18 @@ option_expected = Option(
     is_flag=True,
     help="Return exit code 1 if no result",
     show_default=True,
+)
+option_assignments_per_version = Option(
+    ASSIGNMENTS_PER_VERSION,
+    "--av",
+    "--assignments-per-version",
+    help="Show N last stages for each version. -1 for all",
+)
+option_versions_per_stage = Option(
+    VERSIONS_PER_STAGE,
+    "--vs",
+    "--versions-per-stage",
+    help="Show N last versions for each stage. -1 for all. Applied after 'assignments-per-version'",
 )
 
 # Typer options to format the output
@@ -602,7 +615,8 @@ def which(
     name: str = arg_name,
     stage: str = arg_stage,
     ref: bool = option_show_ref,
-    all: bool = option_all,
+    assignments_per_version: int = option_assignments_per_version,
+    versions_per_stage: int = option_versions_per_stage,
     registered_only: bool = option_registered_only,
     # ascending: bool = option_ascending,
 ):
@@ -614,18 +628,19 @@ def which(
         Print git tag that did the assignment:
         $ gto which nn prod --ref
     """
-    version = gto.api.find_versions_in_stage(
-        repo, name, stage, all=all, registered_only=registered_only
+    versions = gto.api.find_versions_in_stage(
+        repo,
+        name,
+        stage,
+        assignments_per_version=assignments_per_version,
+        versions_per_stage=versions_per_stage,
+        registered_only=registered_only,
     )
-    if version:
-        if all:
-            # if ascending:
-            #     version.reverse()
-            format_echo([v.version for v in version], "lines")
-        elif ref:
-            echo(version.ref or version.commit_hexsha)
+    if versions:
+        if ref:
+            format_echo([v.ref for v in versions], "lines")
         else:
-            echo(version.version)
+            format_echo([v.version for v in versions], "lines")
 
 
 @gto_command(hidden=True)
@@ -695,18 +710,8 @@ def show(
     plain: bool = option_plain,
     name_only: bool = option_name_only,
     registered_only: bool = option_registered_only,
-    last_assignments_per_version: int = Option(
-        -1,
-        "--la",
-        "--last-assignments-per-version",
-        help="Show N last stages for each version. -1 for all",
-    ),
-    last_versions_per_stage: int = Option(
-        1,
-        "--lv",
-        "--last-versions-per-stage",
-        help="Show N last versions for each stage. -1 for all. Applied after 'last_assignments_per_versions'",
-    ),
+    assignments_per_version: int = option_assignments_per_version,
+    versions_per_stage: int = option_versions_per_stage,
 ):
     """Show the registry state
 
@@ -731,8 +736,8 @@ def show(
             all_branches=all_branches,
             all_commits=all_commits,
             registered_only=registered_only,
-            last_assignments_per_version=last_assignments_per_version,
-            last_versions_per_stage=last_versions_per_stage,
+            assignments_per_version=assignments_per_version,
+            versions_per_stage=versions_per_stage,
             table=False,
         )
         if name_only:
@@ -747,8 +752,8 @@ def show(
                 all_branches=all_branches,
                 all_commits=all_commits,
                 registered_only=registered_only,
-                last_assignments_per_version=last_assignments_per_version,
-                last_versions_per_stage=last_versions_per_stage,
+                assignments_per_version=assignments_per_version,
+                versions_per_stage=versions_per_stage,
                 table=True,
                 truncate_hexsha=True,
             ),
