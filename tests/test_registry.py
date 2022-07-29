@@ -1,7 +1,7 @@
 # pylint: disable=unused-variable
 from gto.registry import GitRegistry
 
-from .utils import _check_dict
+from .utils import check_obj
 
 EXPECTED_REGISTRY_TAG_TAG_STATE = {
     "artifacts": {
@@ -167,13 +167,13 @@ def _check_state(appread_state, expected_state, exclude):
                 iter_over(appread_state["artifacts"][name][part]),
                 iter_over(expected_state["artifacts"][name][part]),
             ):
-                _check_dict(appeared, expected, exclude[part])
+                check_obj(appeared, expected, exclude[part])
         for appeared, expected in zip(
             appread_state["artifacts"][name]["versions"],
             expected_state["artifacts"][name]["versions"],
         ):
             for a, e in zip(appeared["assignments"], expected["assignments"]):
-                _check_dict(a, e, exclude["assignments"])
+                check_obj(a, e, exclude["assignments"])
 
 
 def test_registry_state_tag_tag(showcase):

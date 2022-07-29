@@ -6,7 +6,7 @@ from typing import Dict, Optional, Type
 import entrypoints
 from pydantic import BaseModel
 
-ENRICHMENT_ENRTYPOINT = "gto.enrichment"
+ENRICHMENT_ENTRYPOINT = "gto.enrichment"
 
 
 def import_string(path):
@@ -34,7 +34,7 @@ class EnrichmentInfo(BaseModel, ABC):
         raise NotImplementedError
 
 
-class Enrichment(BaseModel, ABC):
+class EnrichmentReader(BaseModel, ABC):
     source: str
 
     @abstractmethod
@@ -55,7 +55,7 @@ class Enrichment(BaseModel, ABC):
 #         return self.repr
 
 
-# class CLIEnrichment(Enrichment):
+# class CLIEnrichment(EnrichmentReader):
 #     cmd: str
 #     info_type: Union[str, Type[EnrichmentInfo]] = CLIEnrichmentInfo
 
@@ -88,28 +88,28 @@ class Enrichment(BaseModel, ABC):
 
 @lru_cache()
 def _find_enrichments():
-    eps = entrypoints.get_group_named(ENRICHMENT_ENRTYPOINT)
+    eps = entrypoints.get_group_named(ENRICHMENT_ENTRYPOINT)
     return {k: ep.load() for k, ep in eps.items()}
 
 
 @lru_cache()
-def find_enrichments() -> Dict[str, Enrichment]:
+def find_enrichments() -> Dict[str, EnrichmentReader]:
     enrichments = _find_enrichments()
     res = {}
     for name, e in enrichments.items():
         # if isinstance(e, type) and issubclass(e, Enrichment) and not e.__fields_set__:
-        if isinstance(e, type) and issubclass(e, Enrichment):
+        if isinstance(e, type) and issubclass(e, EnrichmentReader):
             res[name] = e()
-        if isinstance(e, Enrichment):
+        if isinstance(e, EnrichmentReader):
             res[name] = e
     return res
 
 
 @lru_cache()
-def find_enrichment_types() -> Dict[str, Type[Enrichment]]:
+def find_enrichment_types() -> Dict[str, Type[EnrichmentReader]]:
     enrichments = _find_enrichments()
     return {
         k: e
         for k, e in enrichments.items()
-        if isinstance(e, type) and issubclass(e, Enrichment)
+        if isinstance(e, type) and issubclass(e, EnrichmentReader)
     }

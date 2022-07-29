@@ -14,7 +14,7 @@ from gto.exceptions import (
     ValidationError,
     WrongConfig,
 )
-from gto.ext import Enrichment, find_enrichment_types, find_enrichments
+from gto.ext import EnrichmentReader, find_enrichment_types, find_enrichments
 
 yaml = YAML(typ="safe", pure=True)
 yaml.default_flow_style = False
@@ -38,7 +38,7 @@ class EnrichmentConfig(BaseModel):
     type: str
     config: Dict = {}
 
-    def load(self) -> Enrichment:
+    def load(self) -> EnrichmentReader:
         return find_enrichment_types()[self.type](**self.config)
 
 
@@ -67,7 +67,7 @@ class NoFileConfig(BaseSettings):
             raise UnknownStage(name, self.STAGES)
 
     @property
-    def enrichments(self) -> Dict[str, Enrichment]:
+    def enrichments(self) -> Dict[str, EnrichmentReader]:
         res = {e.source: e for e in (e.load() for e in self.ENRICHMENTS)}
         if self.AUTOLOAD_ENRICHMENTS:
             return {**find_enrichments(), **res}

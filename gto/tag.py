@@ -14,6 +14,7 @@ from .base import (
     BaseManager,
     BaseRegistryState,
     Registration,
+    Unassignment,
 )
 from .constants import ACTION, NAME, NUMBER, STAGE, TAG, VERSION, Action
 from .exceptions import (
@@ -58,7 +59,7 @@ def name_tag(
             if (
                 parsed
                 and (parsed[NAME] == name)
-                and (parsed[ACTION] == Action.ASSIGN)
+                and (parsed[ACTION] in (Action.ASSIGN, Action.UNASSIGN))
                 and (NUMBER in parsed)
             ):
                 numbers.append(parsed[NUMBER])
@@ -89,16 +90,25 @@ def _parse_register(name: str, raise_on_fail: bool = True):
 
 
 def _parse_assign(name: str, raise_on_fail: bool = True):
+    # TODO: use regex instead of if-else
     parsed = name.split(ActionSign[Action.ASSIGN])
-    unassign = False
-    if parsed[-1][-1] == "!":
-        unassign = True
-        parsed[-1] = parsed[-1][:-1]
     if (
         check_name_is_valid(parsed[0])
         and check_name_is_valid(parsed[1])
-        and (parsed[2].isdigit() if len(parsed) == 3 else True)
+        and (
+            parsed[2]
+            and (
+                parsed[2].isdigit()
+                or (parsed[2][-1] == "!" and parsed[2][:-1].isdigit())
+            )
+            if len(parsed) == 3
+            else True
+        )
     ):
+        unassign = False
+        if parsed[-1][-1] == "!":
+            unassign = True
+            parsed[-1] = parsed[-1][:-1]
         if len(parsed) == 2:
             return {
                 ACTION: Action.UNASSIGN if unassign else Action.ASSIGN,
@@ -230,44 +240,48 @@ def delete_tag(repo: git.Repo, name: str):
         raise TagNotFound(name=name) from e
 
 
-def registration_from_tag(tag: git.Tag) -> Registration:
-    mtag = parse_tag(tag)
-    return Registration(
-        artifact=mtag.name,
-        version=mtag.version,
-        created_at=mtag.created_at,
-        author=tag.tag.tagger.name,
-        author_email=tag.tag.tagger.email,
-        message=tag.tag.message,
-        commit_hexsha=tag.commit.hexsha,
-        tag=tag.name,
-    )
-
-
-def assignment_from_tag(artifact: Artifact, tag: git.Tag) -> Assignment:
-    mtag = parse_tag(tag)
-    version = artifact.find_version(
-        commit_hexsha=tag.commit.hexsha, create_new=True
-    ).version  # type: ignore
-    return Assignment(
-        artifact=mtag.name,
-        version=version,
-        stage=mtag.stage,
-        created_at=mtag.created_at,
-        author=tag.tag.tagger.name,
-        author_email=tag.tag.tagger.email,
-        message=tag.tag.message,
-        commit_hexsha=tag.commit.hexsha,
-        tag=tag.name,
-    )
-
-
 def index_tag(artifact: Artifact, tag: git.TagReference) -> Artifact:
-    mtag = parse_name(tag.tag.tag)
-    if mtag["action"] == Action.REGISTER:
-        artifact.add_event(registration_from_tag(tag))
-    if mtag["action"] == Action.ASSIGN:
-        artifact.add_event(assignment_from_tag(artifact, tag))
+    mtag = parse_tag(tag)
+    if mtag.action == Action.REGISTER:
+        event = Registration(
+            artifact=mtag.name,
+            version=mtag.version,
+            created_at=mtag.created_at,
+            author=tag.tag.tagger.name,
+            author_email=tag.tag.tagger.email,
+            message=tag.tag.message,
+            commit_hexsha=tag.commit.hexsha,
+            tag=tag.name,
+        )
+    elif mtag.action in (Action.ASSIGN, Action.UNASSIGN):
+        version = artifact.find_version(
+            commit_hexsha=tag.commit.hexsha, create_new=True
+        ).version  # type: ignore
+        if mtag.action == Action.ASSIGN:
+            event = Assignment(  # type: ignore
+                artifact=mtag.name,
+                version=version,
+                stage=mtag.stage,
+                created_at=mtag.created_at,
+                author=tag.tag.tagger.name,
+                author_email=tag.tag.tagger.email,
+                message=tag.tag.message,
+                commit_hexsha=tag.commit.hexsha,
+                tag=tag.name,
+            )
+        else:
+            event = Unassignment(  # type: ignore
+                artifact=mtag.name,
+                version=version,
+                stage=mtag.stage,
+                created_at=mtag.created_at,
+                author=tag.tag.tagger.name,
+                author_email=tag.tag.tagger.email,
+                message=tag.tag.message,
+                commit_hexsha=tag.commit.hexsha,
+                tag=tag.name,
+            )
+    artifact.add_event(event)
     return artifact
 
 
@@ -310,7 +324,7 @@ class TagVersionManager(TagManager):
 
 
 class TagStageManager(TagManager):
-    actions: FrozenSet[Action] = frozenset((Action.ASSIGN,))
+    actions: FrozenSet[Action] = frozenset((Action.ASSIGN, Action.UNASSIGN))
 
     def assign(
         self,

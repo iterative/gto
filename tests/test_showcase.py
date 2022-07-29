@@ -1,8 +1,8 @@
 """TODO: break this file into multiple test/files"""
 # pylint: disable=unused-variable, too-many-locals, too-many-statements
 import gto
-from gto.base import Artifact, Assignment, Version
-from tests.utils import _check_obj
+from gto.base import Artifact, Assignment, Version, VStage
+from tests.utils import check_obj
 
 
 def test_api(showcase):
@@ -39,30 +39,41 @@ def test_api(showcase):
 
     skip_keys_registration = {
         "created_at",
-        "assignments",
+        "activated_at",
+        "registrations",
+        "deregistrations",
         "enrichments",
         "tag",
         "message",
+        "stages",
     }
-    skip_keys_assignment = {"created_at", "tag", "message"}
+    skip_keys_assignment = {
+        "created_at",
+        "tag",
+        "message",
+        "assignments",
+        "unassignments",
+    }
 
-    _check_obj(
-        nn_version,
+    check_obj(
+        nn_version.dict_state(),
         dict(
             artifact="nn",
-            name="v0.0.1",
+            version="v0.0.1",
             author=author,
             author_email=author_email,
             commit_hexsha=first_commit.hexsha,
             discovered=False,
+            is_active=True,
+            ref="nn@v0.0.1",
         ),
         skip_keys=skip_keys_registration,
     )
-    assert len(nn_artifact.assignments) == 1
-    nn_assignment = nn_artifact.assignments[0]
-    assert isinstance(nn_assignment, Assignment)
-    _check_obj(
-        nn_assignment,
+    assert len(nn_artifact.get_stages()) == 1
+    nn_vstage = nn_artifact.get_stages()
+    assert isinstance(nn_vstage, VStage)
+    check_obj(
+        nn_vstage,
         dict(
             artifact="nn",
             version="v0.0.1",
@@ -81,7 +92,7 @@ def test_api(showcase):
     assert len(rf_artifact.versions) == 2
     assert all(isinstance(v, Version) for v in rf_artifact.versions)
     rf_ver1, rf_ver2 = rf_artifact.versions
-    _check_obj(
+    check_obj(
         rf_ver1,
         dict(
             artifact="rf",
@@ -93,7 +104,7 @@ def test_api(showcase):
         ),
         skip_keys=skip_keys_registration,
     )
-    _check_obj(
+    check_obj(
         rf_ver2,
         dict(
             artifact="rf",
@@ -111,7 +122,7 @@ def test_api(showcase):
     rf_l1, _ = rf_ver1.assignments
     rf_l3, rf_l4 = rf_ver2.assignments
 
-    _check_obj(
+    check_obj(
         rf_l1,
         dict(
             artifact="rf",
@@ -123,7 +134,7 @@ def test_api(showcase):
         ),
         skip_keys=skip_keys_assignment,
     )
-    _check_obj(
+    check_obj(
         rf_l4,
         dict(
             artifact="rf",
@@ -135,7 +146,7 @@ def test_api(showcase):
         ),
         skip_keys=skip_keys_assignment,
     )
-    _check_obj(
+    check_obj(
         rf_l3,
         dict(
             artifact="rf",

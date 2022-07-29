@@ -591,7 +591,7 @@ def latest(
     latest_version = gto.api.find_latest_version(repo, name)
     if latest_version:
         if ref:
-            echo(latest_version.tag or latest_version.commit_hexsha)
+            echo(latest_version.ref or latest_version.commit_hexsha)
         else:
             echo(latest_version.version)
 
@@ -623,7 +623,7 @@ def which(
             #     version.reverse()
             format_echo([v.version for v in version], "lines")
         elif ref:
-            echo(version.tag or version.commit_hexsha)
+            echo(version.ref or version.commit_hexsha)
         else:
             echo(version.version)
 

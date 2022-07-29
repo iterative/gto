@@ -11,7 +11,7 @@ from typer.testing import CliRunner
 from gto.api import _get_index
 from gto.cli import app
 
-from .utils import _check_obj
+from .utils import check_obj
 
 
 def _check_successful_cmd(cmd: str, args: list, expected_stdout: Optional[str]):
@@ -172,23 +172,23 @@ def test_commands(showcase):
     )
     _check_successful_cmd(
         "check-ref",
-        ["-r", path, "rf@v1.2.4", "--assignment"],
-        "",  # since this tag doesn't assign any stage
+        ["-r", path, "rf@v1.2.4", "--event"],
+        "registration\n",
     )
     _check_successful_cmd(
         "check-ref",
-        ["-r", path, "rf@v1.2.4", "--registration"],
+        ["-r", path, "rf@v1.2.4"],
         '✅  Version "v1.2.4" of artifact "rf" was registered\n',
     )
     _check_successful_cmd(
         "check-ref",
-        ["-r", path, "rf#production#3", "--registration"],
-        "",
+        ["-r", path, "rf#production#3", "--event"],
+        "assignment\n",
     )
     _check_successful_cmd(
         "check-ref",
-        ["-r", path, "rf#production#3", "--assignment"],
-        '✅  Stage "production" was assigned to version"v1.2.4" of artifact "rf"\n',
+        ["-r", path, "rf#production#3"],
+        '✅  Stage "production" was assigned to version "v1.2.4" of artifact "rf"\n',
     )
 
 
@@ -243,7 +243,7 @@ def test_annotate(empty_git_repo: Tuple[git.Repo, Callable]):
     artifact = (
         _get_index(repo.working_dir, file=True).get_index().state[name]
     )  # pylint: disable=protected-access
-    _check_obj(
+    check_obj(
         artifact,
         dict(
             type="new-type",

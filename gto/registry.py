@@ -296,7 +296,7 @@ class GitRegistry(BaseModel):
         tag = self.stage_manager.unassign(  # type: ignore
             name,
             stage,
-            ref=ref,
+            ref=found_version.commit_hexsha,
             message=message
             or f"Unassigning stage '{stage}' to artifact '{name}' version '{version}'",
             simple=simple,
@@ -332,7 +332,8 @@ class GitRegistry(BaseModel):
             for aname, artifact in state.get_artifacts().items()
             if aname == name
             for event in artifact.get_events()
-            if event.tag == ref
+            # TODO: support matching the shortened commit hashes
+            if event.ref == ref
         ]
 
     def find_commit(self, name, version):

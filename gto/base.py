@@ -1,12 +1,11 @@
 from datetime import datetime
-from typing import Dict, FrozenSet, List, Optional, Sequence, Union
+from typing import Any, Dict, FrozenSet, List, Optional, Sequence, Union
 
 import git
 from pydantic import BaseModel
 
 from gto.config import RegistryConfig
 from gto.constants import Action, VersionSort
-from gto.ext import Enrichment
 from gto.versions import SemVer
 
 from .exceptions import (
@@ -30,7 +29,6 @@ class BaseEvent(BaseModel):
     author_email: str
     message: str
     commit_hexsha: str
-    tag: str
 
     @property
     def event(self):
@@ -41,26 +39,45 @@ class BaseEvent(BaseModel):
         state["event"] = self.event
         return state
 
+    @property
+    def ref(self):
+        return getattr(self, "tag", self.commit_hexsha)
 
-class Creation(BaseEvent):
+
+class Commit(BaseEvent):
     priority = 0
     addition = True
+    version: str
+    enrichments: List[Any]
+    committer: str
+    committer_email: str
+
+    def __str__(self):
+        return f'Artifact "{self.artifact}" is annotated'
+
+
+class Creation(BaseEvent):
+    priority = 1
+    addition = True
+    tag: str
 
     def __str__(self):
         return f'Artifact "{self.artifact}" was created'
 
 
 class Deprecation(BaseEvent):
-    priority = 5
+    priority = 2
     addition = False
+    tag: str
 
     def __str__(self):
         return f'Artifact "{self.artifact}" was deprecated'
 
 
 class Registration(BaseEvent):
-    priority = 1
+    priority = 3
     addition = True
+    tag: str
     version: str
 
     def __str__(self):
@@ -70,6 +87,7 @@ class Registration(BaseEvent):
 class Deregistration(BaseEvent):
     priority = 4
     addition = False
+    tag: str
     version: str
 
     def __str__(self):
@@ -79,8 +97,9 @@ class Deregistration(BaseEvent):
 
 
 class Assignment(BaseEvent):
-    priority = 2
+    priority = 5
     addition = True
+    tag: str
     version: str
     stage: str
 
@@ -89,8 +108,9 @@ class Assignment(BaseEvent):
 
 
 class Unassignment(BaseEvent):
-    priority = 3
+    priority = 6
     addition = False
+    tag: str
     version: str
     stage: str
 
@@ -124,7 +144,11 @@ class BaseObject(BaseModel):
         ]
         if addition_events:
             return addition_events[0]
-        return self.get_events(direct=False, indirect=True)[0]
+        events = self.get_events(direct=False, indirect=True)
+        except_enrichment = [e for e in events if e.event != "enrichment"]
+        if except_enrichment:
+            return except_enrichment[0]
+        return events[0]
 
     @property
     def created_at(self):
@@ -144,7 +168,18 @@ class BaseObject(BaseModel):
 
     @property
     def ref(self):
-        return self.authoring_event.tag
+        return self.authoring_event.ref
+
+    def dict_state(self, exclude=None):
+        version = self.dict(exclude=exclude)
+        version["is_active"] = self.is_active()
+        version["activated_at"] = self.activated_at
+        version["created_at"] = self.created_at
+        version["author"] = self.author
+        version["author_email"] = self.author_email
+        version["message"] = self.message
+        version["ref"] = self.ref
+        return version
 
 
 class VStage(BaseObject):
@@ -181,15 +216,20 @@ class VStage(BaseObject):
             return self.get_events()[0].created_at
         return None
 
+    def dict_state(self, exclude=None):
+        state = super().dict_state(exclude=exclude)
+        state["assignments"] = [a.dict_state() for a in self.assignments]
+        state["unassignments"] = [a.dict_state() for a in self.unassignments]
+        return state
+
 
 class Version(BaseObject):
     commit_hexsha: str
     version: str
-    discovered: bool = False
+    enrichments: List[Commit] = []
     registrations: List[Registration] = []
     deregistrations: List[Deregistration] = []
     stages: Dict[str, VStage] = {}
-    enrichments: List[Enrichment] = []
 
     def add_event(self, event: BaseEvent):
         if isinstance(event, Registration):
@@ -198,6 +238,9 @@ class Version(BaseObject):
         elif isinstance(event, Deregistration):
             self.deregistrations.append(event)
             self.deregistrations.sort(key=lambda e: e.created_at)
+        elif isinstance(event, Commit):
+            self.enrichments.append(event)
+            self.enrichments.sort(key=lambda e: e.created_at)
         elif isinstance(event, (Assignment, Unassignment)):
             self.get_vstage(event.stage, create_new=True).add_event(event)
         else:
@@ -208,7 +251,8 @@ class Version(BaseObject):
         return sorted(
             (self.registrations + self.deregistrations if direct else [])
             + (
-                [e for s in self.stages.values() for e in s.get_events()]
+                self.enrichments
+                + [e for s in self.stages.values() for e in s.get_events()]
                 if indirect
                 else []
             ),
@@ -218,7 +262,7 @@ class Version(BaseObject):
     def is_active(self):
         if len(self.get_events()) == 0:
             return True
-        return isinstance(self.get_events()[0], Registration)
+        return isinstance(self.get_events(direct=True, indirect=False)[0], Registration)
 
     @property
     def activated_at(self):
@@ -231,6 +275,18 @@ class Version(BaseObject):
     def is_registered(self):
         """Tells if this is an explicitly registered version"""
         return len(self.registrations) > 0  # SemVer.is_valid(self.name)
+
+    @property
+    def discovered(self):
+        return len(self.get_events(direct=True, indirect=False)) == 0
+
+    @property
+    def get_enrichments_info(self):
+        if len(self.enrichments) > 1:
+            raise NotImplementedInGTO(
+                "Multiple enrichments for a single version are not supported"
+            )
+        return self.enrichments[0].enrichments
 
     @property
     def semver(self):
@@ -254,12 +310,10 @@ class Version(BaseObject):
             key=lambda s: s.activated_at,
         )[:: 1 if ascending else -1]
 
-    def dict_state(self):
-        version = self.dict()
+    def dict_state(self, exclude=None):
+        version = super().dict_state(exclude=exclude)
+        version["discovered"] = self.discovered
         version["stages"] = [stage.dict() for stage in self.get_vstages()]
-        version["created_at"] = self.created_at
-        version["author"] = self.author
-        version["ref"] = self.ref
         return version
 
 
@@ -314,7 +368,7 @@ class Artifact(BaseObject):
             self.deprecations.append(event)
             self.deprecations.sort(key=lambda e: e.created_at)
         elif isinstance(
-            event, (Registration, Deregistration, Assignment, Unassignment)
+            event, (Registration, Deregistration, Assignment, Unassignment, Commit)
         ):
             self.find_version(
                 event.version, commit_hexsha=event.commit_hexsha, create_new=True
@@ -337,7 +391,7 @@ class Artifact(BaseObject):
     def is_active(self):
         if len(self.get_events()) == 0:
             return True
-        return isinstance(self.get_events()[0], Creation)
+        return isinstance(self.get_events(direct=True, indirect=False)[0], Creation)
 
     @property
     def activated_at(self):
@@ -406,11 +460,6 @@ class Artifact(BaseObject):
                 if a.version not in [i.version for i in stages[a.stage]]:
                     stages[a.stage].append(a)
         return stages  # type: ignore
-
-    def update_enrichments(self, version, enrichments):
-        self.find_version(
-            name=version, include_discovered=True
-        ).enrichments = enrichments
 
     @property
     def discovered(self):

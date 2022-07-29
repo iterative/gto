@@ -23,18 +23,28 @@ def test_name_tag(empty_git_repo):
         name_tag(Action.ASSIGN, "myartifact", repo=repo, stage="stage", simple=False)
         == f"myartifact{ActionSign[Action.ASSIGN]}stage{ActionSign[Action.ASSIGN]}1"
     )
+    assert (
+        name_tag(Action.UNASSIGN, "myartifact", repo=repo, stage="stage", simple=False)
+        == f"myartifact{ActionSign[Action.ASSIGN]}stage{ActionSign[Action.ASSIGN]}1!"
+    )
 
 
 def test_parse_name():
     assert parse_name(f"path{ActionSign[Action.REGISTER]}v1.2.3") == dict(
         name="path", version="v1.2.3", action=Action.REGISTER
     )
+
     assert parse_name(f"path{ActionSign[Action.ASSIGN]}stage") == dict(
         name="path", action=Action.ASSIGN, stage="stage"
     )
+
     assert parse_name(
         f"path{ActionSign[Action.ASSIGN]}stage{ActionSign[Action.ASSIGN]}1"
     ) == dict(name="path", action=Action.ASSIGN, stage="stage", number=1)
+
+    assert parse_name(
+        f"path{ActionSign[Action.ASSIGN]}stage{ActionSign[Action.ASSIGN]}2!"
+    ) == dict(name="path", action=Action.UNASSIGN, stage="stage", number=2)
 
 
 @pytest.mark.parametrize(

@@ -1,6 +1,7 @@
 import os
 from abc import ABC, abstractmethod
 from collections import defaultdict
+from datetime import datetime
 from functools import wraps
 from pathlib import Path
 from typing import IO, Dict, FrozenSet, Generator, List, Optional, Union
@@ -9,6 +10,7 @@ import git
 from pydantic import BaseModel, parse_obj_as, validator
 
 from gto.base import BaseManager, BaseRegistryState
+from gto.base import Commit as EnrichmentEvent
 from gto.config import (
     CONFIG_FILE_NAME,
     RegistryConfig,
@@ -25,7 +27,7 @@ from gto.exceptions import (
     PathIsUsed,
     WrongArgs,
 )
-from gto.ext import Enrichment, EnrichmentInfo
+from gto.ext import EnrichmentInfo, EnrichmentReader
 from gto.utils import resolve_ref
 
 
@@ -350,13 +352,25 @@ class EnrichmentManager(BaseManager):
         # processing registered artifacts and versions first
         for artifact in state.get_artifacts().values():
             for version in artifact.versions:
+                commit = self.repo.commit(version.commit_hexsha)
                 enrichments = self.describe(
                     artifact.artifact,
                     # faster to make git.Reference here
-                    rev=self.repo.commit(version.commit_hexsha),
+                    rev=commit,
                 )
-                artifact.update_enrichments(
-                    version=version.version, enrichments=enrichments
+                version.add_event(
+                    EnrichmentEvent(
+                        artifact=artifact.artifact,
+                        version=version.version,
+                        created_at=datetime.fromtimestamp(commit.committed_date),
+                        author=commit.author.name,
+                        author_email=commit.author.email,
+                        commit_hexsha=commit.hexsha,
+                        message=commit.message,
+                        committer=commit.committer.name,
+                        committer_email=commit.committer.email,
+                        enrichments=enrichments,
+                    )
                 )
                 state.update_artifact(artifact)
         for commit in self.get_commits(
@@ -368,15 +382,22 @@ class EnrichmentManager(BaseManager):
                 version = artifact.find_version(
                     commit_hexsha=commit.hexsha, create_new=True
                 )
-                artifact.update_enrichments(
-                    version=version.version, enrichments=enrichments
+                version.add_event(
+                    EnrichmentEvent(
+                        artifact=artifact.artifact,
+                        version=version.version,
+                        created_at=datetime.fromtimestamp(commit.committed_date),
+                        author=commit.author.name,
+                        author_email=commit.author.email,
+                        commit_hexsha=commit.hexsha,
+                        message=commit.message,
+                        committer=commit.committer.name,
+                        committer_email=commit.committer.email,
+                        enrichments=enrichments,
+                    )
                 )
                 state.update_artifact(artifact)
         return state
-
-    def check_ref(self, ref: str, state: BaseRegistryState):
-        # TODO: implement
-        raise NotImplementedError()
 
 
 def init_index_manager(path):
@@ -400,7 +421,7 @@ class GTOInfo(EnrichmentInfo):
         return self.artifact.path
 
 
-class GTOEnrichment(Enrichment):
+class GTOEnrichment(EnrichmentReader):
     source = "gto"
 
     def discover(  # pylint: disable=no-self-use

@@ -1,6 +1,5 @@
 import warnings
 from collections import OrderedDict
-from datetime import datetime
 from typing import List, Optional, Union
 
 from funcy import distinct
@@ -363,16 +362,9 @@ def _show_versions(  # pylint: disable=too-many-locals
             raise NotImplementedInGTO(
                 "Multiple registrations are not supported currently. How you got in here?"
             )
-        for key in (
-            "enrichments",
-            "discovered",
-            "commit_hexsha",
-            "stages",
-            "registrations",
-            "deregistrations",
-            "author",
-        ):
-            v.pop(key)
+        for key in list(v.keys()):
+            if key not in first_keys + ["created_at", "ref"]:
+                del v[key]
         v = OrderedDict(
             [(key, v[key]) for key in first_keys]
             + [(key, v[key]) for key in v if key not in first_keys]
@@ -415,23 +407,6 @@ def history(
     def format_hexsha(hexsha):
         return hexsha[:7] if truncate_hexsha else hexsha
 
-    commits = [
-        OrderedDict(
-            timestamp=datetime.fromtimestamp(
-                reg.repo.commit(v.commit_hexsha).committed_date
-            ),
-            artifact=o.artifact,
-            event=COMMIT,
-            priority=-1,
-            commit=format_hexsha(v.commit_hexsha),
-            author=reg.repo.commit(v.commit_hexsha).author.name,
-            author_email=reg.repo.commit(v.commit_hexsha).author.email,
-            message=reg.repo.commit(v.commit_hexsha).message,
-        )
-        for o in artifacts.values()
-        for v in o.get_versions(include_non_explicit=True, include_discovered=True)
-    ]
-
     events = [
         OrderedDict(
             timestamp=e.created_at,
@@ -444,14 +419,14 @@ def history(
             author=e.author,
             author_email=e.author_email,
             message=e.message,
-            ref=e.tag,
+            ref=format_hexsha(e.ref) if e.ref == e.commit_hexsha else e.ref,
         )
         for o in artifacts.values()
         for e in o.get_events()
     ]
 
     events = sorted(
-        commits + events,
+        events,
         key=lambda x: (x["timestamp"], x["priority"]),
     )
     if not ascending:
@@ -467,7 +442,6 @@ def history(
         VERSION,
         STAGE,
         COMMIT,
-        # "author",
         "ref",
     ]
     keys_order = [c for c in keys_order if any(c in event for event in events)]

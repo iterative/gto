@@ -7,7 +7,7 @@
 # from mlem.core.objects import DatasetMeta, MlemMeta, ModelMeta
 # from pydantic import BaseModel
 
-# from gto.ext import Enrichment, EnrichmentInfo
+# from gto.ext import EnrichmentReader, EnrichmentInfo
 
 
 # class MlemInfo(EnrichmentInfo):
@@ -27,7 +27,7 @@
 #         return description
 
 
-# class MlemEnrichment(Enrichment):
+# class MlemEnrichment(EnrichmentReader):
 #     source = "mlem"
 
 #     def describe(self, repo, obj: str, rev: Optional[str]) -> Optional[MlemInfo]:
