@@ -224,9 +224,11 @@ class GitRegistry(BaseModel):
             not force
             and found_version
             and found_version.stages
-            and any(s == stage for s in found_version.stages)
+            and any(vstage.stage == stage for vstage in found_version.get_vstages())
         ):
-            raise WrongArgs(f"Version is already in stage '{stage}'")
+            raise WrongArgs(
+                f"Version '{found_version.version}' is already in stage '{stage}'"
+            )
         # TODO: getting tag name as a result and using it
         # is leaking implementation details in base module
         # it's roughly ok to have until we add other implementations
@@ -236,7 +238,7 @@ class GitRegistry(BaseModel):
             stage,
             ref=ref,
             message=message
-            or f"Assigning stage {stage} to artifact {name} version {version}",
+            or f"Assigning stage {stage} to artifact {name} version {found_version.version}",
             simple=simple,
             author=author,
             author_email=author_email,
@@ -298,7 +300,7 @@ class GitRegistry(BaseModel):
             stage,
             ref=found_version.commit_hexsha,
             message=message
-            or f"Unassigning stage '{stage}' to artifact '{name}' version '{version}'",
+            or f"Unassigning stage '{stage}' to artifact '{name}' version '{found_version.version}'",
             simple=simple,
             delete=delete,
             author=author,

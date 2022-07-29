@@ -14,6 +14,7 @@ from .exceptions import (
     NoStageForVersion,
     NotImplementedInGTO,
     VersionRequired,
+    WrongArgs,
 )
 
 
@@ -130,6 +131,7 @@ class BaseObject(BaseModel):
     ) -> Sequence[BaseEvent]:
         raise NotImplementedError()
 
+    @property
     def is_active(self):
         raise NotImplementedError()
 
@@ -172,7 +174,7 @@ class BaseObject(BaseModel):
 
     def dict_state(self, exclude=None):
         version = self.dict(exclude=exclude)
-        version["is_active"] = self.is_active()
+        version["is_active"] = self.is_active
         version["activated_at"] = self.activated_at
         version["created_at"] = self.created_at
         version["author"] = self.author
@@ -207,6 +209,7 @@ class VStage(BaseObject):
             self.assignments + self.unassignments if direct else [], key=lambda e: e.created_at  # type: ignore
         )[:: 1 if ascending else -1]
 
+    @property
     def is_active(self):
         return isinstance(self.get_events()[0], Assignment)
 
@@ -259,6 +262,7 @@ class Version(BaseObject):
             key=lambda e: e.created_at,
         )[:: 1 if ascending else -1]
 
+    @property
     def is_active(self):
         if len(self.get_events()) == 0:
             return True
@@ -306,14 +310,18 @@ class Version(BaseObject):
 
     def get_vstages(self, active_only=True, ascending=False):
         return sorted(
-            [s for s in self.stages.values() if not active_only or s.is_active()],
+            [s for s in self.stages.values() if not active_only or s.is_active],
             key=lambda s: s.activated_at,
         )[:: 1 if ascending else -1]
 
-    def dict_state(self, exclude=None):
+    def dict_state(self, exclude=None, last_assignments_per_version=-1):
+        if last_assignments_per_version < -1:
+            raise WrongArgs("'last_assignments_per_version' must be >= -1")
         version = super().dict_state(exclude=exclude)
         version["discovered"] = self.discovered
-        version["stages"] = [stage.dict() for stage in self.get_vstages()]
+        version["stages"] = [stage.dict_state() for stage in self.get_vstages()]
+        if last_assignments_per_version >= 0:
+            version["stages"] = version["stages"][:last_assignments_per_version]
         return version
 
 
@@ -388,6 +396,7 @@ class Artifact(BaseObject):
             key=lambda e: e.created_at,
         )[:: 1 if ascending else -1]
 
+    @property
     def is_active(self):
         if len(self.get_events()) == 0:
             return True
@@ -402,7 +411,7 @@ class Artifact(BaseObject):
 
     @property
     def unique_stages(self):
-        return set(self.get_stages())
+        return set(self.get_vstages())
 
     def __repr__(self) -> str:
         versions = ", ".join(f"'{v.version}'" for v in self.versions)
@@ -435,12 +444,17 @@ class Artifact(BaseObject):
             return versions[0]
         return None
 
-    def get_stages(
+    def get_vstages(
         self,
         registered_only=False,
-        last_stage=False,
+        last_assignments_per_version=-1,
+        last_versions_per_stage=1,
         sort=VersionSort.SemVer,
-    ) -> Dict[str, List[Assignment]]:
+    ):
+        if last_assignments_per_version < -1:
+            raise WrongArgs("'last_assignments_per_version' must be >= -1")
+        if last_versions_per_stage < -1:
+            raise WrongArgs("'last_versions_per_stage' must be >=-1")
         versions = self.get_versions(
             include_non_explicit=not registered_only, sort=sort
         )
@@ -451,15 +465,20 @@ class Artifact(BaseObject):
         stages: Dict[str, List[VStage]] = {}
         for version in versions:
             for a in (
-                version.get_vstages()[-1:]
-                if last_stage
+                version.get_vstages(ascending=True)[:last_assignments_per_version]
+                if last_assignments_per_version > -1
                 else version.get_vstages(ascending=True)
             ):
                 if a.stage not in stages:
                     stages[a.stage] = []
+                if (
+                    last_versions_per_stage > -1  # pylint: disable=chained-comparison
+                    and len(stages[a.stage]) >= last_versions_per_stage
+                ):
+                    continue
                 if a.version not in [i.version for i in stages[a.stage]]:
                     stages[a.stage].append(a)
-        return stages  # type: ignore
+        return stages
 
     @property
     def discovered(self):
@@ -552,7 +571,7 @@ class BaseRegistryState(BaseModel):
         self, name, stage, raise_if_not_found=True, all=False, registered_only=False
     ):
         """Return stage active in specific stage"""
-        assigned = self.find_artifact(name).get_stages(registered_only=registered_only)
+        assigned = self.find_artifact(name).get_vstages(registered_only=registered_only)
         if stage in assigned:
             return assigned[stage] if all else assigned[stage][0]
         if raise_if_not_found:

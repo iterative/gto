@@ -69,8 +69,8 @@ def test_api(showcase):
         ),
         skip_keys=skip_keys_registration,
     )
-    assert len(nn_artifact.get_stages()) == 1
-    nn_vstage = nn_artifact.get_stages()
+    assert len(nn_artifact.get_vstages()) == 1
+    nn_vstage = nn_artifact.get_vstages()
     assert isinstance(nn_vstage, VStage)
     check_obj(
         nn_vstage,

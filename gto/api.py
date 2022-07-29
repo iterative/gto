@@ -240,7 +240,8 @@ def show(
     all_commits=False,
     truncate_hexsha=False,
     registered_only=False,
-    last_stage=False,
+    last_assignments_per_version=-1,
+    last_versions_per_stage=1,
     table: bool = False,
 ):
     return (
@@ -250,7 +251,8 @@ def show(
             all_branches=all_branches,
             all_commits=all_commits,
             registered_only=registered_only,
-            last_stage=last_stage,
+            last_assignments_per_version=last_assignments_per_version,
+            last_versions_per_stage=last_versions_per_stage,
             table=table,
             truncate_hexsha=truncate_hexsha,
         )
@@ -260,7 +262,8 @@ def show(
             all_branches=all_branches,
             all_commits=all_commits,
             registered_only=registered_only,
-            last_stage=last_stage,
+            last_assignments_per_version=last_assignments_per_version,
+            last_versions_per_stage=last_versions_per_stage,
             table=table,
             truncate_hexsha=truncate_hexsha,
         )
@@ -272,7 +275,8 @@ def _show_registry(
     all_branches=False,
     all_commits=False,
     registered_only=False,
-    last_stage: bool = False,
+    last_assignments_per_version: int = -1,
+    last_versions_per_stage: int = 1,
     table: bool = False,
     truncate_hexsha: bool = False,
 ):
@@ -289,13 +293,21 @@ def _show_registry(
             if o.get_latest_version(registered_only=True)
             else None,
             "stage": {
-                name: format_hexsha(
-                    o.get_stages(
-                        registered_only=registered_only, last_stage=last_stage
-                    )[name][0].version
+                name: ", ".join(
+                    [
+                        format_hexsha(s.version)
+                        for s in o.get_vstages(
+                            registered_only=registered_only,
+                            last_assignments_per_version=last_assignments_per_version,
+                            last_versions_per_stage=last_versions_per_stage,
+                        )[name]
+                    ]
                 )
                 if name
-                in o.get_stages(registered_only=registered_only, last_stage=last_stage)
+                in o.get_vstages(
+                    registered_only=registered_only,
+                    last_assignments_per_version=last_assignments_per_version,
+                )
                 else None
                 for name in stages
             },
@@ -323,7 +335,8 @@ def _show_versions(  # pylint: disable=too-many-locals
     all_branches=False,
     all_commits=False,
     registered_only=False,
-    last_stage: bool = False,
+    last_assignments_per_version: int = -1,
+    last_versions_per_stage: int = 1,
     table: bool = False,
     truncate_hexsha: bool = False,
 ):
@@ -335,16 +348,30 @@ def _show_versions(  # pylint: disable=too-many-locals
     reg = GitRegistry.from_repo(repo)
     if raw:
         return reg.find_artifact(name).versions
-    versions = [
-        v.dict_state()
-        for v in reg.find_artifact(
-            name,
-            all_branches=all_branches,
-            all_commits=all_commits,
-        ).get_versions(
-            include_non_explicit=not registered_only, include_discovered=True
-        )
-    ]
+
+    artifact = reg.find_artifact(
+        name,
+        all_branches=all_branches,
+        all_commits=all_commits,
+    )
+    stages = artifact.get_vstages(
+        registered_only=registered_only,
+        last_assignments_per_version=last_assignments_per_version,
+        last_versions_per_stage=last_versions_per_stage,
+    )
+    versions = []
+    for v in artifact.get_versions(
+        include_non_explicit=not registered_only, include_discovered=True
+    ):
+        v = v.dict_state()
+        v["stages"] = [
+            vstage.dict_state()
+            for vstages in stages.values()
+            for vstage in vstages
+            if vstage.version == v["version"]
+        ]
+        versions.append(v)
+
     if not table:
         return versions
 
@@ -353,8 +380,8 @@ def _show_versions(  # pylint: disable=too-many-locals
     for v in versions:
         v["version"] = format_hexsha(v["version"])
         v["stage"] = ", ".join(
-            distinct(
-                s["stage"] for s in (v["stages"][:1] if last_stage else v["stages"])
+            distinct(  # TODO: remove? no longer necessary
+                s["stage"] for s in v["stages"]
             )
         )
         v["commit_hexsha"] = format_hexsha(v["commit_hexsha"])

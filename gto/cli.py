@@ -695,8 +695,17 @@ def show(
     plain: bool = option_plain,
     name_only: bool = option_name_only,
     registered_only: bool = option_registered_only,
-    last_stage: bool = Option(
-        False, "--ls", "--last-stage", help="Show only the last stage for each version"
+    last_assignments_per_version: int = Option(
+        -1,
+        "--la",
+        "--last-assignments-per-version",
+        help="Show N last stages for each version. -1 for all",
+    ),
+    last_versions_per_stage: int = Option(
+        1,
+        "--lv",
+        "--last-versions-per-stage",
+        help="Show N last versions for each stage. -1 for all. Applied after 'last_assignments_per_versions'",
     ),
 ):
     """Show the registry state
@@ -722,7 +731,8 @@ def show(
             all_branches=all_branches,
             all_commits=all_commits,
             registered_only=registered_only,
-            last_stage=last_stage,
+            last_assignments_per_version=last_assignments_per_version,
+            last_versions_per_stage=last_versions_per_stage,
             table=False,
         )
         if name_only:
@@ -737,7 +747,8 @@ def show(
                 all_branches=all_branches,
                 all_commits=all_commits,
                 registered_only=registered_only,
-                last_stage=last_stage,
+                last_assignments_per_version=last_assignments_per_version,
+                last_versions_per_stage=last_versions_per_stage,
                 table=True,
                 truncate_hexsha=True,
             ),
@@ -745,16 +756,6 @@ def show(
             format_table="plain" if plain else "fancy_outline",
             if_empty="Nothing found in the current workspace",
         )
-
-
-# Actions = StrEnum("Actions", ALIAS.REGISTER + ALIAS.PROMOTE, type=str)  # type: ignore
-# action: List[Actions] = Argument(None),  # type: ignore
-# @click.option(
-#     "--action",
-#     required=False,
-#     type=click.Choice(ALIAS.COMMIT + ALIAS.REGISTER + ALIAS.PROMOTE),
-#     nargs=-1,
-# )
 
 
 @gto_command(section=CommandGroups.querying)

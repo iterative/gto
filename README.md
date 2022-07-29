@@ -178,15 +178,18 @@ GTO the artifact file is committed to Git.
 
 ### Deprecating
 
-Sometimes you need to need to mark the artifact as "deprecated", usually meaning it's outdated and will no longer be developed. To do this, you could run:
+Sometimes you need to need to mark the artifact as "deprecated", usually meaning
+it's outdated and will no longer be developed. To do this, you could run:
 
 ```console
 $ gto deprecate awesome-model
 ```
 
 Generally, the artifact is considered to be deprecated either if
+
 1. There is a `awesome-model@deprecated` git tag
-2. There are no git tags for the artifact and it doesn't appear in `artifacts.yaml` in the workspace (i.e. in the check outed commit).
+2. There are no git tags for the artifact and it doesn't appear in
+   `artifacts.yaml` in the workspace (i.e. in the check outed commit).
 
 ### Removing
 
@@ -206,7 +209,7 @@ $ gto show
 ╒═══════════════╤══════════╤════════╤═════════╤════════════╕
 │ name          │ latest   │ #dev   │ #prod   │ #staging   │
 ╞═══════════════╪══════════╪════════╪═════════╪════════════╡
-│ churn         │ v3.1.0   │ v3.0.0 │ v3.0.0  │ v3.1.0     │
+│ churn         │ v3.1.0   │ v3.1.0 │ v3.0.0  │ v3.1.0     │
 │ segment       │ v0.4.1   │ v0.4.1 │ -       │ -          │
 │ cv-class      │ v0.1.13  │ -      │ -       │ -          │
 │ awesome-model │ v0.0.1   │ -      │ v0.0.1  │ -          │
@@ -221,15 +224,41 @@ Add an artifact name to print all of its versions instead:
 
 ```console
 $ gto show churn
-╒════════════╤═══════════╤═══════════╤═════════════════════╤═══════════════════╤══════════════╕
-│ artifact   │ version   │ stage     │ created_at          │ author            │ ref          │
-╞════════════╪═══════════╪═══════════╪═════════════════════╪═══════════════════╪══════════════╡
-│ churn      │ v3.1.0    │ staging   │ 2022-07-13 15:25:41 │ Alexander Guschin │ churn@v3.1.0 │
-│ churn      │ v3.0.0    │ prod, dev │ 2022-07-09 00:19:01 │ Alexander Guschin │ churn@v3.0.0 │
-╘════════════╧═══════════╧═══════════╧═════════════════════╧═══════════════════╧══════════════╛
+╒════════════╤═══════════╤══════════════╤═════════════════════╤══════════════╕
+│ artifact   │ version   │ stage        │ created_at          │ ref          │
+╞════════════╪═══════════╪══════════════╪═════════════════════╪══════════════╡
+│ churn      │ v3.1.0    │ staging, dev │ 2022-07-14 10:33:53 │ churn@v3.1.0 │
+│ churn      │ v3.0.0    │ prod         │ 2022-07-09 19:27:13 │ churn@v3.0.0 │
+╘════════════╧═══════════╧══════════════╧═════════════════════╧══════════════╛
 ```
 
+#### Enabling multiple versions in the same Stage workflow
+
+Note: this functionality is experimental and subject to change. If you find it
+useful, please share your feedback in GH issues to help us make it stable.
+
+In some cases, you want to see more than a single version assigned in a stage.
+For that, use `--lv` (short for `--last-assignments-per-version`), e.g. `-1` to
+show all versions.
+
+```console
+$ gto show churn --lv -1
+╒════════════╤═══════════╤══════════════╤═════════════════════╤══════════════╕
+│ artifact   │ version   │ stage        │ created_at          │ ref          │
+╞════════════╪═══════════╪══════════════╪═════════════════════╪══════════════╡
+│ churn      │ v3.1.0    │ staging, dev │ 2022-07-14 10:33:53 │ churn@v3.1.0 │
+│ churn      │ v3.0.0    │ dev, prod    │ 2022-07-09 19:27:13 │ churn@v3.0.0 │
+╘════════════╧═══════════╧══════════════╧═════════════════════╧══════════════╛
+```
+
+To enable this workflow, you need to supply the `--lv` argument to `gto show`
+and `gto which` commands. Other commands behave the same way regardless of the
+approach you choose.
+
 #### Enabling Kanban workflow
+
+Note: this functionality is experimental and subject to change. If you find it
+useful, please share your feedback in GH issues to help us make it stable.
 
 In some cases, you would like to have a latest stage for an artifact version to
 replace all the previous stages. In this case the version will have a single
@@ -237,19 +266,22 @@ stage. This resembles Kanban workflow, when you "move" your artifact version
 from one column ("stage-1") to another ("stage-2"). This is how MLFlow and some
 other Model Registries work.
 
-To achieve this, you can use `--last-stage` flag (or `--ls` for short):
+To achieve this, you can use `--la` flag (or `--last-versions-per-stage` for
+short) combined with `--lv`:
 
 ```console
-$ gto show --ls
-╒═══════════════╤══════════╤════════╤═════════╤════════════╕
-│ name          │ latest   │ #dev   │ #prod   │ #staging   │
-╞═══════════════╪══════════╪════════╪═════════╪════════════╡
-│ churn         │ v3.1.0   │ -      │ v3.0.0  │ v3.1.0     │
-│ segment       │ v0.4.1   │ v0.4.1 │ -       │ -          │
-│ cv-class      │ v0.1.13  │ -      │ -       │ -          │
-│ awesome-model │ v0.0.1   │ -      │ v0.0.1  │ -          │
-╘═══════════════╧══════════╧════════╧═════════╧════════════╛
+$ gto show churn --la 1 --lv -1
+╒════════════╤═══════════╤═════════╤═════════════════════╤══════════════╕
+│ artifact   │ version   │ stage   │ created_at          │ ref          │
+╞════════════╪═══════════╪═════════╪═════════════════════╪══════════════╡
+│ churn      │ v3.1.0    │ staging │ 2022-07-14 10:33:53 │ churn@v3.1.0 │
+│ churn      │ v3.0.0    │ dev     │ 2022-07-09 19:27:13 │ churn@v3.0.0 │
+╘════════════╧═══════════╧═════════╧═════════════════════╧══════════════╛
 ```
+
+To enable this workflow, you need to supply the `--lv` argument to `gto show`
+and `gto which` commands. Other commands behave the same way regardless of the
+approach you choose.
 
 ### See the history of an artifact
 
@@ -258,17 +290,19 @@ This allows you to audit the changes.
 
 ```console
 $ gto history churn
-╒═════════════════════╤════════════╤══════════════╤═══════════╤═════════╤══════════╤═══════════════════╕
-│ timestamp           │ artifact   │ event        │ version   │ stage   │ commit   │ author            │
-╞═════════════════════╪════════════╪══════════════╪═══════════╪═════════╪══════════╪═══════════════════╡
-│ 2022-07-17 02:45:41 │ churn      │ assignment    │ v3.0.0    │ prod    │ 631520b  │ Alexander Guschin │
-│ 2022-07-15 22:59:01 │ churn      │ assignment    │ v3.1.0    │ staging │ be340cc  │ Alexander Guschin │
-│ 2022-07-14 19:12:21 │ churn      │ assignment    │ v3.0.0    │ dev     │ 631520b  │ Alexander Guschin │
-│ 2022-07-13 15:25:41 │ churn      │ registration │ v3.1.0    │ -       │ be340cc  │ Alexander Guschin │
-│ 2022-07-12 11:39:01 │ churn      │ commit       │ -         │ -       │ be340cc  │ Alexander Guschin │
-│ 2022-07-09 00:19:01 │ churn      │ registration │ v3.0.0    │ -       │ 631520b  │ Alexander Guschin │
-│ 2022-07-07 20:32:21 │ churn      │ commit       │ -         │ -       │ 631520b  │ Alexander Guschin │
-╘═════════════════════╧════════════╧══════════════╧═══════════╧═════════╧══════════╧═══════════════════╛
+╒═════════════════════╤════════════╤══════════════╤═══════════╤═════════╤══════════╤═════════════════╕
+│ timestamp           │ artifact   │ event        │ version   │ stage   │ commit   │ ref             │
+╞═════════════════════╪════════════╪══════════════╪═══════════╪═════════╪══════════╪═════════════════╡
+│ 2022-07-29 14:50:10 │ churn      │ assignment   │ v3.1.0    │ dev     │ 8e4b8e9  │ churn#dev#4     │
+│ 2022-07-17 21:53:53 │ churn      │ assignment   │ v3.0.0    │ prod    │ 0d4e471  │ churn#prod#3    │
+│ 2022-07-16 18:07:13 │ churn      │ assignment   │ v3.1.0    │ staging │ 8e4b8e9  │ churn#staging#2 │
+│ 2022-07-15 14:20:33 │ churn      │ assignment   │ v3.0.0    │ dev     │ 0d4e471  │ churn#dev#1     │
+│ 2022-07-14 10:33:53 │ churn      │ registration │ v3.1.0    │ -       │ 8e4b8e9  │ churn@v3.1.0    │
+│ 2022-07-13 06:47:13 │ churn      │ commit       │ v3.1.0    │ -       │ 8e4b8e9  │ 8e4b8e9         │
+│ 2022-07-13 06:47:13 │ churn      │ commit       │ v3.1.0    │ -       │ 8e4b8e9  │ 8e4b8e9         │
+│ 2022-07-09 19:27:13 │ churn      │ registration │ v3.0.0    │ -       │ 0d4e471  │ churn@v3.0.0    │
+│ 2022-07-08 15:40:33 │ churn      │ commit       │ v3.0.0    │ -       │ 0d4e471  │ 0d4e471         │
+╘═════════════════════╧════════════╧══════════════╧═══════════╧═════════╧══════════╧═════════════════╛
 ```
 
 ## Consuming the registry downstream
@@ -332,25 +366,11 @@ To get the version that is currently assigned to an environment (stage), use
 
 ```console
 $ gto which churn dev
-v3.0.0
+v3.1.0
 
 $ gto which churn dev --ref
-churn#dev#1
+churn#dev#4
 ```
-
-<details summary="Kanban workflow">
-
-If you prefer Kanban workflow described above, you could use `--last` flag. This
-will take into account the last stage for a version only.
-
-```console
-$ gto which churn dev --last
-```
-
-Since the last stage for version `v3.0.0` was `prod`, this doesn't return
-anything.
-
-</details>
 
 To get details about an artifact (from `artifacts.yaml`) use `gto describe`:
 
