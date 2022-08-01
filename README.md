@@ -128,9 +128,9 @@ git push origin awesome-model#prod#1 --delete
 
 ### Annotating
 
-So far we've seen how to publish and assign a stage to an artifact versions,
-but we still don't have much information about them. What about the type of
-artifact (dataset, model, etc.) or the file path to find it in the working tree?
+So far we've seen how to publish and assign a stage to an artifact versions, but
+we still don't have much information about them. What about the type of artifact
+(dataset, model, etc.) or the file path to find it in the working tree?
 
 For simple projects (e.g. single artifact) we can assume the details in a
 downstream system. But for more advanced cases, we should codify them in the
@@ -211,6 +211,7 @@ it's outdated and will no longer be developed. To do this, you could run:
 
 ```console
 $ gto deregister awesome-model
+Created Git tag 'awesome-model@!' that deregisters the artifact.
 ```
 
 <details summary="Some details and options">
@@ -229,6 +230,19 @@ git push origin awesome-model@v0.0.1 awesome-model#prod#1 awesome-model#prod#2! 
 
 It looks just the same as `$ gto deprecate awesome-model --delete`, but will
 include all artifact versions that exist.
+
+One more thing: since there is a `$ gto deregister`, there should be the command
+that does the opposite. It's `$ gto register`:
+
+```console
+$ gto register awesome-model
+Created Git tag `awesome-model@` that registers the artifact.
+```
+
+This can be done to undo `deregister` and keep the history or at the very
+beginning to add the artifact to the artifact registry. Although, in the last
+it's not mandatory since publishing the very first version with `$ gto publish`
+already implies registering the artifact.
 
 </details>
 
@@ -269,7 +283,9 @@ $ gto show churn
 ╘════════════╧═══════════╧══════════════╧═════════════════════╧══════════════╛
 ```
 
-<details summary="#### Enabling multiple versions in the same Stage workflow">
+#### Enabling multiple versions in the same Stage workflow
+
+<details summary="Details">
 
 Note: this functionality is experimental and subject to change. If you find it
 useful, please share your feedback in GH issues to help us make it stable.
@@ -294,7 +310,9 @@ approach you choose.
 
 </details>
 
-<details summary="#### Enabling Kanban workflow">
+#### Enabling Kanban workflow
+
+<details summary="Details">
 
 Note: this functionality is experimental and subject to change. If you find it
 useful, please share your feedback in GH issues to help us make it stable.
