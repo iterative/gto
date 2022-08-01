@@ -43,7 +43,38 @@ $ git clone https://github.com/iterative/example-gto.git
 $ cd example-gto
 ```
 
-### Versioning
+This guide will walk you through the Lifecycle of an artifact. To execute each
+step, you'll need to create a Git tag of a special format, which will trigger CI
+and trigger the job you intend to run:
+
+1. Registering it - marking the very beginning of the artifact history in the
+   Git repository.
+2. Publishing a version - marking an important change in the artifact.
+3. Assigning a stage to a version - marking the readiness to be consumed by a
+   downstream system.
+4. Unassigning a stage - removing an "artifact is ready for this stage" mark.
+5. Deprecating a version - marking a version as the one that should not be used
+   any longer.
+6. Deregistering an artifact - completing the lifecycle of an artifact and
+   marking it as an outdated one.
+
+### Registering an artifact
+
+Note: this is an optional operation, since publishing the very first version
+with `$ gto publish` already implies registering the artifact.
+
+To start tracking the artifact in the registry, you need to run:
+
+```console
+$ gto register awesome-model
+Created Git tag `awesome-model@` that registers the artifact.
+```
+
+This can be done to mark the very beginning of the artifact history, so it's
+better to create this tag for the very first commit the artifact was present in
+(even not annotated - see below what an annotation is).
+
+### Versioning an artifact
 
 To release a new artifact or a new version, use `gto publish`. This is usually
 done to mark significant changes to the artifact (such as a release).
@@ -230,19 +261,6 @@ git push origin awesome-model@v0.0.1 awesome-model#prod#1 awesome-model#prod#2! 
 
 It looks just the same as `$ gto deprecate awesome-model --delete`, but will
 include all artifact versions that exist.
-
-One more thing: since there is a `$ gto deregister`, there should be the command
-that does the opposite. It's `$ gto register`:
-
-```console
-$ gto register awesome-model
-Created Git tag `awesome-model@` that registers the artifact.
-```
-
-This can be done to undo `deregister` and keep the history or at the very
-beginning to add the artifact to the artifact registry. Although, in the last
-it's not mandatory since publishing the very first version with `$ gto publish`
-already implies registering the artifact.
 
 </details>
 
