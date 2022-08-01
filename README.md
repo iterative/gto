@@ -46,8 +46,7 @@ $ cd example-gto
 ### Versioning
 
 To register a new artifact or a new version, use `gto register`. This is usually
-done to mark significant changes to the artifact (such as a release or a
-deprecation).
+done to mark significant changes to the artifact (such as a release).
 
 ```console
 $ gto register awesome-model
@@ -59,8 +58,9 @@ Created git tag 'awesome-model@v0.0.1' that registers a new version
 GTO creates a special Git tag for the artifact version, in a standard format:
 `{artifact_name}@{version_number}`.
 
-The version is now associated to the current Git commit (`HEAD`). You can have
-several versions in a given commit, ordered by their automatic version numbers.
+The version is now associated to the current Git commit (`HEAD`). You can use
+another Git commit if you provide it's hexsha as an additional argument, like
+`$ gto register awesome-model abc1234`.
 
 </details>
 
@@ -120,7 +120,7 @@ can use:
 ```console
 $ gto unassign --delete
 Deleted git tag 'awesome-model#prod#1' that assigned 'prod' to 'v0.0.1'
-To push the changes upsteam, run:
+To push the changes upstream, run:
 git push origin awesome-model#prod#1 --delete
 ```
 
@@ -176,6 +176,34 @@ GTO the artifact file is committed to Git.
 
 </details>
 
+### Deregistering
+
+Sometimes you need mark a specific artifact version as a deprecated one,
+signaling that it's not ready to be used any more. You could just delete a git
+tag, but if you want to preserve a history of the actions, you may find
+`gto deregister` useful.
+
+```console
+$ gto deregister awesome-model v0.0.1
+Created git tag 'awesome-model@v0.0.1!' that deregisters a version.
+```
+
+<details summary="Some details and options">
+
+If you want to deprecate the version by deleting the Git tags itself, you could
+use
+
+```console
+$ gto deregister awesome-model v0.0.1 --delete
+Deleted git tag 'awesome-model@v0.0.1' that registered a version.
+Deleted git tag 'awesome-model#prod#1' that assigned a stage.
+Deleted git tag 'awesome-model#prod#2!' that unassigned a stage.
+To push the changes upstream, run:
+git push origin awesome-model@v0.0.1 awesome-model#prod#1 awesome-model#prod#2! --delete
+```
+
+</details>
+
 ### Deprecating
 
 Sometimes you need to need to mark the artifact as "deprecated", usually meaning
@@ -185,15 +213,24 @@ it's outdated and will no longer be developed. To do this, you could run:
 $ gto deprecate awesome-model
 ```
 
-Generally, the artifact is considered to be deprecated either if
+<details summary="Some details and options">
 
-1. There is a `awesome-model@deprecated` git tag
-2. There are no git tags for the artifact and it doesn't appear in
-   `artifacts.yaml` in the workspace (i.e. in the check outed commit).
+If you want to deprecate an artifact by deleting git tags, you'll need to delete
+all of them for the artifact. You could do that with
 
-### Removing
+```console
+$ gto deprecate awesome-model --delete
+Deleted git tag 'awesome-model@v0.0.1' that registered a version.
+Deleted git tag 'awesome-model#prod#1' that assigned a stage.
+Deleted git tag 'awesome-model#prod#2!' that unassigned a stage.
+To push the changes upstream, run:
+git push origin awesome-model@v0.0.1 awesome-model#prod#1 awesome-model#prod#2! --delete
+```
 
-TODO
+It looks just the same as `$ gto register awesome-model --delete`, but will
+include all artifact versions that exist.
+
+</details>
 
 ## Using the registry locally
 
