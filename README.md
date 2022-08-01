@@ -45,12 +45,12 @@ $ cd example-gto
 
 ### Versioning
 
-To register a new artifact or a new version, use `gto register`. This is usually
+To release a new artifact or a new version, use `gto publish`. This is usually
 done to mark significant changes to the artifact (such as a release).
 
 ```console
-$ gto register awesome-model
-Created git tag 'awesome-model@v0.0.1' that registers a new version
+$ gto publish awesome-model
+Created git tag 'awesome-model@v0.0.1' that publishes a new version
 ```
 
 <details summary="What happens under the hood?">
@@ -60,11 +60,11 @@ GTO creates a special Git tag for the artifact version, in a standard format:
 
 The version is now associated to the current Git commit (`HEAD`). You can use
 another Git commit if you provide it's hexsha as an additional argument, like
-`$ gto register awesome-model abc1234`.
+`$ gto publish awesome-model abc1234`.
 
 </details>
 
-### Assign a stage
+### Assigning a stage
 
 Assign an actionable stage for a specific artifact version with `gto assign`.
 Stages can mark it's readiness for a specific consumer. You can plug in a real
@@ -91,7 +91,7 @@ require deleting the existing tag.
 
 </details>
 
-### Unassign a stage
+### Unassigning a stage
 
 Note: this functionality is in development and will be introduced soon.
 
@@ -128,7 +128,7 @@ git push origin awesome-model#prod#1 --delete
 
 ### Annotating
 
-So far we've seen how to register and assign a stage to an artifact versions,
+So far we've seen how to publish and assign a stage to an artifact versions,
 but we still don't have much information about them. What about the type of
 artifact (dataset, model, etc.) or the file path to find it in the working tree?
 
@@ -158,7 +158,7 @@ GTO the artifact file is committed to Git.
 
 <details summary="Virtual vs. Physical artifacts">
 
-- Physical files/directories are committed to the repo. When you register a new
+- Physical files/directories are committed to the repo. When you publish a new
   version or assign a stage to it, Git guarantees that it's immutable -- you can
   return a year later and get the same artifact by providing a version.
 
@@ -176,16 +176,16 @@ GTO the artifact file is committed to Git.
 
 </details>
 
-### Deregistering
+### Deprecating a version
 
 Sometimes you need mark a specific artifact version as a deprecated one,
 signaling that it's not ready to be used any more. You could just delete a git
 tag, but if you want to preserve a history of the actions, you may find
-`gto deregister` useful.
+`gto deprecate` useful.
 
 ```console
-$ gto deregister awesome-model v0.0.1
-Created git tag 'awesome-model@v0.0.1!' that deregisters a version.
+$ gto deprecate awesome-model --version v0.0.1
+Created git tag 'awesome-model@v0.0.1!' that deprecates a version.
 ```
 
 <details summary="Some details and options">
@@ -194,8 +194,8 @@ If you want to deprecate the version by deleting the Git tags itself, you could
 use
 
 ```console
-$ gto deregister awesome-model v0.0.1 --delete
-Deleted git tag 'awesome-model@v0.0.1' that registered a version.
+$ gto deprecate awesome-model --version v0.0.1 --delete
+Deleted git tag 'awesome-model@v0.0.1' that published a version.
 Deleted git tag 'awesome-model#prod#1' that assigned a stage.
 Deleted git tag 'awesome-model#prod#2!' that unassigned a stage.
 To push the changes upstream, run:
@@ -204,13 +204,13 @@ git push origin awesome-model@v0.0.1 awesome-model#prod#1 awesome-model#prod#2! 
 
 </details>
 
-### Deprecating
+### Deregistering an artifact
 
 Sometimes you need to need to mark the artifact as "deprecated", usually meaning
 it's outdated and will no longer be developed. To do this, you could run:
 
 ```console
-$ gto deprecate awesome-model
+$ gto deregister awesome-model
 ```
 
 <details summary="Some details and options">
@@ -219,15 +219,15 @@ If you want to deprecate an artifact by deleting git tags, you'll need to delete
 all of them for the artifact. You could do that with
 
 ```console
-$ gto deprecate awesome-model --delete
-Deleted git tag 'awesome-model@v0.0.1' that registered a version.
+$ gto deregister awesome-model --delete
+Deleted git tag 'awesome-model@v0.0.1' that published a version.
 Deleted git tag 'awesome-model#prod#1' that assigned a stage.
 Deleted git tag 'awesome-model#prod#2!' that unassigned a stage.
 To push the changes upstream, run:
 git push origin awesome-model@v0.0.1 awesome-model#prod#1 awesome-model#prod#2! --delete
 ```
 
-It looks just the same as `$ gto register awesome-model --delete`, but will
+It looks just the same as `$ gto deprecate awesome-model --delete`, but will
 include all artifact versions that exist.
 
 </details>
@@ -269,7 +269,7 @@ $ gto show churn
 ╘════════════╧═══════════╧══════════════╧═════════════════════╧══════════════╛
 ```
 
-#### Enabling multiple versions in the same Stage workflow
+<details summary="#### Enabling multiple versions in the same Stage workflow">
 
 Note: this functionality is experimental and subject to change. If you find it
 useful, please share your feedback in GH issues to help us make it stable.
@@ -292,7 +292,9 @@ To enable this workflow, you need to supply the `--av` argument to `gto show`
 and `gto which` commands. Other commands behave the same way regardless of the
 approach you choose.
 
-#### Enabling Kanban workflow
+</details>
+
+<details summary="#### Enabling Kanban workflow">
 
 Note: this functionality is experimental and subject to change. If you find it
 useful, please share your feedback in GH issues to help us make it stable.
@@ -319,6 +321,8 @@ $ gto show churn --av 1 --vs -1
 To enable this workflow, you need to supply the `--vs` and `--av` arguments to
 `gto show` and `gto which` commands. Other commands behave the same way
 regardless of the approach you choose.
+
+</details>
 
 ### See the history of an artifact
 
