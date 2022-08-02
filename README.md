@@ -47,8 +47,8 @@ This guide will walk you through the Lifecycle of an artifact. To execute each
 step, you'll need to create a Git tag of a special format, which will trigger CI
 and trigger the job you intend to run:
 
-1. Registering it - marking the very beginning of the artifact history in the
-   Git repository.
+1. Registering artifact - marking the very beginning of the artifact history in
+   the Git repository.
 2. Publishing a version - marking an important change in the artifact.
 3. Assigning a stage to a version - marking the readiness to be consumed by a
    downstream system.
