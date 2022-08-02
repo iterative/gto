@@ -95,6 +95,8 @@ class Index(BaseModel):
             assert_name_is_valid(name)
             if artifact.type:
                 assert_name_is_valid(artifact.type)
+            for label in artifact.labels:
+                assert_name_is_valid(label)
         return v
 
     def __contains__(self, item):
@@ -180,6 +182,8 @@ class BaseIndexManager(BaseModel, ABC):
         raise NotImplementedError
 
     def add(self, name, type, path, must_exist, labels, description, update):
+        for arg in [name] + (labels or []):
+            assert_name_is_valid(arg)
         if type:
             self.config.assert_type(type)
         if must_exist:
