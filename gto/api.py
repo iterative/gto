@@ -321,6 +321,7 @@ def _show_registry(
                 in o.get_vstages(
                     registered_only=registered_only,
                     assignments_per_version=assignments_per_version,
+                    versions_per_stage=versions_per_stage,
                 )
                 else None
                 for name in stages

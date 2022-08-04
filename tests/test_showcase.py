@@ -1,7 +1,16 @@
 """TODO: break this file into multiple test/files"""
 # pylint: disable=unused-variable, too-many-locals, too-many-statements
 import gto
-from gto.base import Artifact, Assignment, Version, VStage
+from gto.base import (
+    Artifact,
+    Assignment,
+    Commit,
+    Deregistration,
+    Registration,
+    Unassignment,
+    Version,
+    VStage,
+)
 from tests.utils import check_obj
 
 
@@ -49,10 +58,13 @@ def test_api(showcase):
     }
     skip_keys_assignment = {
         "created_at",
-        "tag",
         "message",
         "assignments",
         "unassignments",
+        "activated_at",
+        "priority",
+        "addition",
+        "event",
     }
 
     check_obj(
@@ -69,15 +81,17 @@ def test_api(showcase):
         ),
         skip_keys=skip_keys_registration,
     )
-    assert len(nn_artifact.get_vstages()) == 1
-    nn_vstage = nn_artifact.get_vstages()
-    assert isinstance(nn_vstage, VStage)
+    nn_vstages = nn_artifact.get_vstages()
+    assert len(nn_vstages) == 1
+    assert isinstance(nn_vstages["staging"][0], VStage)
     check_obj(
-        nn_vstage,
+        nn_vstages["staging"][0].dict_state(),
         dict(
             artifact="nn",
             version="v0.0.1",
             stage="staging",
+            is_active=True,
+            ref="nn#staging#1",
             author=author,
             author_email=author_email,
             commit_hexsha=first_commit.hexsha,
@@ -93,10 +107,12 @@ def test_api(showcase):
     assert all(isinstance(v, Version) for v in rf_artifact.versions)
     rf_ver1, rf_ver2 = rf_artifact.versions
     check_obj(
-        rf_ver1,
+        rf_ver1.dict_state(),
         dict(
             artifact="rf",
-            name="v1.2.3",
+            version="v1.2.3",
+            is_active=True,
+            ref="rf@v1.2.3",
             author=author,
             author_email=author_email,
             commit_hexsha=first_commit.hexsha,
@@ -105,10 +121,12 @@ def test_api(showcase):
         skip_keys=skip_keys_registration,
     )
     check_obj(
-        rf_ver2,
+        rf_ver2.dict_state(),
         dict(
             artifact="rf",
-            name="v1.2.4",
+            version="v1.2.4",
+            is_active=True,
+            ref="rf@v1.2.4",
             author=author,
             author_email=author_email,
             commit_hexsha=second_commit.hexsha,
@@ -117,17 +135,34 @@ def test_api(showcase):
         skip_keys=skip_keys_registration,
     )
 
-    assert len(rf_artifact.assignments) == 4
-    assert all(isinstance(p, Assignment) for p in rf_artifact.assignments)
-    rf_l1, _ = rf_ver1.assignments
-    rf_l3, rf_l4 = rf_ver2.assignments
+    assert len(rf_artifact.get_events()) == 8
+    assert all(
+        isinstance(p, (Assignment, Unassignment, Registration, Deregistration, Commit))
+        for p in rf_artifact.get_events()
+    )
+    assert all(
+        isinstance(p, (Registration, Deregistration))
+        for p in rf_ver1.get_events(indirect=False) + rf_ver2.get_events(indirect=False)
+    )
+    assert all(
+        isinstance(p, (Assignment, Unassignment, Commit))
+        for p in rf_ver1.get_events(direct=False) + rf_ver2.get_events(direct=False)
+    )
+    print(rf_ver2.get_events(direct=False))
+    rf_a4, rf_a1, rf_c1 = rf_ver1.get_events(
+        direct=False
+    )  # pylint: disable=unused-variable
+    rf_a3, rf_a2, rf_c2 = rf_ver2.get_events(
+        direct=False
+    )  # pylint: disable=unused-variable
 
     check_obj(
-        rf_l1,
+        rf_a1.dict_state(),
         dict(
             artifact="rf",
             version="v1.2.3",
             stage="production",
+            tag="rf#production#1",
             author=author,
             author_email=author_email,
             commit_hexsha=first_commit.hexsha,
@@ -135,11 +170,12 @@ def test_api(showcase):
         skip_keys=skip_keys_assignment,
     )
     check_obj(
-        rf_l4,
+        rf_a3.dict_state(),
         dict(
             artifact="rf",
             version="v1.2.4",
             stage="production",
+            tag="rf#production#3",
             author=author,
             author_email=author_email,
             commit_hexsha=second_commit.hexsha,
@@ -147,17 +183,15 @@ def test_api(showcase):
         skip_keys=skip_keys_assignment,
     )
     check_obj(
-        rf_l3,
+        rf_a2.dict_state(),
         dict(
             artifact="rf",
             version="v1.2.4",
             stage="staging",
+            tag="rf#staging#2",
             author=author,
             author_email=author_email,
             commit_hexsha=second_commit.hexsha,
         ),
         skip_keys=skip_keys_assignment,
     )
-    assert gto.api.find_versions_in_stage(
-        repo, "rf", "staging", versions_per_stage=-1
-    ) == [rf_l3]

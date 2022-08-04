@@ -5,7 +5,12 @@ import git
 from pydantic import BaseModel
 
 from gto.config import RegistryConfig
-from gto.constants import Action, VersionSort
+from gto.constants import (
+    ASSIGNMENTS_PER_VERSION,
+    VERSIONS_PER_STAGE,
+    Action,
+    VersionSort,
+)
 from gto.versions import SemVer
 
 from .exceptions import (
@@ -192,6 +197,8 @@ class VStage(BaseObject):
     unassignments: List[Unassignment] = []
 
     def add_event(self, event: BaseEvent):
+        if event in self.get_events():
+            return event
         if isinstance(event, Assignment):
             self.assignments.append(event)
             self.assignments.sort(key=lambda e: e.created_at)
@@ -235,6 +242,8 @@ class Version(BaseObject):
     stages: Dict[str, VStage] = {}
 
     def add_event(self, event: BaseEvent):
+        if event in self.get_events():
+            return event
         if isinstance(event, Registration):
             self.registrations.append(event)
             self.registrations.sort(key=lambda e: e.created_at)
@@ -264,9 +273,13 @@ class Version(BaseObject):
 
     @property
     def is_active(self):
-        if len(self.get_events()) == 0:
+        direct_events = self.get_events(direct=True, indirect=False)
+        if direct_events:
+            return isinstance(direct_events[0], Registration)
+        indirect_events = self.get_events(direct=False, indirect=True)
+        if indirect_events:
             return True
-        return isinstance(self.get_events(direct=True, indirect=False)[0], Registration)
+        return False
 
     @property
     def activated_at(self):
@@ -314,7 +327,7 @@ class Version(BaseObject):
             key=lambda s: s.activated_at,
         )[:: 1 if ascending else -1]
 
-    def dict_state(self, exclude=None, assignments_per_version=None):
+    def dict_state(self, exclude=None, assignments_per_version=ASSIGNMENTS_PER_VERSION):
         if assignments_per_version < -1:
             raise WrongArgs("'assignments_per_version' must be >= -1")
         version = super().dict_state(exclude=exclude)
@@ -369,6 +382,8 @@ class Artifact(BaseObject):
     deprecations: List[Deprecation] = []
 
     def add_event(self, event: BaseEvent):
+        if event in self.get_events():
+            return event
         if isinstance(event, Creation):
             self.creations.append(event)
             self.creations.sort(key=lambda e: e.created_at)
@@ -447,8 +462,8 @@ class Artifact(BaseObject):
     def get_vstages(
         self,
         registered_only=False,
-        assignments_per_version=None,
-        versions_per_stage=None,
+        assignments_per_version=ASSIGNMENTS_PER_VERSION,
+        versions_per_stage=VERSIONS_PER_STAGE,
         sort=VersionSort.SemVer,
     ):
         if assignments_per_version < -1:

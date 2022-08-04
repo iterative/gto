@@ -376,7 +376,7 @@ def gto_command(*args, section="other", aliases=None, parent=app, **kwargs):
                         )
                     )
                     echo(
-                        "Please report it here: <https://github.com/iterative/gto/issues>"
+                        "Please report it here running with '--traceback' flag: <https://github.com/iterative/gto/issues>"
                     )
                 raise typer.Exit(1) from e
             finally:

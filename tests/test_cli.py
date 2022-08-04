@@ -118,12 +118,12 @@ def test_commands(showcase):
     )
     _check_successful_cmd(
         "which",
-        ["-r", path, "rf", "production", "--all"],
+        ["-r", path, "rf", "production", "--vs", "-1"],
         "v1.2.4\nv1.2.3\n",
     )
     _check_successful_cmd(
         "which",
-        ["-r", path, "rf", "staging", "--all"],
+        ["-r", path, "rf", "staging", "--vs", "-1"],
         "v1.2.4\n",
     )
     _check_successful_cmd(

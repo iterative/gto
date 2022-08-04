@@ -75,7 +75,6 @@ def test_register_incorrect_name(init_repo):
         register(init_repo, "###", ref="HEAD")
 
 
-@pytest.mark.xfail
 def test_register_incorrect_version(init_repo):
     with pytest.raises(ValidationError):
         register(init_repo, "model", ref="HEAD", version="###")

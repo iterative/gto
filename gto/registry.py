@@ -173,7 +173,7 @@ class GitRegistry(BaseModel):
         )
         if stdout:
             echo(
-                f"Created git tag '{registered_version.tag}' that registers a new version"
+                f"Created git tag '{registered_version.ref}' that registers a new version"
             )
         return registered_version
 
@@ -238,7 +238,10 @@ class GitRegistry(BaseModel):
             stage,
             ref=ref,
             message=message
-            or f"Assigning stage {stage} to artifact {name} version {found_version.version}",
+            or f"Assigning stage {stage} to artifact {name} "
+            + (
+                f"version {found_version.version}" if found_version else f"commit {ref}"
+            ),
             simple=simple,
             author=author,
             author_email=author_email,

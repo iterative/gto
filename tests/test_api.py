@@ -135,9 +135,10 @@ def test_assign(repo_with_artifact: Tuple[git.Repo, str]):
         author=author,
         author_email=author_email,
     )
-    assignment = gto.api.find_versions_in_stage(repo.working_dir, name, stage)
+    assignments = gto.api.find_versions_in_stage(repo.working_dir, name, stage)
+    assert len(assignments) == 1
     check_obj(
-        assignment.dict_state(),
+        assignments[0].dict_state(),
         dict(
             artifact=name,
             version="v0.0.1",
@@ -166,8 +167,9 @@ def test_assign_skip_registration(repo_with_artifact: Tuple[git.Repo, str]):
             skip_registration=True,
         )
     gto.api.assign(repo.working_dir, name, stage, ref="HEAD", skip_registration=True)
-    assignment = gto.api.find_versions_in_stage(repo.working_dir, name, stage)
-    assert not SemVer.is_valid(assignment.version)
+    assignments = gto.api.find_versions_in_stage(repo.working_dir, name, stage)
+    assert len(assignments) == 1
+    assert not SemVer.is_valid(assignments[0].version)
 
 
 def test_assign_force_is_needed(repo_with_artifact: Tuple[git.Repo, str]):
