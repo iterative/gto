@@ -68,7 +68,7 @@ To start tracking the artifact in the registry, you need to run:
 
 ```console
 $ gto register awesome-model
-Created Git tag `awesome-model@` that registers the artifact.
+Created Git tag 'awesome-model@registered' that registers the artifact.
 ```
 
 This can be done to mark the very beginning of the artifact history, so it's
@@ -243,7 +243,7 @@ it's outdated and will no longer be developed. To do this, you could run:
 
 ```console
 $ gto deregister awesome-model
-Created Git tag 'awesome-model@!' that deregisters the artifact.
+Created Git tag 'awesome-model@deregistered' that deregisters the artifact.
 ```
 
 <details summary="Some details and options">
@@ -253,16 +253,13 @@ all of them for the artifact. You could do that with
 
 ```console
 $ gto deregister awesome-model --delete
+Deleted git tag 'awesome-model@registered' that registered an artifact.
 Deleted git tag 'awesome-model@v0.0.1' that published a version.
 Deleted git tag 'awesome-model#prod#1' that assigned a stage.
 Deleted git tag 'awesome-model#prod#2!' that unassigned a stage.
 To push the changes upstream, run:
-git push origin awesome-model@v0.0.1 awesome-model#prod#1 awesome-model#prod#2! --delete
+git push origin awesome-model@registered awesome-model@v0.0.1 awesome-model#prod#1 awesome-model#prod#2! --delete
 ```
-
-It looks just the same as `$ gto deprecate awesome-model --delete`, but will
-include tags for all artifact versions that exist, as well as a creation tag if
-it existed.
 
 </details>
 
