@@ -8,6 +8,7 @@ from pydantic import BaseModel, BaseSettings, validator
 from pydantic.env_settings import InitSettingsSource
 from ruamel.yaml import YAML
 
+from gto.constants import name_regexp
 from gto.exceptions import (
     UnknownStage,
     UnknownType,
@@ -23,7 +24,7 @@ CONFIG_FILE_NAME = ".gto"
 
 
 def check_name_is_valid(name):
-    return bool(re.match(r"[a-z][a-z0-9-/]*[a-z0-9]$", name))
+    return bool(re.search(name_regexp, name))
 
 
 def assert_name_is_valid(name):

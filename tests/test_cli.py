@@ -190,6 +190,12 @@ def test_commands(showcase):
         ["-r", path, "rf#production#3"],
         '✅  Stage "production" was assigned to version "v1.2.4" of artifact "rf"\n',
     )
+    # TODO: make unsuccessful
+    _check_successful_cmd(
+        "check-ref",
+        ["-r", path, "this-tag-does-not-exist"],
+        "",
+    )
 
 
 EXPECTED_DESCRIBE_OUTPUT_2 = """{
@@ -274,19 +280,19 @@ def test_register(repo_with_commit: Tuple[git.Repo, Callable]):
     _check_successful_cmd(
         "register",
         ["-r", repo.working_dir, "a1"],
-        "Created git tag 'a1@v0.0.1' that registers a new version\n",
+        "Created git tag 'a1@v0.0.1'\n",
     )
 
     _check_successful_cmd(
         "register",
         ["-r", repo.working_dir, "a2", "--version", "v1.2.3"],
-        "Created git tag 'a2@v1.2.3' that registers a new version\n",
+        "Created git tag 'a2@v1.2.3'\n",
     )
 
     _check_failing_cmd(
         "register",
         ["-r", repo.working_dir, "a3", "--version", "1.2.3"],
-        "❌ Version '1.2.3' is not valid. Example of valid version: 'v1.0.0'\n",
+        "❌ Cannot parse tag name 'a3@1.2.3'\n",
     )
 
 
@@ -296,8 +302,7 @@ def test_assign(repo_with_commit: Tuple[git.Repo, Callable]):
     _check_successful_cmd(
         "assign",
         ["-r", repo.working_dir, "nn1", "prod", "HEAD"],
-        "Created git tag 'nn1@v0.0.1' that registers a new version\n"
-        "Created git tag 'nn1#prod#1' that assigns 'prod' to 'v0.0.1'\n",
+        "Created git tag 'nn1@v0.0.1'\n" "Created git tag 'nn1#prod#1'\n",
     )
 
     # this check depends on the previous assignment

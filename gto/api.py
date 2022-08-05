@@ -110,6 +110,28 @@ def register(
     )
 
 
+def deregister(
+    repo: Union[str, Repo],
+    name: str,
+    ref: str = None,
+    version: str = None,
+    message: str = None,
+    stdout: bool = False,
+    author: Optional[str] = None,
+    author_email: Optional[str] = None,
+):
+    """Register new artifact version"""
+    return GitRegistry.from_repo(repo).deregister(
+        name=name,
+        ref=ref,
+        version=version,
+        message=message,
+        stdout=stdout,
+        author=author,
+        author_email=author_email,
+    )
+
+
 def promote(
     repo: Union[str, Repo],
     name: str,

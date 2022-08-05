@@ -683,6 +683,8 @@ def check_ref(
     result = gto.api.check_ref(repo, ref)
     if len(result) > 1:
         NotImplementedInGTO("Checking refs that created 1+ events is not supported")
+    if len(result) == 0:
+        return
     found_event = result[0]
     if json:
         format_echo(found_event.dict_state(exclude={"priority", "addition"}), "json")

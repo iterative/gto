@@ -1,3 +1,4 @@
+import re
 from datetime import datetime
 from enum import Enum
 from typing import FrozenSet, Iterable, Optional, Union
@@ -5,21 +6,27 @@ from typing import FrozenSet, Iterable, Optional, Union
 import git
 from pydantic import BaseModel
 
-from gto.config import assert_name_is_valid, check_name_is_valid
-from gto.versions import SemVer
-
 from .base import (
     Artifact,
     Assignment,
     BaseManager,
     BaseRegistryState,
+    Deregistration,
     Registration,
     Unassignment,
 )
-from .constants import ACTION, NAME, NUMBER, STAGE, TAG, VERSION, Action
+from .constants import (
+    ACTION,
+    COUNTER,
+    NAME,
+    STAGE,
+    TAG,
+    VERSION,
+    Action,
+    tag_regexp,
+)
 from .exceptions import (
     InvalidTagName,
-    InvalidVersion,
     MissingArg,
     RefNotFound,
     TagExists,
@@ -27,119 +34,67 @@ from .exceptions import (
     UnknownAction,
 )
 
-ActionSign = {
-    Action.REGISTER: "@",
-    Action.ASSIGN: "#",
-    Action.UNASSIGN: "!",
+COUNT_DELIMITER = "#"
+
+TagTemplates = {
+    # Action.CREATE: "{artifact}@",
+    # Action.DEPRECATE: "{artifact}@!",
+    Action.REGISTER: "{artifact}@{version}",
+    Action.DEREGISTER: "{artifact}@{version}!",
+    Action.ASSIGN: "{artifact}#{stage}",
+    Action.UNASSIGN: "{artifact}#{stage}!",
 }
 
 
 def name_tag(
     action: Action,
-    name: str,
+    artifact: str,
     version: Optional[str] = None,
     stage: Optional[str] = None,
     repo: Optional[git.Repo] = None,
     simple: bool = False,
 ):
-    if action == Action.REGISTER:
-        return f"{name}{ActionSign[action]}{version}"
+    if action not in TagTemplates:
+        raise UnknownAction(action=action)
 
-    if action in (Action.ASSIGN, Action.UNASSIGN):
-        if simple:
-            tag = f"{name}{ActionSign[Action.ASSIGN]}{stage}"
-            if action == Action.UNASSIGN:
-                tag += ActionSign[Action.UNASSIGN]
-            return tag
-        if repo is None:
-            raise MissingArg(arg="repo")
-        numbers = []
-        for tag in repo.tags:
-            parsed = parse_name(tag.name, raise_on_fail=False)  # type: ignore
-            if (
-                parsed
-                and (parsed[NAME] == name)
-                and (parsed[ACTION] in (Action.ASSIGN, Action.UNASSIGN))
-                and (NUMBER in parsed)
-            ):
-                numbers.append(parsed[NUMBER])
-        new_number = max(numbers) + 1 if numbers else 1
-        tag = f"{name}{ActionSign[Action.ASSIGN]}{stage}{ActionSign[Action.ASSIGN]}{new_number}"
-        if action == Action.UNASSIGN:
-            tag += ActionSign[Action.UNASSIGN]
+    tag = TagTemplates[action].format(artifact=artifact, version=version, stage=stage)
+    if simple:
         return tag
-    raise UnknownAction(action=action)
-
-
-def _parse_register(name: str, raise_on_fail: bool = True):
-    sign = len(name) - name[::-1].index(ActionSign[Action.REGISTER])
-    name, version = name[: sign - 1], name[sign:]
-    if check_name_is_valid(name) and SemVer.is_valid(version):
-        return {
-            ACTION: Action.REGISTER,
-            NAME: name,
-            VERSION: version,
-        }
-    if raise_on_fail:
-        assert_name_is_valid(name)
-        if not SemVer.is_valid(version):
-            raise InvalidVersion(
-                f"Version format should be v1.0.0, cannot parse {version}"
-            )
-    return {}
-
-
-def _parse_assign(name: str, raise_on_fail: bool = True):
-    # TODO: use regex instead of if-else
-    parsed = name.split(ActionSign[Action.ASSIGN])
-    if (
-        check_name_is_valid(parsed[0])
-        and check_name_is_valid(parsed[1])
-        and (
-            parsed[2]
-            and (
-                parsed[2].isdigit()
-                or (parsed[2][-1] == "!" and parsed[2][:-1].isdigit())
-            )
-            if len(parsed) == 3
-            else True
-        )
-    ):
-        unassign = False
-        if parsed[-1][-1] == "!":
-            unassign = True
-            parsed[-1] = parsed[-1][:-1]
-        if len(parsed) == 2:
-            return {
-                ACTION: Action.UNASSIGN if unassign else Action.ASSIGN,
-                NAME: parsed[0],
-                STAGE: parsed[1],
-            }
-        if len(parsed) == 3:
-            return {
-                ACTION: Action.UNASSIGN if unassign else Action.ASSIGN,
-                NAME: parsed[0],
-                STAGE: parsed[1],
-                NUMBER: int(parsed[2]),
-            }
-    if raise_on_fail:
-        assert_name_is_valid(parsed[0])
-        assert_name_is_valid(parsed[1])
-        if not parsed[2].isdigit():
-            raise InvalidTagName(name)
-    return {}
+    if repo is None:
+        raise MissingArg(arg="repo")
+    counter = 0
+    for t in repo.tags:
+        parsed = parse_name(t.name, raise_on_fail=False)  # type: ignore
+        if (
+            parsed
+            and parsed[NAME] == artifact
+            and COUNTER in parsed
+            and parsed[COUNTER] > counter
+        ):
+            counter = parsed[COUNTER]
+    return f"{tag}{COUNT_DELIMITER}{counter+1}"
 
 
 def parse_name(name: str, raise_on_fail: bool = True):
 
-    if ActionSign[Action.REGISTER] in name:
-        return _parse_register(name, raise_on_fail=raise_on_fail)
-
-    if ActionSign[Action.ASSIGN] in name:
-        return _parse_assign(name, raise_on_fail=raise_on_fail)
-
-    if raise_on_fail:
+    match = re.search(tag_regexp, name)
+    if raise_on_fail and not match:
         raise InvalidTagName(name)
+    if match:
+        parsed = {NAME: match["artifact"]}
+        if match[VERSION]:
+            parsed[VERSION] = match[VERSION]
+            parsed[ACTION] = (
+                Action.DEREGISTER if match["cancel"] == "!" else Action.REGISTER
+            )
+        if match[STAGE]:
+            parsed[STAGE] = match[STAGE]
+            parsed[ACTION] = (
+                Action.UNASSIGN if match["cancel"] == "!" else Action.ASSIGN
+            )
+        if match[COUNTER]:
+            parsed[COUNTER] = int(match[COUNTER])
+        return parsed
     return {}
 
 
@@ -239,9 +194,21 @@ def delete_tag(repo: git.Repo, name: str):
 
 
 def index_tag(artifact: Artifact, tag: git.TagReference) -> Artifact:
+    event: Union[Registration, Deregistration, Assignment, Unassignment]
     mtag = parse_tag(tag)
     if mtag.action == Action.REGISTER:
         event = Registration(
+            artifact=mtag.name,
+            version=mtag.version,
+            created_at=mtag.created_at,
+            author=tag.tag.tagger.name,
+            author_email=tag.tag.tagger.email,
+            message=tag.tag.message,
+            commit_hexsha=tag.commit.hexsha,
+            tag=tag.name,
+        )
+    elif mtag.action == Action.DEREGISTER:
+        event = Deregistration(
             artifact=mtag.name,
             version=mtag.version,
             created_at=mtag.created_at,
@@ -256,7 +223,7 @@ def index_tag(artifact: Artifact, tag: git.TagReference) -> Artifact:
             commit_hexsha=tag.commit.hexsha, create_new=True
         ).version  # type: ignore
         if mtag.action == Action.ASSIGN:
-            event = Assignment(  # type: ignore
+            event = Assignment(
                 artifact=mtag.name,
                 version=version,
                 stage=mtag.stage,
@@ -268,7 +235,7 @@ def index_tag(artifact: Artifact, tag: git.TagReference) -> Artifact:
                 tag=tag.name,
             )
         else:
-            event = Unassignment(  # type: ignore
+            event = Unassignment(
                 artifact=mtag.name,
                 version=version,
                 stage=mtag.stage,
@@ -300,7 +267,7 @@ class TagManager(BaseManager):  # pylint: disable=abstract-method
 
 
 class TagVersionManager(TagManager):
-    actions: FrozenSet[Action] = frozenset((Action.REGISTER,))
+    actions: FrozenSet[Action] = frozenset((Action.REGISTER, Action.DEREGISTER))
 
     def register(
         self,
@@ -311,14 +278,40 @@ class TagVersionManager(TagManager):
         author: Optional[str] = None,
         author_email: Optional[str] = None,
     ):
+        tag = name_tag(
+            Action.REGISTER, name, version=version, repo=self.repo, simple=True
+        )
         create_tag(
             self.repo,
-            name_tag(Action.REGISTER, name, version=version, repo=self.repo),
+            tag,
             ref=ref,
             message=message,
             tagger=author,
             tagger_email=author_email,
         )
+        return tag
+
+    def deregister(
+        self,
+        name,
+        version,
+        ref,
+        message,
+        author: Optional[str] = None,
+        author_email: Optional[str] = None,
+    ):
+        tag = name_tag(
+            Action.DEREGISTER, name, version=version, repo=self.repo, simple=True
+        )
+        create_tag(
+            self.repo,
+            tag,
+            ref=ref,
+            message=message,
+            tagger=author,
+            tagger_email=author_email,
+        )
+        return tag
 
 
 class TagStageManager(TagManager):

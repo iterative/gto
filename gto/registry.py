@@ -1,12 +1,19 @@
 import logging
 import os
-from typing import Optional, Union
+from typing import Optional, TypeVar, Union
 
 import git
 from git import InvalidGitRepositoryError, NoSuchPathError, Repo
 from pydantic import BaseModel
 
-from gto.base import Assignment, BaseRegistryState
+from gto.base import (
+    Assignment,
+    BaseEvent,
+    BaseRegistryState,
+    Deregistration,
+    Registration,
+    Unassignment,
+)
 from gto.config import (
     CONFIG_FILE_NAME,
     RegistryConfig,
@@ -25,6 +32,8 @@ from gto.index import EnrichmentManager
 from gto.tag import TagStageManager, TagVersionManager, parse_name
 from gto.ui import echo
 from gto.versions import SemVer
+
+TBaseEvent = TypeVar("TBaseEvent", bound=BaseEvent)
 
 
 class GitRegistry(BaseModel):
@@ -117,7 +126,7 @@ class GitRegistry(BaseModel):
         stdout=False,
         author: Optional[str] = None,
         author_email: Optional[str] = None,
-    ):
+    ) -> Registration:
         """Register artifact version"""
         assert_name_is_valid(name)
         version_args = sum(
@@ -126,8 +135,6 @@ class GitRegistry(BaseModel):
         if version_args > 1:
             raise WrongArgs("Need to specify either version or single bump argument")
         ref = self.repo.commit(ref).hexsha
-        # TODO: add the same check for other actions, to assign and etc
-        # also we need to check integrity of the index+state
         found_artifact = self.find_artifact(name, create_new=True)
         # check that this commit don't have a version already
         found_version = found_artifact.find_version(commit_hexsha=ref)
@@ -137,10 +144,6 @@ class GitRegistry(BaseModel):
         if version:
             if found_artifact.find_version(name=version) is not None:
                 raise VersionAlreadyRegistered(version)
-            if not SemVer.is_valid(version):
-                raise WrongArgs(
-                    f"Version '{version}' is not valid. Example of valid version: 'v1.0.0'"
-                )
         else:
             # if version name wasn't provided but there were some, bump the last one
             last_version = found_artifact.get_latest_version(registered_only=True)
@@ -160,7 +163,7 @@ class GitRegistry(BaseModel):
                 )
             else:
                 version = SemVer.get_minimal().version
-        self.version_manager.register(
+        tag = self.version_manager.register(
             name,
             version,
             ref,
@@ -168,14 +171,33 @@ class GitRegistry(BaseModel):
             author=author,
             author_email=author_email,
         )
-        registered_version = self.find_artifact(name).find_version(
-            name=version, raise_if_not_found=True
+        return self._return_event(tag, stdout=stdout)
+
+    def deregister(
+        self,
+        name,
+        ref=None,
+        version=None,
+        message=None,
+        stdout=False,
+        author: Optional[str] = None,
+        author_email: Optional[str] = None,
+    ) -> Deregistration:
+        """Deregister artifact version"""
+        self._check_args(name, version, ref)
+        if ref is not None:
+            ref = self.repo.commit(ref).hexsha
+        found_artifact = self.find_artifact(name, create_new=True)
+        found_version = found_artifact.find_version(name=version, commit_hexsha=ref)
+        tag = self.version_manager.deregister(
+            name,
+            found_version.version,
+            found_version.commit_hexsha,
+            message=message or f"Deregistering artifact {name} version {version}",
+            author=author,
+            author_email=author_email,
         )
-        if stdout:
-            echo(
-                f"Created git tag '{registered_version.ref}' that registers a new version"
-            )
-        return registered_version
+        return self._return_event(tag, stdout=stdout)
 
     def assign(  # pylint: disable=too-many-locals
         self,
@@ -193,10 +215,9 @@ class GitRegistry(BaseModel):
         author_email: Optional[str] = None,
     ) -> Assignment:
         """Assign stage to specific artifact version"""
-        assert_name_is_valid(name)
-        self.config.assert_stage(stage)
-        if not (version is None) ^ (ref is None):
-            raise WrongArgs("One and only one of (version, ref) must be specified.")
+        self._check_args(name, version, ref, stage)
+        if name_version:
+            self._check_version(name_version)
         if name_version and skip_registration:
             raise WrongArgs(
                 "You either need to supply version name or skip registration"
@@ -246,15 +267,7 @@ class GitRegistry(BaseModel):
             author=author,
             author_email=author_email,
         )
-        event = self.check_ref(tag)
-        if len(event) > 1:
-            raise NotImplementedInGTO("Can't process a tag that caused multiple events")
-        event = event[0]
-        if stdout:
-            echo(
-                f"Created git tag '{tag}' that assigns '{event.stage}' to '{event.version}'"
-            )
-        return event
+        return self._return_event(tag, stdout=stdout)
 
     def unassign(  # pylint: disable=too-many-locals
         self,
@@ -269,12 +282,9 @@ class GitRegistry(BaseModel):
         stdout=False,
         author: Optional[str] = None,
         author_email: Optional[str] = None,
-    ) -> Assignment:
-        """Assign stage to specific artifact version"""
-        assert_name_is_valid(name)
-        self.config.assert_stage(stage)
-        if not (version is None) ^ (ref is None):
-            raise WrongArgs("One and only one of (version, ref) must be specified.")
+    ) -> Unassignment:
+        """Unassign stage to specific artifact version"""
+        self._check_args(name, version, ref, stage)
         if ref:
             ref = self.repo.commit(ref).hexsha
         found_artifact = self.find_artifact(name)
@@ -309,14 +319,31 @@ class GitRegistry(BaseModel):
             author=author,
             author_email=author_email,
         )
+        return self._return_event(tag, stdout=stdout)
+
+    def _check_args(self, name, version, ref, stage=None):
+        assert_name_is_valid(name)
+        if stage is not None:
+            self.config.assert_stage(stage)
+        if version:
+            self._check_version(version)
+        if not (version is None) ^ (ref is None):
+            raise WrongArgs("One and only one of (version, ref) must be specified.")
+
+    @staticmethod
+    def _check_version(version):
+        if not SemVer.is_valid(version):
+            raise WrongArgs(
+                f"Version '{version}' is not valid. Example of valid version: 'v1.0.0'"
+            )
+
+    def _return_event(self, tag, stdout) -> TBaseEvent:
         event = self.check_ref(tag)
         if len(event) > 1:
             raise NotImplementedInGTO("Can't process a tag that caused multiple events")
         event = event[0]
         if stdout:
-            echo(
-                f"Created git tag '{tag}' that unassigns '{event.stage}' from '{event.version}'"
-            )
+            echo(f"Created git tag '{tag}'")
         return event
 
     def check_ref(self, ref: str):
@@ -326,8 +353,10 @@ class GitRegistry(BaseModel):
                 ref = ref[len("refs/tags/") :]
             if ref.startswith("refs/heads/"):
                 ref = self.repo.commit(ref).hexsha
+            # check the ref exists
             _ = self.repo.tags[ref]
-            name = parse_name(ref)[NAME]  # optimization
+            # check the ref follows the GTO format
+            name = parse_name(ref)[NAME]
         except (KeyError, ValueError, IndexError):
             logging.info("Provided ref doesn't exist or it is not of GTO format")
             return []

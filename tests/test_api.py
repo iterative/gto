@@ -85,7 +85,7 @@ def test_api_info_commands_repo_with_artifact(
     gto.api.history(repo.working_dir)
 
 
-def test_register(repo_with_artifact):
+def test_register_deregister(repo_with_artifact):
     repo, name = repo_with_artifact
     vname1, vname2 = "v1.0.0", "v1.0.1"
     gto.api.register(repo.working_dir, name, "HEAD", vname1)
@@ -98,7 +98,9 @@ def test_register(repo_with_artifact):
         "anything",
         must_exist=False,
     )
-    repo.index.commit("Irrelevant action to create a git commit")
+    repo.index.commit(
+        "Irrelevant action to create a git commit to register another version"
+    )
     message = "Some message"
     author = "GTO"
     author_email = "gto@iterative.ai"
@@ -115,6 +117,10 @@ def test_register(repo_with_artifact):
     assert latest.message == message
     assert latest.author == author
     assert latest.author_email == author_email
+
+    gto.api.deregister(repo.working_dir, name, version=vname2)
+    latest = gto.api.find_latest_version(repo.working_dir, name)
+    assert latest.version == vname1
 
 
 def test_assign(repo_with_artifact: Tuple[git.Repo, str]):
@@ -259,7 +265,7 @@ def test_check_ref_catch_the_bug(repo_with_artifact: Tuple[git.Repo, Callable]):
         [f"{NAME}#staging#1", f"{NAME}#prod#2", f"{NAME}#dev#3"],
     ):
         events = gto.api.check_ref(repo, tag)
-        assert len(events) == 1, "Should return one event"
+        assert len(events) == 1, events
         assert events[0].ref == assignment.tag == tag
 
 

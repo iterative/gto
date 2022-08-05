@@ -8,7 +8,7 @@ from typer.testing import CliRunner
 from gto.api import annotate, assign, get_stages, register
 from gto.cli import app
 from gto.config import CONFIG_FILE_NAME, check_name_is_valid
-from gto.exceptions import UnknownType, ValidationError
+from gto.exceptions import InvalidTagName, UnknownType, ValidationError
 from gto.index import init_index_manager
 from gto.registry import GitRegistry
 
@@ -28,6 +28,8 @@ def init_repo(empty_git_repo: Tuple[git.Repo, Callable]):
     repo, write_file = empty_git_repo
 
     write_file(CONFIG_FILE_NAME, CONFIG_CONTENT)
+    repo.index.add([CONFIG_FILE_NAME])
+    repo.index.commit("Initial commit")
     return repo
 
 
@@ -76,7 +78,7 @@ def test_register_incorrect_name(init_repo):
 
 
 def test_register_incorrect_version(init_repo):
-    with pytest.raises(ValidationError):
+    with pytest.raises(InvalidTagName):
         register(init_repo, "model", ref="HEAD", version="###")
 
 

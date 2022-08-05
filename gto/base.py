@@ -443,9 +443,12 @@ class Artifact(BaseObject):
         versions = [
             v
             for v in self.versions
-            if (v.is_registered and not v.discovered)
-            or (include_discovered and v.discovered)
-            or (include_non_explicit and not v.is_registered)
+            if v.is_active
+            and (
+                (v.is_registered and not v.discovered)
+                or (include_discovered and v.discovered)
+                or (include_non_explicit and not v.is_registered)
+            )
         ]
         return sort_versions(versions, sort=sort, ascending=ascending)
 
