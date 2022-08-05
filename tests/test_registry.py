@@ -383,6 +383,8 @@ def test_registry_state_tag_tag(showcase):
             "commit_hexsha",
             "message",
             "version",
+            "committer",
+            "committer_email",
         ],
         "registrations": [
             "author",

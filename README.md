@@ -61,7 +61,8 @@ and trigger the job you intend to run:
 ### Registering an artifact
 
 Note: this is an optional operation, since publishing the very first version
-with `$ gto publish` already implies registering the artifact.
+with `$ gto publish` or annotating it with `$ gto annotate` in the `HEAD` of any
+branch already implies that artifact is registered.
 
 To start tracking the artifact in the registry, you need to run:
 
@@ -260,7 +261,8 @@ git push origin awesome-model@v0.0.1 awesome-model#prod#1 awesome-model#prod#2! 
 ```
 
 It looks just the same as `$ gto deprecate awesome-model --delete`, but will
-include all artifact versions that exist.
+include tags for all artifact versions that exist, as well as a creation tag if
+it existed.
 
 </details>
 
