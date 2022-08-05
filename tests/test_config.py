@@ -8,7 +8,12 @@ from typer.testing import CliRunner
 from gto.api import annotate, assign, get_stages, register
 from gto.cli import app
 from gto.config import CONFIG_FILE_NAME, check_name_is_valid
-from gto.exceptions import InvalidTagName, UnknownType, ValidationError
+from gto.exceptions import (
+    InvalidTagName,
+    UnknownStage,
+    UnknownType,
+    ValidationError,
+)
 from gto.index import init_index_manager
 from gto.registry import GitRegistry
 
@@ -21,6 +26,9 @@ PROHIBIT_CONFIG_CONTENT = """
 types: []
 stages: []
 """
+
+ALLOWED_STRING = "model"
+DISALLOWED_STRING = "###"
 
 
 @pytest.fixture
@@ -44,12 +52,12 @@ def test_config_load_registry(init_repo):
 
 
 def test_adding_allowed_type(init_repo):
-    annotate(init_repo, "name", type="model")
+    annotate(init_repo, ALLOWED_STRING, type="model")
 
 
 def test_adding_not_allowed_type(init_repo):
     with pytest.raises(UnknownType):
-        annotate(init_repo, "name", type="unknown")
+        annotate(init_repo, ALLOWED_STRING, type="unknown")
 
 
 def test_stages(init_repo):
@@ -59,22 +67,27 @@ def test_stages(init_repo):
 
 
 def test_correct_name(init_repo):
-    annotate(init_repo, "model")
+    annotate(init_repo, ALLOWED_STRING)
 
 
-def test_incorrect_name(init_repo):
+def test_annotate_incorrect_name(init_repo):
     with pytest.raises(ValidationError):
-        annotate(init_repo, "###")
+        annotate(init_repo, DISALLOWED_STRING)
 
 
-def test_incorrect_type(init_repo):
+def test_annotate_incorrect_type(init_repo):
     with pytest.raises(ValidationError):
-        annotate(init_repo, "model", type="###")
+        annotate(init_repo, ALLOWED_STRING, type=DISALLOWED_STRING)
+
+
+def test_annotate_incorrect_labels(init_repo):
+    with pytest.raises(ValidationError):
+        annotate(init_repo, ALLOWED_STRING, labels=[DISALLOWED_STRING])
 
 
 def test_register_incorrect_name(init_repo):
     with pytest.raises(ValidationError):
-        register(init_repo, "###", ref="HEAD")
+        register(init_repo, DISALLOWED_STRING, ref="HEAD")
 
 
 def test_register_incorrect_version(init_repo):
@@ -84,12 +97,12 @@ def test_register_incorrect_version(init_repo):
 
 def test_assign_incorrect_name(init_repo):
     with pytest.raises(ValidationError):
-        assign(init_repo, "###", ref="HEAD", stage="dev")
+        assign(init_repo, DISALLOWED_STRING, ref="HEAD", stage="dev")
 
 
 def test_assign_incorrect_stage(init_repo):
     with pytest.raises(ValidationError):
-        assign(init_repo, "model", ref="HEAD", stage="###")
+        assign(init_repo, ALLOWED_STRING, ref="HEAD", stage=DISALLOWED_STRING)
 
 
 def test_config_is_not_needed(empty_git_repo: Tuple[git.Repo, Callable], request):
@@ -111,23 +124,24 @@ def init_repo_prohibit(empty_git_repo: Tuple[git.Repo, Callable]):
     repo, write_file = empty_git_repo
 
     write_file(CONFIG_FILE_NAME, PROHIBIT_CONFIG_CONTENT)
+    repo.index.add(CONFIG_FILE_NAME)
+    repo.index.commit("Initial commit")
     return repo
 
 
 def test_prohibit_config_type(init_repo_prohibit):
     with pytest.raises(UnknownType):
-        annotate(init_repo_prohibit, "name", type="model")
+        annotate(init_repo_prohibit, ALLOWED_STRING, type="model")
 
 
-@pytest.mark.xfail
-def test_prohibit_config_assign_incorrect_stage(init_repo):
-    with pytest.raises(ValidationError):
-        assign(init_repo, "model", ref="HEAD", stage="dev")
+def test_prohibit_config_assign_incorrect_stage(init_repo_prohibit):
+    with pytest.raises(UnknownStage):
+        assign(init_repo_prohibit, ALLOWED_STRING, ref="HEAD", stage="dev")
 
 
 def test_empty_config_type(empty_git_repo):
     repo, _ = empty_git_repo
-    annotate(repo, "name", type="model")
+    annotate(repo, ALLOWED_STRING, type=ALLOWED_STRING)
 
 
 @pytest.mark.parametrize(
@@ -155,6 +169,8 @@ def test_check_name_is_valid(name):
         "1nn",
         "###",
         "@@@",
+        "a model",
+        "a_model",
         "-model",
         "model-",
         "model@1",
