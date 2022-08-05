@@ -73,7 +73,7 @@ Created Git tag `awesome-model@` that registers the artifact.
 
 This can be done to mark the very beginning of the artifact history, so it's
 better to create this tag for the very first commit the artifact was present in
-(even not annotated - see below what an annotation is).
+(even if not annotated - see below what an annotation is).
 
 ### Versioning an artifact
 
