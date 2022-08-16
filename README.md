@@ -73,7 +73,7 @@ consumer. You can plug in a real downsteam system via CI/CD or web hooks, e.g.
 to redeploy an ML model.
 
 ```console
-$ gto tag awesome-model --stage prod
+$ gto tag awesome-model --version v0.0.1 --stage prod
 Created git tag 'awesome-model#prod#1'
 ```
 
@@ -95,10 +95,10 @@ require deleting the existing tag.
 
 ### Annotating
 
-So far we've seen how to register new version and assign a stage to an artifact
-versions, but we still don't have much information about them. What about the
-type of artifact (dataset, model, etc.) or the file path to find it in the
-working tree?
+So far we've seen how to register a new version and assign a stage to an
+artifact versions, but we still don't have much information about them. What
+about the type of artifact (dataset, model, etc.) or the file path to find it in
+the working tree?
 
 For simple projects (e.g. single artifact) we can assume the details in a
 downstream system. But for more advanced cases, we should codify them in the
@@ -151,7 +151,7 @@ consumer, and maybe signal a downstream system about this. You can use
 `gto untag` for that:
 
 ```console
-$ gto untag awesome-model --stage prod
+$ gto untag awesome-model --version v0.0.1 --stage prod
 Created git tag 'awesome-model#prod#2!'
 ```
 
@@ -169,7 +169,7 @@ and don't want to trigger a CI/CD or another downstream system. For that, you
 can use:
 
 ```console
-$ gto untag --stage prod --delete
+$ gto untag awesome-model --version v0.0.1 --stage prod --delete
 Deleted git tag 'awesome-model#prod#1'
 To push the changes upstream, run:
 git push origin awesome-model#prod#1 --delete
