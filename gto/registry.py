@@ -10,6 +10,7 @@ from gto.base import (
     Assignment,
     BaseEvent,
     BaseRegistryState,
+    Deprecation,
     Deregistration,
     Registration,
     Unassignment,
@@ -29,7 +30,12 @@ from gto.exceptions import (
     WrongArgs,
 )
 from gto.index import EnrichmentManager
-from gto.tag import TagStageManager, TagVersionManager, parse_name
+from gto.tag import (
+    TagArtifactManager,
+    TagStageManager,
+    TagVersionManager,
+    parse_name,
+)
 from gto.ui import echo
 from gto.versions import SemVer
 
@@ -38,6 +44,7 @@ TBaseEvent = TypeVar("TBaseEvent", bound=BaseEvent)
 
 class GitRegistry(BaseModel):
     repo: git.Repo
+    artifact_manager: TagArtifactManager
     version_manager: TagVersionManager
     stage_manager: TagStageManager
     enrichment_manager: EnrichmentManager
@@ -61,6 +68,7 @@ class GitRegistry(BaseModel):
         return cls(
             repo=repo,
             config=config,
+            artifact_manager=TagArtifactManager(repo=repo, config=config),
             version_manager=TagVersionManager(repo=repo, config=config),
             stage_manager=TagStageManager(repo=repo, config=config),
             enrichment_manager=EnrichmentManager(repo=repo, config=config),
@@ -81,6 +89,7 @@ class GitRegistry(BaseModel):
         all_commits=False,
     ) -> BaseRegistryState:
         state = BaseRegistryState()
+        state = self.artifact_manager.update_state(state)
         state = self.version_manager.update_state(state)
         state = self.stage_manager.update_state(state)
         state = self.enrichment_manager.update_state(
@@ -120,6 +129,7 @@ class GitRegistry(BaseModel):
         ref,
         version=None,
         message=None,
+        simple=None,
         bump_major=False,
         bump_minor=False,
         bump_patch=False,
@@ -168,6 +178,7 @@ class GitRegistry(BaseModel):
             version,
             ref,
             message=message or f"Registering artifact {name} version {version}",
+            simple=simple,
             author=author,
             author_email=author_email,
         )
@@ -314,6 +325,34 @@ class GitRegistry(BaseModel):
             ref=found_version.commit_hexsha,
             message=message
             or f"Unassigning stage '{stage}' to artifact '{name}' version '{found_version.version}'",
+            simple=simple,
+            delete=delete,
+            author=author,
+            author_email=author_email,
+        )
+        return self._return_event(tag, stdout=stdout)
+
+    def deprecate(
+        self,
+        name,
+        ref=None,
+        message=None,
+        simple=False,
+        force=False,
+        delete=False,
+        stdout=False,
+        author: Optional[str] = None,
+        author_email: Optional[str] = None,
+    ) -> Deprecation:
+        if not force:
+            found_artifact = self.find_artifact(name)
+            if not found_artifact.is_active:
+                raise WrongArgs("Artifact was deprecated already")
+        tag = self.artifact_manager.deprecate(  # type: ignore
+            name,
+            ref=ref
+            or (self.latest(name).ref if name in self.get_artifacts() else "HEAD"),
+            message=message or f"Deprecating artifact '{name}'",
             simple=simple,
             delete=delete,
             author=author,

@@ -16,6 +16,8 @@ COUNTER = "counter"
 
 
 class Action(Enum):
+    CREATE = "create"
+    DEPRECATE = "deprecate"
     DEREGISTER = "deregister"
     REGISTER = "register"
     ASSIGN = "assign"
@@ -27,7 +29,7 @@ semver = r"(?P<major>0|[1-9]\d*)\.(?P<minor>0|[1-9]\d*)\.(?P<patch>0|[1-9]\d*)(?
 counter = "?P<counter>[0-9]+"
 name_regexp = re.compile(f"^{name}$")
 tag_regexp = re.compile(
-    f"^(?P<artifact>{name})(#(?P<stage>{name})|@(?P<version>v{semver}))(?P<cancel>!?)(#({counter}))?$"
+    f"^(?P<artifact>{name})(((#(?P<stage>{name})|@(?P<version>v{semver}))(?P<cancel>!?))|@((?P<deprecated>deprecated)|(?P<created>created)))(#({counter}))?$"
 )
 
 

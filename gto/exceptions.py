@@ -133,6 +133,10 @@ class RefNotFound(GTOException):
         super().__init__(self.message)
 
 
+class AmbiguousArg(GTOException):
+    pass
+
+
 class InvalidVersion(GTOException):
     pass
 

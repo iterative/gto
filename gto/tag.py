@@ -11,6 +11,7 @@ from .base import (
     Assignment,
     BaseManager,
     BaseRegistryState,
+    Deprecation,
     Deregistration,
     Registration,
     Unassignment,
@@ -28,6 +29,7 @@ from .constants import (
 from .exceptions import (
     InvalidTagName,
     MissingArg,
+    NotImplementedInGTO,
     RefNotFound,
     TagExists,
     TagNotFound,
@@ -38,7 +40,7 @@ COUNT_DELIMITER = "#"
 
 TagTemplates = {
     # Action.CREATE: "{artifact}@",
-    # Action.DEPRECATE: "{artifact}@!",
+    Action.DEPRECATE: "{artifact}@deprecated",
     Action.REGISTER: "{artifact}@{version}",
     Action.DEREGISTER: "{artifact}@{version}!",
     Action.ASSIGN: "{artifact}#{stage}",
@@ -82,6 +84,8 @@ def parse_name(name: str, raise_on_fail: bool = True):
         raise InvalidTagName(name)
     if match:
         parsed = {NAME: match["artifact"]}
+        if match["deprecated"]:
+            parsed[ACTION] = Action.DEPRECATE
         if match[VERSION]:
             parsed[VERSION] = match[VERSION]
             parsed[ACTION] = (
@@ -194,7 +198,7 @@ def delete_tag(repo: git.Repo, name: str):
 
 
 def index_tag(artifact: Artifact, tag: git.TagReference) -> Artifact:
-    event: Union[Registration, Deregistration, Assignment, Unassignment]
+    event: Union[Deprecation, Registration, Deregistration, Assignment, Unassignment]
     mtag = parse_tag(tag)
     if mtag.action == Action.REGISTER:
         event = Registration(
@@ -246,6 +250,16 @@ def index_tag(artifact: Artifact, tag: git.TagReference) -> Artifact:
                 commit_hexsha=tag.commit.hexsha,
                 tag=tag.name,
             )
+    elif mtag.action == Action.DEPRECATE:
+        event = Deprecation(
+            artifact=mtag.name,
+            created_at=mtag.created_at,
+            author=tag.tag.tagger.name,
+            author_email=tag.tag.tagger.email,
+            message=tag.tag.message,
+            commit_hexsha=tag.commit.hexsha,
+            tag=tag.name,
+        )
     artifact.add_event(event)
     return artifact
 
@@ -266,6 +280,51 @@ class TagManager(BaseManager):  # pylint: disable=abstract-method
         return state
 
 
+class TagArtifactManager(TagManager):
+    actions: FrozenSet[Action] = frozenset((Action.CREATE, Action.DEPRECATE))
+
+    def create(self):
+        raise NotImplementedInGTO(
+            "If you want to create artifact, register a version or assign a stage for it"
+        )
+
+    def deprecate(
+        self,
+        name,
+        ref,
+        message,
+        simple,
+        delete,
+        author: Optional[str] = None,
+        author_email: Optional[str] = None,
+    ):
+        if delete:
+            raise NotImplementedInGTO(
+                "`delete=True` is not implemented for deprecation"
+            )
+            # TODO: find all the tags somehow
+            # tags = []
+            # for tag in tags:
+            #     delete_tag(tag)
+            # return tags
+
+        tag = name_tag(
+            Action.DEPRECATE,
+            name,
+            repo=self.repo,
+            simple=simple,
+        )
+        create_tag(
+            self.repo,
+            tag,
+            ref=ref,
+            message=message,
+            tagger=author,
+            tagger_email=author_email,
+        )
+        return tag
+
+
 class TagVersionManager(TagManager):
     actions: FrozenSet[Action] = frozenset((Action.REGISTER, Action.DEREGISTER))
 
@@ -275,11 +334,12 @@ class TagVersionManager(TagManager):
         version,
         ref,
         message,
+        simple,
         author: Optional[str] = None,
         author_email: Optional[str] = None,
     ):
         tag = name_tag(
-            Action.REGISTER, name, version=version, repo=self.repo, simple=True
+            Action.REGISTER, name, version=version, repo=self.repo, simple=simple
         )
         create_tag(
             self.repo,
@@ -350,6 +410,7 @@ class TagStageManager(TagManager):
         author_email: Optional[str] = None,
     ) -> str:
         if delete:
+            # TODO: should be Action.ASSIGN?
             return delete_tag(
                 self.repo, name_tag(Action.UNASSIGN, name, stage=stage, repo=self.repo)
             )

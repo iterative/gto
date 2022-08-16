@@ -4,7 +4,7 @@ from collections.abc import Iterable
 from copy import deepcopy
 from datetime import datetime
 from enum import Enum
-from typing import Optional
+from typing import Optional, Union
 
 import click
 import git
@@ -12,6 +12,7 @@ from pydantic import BaseModel
 from tabulate import tabulate
 
 from gto.config import yaml
+from gto.exceptions import RefNotFound
 
 
 def flatten(obj):
@@ -80,7 +81,16 @@ def format_echo(result, format, format_table=None, if_empty="", missing_value="-
         raise NotImplementedError(f"Format {format} is not implemented")
 
 
-def resolve_ref(repo: git.Repo, ref: Optional[str] = None):
+def resolve_ref(
+    repo: Union[git.Repo, str], ref: Optional[str] = None, raise_if_not_found=True
+):
     # this becomes pretty slow if called many times
     # may need optimization if we will
-    return repo.refs[ref].commit if (ref and ref in repo.refs) else repo.commit(ref)
+    if isinstance(repo, str):
+        repo = git.Repo(repo)
+    try:
+        return repo.refs[ref].commit if (ref and ref in repo.refs) else repo.commit(ref)
+    except git.BadName as e:
+        if raise_if_not_found:
+            raise RefNotFound(ref) from e
+        return None
