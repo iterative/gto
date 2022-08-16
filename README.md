@@ -43,46 +43,15 @@ $ git clone https://github.com/iterative/example-gto.git
 $ cd example-gto
 ```
 
-This guide will walk you through the Lifecycle of an artifact. To execute each
-step, you'll need to create a Git tag of a special format, which will trigger CI
-and trigger the job you intend to run:
-
-1. Registering artifact - marking the very beginning of the artifact history in
-   the Git repository.
-2. Publishing a version - marking an important change in the artifact.
-3. Assigning a stage to a version - marking the readiness to be consumed by a
-   downstream system.
-4. Unassigning a stage - removing an "artifact is ready for this stage" mark.
-5. Deprecating a version - marking a version as the one that should not be used
-   any longer.
-6. Deregistering an artifact - completing the lifecycle of an artifact and
-   marking it as an outdated one.
-
-### Registering an artifact
-
-Note: this is an optional operation, since publishing the very first version
-with `$ gto publish` or annotating it with `$ gto annotate` in the `HEAD` of any
-branch already implies that artifact is registered.
-
-To start tracking the artifact in the registry, you need to run:
-
-```console
-$ gto register awesome-model
-Created Git tag 'awesome-model@registered' that registers the artifact.
-```
-
-This can be done to mark the very beginning of the artifact history, so it's
-better to create this tag for the very first commit the artifact was present in
-(even if not annotated - see below what an annotation is).
-
 ### Versioning an artifact
 
-To release a new artifact or a new version, use `gto publish`. This is usually
-done to mark significant changes to the artifact (such as a release).
+Registering a version is usually done to mark significant changes to the
+artifact. To release a new version (including the very first one), use
+`gto tag`.
 
 ```console
-$ gto publish awesome-model
-Created git tag 'awesome-model@v0.0.1' that publishes a new version
+$ gto tag awesome-model --version v0.0.1
+Created git tag 'awesome-model@v0.0.1'
 ```
 
 <details summary="What happens under the hood?">
@@ -92,19 +61,20 @@ GTO creates a special Git tag for the artifact version, in a standard format:
 
 The version is now associated to the current Git commit (`HEAD`). You can use
 another Git commit if you provide it's hexsha as an additional argument, like
-`$ gto publish awesome-model abc1234`.
+`$ gto tag awesome-model abc1234`.
 
 </details>
 
 ### Assigning a stage
 
-Assign an actionable stage for a specific artifact version with `gto assign`.
-Stages can mark it's readiness for a specific consumer. You can plug in a real
-downsteam system via CI/CD or web hooks. For example: redeploy an ML model.
+To assign an actionable stage for a specific artifact version use the same
+`gto tag` command. Stages can mark the artifact readiness for a specific
+consumer. You can plug in a real downsteam system via CI/CD or web hooks, e.g.
+to redeploy an ML model.
 
 ```console
-$ gto assign awesome-model prod
-Created git tag 'awesome-model#prod#1' that adds stage 'prod' to 'v0.0.1'
+$ gto tag awesome-model --stage prod
+Created git tag 'awesome-model#prod#1'
 ```
 
 <details summary="What happens under the hood?">
@@ -123,46 +93,12 @@ require deleting the existing tag.
 
 </details>
 
-### Unassigning a stage
-
-Note: this functionality is in development and will be introduced soon.
-
-Sometimes you need to mark an artifact version no longer ready for a specific
-consumer, and maybe signal a downstream system about this. You can use
-`gto unassign` for that:
-
-```console
-$ gto unassign awesome-model prod
-Created git tag 'awesome-model#prod#2!' that unassigns stage 'prod' from 'v0.0.1'
-```
-
-<details summary="Some details and options">
-
-GTO creates a special Git tag in a standard format:
-`{artifact_name}#{stage}#{e}!`.
-
-Note, that later you can create this stage again, if you need to, by calling
-`$ gto assign`.
-
-You also may want to delete the git tag instead of creating a new one. This is
-useful if you don't want to keep extra tags in you Git repo, don't need history
-and don't want to trigger a CI/CD or another downstream system. For that, you
-can use:
-
-```console
-$ gto unassign --delete
-Deleted git tag 'awesome-model#prod#1' that assigned 'prod' to 'v0.0.1'
-To push the changes upstream, run:
-git push origin awesome-model#prod#1 --delete
-```
-
-</details>
-
 ### Annotating
 
-So far we've seen how to publish and assign a stage to an artifact versions, but
-we still don't have much information about them. What about the type of artifact
-(dataset, model, etc.) or the file path to find it in the working tree?
+So far we've seen how to register new version and assign a stage to an artifact
+versions, but we still don't have much information about them. What about the
+type of artifact (dataset, model, etc.) or the file path to find it in the
+working tree?
 
 For simple projects (e.g. single artifact) we can assume the details in a
 downstream system. But for more advanced cases, we should codify them in the
@@ -190,7 +126,7 @@ GTO the artifact file is committed to Git.
 
 <details summary="Virtual vs. Physical artifacts">
 
-- Physical files/directories are committed to the repo. When you publish a new
+- Physical files/directories are committed to the repo. When you create a new
   version or assign a stage to it, Git guarantees that it's immutable -- you can
   return a year later and get the same artifact by providing a version.
 
@@ -208,26 +144,58 @@ GTO the artifact file is committed to Git.
 
 </details>
 
-### Deprecating a version
+### Unassigning a stage
 
-Sometimes you need mark a specific artifact version as a deprecated one,
-signaling that it's not ready to be used any more. You could just delete a git
-tag, but if you want to preserve a history of the actions, you may find
-`gto deprecate` useful.
+Sometimes you need to mark an artifact version no longer ready for a specific
+consumer, and maybe signal a downstream system about this. You can use
+`gto untag` for that:
 
 ```console
-$ gto deprecate awesome-model --version v0.0.1
-Created git tag 'awesome-model@v0.0.1!' that deprecates a version.
+$ gto untag awesome-model --stage prod
+Created git tag 'awesome-model#prod#2!'
 ```
 
 <details summary="Some details and options">
 
-If you want to deprecate the version by deleting the Git tags itself, you could
+GTO creates a special Git tag in a standard format:
+`{artifact_name}#{stage}#{e}!`.
+
+Note, that later you can create this stage again, if you need to, by calling
+`$ gto tag` again.
+
+You also may want to delete the git tag instead of creating a new one. This is
+useful if you don't want to keep extra tags in you Git repo, don't need history
+and don't want to trigger a CI/CD or another downstream system. For that, you
+can use:
+
+```console
+$ gto untag --stage prod --delete
+Deleted git tag 'awesome-model#prod#1'
+To push the changes upstream, run:
+git push origin awesome-model#prod#1 --delete
+```
+
+</details>
+
+### Deregister a version
+
+Sometimes you need mark a specific artifact version as a no longer ready for
+usage. You could just delete a git tag, but if you want to preserve a history of
+the actions, you may find `gto untag` useful.
+
+```console
+$ gto untag awesome-model --version v0.0.1
+Created git tag 'awesome-model@v0.0.1!' that deregistered a version.
+```
+
+<details summary="Some details and options">
+
+If you want to deregister the version by deleting the Git tags itself, you could
 use
 
 ```console
-$ gto deprecate awesome-model --version v0.0.1 --delete
-Deleted git tag 'awesome-model@v0.0.1' that published a version.
+$ gto untag awesome-model --version v0.0.1 --delete
+Deleted git tag 'awesome-model@v0.0.1' that registered a version.
 Deleted git tag 'awesome-model#prod#1' that assigned a stage.
 Deleted git tag 'awesome-model#prod#2!' that unassigned a stage.
 To push the changes upstream, run:
@@ -236,25 +204,29 @@ git push origin awesome-model@v0.0.1 awesome-model#prod#1 awesome-model#prod#2! 
 
 </details>
 
-### Deregistering an artifact
+### Deprecating an artifact
 
 Sometimes you need to need to mark the artifact as "deprecated", usually meaning
 it's outdated and will no longer be developed. To do this, you could run:
 
 ```console
-$ gto deregister awesome-model
-Created Git tag 'awesome-model@deregistered' that deregisters the artifact.
+$ gto deprecate awesome-model
+Created Git tag 'awesome-model@deprecated' that deprecates an artifact.
 ```
 
 <details summary="Some details and options">
+
+With `awesome-model@deprecated` Git tag the artifact will be considered
+deprecated until you register a new version or assign a new stage to it after
+the deprecation.
 
 If you want to deprecate an artifact by deleting git tags, you'll need to delete
 all of them for the artifact. You could do that with
 
 ```console
-$ gto deregister awesome-model --delete
+$ gto deprecate awesome-model --delete
 Deleted git tag 'awesome-model@registered' that registered an artifact.
-Deleted git tag 'awesome-model@v0.0.1' that published a version.
+Deleted git tag 'awesome-model@v0.0.1' that registered a version.
 Deleted git tag 'awesome-model#prod#1' that assigned a stage.
 Deleted git tag 'awesome-model#prod#2!' that unassigned a stage.
 To push the changes upstream, run:
