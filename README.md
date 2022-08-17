@@ -51,7 +51,7 @@ artifact. To release a new version (including the very first one), use
 
 ```console
 $ gto tag awesome-model --version v0.0.1
-Created git tag 'awesome-model@v0.0.1'
+Created git tag 'awesome-model@v0.0.1' that registers a version
 ```
 
 <details summary="What happens under the hood?">
@@ -65,7 +65,7 @@ another Git commit if you provide it's hexsha as an additional argument, like
 
 </details>
 
-### Assigning a stage
+### Assigning a stage to version
 
 To assign an actionable stage for a specific artifact version use the same
 `gto tag` command. Stages can mark the artifact readiness for a specific
@@ -74,7 +74,7 @@ to redeploy an ML model.
 
 ```console
 $ gto tag awesome-model --version v0.0.1 --stage prod
-Created git tag 'awesome-model#prod#1'
+Created git tag 'awesome-model#prod#1' that assigns a stage to 'v0.0.1'
 ```
 
 <details summary="What happens under the hood?">
@@ -152,7 +152,7 @@ consumer, and maybe signal a downstream system about this. You can use
 
 ```console
 $ gto untag awesome-model --version v0.0.1 --stage prod
-Created git tag 'awesome-model#prod#2!'
+Created git tag 'awesome-model#prod#2!' that unassigns a stage from 'v0.0.1'
 ```
 
 <details summary="Some details and options">
@@ -170,7 +170,7 @@ can use:
 
 ```console
 $ gto untag awesome-model --version v0.0.1 --stage prod --delete
-Deleted git tag 'awesome-model#prod#1'
+Deleted git tag 'awesome-model#prod#1' that assigned a stage to 'v0.0.1'
 To push the changes upstream, run:
 git push origin awesome-model#prod#1 --delete
 ```
@@ -196,11 +196,14 @@ use
 ```console
 $ gto untag awesome-model --version v0.0.1 --delete
 Deleted git tag 'awesome-model@v0.0.1' that registered a version.
-Deleted git tag 'awesome-model#prod#1' that assigned a stage.
-Deleted git tag 'awesome-model#prod#2!' that unassigned a stage.
+Deleted git tag 'awesome-model#prod#1' that assigned a stage to 'v0.0.1'.
+Deleted git tag 'awesome-model#prod#2!' that unassigned a stage to 'v0.0.1'.
 To push the changes upstream, run:
 git push origin awesome-model@v0.0.1 awesome-model#prod#1 awesome-model#prod#2! --delete
 ```
+
+This includes all Git tags related to the version: a tag that registered it and
+all tags that assigned stages to it.
 
 </details>
 
@@ -225,12 +228,11 @@ all of them for the artifact. You could do that with
 
 ```console
 $ gto deprecate awesome-model --delete
-Deleted git tag 'awesome-model@registered' that registered an artifact.
 Deleted git tag 'awesome-model@v0.0.1' that registered a version.
-Deleted git tag 'awesome-model#prod#1' that assigned a stage.
-Deleted git tag 'awesome-model#prod#2!' that unassigned a stage.
+Deleted git tag 'awesome-model#prod#1' that assigned a stage to 'v0.0.1'.
+Deleted git tag 'awesome-model#prod#2!' that unassigned a stage to 'v0.0.1'.
 To push the changes upstream, run:
-git push origin awesome-model@registered awesome-model@v0.0.1 awesome-model#prod#1 awesome-model#prod#2! --delete
+git push origin awesome-model@v0.0.1 awesome-model#prod#1 awesome-model#prod#2! --delete
 ```
 
 </details>
