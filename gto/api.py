@@ -81,12 +81,13 @@ def remove(repo: Union[str, Repo], name: str):
     return init_index_manager(path=repo).remove(name)
 
 
-def tag(
+def tag(  # pylint: disable=too-many-locals
     repo: Union[str, Repo],
     name: str,
     ref: str = None,
     version: str = None,
     stage: str = None,
+    to_version: str = None,
     message: str = None,
     bump_major: bool = False,
     bump_minor: bool = False,
@@ -98,36 +99,36 @@ def tag(
     force: bool = False,
     skip_registration: bool = False,
 ):
+    """Register new artifact version or assign stage to specific artifact version"""
+    if stage and version:
+        raise WrongArgs("Can't register both version and assign a stage")
     if stage:
-        """Assign stage to specific artifact version"""
         return GitRegistry.from_repo(repo).assign(
             name,
             stage,
-            version,
-            ref,
+            version=to_version,
+            ref=ref,
             message=message,
-            simple=simple if simple is not None else True,
+            simple=simple if simple is not None else False,
             force=force,
             skip_registration=skip_registration,
             stdout=stdout,
             author=author,
             author_email=author_email,
         )
-    else:
-        """Register new artifact version"""
-        return GitRegistry.from_repo(repo).register(
-            name=name,
-            ref=ref,
-            version=version,
-            message=message,
-            simple=simple if simple is not None else False,
-            bump_major=bump_major,
-            bump_minor=bump_minor,
-            bump_patch=bump_patch,
-            stdout=stdout,
-            author=author,
-            author_email=author_email,
-        )
+    return GitRegistry.from_repo(repo).register(
+        name=name,
+        ref=ref,
+        version=version,
+        message=message,
+        simple=simple if simple is not None else True,
+        bump_major=bump_major,
+        bump_minor=bump_minor,
+        bump_patch=bump_patch,
+        stdout=stdout,
+        author=author,
+        author_email=author_email,
+    )
 
 
 def untag(
@@ -144,31 +145,33 @@ def untag(
     author: Optional[str] = None,
     author_email: Optional[str] = None,
 ):
+    "Deregister version or unassign stage"
     if stage is not None:
-        """Assign stage to specific artifact version"""
         return GitRegistry.from_repo(repo).unassign(
             name,
             stage,
             version,
             ref,
             message=message,
-            simple=simple,
+            simple=simple if simple is not None else False,
             force=force,
             delete=delete,
             stdout=stdout,
             author=author,
             author_email=author_email,
         )
-    else:
-        return GitRegistry.from_repo(repo).deregister(
-            name=name,
-            ref=ref,
-            version=version,
-            message=message,
-            stdout=stdout,
-            author=author,
-            author_email=author_email,
-        )
+    return GitRegistry.from_repo(repo).deregister(
+        name=name,
+        ref=ref,
+        version=version,
+        message=message,
+        simple=simple if simple is not None else True,
+        force=force,
+        delete=delete,
+        stdout=stdout,
+        author=author,
+        author_email=author_email,
+    )
 
 
 def deprecate(

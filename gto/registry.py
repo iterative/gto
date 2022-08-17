@@ -3,6 +3,7 @@ import os
 from typing import Optional, TypeVar, Union
 
 import git
+from funcy import distinct
 from git import InvalidGitRepositoryError, NoSuchPathError, Repo
 from pydantic import BaseModel
 
@@ -34,6 +35,7 @@ from gto.tag import (
     TagArtifactManager,
     TagStageManager,
     TagVersionManager,
+    delete_tag,
     parse_name,
 )
 from gto.ui import echo
@@ -182,14 +184,19 @@ class GitRegistry(BaseModel):
             author=author,
             author_email=author_email,
         )
-        return self._return_event(tag, stdout=stdout)
+        if stdout:
+            echo(f"Created git tag '{tag}' that registers version")
+        return self._return_event(tag)
 
-    def deregister(
+    def deregister(  # pylint: disable=too-many-locals
         self,
         name,
         ref=None,
         version=None,
         message=None,
+        simple=None,
+        force=False,
+        delete=False,
         stdout=False,
         author: Optional[str] = None,
         author_email: Optional[str] = None,
@@ -199,16 +206,43 @@ class GitRegistry(BaseModel):
         if ref is not None:
             ref = self.repo.commit(ref).hexsha
         found_artifact = self.find_artifact(name, create_new=True)
+        if not force:
+            found_version = found_artifact.find_version(
+                name=version, commit_hexsha=ref, raise_if_not_found=True
+            )
+            if not found_version.is_registered:
+                raise WrongArgs(
+                    f"The version at ref '{found_version.commit_hexsha}' is not registered"
+                )
+
         found_version = found_artifact.find_version(name=version, commit_hexsha=ref)
+        version = version or getattr(found_version, "version", None)
+        commit_hexsha = ref or getattr(found_version, "commit_hexsha", None)
+        if not (version and commit_hexsha):
+            raise WrongArgs("Can't deregister a version that have no git tags")
+
+        if delete:
+            tags = distinct(
+                [
+                    e.tag
+                    for e in found_version.get_events(ascending=True)
+                    if hasattr(e, "tag")
+                ]
+            )
+            return self._delete_tags(tags, stdout=stdout)
+
         tag = self.version_manager.deregister(
             name,
-            found_version.version,
+            version,
             found_version.commit_hexsha,
             message=message or f"Deregistering artifact {name} version {version}",
+            simple=simple,
             author=author,
             author_email=author_email,
         )
-        return self._return_event(tag, stdout=stdout)
+        if stdout:
+            echo(f"Created git tag '{tag}' that deregisters version")
+        return self._return_event(tag)
 
     def assign(  # pylint: disable=too-many-locals
         self,
@@ -278,7 +312,11 @@ class GitRegistry(BaseModel):
             author=author,
             author_email=author_email,
         )
-        return self._return_event(tag, stdout=stdout)
+        if stdout:
+            echo(
+                f"Created git tag '{tag}' that assigns stage to version '{found_version.version}'"
+            )
+        return self._return_event(tag)
 
     def unassign(  # pylint: disable=too-many-locals
         self,
@@ -302,19 +340,20 @@ class GitRegistry(BaseModel):
         found_version = found_artifact.find_version(
             name=version, commit_hexsha=ref, raise_if_not_found=True
         )
-        if (
-            not force
-            and found_version
-            and found_version.stages
-            and all(s != stage for s in found_version.stages)
-        ):
+        if not force and all(s != stage for s in getattr(found_version, "stages", [])):
             raise WrongArgs(
                 f"Stage '{stage}' is not assigned to a version '{found_version.version}'"
             )
-        if delete and any([message, author, author_email, simple, force]):
-            raise WrongArgs(
-                "Deleting a git tag doesn't require any of 'message', 'force', 'simple', 'author' or 'author_email'"
+        if delete:
+            tags = distinct(
+                [
+                    e.tag
+                    for e in found_version.get_events(ascending=True)
+                    if hasattr(e, "tag") and hasattr(e, "stage") and e.stage == stage
+                ]
             )
+            return self._delete_tags(tags, stdout=stdout)
+
         # TODO: getting tag name as a result and using it
         # is leaking implementation details in base module
         # it's roughly ok to have until we add other implementations
@@ -326,11 +365,14 @@ class GitRegistry(BaseModel):
             message=message
             or f"Unassigning stage '{stage}' to artifact '{name}' version '{found_version.version}'",
             simple=simple,
-            delete=delete,
             author=author,
             author_email=author_email,
         )
-        return self._return_event(tag, stdout=stdout)
+        if stdout:
+            echo(
+                f"Created git tag '{tag}' that unassigns stage from version '{found_version.version}'"
+            )
+        return self._return_event(tag)
 
     def deprecate(
         self,
@@ -343,22 +385,36 @@ class GitRegistry(BaseModel):
         stdout=False,
         author: Optional[str] = None,
         author_email: Optional[str] = None,
-    ) -> Deprecation:
+    ) -> Optional[Deprecation]:
         if not force:
             found_artifact = self.find_artifact(name)
             if not found_artifact.is_active:
                 raise WrongArgs("Artifact was deprecated already")
+        if delete:
+            tags = distinct(
+                [
+                    e.tag
+                    for e in self.find_artifact(name=name).get_events(ascending=True)
+                    if hasattr(e, "tag")
+                ]
+            )
+            return self._delete_tags(tags, stdout=stdout)
+        if ref is None:
+            if name in self.get_artifacts():
+                ref = self.find_artifact(name=name).get_events()[0].commit_hexsha
+            else:
+                ref = "HEAD"
         tag = self.artifact_manager.deprecate(  # type: ignore
             name,
-            ref=ref
-            or (self.latest(name).ref if name in self.get_artifacts() else "HEAD"),
+            ref=ref,
             message=message or f"Deprecating artifact '{name}'",
             simple=simple,
-            delete=delete,
             author=author,
             author_email=author_email,
         )
-        return self._return_event(tag, stdout=stdout)
+        if stdout:
+            echo(f"Created git tag '{tag}' that deprecates artifact")
+        return self._return_event(tag)
 
     def _check_args(self, name, version, ref, stage=None):
         assert_name_is_valid(name)
@@ -376,14 +432,22 @@ class GitRegistry(BaseModel):
                 f"Version '{version}' is not valid. Example of valid version: 'v1.0.0'"
             )
 
-    def _return_event(self, tag, stdout) -> TBaseEvent:
+    def _return_event(self, tag) -> TBaseEvent:
         event = self.check_ref(tag)
         if len(event) > 1:
             raise NotImplementedInGTO("Can't process a tag that caused multiple events")
         event = event[0]
-        if stdout:
-            echo(f"Created git tag '{tag}'")
         return event
+
+    def _delete_tags(self, tags, stdout):
+        tags = list(tags)
+        for tag in tags:
+            delete_tag(self.repo, tag)
+            if stdout:
+                echo(f"Deleted git tag '{tag}'")
+        if stdout:
+            echo("To push the changes upstream, run:")
+            echo(f"git push {' '.join(tags)} --delete")
 
     def check_ref(self, ref: str):
         "Find out what was registered/assigned in this ref"

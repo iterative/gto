@@ -283,7 +283,7 @@ class TagManager(BaseManager):  # pylint: disable=abstract-method
 class TagArtifactManager(TagManager):
     actions: FrozenSet[Action] = frozenset((Action.CREATE, Action.DEPRECATE))
 
-    def create(self):
+    def create(self):  # pylint: disable=no-self-use
         raise NotImplementedInGTO(
             "If you want to create artifact, register a version or assign a stage for it"
         )
@@ -294,20 +294,9 @@ class TagArtifactManager(TagManager):
         ref,
         message,
         simple,
-        delete,
         author: Optional[str] = None,
         author_email: Optional[str] = None,
     ):
-        if delete:
-            raise NotImplementedInGTO(
-                "`delete=True` is not implemented for deprecation"
-            )
-            # TODO: find all the tags somehow
-            # tags = []
-            # for tag in tags:
-            #     delete_tag(tag)
-            # return tags
-
         tag = name_tag(
             Action.DEPRECATE,
             name,
@@ -357,11 +346,12 @@ class TagVersionManager(TagManager):
         version,
         ref,
         message,
+        simple,
         author: Optional[str] = None,
         author_email: Optional[str] = None,
     ):
         tag = name_tag(
-            Action.DEREGISTER, name, version=version, repo=self.repo, simple=True
+            Action.DEREGISTER, name, version=version, repo=self.repo, simple=simple
         )
         create_tag(
             self.repo,
@@ -405,15 +395,9 @@ class TagStageManager(TagManager):
         ref,
         message,
         simple,
-        delete,
         author: Optional[str] = None,
         author_email: Optional[str] = None,
     ) -> str:
-        if delete:
-            # TODO: should be Action.ASSIGN?
-            return delete_tag(
-                self.repo, name_tag(Action.UNASSIGN, name, stage=stage, repo=self.repo)
-            )
         tag = name_tag(
             Action.UNASSIGN, name, stage=stage, repo=self.repo, simple=simple
         )

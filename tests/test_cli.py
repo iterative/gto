@@ -198,7 +198,7 @@ def test_commands(showcase):
     )
 
 
-def test_tag(repo_with_commit: Tuple[git.Repo, callable]):
+def test_tag_untag(repo_with_commit: Tuple[git.Repo, Callable]):
     repo, write_file = repo_with_commit
     _check_successful_cmd(
         "tag",
@@ -206,10 +206,22 @@ def test_tag(repo_with_commit: Tuple[git.Repo, callable]):
         "Created git tag 'x1@v0.0.1'\n",
     )
     _check_successful_cmd(
+        "untag",
+        ["-r", repo.working_dir, "x1"],
+        "Created git tag 'x1@v0.0.1!'\n",
+    )
+
+    _check_successful_cmd(
         "tag",
         ["-r", repo.working_dir, "x2", "HEAD"],
         "Created git tag 'x2@v0.0.1'\n",
     )
+    _check_successful_cmd(
+        "untag",
+        ["-r", repo.working_dir, "x2", "HEAD"],
+        "Created git tag 'x2@v0.0.1!'\n",
+    )
+
     _check_successful_cmd(
         "tag",
         ["-r", repo.working_dir, "x3", repo.commit().hexsha],
@@ -226,10 +238,32 @@ def test_tag(repo_with_commit: Tuple[git.Repo, callable]):
         "Created git tag 'x3#dev#2'\n",
     )
     _check_successful_cmd(
+        "untag",
+        ["-r", repo.working_dir, "x3", repo.commit().hexsha, "--stage", "prod"],
+        "Created git tag 'x3#prod!#3'\n",
+    )
+    _check_successful_cmd(
+        "untag",
+        ["-r", repo.working_dir, "x3", "--version", "v0.0.1", "--stage", "dev"],
+        "Created git tag 'x3#dev!#4'\n",
+    )
+    _check_successful_cmd(
+        "untag",
+        ["-r", repo.working_dir, "x3", repo.commit().hexsha],
+        "Created git tag 'x3@v0.0.1!'\n",
+    )
+
+    _check_successful_cmd(
         "tag",
         ["-r", repo.working_dir, "x4", repo.commit().hexsha, "--version", "v1.0.0"],
         "Created git tag 'x4@v1.0.0'\n",
     )
+    _check_successful_cmd(
+        "untag",
+        ["-r", repo.working_dir, "x4", "--version", "v1.0.0"],
+        "Created git tag 'x4@v1.0.0!'\n",
+    )
+
     _check_failing_cmd(
         "tag",
         [
@@ -246,7 +280,7 @@ def test_tag(repo_with_commit: Tuple[git.Repo, callable]):
     )
 
 
-def test_tag2(repo_with_commit: Tuple[git.Repo, callable]):
+def test_tag2(repo_with_commit: Tuple[git.Repo, Callable]):
     repo, write_file = repo_with_commit
     _check_successful_cmd(
         "tag2",

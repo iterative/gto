@@ -13,14 +13,9 @@ from typer.core import TyperCommand, TyperGroup
 
 import gto
 from gto.constants import ASSIGNMENTS_PER_VERSION, VERSIONS_PER_STAGE
-from gto.exceptions import (
-    AmbiguousArg,
-    GTOException,
-    NotImplementedInGTO,
-    WrongArgs,
-)
+from gto.exceptions import GTOException, NotImplementedInGTO, WrongArgs
 from gto.ui import EMOJI_FAIL, EMOJI_GTO, EMOJI_OK, bold, cli_echo, color, echo
-from gto.utils import format_echo, make_ready_to_serialize, resolve_ref
+from gto.utils import format_echo, make_ready_to_serialize
 
 
 class CommandGroups:
@@ -191,8 +186,11 @@ app = Typer(
 arg_name = Argument(..., help="Artifact name")
 arg_version = Argument(..., help="Artifact version")
 arg_stage = Argument(..., help="Stage to assign")
-option_version = Option(None, "--version", help="Version name in SemVer format")
+option_version = Option(None, "--version", help="Version to register")
 option_stage = Option(None, "--stage", help="Stage to assign")
+option_to_version = Option(
+    None, "--to-version", help="Version to use for stage assignment"
+)
 option_delete = Option(
     False,
     "-d",
@@ -225,7 +223,11 @@ option_force = Option(
 )
 
 
-def name_callback(ctx: typer.Context, param: typer.CallbackParam, value: str):
+def name_callback(  # pylint: disable=inconsistent-return-statements
+    ctx: typer.Context,
+    param: typer.CallbackParam,  # pylint: disable=unused-argument
+    value: str,
+):
     if ctx.resilient_parsing:
         return
     allowed_values = ["auto", "true", "false"]
@@ -469,7 +471,8 @@ def tag(
     name: str = arg_name,
     ref: str = Argument(None, help="Git reference to use for registration"),
     version: Optional[str] = option_version,
-    stage: str = option_stage,
+    stage: Optional[str] = option_stage,
+    to_version: Optional[str] = option_to_version,
     message: Optional[str] = option_message,
     bump_major: bool = Option(
         False, "--bump-major", is_flag=True, help="Bump major version"
@@ -505,83 +508,7 @@ def tag(
         ref=ref,
         version=version,
         stage=stage,
-        message=message,
-        bump_major=bump_major,
-        bump_minor=bump_minor,
-        bump_patch=bump_patch,
-        simple=simple,  # type: ignore
-        force=force,
-        skip_registration=skip_registration,
-        stdout=True,
-    )
-
-
-@gto_command(section=CommandGroups.modifying, hidden=True)
-def tag2(
-    repo: str = option_repo,
-    name: str = arg_name,
-    ref: str = Argument(None, help="Git reference to use for registration"),
-    version: str = Argument(None, help="Version name in SemVer format"),
-    stage: str = Argument(None, help="Stage to assign"),
-    message: Optional[str] = option_message,
-    bump_major: bool = Option(
-        False, "--bump-major", is_flag=True, help="Bump major version"
-    ),
-    bump_minor: bool = Option(
-        False, "--bump-minor", is_flag=True, help="Bump minor version"
-    ),
-    bump_patch: bool = Option(
-        False, "--bump-patch", is_flag=True, help="Bump patch version"
-    ),
-    simple: str = option_simple,
-    force: bool = option_force,
-    skip_registration: bool = Option(
-        False,
-        "--sr",
-        "--skip-registration",
-        is_flag=True,
-        help="Don't register a version at specified commit",
-    ),
-):
-    if stage is not None:
-        # gto tag x3 HEAD v0.0.1 prod
-        raise GTOException("ref, version and stage can't be specified simultaneously")
-    elif version is not None:
-        from gto.versions import SemVer
-
-        if SemVer.is_valid(ref) and SemVer.is_valid(version):
-            # gto tag x3 v0.0.1 v0.0.1
-            ref, version, stage = ref, version, None
-        elif SemVer.is_valid(version):
-            # gto tag x3 HEAD v0.0.1
-            ref, version, stage = ref, version, None
-        elif SemVer.is_valid(ref):
-            # gto tag x3 v0.0.1 prod
-            # 'ref' is a git ref or a model version?
-            if resolve_ref(repo, ref, raise_if_not_found=False) is None:
-                ref, version, stage = None, ref, version
-            else:
-                raise AmbiguousArg(
-                    f"Argument value '{ref}' is ambiguous. If it's a Git ref, use "
-                    "'refs/tags/{ref}' or 'refs/heads/{ref}'. If it's an artifact version, "
-                    "use Git ref instead, like '{name}@{ref}'"
-                )
-        else:
-            # gto tag x3 HEAD prod
-            ref, version, stage = ref, None, version
-    elif ref is not None:
-        # gto tag x2 HEAD
-        ref, version, stage = ref, None, None
-    else:
-        # gto tag x3
-        ref, version, stage = "HEAD", None, None
-
-    gto.api.tag(
-        repo,
-        name,
-        ref=ref,
-        version=version,
-        stage=stage,
+        to_version=to_version,
         message=message,
         bump_major=bump_major,
         bump_minor=bump_minor,
