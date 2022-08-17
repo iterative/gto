@@ -186,6 +186,7 @@ class GitRegistry(BaseModel):
         )
         if stdout:
             echo(f"Created git tag '{tag}' that registers version")
+            self._echo_git_suggestion(tag)
         return self._return_event(tag)
 
     def deregister(  # pylint: disable=too-many-locals
@@ -242,6 +243,7 @@ class GitRegistry(BaseModel):
         )
         if stdout:
             echo(f"Created git tag '{tag}' that deregisters version")
+            self._echo_git_suggestion(tag)
         return self._return_event(tag)
 
     def assign(  # pylint: disable=too-many-locals
@@ -316,6 +318,7 @@ class GitRegistry(BaseModel):
             echo(
                 f"Created git tag '{tag}' that assigns stage to version '{found_version.version}'"
             )
+            self._echo_git_suggestion(tag)
         return self._return_event(tag)
 
     def unassign(  # pylint: disable=too-many-locals
@@ -372,6 +375,7 @@ class GitRegistry(BaseModel):
             echo(
                 f"Created git tag '{tag}' that unassigns stage from version '{found_version.version}'"
             )
+            self._echo_git_suggestion(tag)
         return self._return_event(tag)
 
     def deprecate(
@@ -414,6 +418,7 @@ class GitRegistry(BaseModel):
         )
         if stdout:
             echo(f"Created git tag '{tag}' that deprecates artifact")
+            self._echo_git_suggestion(tag)
         return self._return_event(tag)
 
     def _check_args(self, name, version, ref, stage=None):
@@ -439,6 +444,11 @@ class GitRegistry(BaseModel):
         event = event[0]
         return event
 
+    @staticmethod
+    def _echo_git_suggestion(tag):
+        echo("To push the changes upstream, run:")
+        echo(f"    git push {tag}")
+
     def _delete_tags(self, tags, stdout):
         tags = list(tags)
         for tag in tags:
@@ -447,7 +457,7 @@ class GitRegistry(BaseModel):
                 echo(f"Deleted git tag '{tag}'")
         if stdout:
             echo("To push the changes upstream, run:")
-            echo(f"git push {' '.join(tags)} --delete")
+            echo(f"    git push {' '.join(tags)} --delete")
 
     def check_ref(self, ref: str):
         "Find out what was registered/assigned in this ref"
