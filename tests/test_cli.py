@@ -280,40 +280,6 @@ def test_tag_untag(repo_with_commit: Tuple[git.Repo, Callable]):
     )
 
 
-def test_tag2(repo_with_commit: Tuple[git.Repo, Callable]):
-    repo, write_file = repo_with_commit
-    _check_successful_cmd(
-        "tag2",
-        ["-r", repo.working_dir, "x1"],
-        "Created git tag 'x1@v0.0.1'\n",
-    )
-    _check_successful_cmd(
-        "tag2",
-        ["-r", repo.working_dir, "x2", "HEAD"],
-        "Created git tag 'x2@v0.0.1'\n",
-    )
-    _check_successful_cmd(
-        "tag2",
-        ["-r", repo.working_dir, "x3", repo.commit().hexsha],
-        "Created git tag 'x3@v0.0.1'\n",
-    )
-    _check_successful_cmd(
-        "tag2",
-        ["-r", repo.working_dir, "x3", repo.commit().hexsha, "prod"],
-        "Created git tag 'x3#prod#1'\n",
-    )
-    _check_successful_cmd(
-        "tag2",
-        ["-r", repo.working_dir, "x3", "v0.0.1", "dev"],
-        "Created git tag 'x3#dev#2'\n",
-    )
-    _check_successful_cmd(
-        "tag2",
-        ["-r", repo.working_dir, "x4", repo.commit().hexsha, "v1.0.0"],
-        "Created git tag 'x4@v1.0.0'\n",
-    )
-
-
 EXPECTED_DESCRIBE_OUTPUT_2 = """{
     "type": "new-type",
     "path": "new/path",
