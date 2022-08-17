@@ -368,6 +368,9 @@ def annotate(
     ),
     label: List[str] = Option(None, "--label", help="Labels to add to artifact"),
     description: str = Option("", "-d", "--description", help="Artifact description"),
+    requirements: List[str] = Option(
+        None, "--requirements", help="Hardware / Software requirements."
+    ),
     # update: bool = Option(
     #     False, "-u", "--update", is_flag=True, help="Update artifact if it exists"
     # ),
@@ -385,6 +388,7 @@ def annotate(
         must_exist=must_exist,
         labels=label,
         description=description,
+        requirements=requirements,
         # update=update,
     )
 

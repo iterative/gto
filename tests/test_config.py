@@ -85,6 +85,11 @@ def test_annotate_incorrect_labels(init_repo):
         annotate(init_repo, ALLOWED_STRING, labels=[DISALLOWED_STRING])
 
 
+def test_annotate_incorrect_requirements(init_repo):
+    with pytest.raises(ValidationError):
+        annotate(init_repo, ALLOWED_STRING, requirements=["foo: "])
+
+
 def test_register_incorrect_name(init_repo):
     with pytest.raises(ValidationError):
         register(init_repo, DISALLOWED_STRING, ref="HEAD")

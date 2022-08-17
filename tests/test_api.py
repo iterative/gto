@@ -51,6 +51,7 @@ def test_add_remove(empty_git_repo: Tuple[git.Repo, Callable]):
             virtual=not must_exist,
             labels=[],
             description="",
+            requirements=[],
         ),
         [],
     )

@@ -26,11 +26,23 @@ def check_name_is_valid(name):
     return bool(re.match(r"[a-z][a-z0-9-/]*[a-z0-9]$", name))
 
 
+def check_requirement_is_valid(name):
+    return bool(re.match(r".+:\s\d", name))
+
+
 def assert_name_is_valid(name):
     if not check_name_is_valid(name):
         raise ValidationError(
             f"Invalid value '{name}'. Only alphanumeric characters, '-', '/' are allowed."
             "Value must be of len >= 2, must with a letter and end with a letter or a number."
+        )
+
+
+def assert_requirement_is_valid(name):
+    if not check_requirement_is_valid(name):
+        raise ValidationError(
+            f"Invalid value '{name}'. "
+            "Requirements must be in `{name}: {version}` format"
         )
 
 

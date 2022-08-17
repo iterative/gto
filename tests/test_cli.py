@@ -200,7 +200,11 @@ EXPECTED_DESCRIBE_OUTPUT_2 = """{
         "new-label",
         "some-label"
     ],
-    "description": "new description"
+    "description": "new description",
+    "requirements": [
+        "bar: 2",
+        "foo: 1"
+    ]
 }
 """
 
@@ -224,6 +228,8 @@ def test_annotate(empty_git_repo: Tuple[git.Repo, Callable]):
             "another-label",
             "--description",
             "some description",
+            "--requirements",
+            "foo: 1",
         ],
         "",
     )
@@ -237,6 +243,8 @@ def test_annotate(empty_git_repo: Tuple[git.Repo, Callable]):
             "new-label",
             "--description",
             "new description",
+            "--requirements",
+            "bar: 2",
         ],
         "",
     )
@@ -251,6 +259,8 @@ def test_annotate(empty_git_repo: Tuple[git.Repo, Callable]):
             virtual=True,
             labels=["another-label", "new-label", "some-label"],
             description="new description",
+            # Sorted
+            requirements=["bar: 2", "foo: 1"],
         ),
         [],
     )

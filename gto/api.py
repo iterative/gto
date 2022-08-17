@@ -55,6 +55,7 @@ def annotate(
     must_exist: bool = False,
     labels: List[str] = None,
     description: str = "",
+    requirements: List[str] = None,
     # update: bool = False,
 ):
     """Add an artifact to the Index"""
@@ -65,6 +66,7 @@ def annotate(
         must_exist=must_exist,
         labels=labels,
         description=description,
+        requirements=requirements,
         update=True,
     )
 

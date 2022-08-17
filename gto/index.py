@@ -14,6 +14,7 @@ from gto.config import (
     CONFIG_FILE_NAME,
     RegistryConfig,
     assert_name_is_valid,
+    assert_requirement_is_valid,
     read_registry_config,
     yaml,
 )
@@ -36,6 +37,7 @@ class Artifact(BaseModel):
     virtual: bool = True
     labels: List[str] = []  # TODO: allow key:value labels
     description: str = ""
+    requirements: List[str] = []
 
 
 State = Dict[str, Artifact]
@@ -97,6 +99,8 @@ class Index(BaseModel):
                 assert_name_is_valid(artifact.type)
             for label in artifact.labels:
                 assert_name_is_valid(label)
+            for requirement in artifact.requirements:
+                assert_requirement_is_valid(requirement)
         return v
 
     def __contains__(self, item):
@@ -126,7 +130,15 @@ class Index(BaseModel):
 
     @not_frozen
     def add(
-        self, name, type, path, must_exist, labels, description, update
+        self,
+        name,
+        type,
+        path,
+        must_exist,
+        labels,
+        description,
+        update,
+        requirements=None,
     ) -> Artifact:
         if name in self and not update:
             raise ArtifactExists(name)
@@ -147,6 +159,9 @@ class Index(BaseModel):
                 self.state[name].virtual = True
             self.state[name].labels = sorted(set(self.state[name].labels).union(labels))
             self.state[name].description = description or self.state[name].description
+            self.state[name].requirements = sorted(
+                set(self.state[name].requirements).union(requirements or [])
+            )
         else:
             self.state[name] = Artifact(
                 type=type,
@@ -154,6 +169,7 @@ class Index(BaseModel):
                 virtual=not must_exist,
                 labels=labels,
                 description=description,
+                requirements=requirements,
             )
         self.state_is_valid(self.state)
         return self.state[name]
@@ -181,9 +197,21 @@ class BaseIndexManager(BaseModel, ABC):
     def get_history(self) -> Dict[str, Index]:
         raise NotImplementedError
 
-    def add(self, name, type, path, must_exist, labels, description, update):
+    def add(
+        self,
+        name,
+        type,
+        path,
+        must_exist,
+        labels,
+        description,
+        update,
+        requirements=None,
+    ):
         for arg in [name] + (labels or []):
             assert_name_is_valid(arg)
+        for requirement in requirements or []:
+            assert_requirement_is_valid(requirement)
         if type:
             self.config.assert_type(type)
         if must_exist:
@@ -201,6 +229,7 @@ class BaseIndexManager(BaseModel, ABC):
             must_exist=must_exist,
             labels=labels or [],
             description=description,
+            requirements=requirements or [],
             update=update,
         )
         self.update()
