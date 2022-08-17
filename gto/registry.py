@@ -457,7 +457,7 @@ class GitRegistry(BaseModel):
                 echo(f"Deleted git tag '{tag}'")
         if stdout:
             echo("To push the changes upstream, run:")
-            echo(f"    git push {' '.join(tags)} --delete")
+            echo(f"    git push {' '.join(tags)} --delete".replace("!", "/!"))
 
     def check_ref(self, ref: str):
         "Find out what was registered/assigned in this ref"

@@ -414,8 +414,8 @@ class Artifact(BaseObject):
     @property
     def is_active(self):
         if len(self.get_events()) == 0:
-            return True
-        return isinstance(self.get_events(direct=True, indirect=False)[0], Creation)
+            return False
+        return not isinstance(self.get_events()[0], Deprecation)
 
     @property
     def activated_at(self):
