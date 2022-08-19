@@ -596,17 +596,39 @@ def deprecate(
         Unassign a stage:
         $ gto deprecate nn v0.0.1 prod
     """
-    gto.api.deprecate(
-        repo=repo,
-        name=name,
-        version=version,
-        stage=stage,
-        message=message,
-        simple=simple,  # type: ignore
-        force=force,
-        delete=delete,
-        stdout=True,
-    )
+    if stage:
+        gto.api.unassign(
+            repo=repo,
+            name=name,
+            version=version,
+            stage=stage,
+            message=message,
+            simple=simple,  # type: ignore
+            force=force,
+            delete=delete,
+            stdout=True,
+        )
+    elif version:
+        gto.api.unregister(
+            repo=repo,
+            name=name,
+            version=version,
+            message=message,
+            simple=simple,  # type: ignore
+            force=force,
+            delete=delete,
+            stdout=True,
+        )
+    else:
+        gto.api.deprecate(
+            repo=repo,
+            name=name,
+            message=message,
+            simple=simple,  # type: ignore
+            force=force,
+            delete=delete,
+            stdout=True,
+        )
 
 
 @gto_command(section=CommandGroups.querying)
