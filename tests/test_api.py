@@ -118,7 +118,7 @@ def test_register_deregister(repo_with_artifact):
     assert latest.author == author
     assert latest.author_email == author_email
 
-    gto.api.deprecate(repo=repo.working_dir, name=name, version=vname2)
+    gto.api.deregister(repo=repo.working_dir, name=name, version=vname2)
     latest = gto.api.find_latest_version(repo.working_dir, name)
     assert latest.version == vname1
 

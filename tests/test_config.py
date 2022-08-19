@@ -9,7 +9,7 @@ from gto.api import annotate, assign, get_stages, register
 from gto.cli import app
 from gto.config import CONFIG_FILE_NAME, check_name_is_valid
 from gto.exceptions import (
-    InvalidTagName,
+    InvalidVersion,
     UnknownStage,
     UnknownType,
     ValidationError,
@@ -91,7 +91,7 @@ def test_register_incorrect_name(init_repo):
 
 
 def test_register_incorrect_version(init_repo):
-    with pytest.raises(InvalidTagName):
+    with pytest.raises(InvalidVersion):
         register(init_repo, "model", ref="HEAD", version="###")
 
 

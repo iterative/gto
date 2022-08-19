@@ -117,10 +117,10 @@ def assign(
     repo: Union[str, Repo],
     name: str,
     stage: str,
-    version: str = None,
-    ref: str = None,
-    name_version: str = None,
-    message: str = None,
+    version: Optional[str] = None,
+    ref: Optional[str] = None,
+    name_version: Optional[str] = None,
+    message: Optional[str] = None,
     simple: bool = False,
     force: bool = False,
     skip_registration: bool = False,
@@ -145,9 +145,10 @@ def assign(
     )
 
 
-def deprecate(
+def unassign(
     repo: Union[str, Repo],
     name: str,
+    ref: str = None,
     version: str = None,
     stage: str = None,
     message: str = None,
@@ -158,31 +159,59 @@ def deprecate(
     author: Optional[str] = None,
     author_email: Optional[str] = None,
 ):
-    if stage:
-        return GitRegistry.from_repo(repo).unassign(
-            name=name,
-            stage=stage,
-            version=version,
-            message=message,
-            stdout=stdout,
-            simple=simple if simple is not None else False,
-            force=force,
-            delete=delete,
-            author=author,
-            author_email=author_email,
-        )
-    if version:
-        return GitRegistry.from_repo(repo).deregister(
-            name=name,
-            version=version,
-            message=message,
-            stdout=stdout,
-            simple=simple if simple is not None else True,
-            force=force,
-            delete=delete,
-            author=author,
-            author_email=author_email,
-        )
+    return GitRegistry.from_repo(repo).unassign(
+        name=name,
+        stage=stage,
+        ref=ref,
+        version=version,
+        message=message,
+        stdout=stdout,
+        simple=simple if simple is not None else False,
+        force=force,
+        delete=delete,
+        author=author,
+        author_email=author_email,
+    )
+
+
+def deregister(
+    repo: Union[str, Repo],
+    name: str,
+    ref: str = None,
+    version: str = None,
+    message: str = None,
+    stdout: bool = False,
+    simple: Optional[bool] = None,
+    force: bool = False,
+    delete: bool = False,
+    author: Optional[str] = None,
+    author_email: Optional[str] = None,
+):
+    return GitRegistry.from_repo(repo).deregister(
+        name=name,
+        ref=ref,
+        version=version,
+        message=message,
+        stdout=stdout,
+        simple=simple if simple is not None else True,
+        force=force,
+        delete=delete,
+        author=author,
+        author_email=author_email,
+    )
+
+
+def deprecate(
+    repo: Union[str, Repo],
+    name: str,
+    message: str = None,
+    stdout: bool = False,
+    simple: Optional[bool] = None,
+    force: bool = False,
+    delete: bool = False,
+    author: Optional[str] = None,
+    author_email: Optional[str] = None,
+):
     return GitRegistry.from_repo(repo).deprecate(
         name=name,
         message=message,
