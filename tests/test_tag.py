@@ -6,35 +6,59 @@ import pytest
 
 from gto.constants import Action
 from gto.exceptions import RefNotFound, TagExists
-from gto.tag import ActionSign, create_tag, find, name_tag, parse_name
+from gto.tag import create_tag, find, name_tag, parse_name
 
 
 def test_name_tag(empty_git_repo):
     repo, write_func = empty_git_repo
+    assert name_tag(Action.REGISTER, "myartifact", "v1", simple=True) == "myartifact@v1"
     assert (
-        name_tag(Action.REGISTER, "myartifact", "v1")
-        == f"myartifact{ActionSign[Action.REGISTER]}v1"
+        name_tag(Action.REGISTER, "myartifact", "v1", simple=False, repo=repo)
+        == "myartifact@v1#1"
+    )
+    assert (
+        name_tag(Action.DEREGISTER, "myartifact", "v1", simple=True) == "myartifact@v1!"
+    )
+    assert (
+        name_tag(Action.DEREGISTER, "myartifact", "v1", simple=False, repo=repo)
+        == "myartifact@v1!#1"
     )
     assert (
         name_tag(Action.ASSIGN, "myartifact", stage="stage", simple=True)
-        == f"myartifact{ActionSign[Action.ASSIGN]}stage"
+        == "myartifact#stage"
     )
     assert (
         name_tag(Action.ASSIGN, "myartifact", repo=repo, stage="stage", simple=False)
-        == f"myartifact{ActionSign[Action.ASSIGN]}stage{ActionSign[Action.ASSIGN]}1"
+        == "myartifact#stage#1"
+    )
+    assert (
+        name_tag(Action.UNASSIGN, "myartifact", repo=repo, stage="stage", simple=False)
+        == "myartifact#stage!#1"
     )
 
 
 def test_parse_name():
-    assert parse_name(f"path{ActionSign[Action.REGISTER]}v1.2.3") == dict(
+    assert parse_name("path@v1.2.3") == dict(
         name="path", version="v1.2.3", action=Action.REGISTER
     )
-    assert parse_name(f"path{ActionSign[Action.ASSIGN]}stage") == dict(
+    assert parse_name("path@v1.2.3#5") == dict(
+        name="path", version="v1.2.3", action=Action.REGISTER, counter=5
+    )
+    assert parse_name("path@v1.2.3!") == dict(
+        name="path", version="v1.2.3", action=Action.DEREGISTER
+    )
+    assert parse_name("path@v1.2.3!#2") == dict(
+        name="path", version="v1.2.3", action=Action.DEREGISTER, counter=2
+    )
+    assert parse_name("path#stage") == dict(
         name="path", action=Action.ASSIGN, stage="stage"
     )
-    assert parse_name(
-        f"path{ActionSign[Action.ASSIGN]}stage{ActionSign[Action.ASSIGN]}1"
-    ) == dict(name="path", action=Action.ASSIGN, stage="stage", number=1)
+    assert parse_name("path#stage#1") == dict(
+        name="path", action=Action.ASSIGN, stage="stage", counter=1
+    )
+    assert parse_name("path#stage!#2") == dict(
+        name="path", action=Action.UNASSIGN, stage="stage", counter=2
+    )
 
 
 @pytest.mark.parametrize(
@@ -44,6 +68,7 @@ def test_parse_name():
         "###",
         "@@@",
         "model@v1",
+        "nn#prod#-1",
         "model@v111",
         "model-prod",
         "model@0.0.1",
@@ -51,6 +76,8 @@ def test_parse_name():
         "model#prod#-1",
         "model#prod#1-2",
         "model#prod?#1-2",
+        "model#prod@v1.2.3",
+        "model@v1.2.3#prod",
         "model-prod-v1-stage",
         "model@prod@v1@stage-1",
         "namespace/model@0.0.1",
@@ -62,6 +89,28 @@ def test_parse_name():
 )
 def test_parse_wrong_names(tag_name):
     assert not parse_name(tag_name, raise_on_fail=False)
+
+
+@pytest.mark.parametrize(
+    "tag_name",
+    [
+        "nn#prod",
+        "nn#prod!",
+        "nn#prod#1",
+        "nn@v1.0.0",
+        "nn#prod!#2",
+        "nn@v1.0.0!",
+        "nn@v1.0.0#1",
+        "nn@v1.0.0!#1",
+        "nn@v1.0.0-rc.2",
+        "nn@v1.0.0-alpha",
+        "nn@v1.0.0-alpha.1",
+        "nn@v1.0.0-alpha.beta",
+        "new-artifact@v1.0.1!",
+    ],
+)
+def test_parse_correct_names(tag_name):
+    assert parse_name(tag_name, raise_on_fail=False)
 
 
 def test_create_tag_bad_ref(repo_with_commit):

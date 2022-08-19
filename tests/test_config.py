@@ -9,7 +9,7 @@ from gto.api import annotate, assign, get_stages, register
 from gto.cli import app
 from gto.config import CONFIG_FILE_NAME, check_name_is_valid
 from gto.exceptions import (
-    GTOException,
+    InvalidVersion,
     UnknownStage,
     UnknownType,
     ValidationError,
@@ -36,7 +36,7 @@ def init_repo(empty_git_repo: Tuple[git.Repo, Callable]):
     repo, write_file = empty_git_repo
 
     write_file(CONFIG_FILE_NAME, CONFIG_CONTENT)
-    repo.index.add(CONFIG_FILE_NAME)
+    repo.index.add([CONFIG_FILE_NAME])
     repo.index.commit("Initial commit")
     return repo
 
@@ -91,8 +91,8 @@ def test_register_incorrect_name(init_repo):
 
 
 def test_register_incorrect_version(init_repo):
-    with pytest.raises(GTOException):
-        register(init_repo, ALLOWED_STRING, ref="HEAD", version="###")
+    with pytest.raises(InvalidVersion):
+        register(init_repo, "model", ref="HEAD", version="###")
 
 
 def test_assign_incorrect_name(init_repo):

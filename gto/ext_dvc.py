@@ -3,7 +3,7 @@
 # from pydantic import BaseModel
 # from ruamel.yaml import safe_load
 
-# from gto.ext import Enrichment, EnrichmentInfo
+# from gto.ext import EnrichmentReader, EnrichmentInfo
 
 
 # class DVCEnrichmentInfo(EnrichmentInfo):
@@ -18,7 +18,7 @@
 #         return f"""DVC-tracked [{self.size} bytes]"""
 
 
-# class DVCEnrichment(Enrichment):
+# class DVCEnrichment(EnrichmentReader):
 #     def describe(self, obj: str) -> Optional[DVCEnrichmentInfo]:
 #         try:
 #             with open(obj + ".dvc", encoding="utf8") as f:

@@ -11,7 +11,7 @@ from typer.testing import CliRunner
 from gto.api import _get_index
 from gto.cli import app
 
-from .utils import _check_obj
+from .utils import check_obj
 
 
 def _check_successful_cmd(cmd: str, args: list, expected_stdout: Optional[str]):
@@ -118,12 +118,12 @@ def test_commands(showcase):
     )
     _check_successful_cmd(
         "which",
-        ["-r", path, "rf", "production", "--all"],
+        ["-r", path, "rf", "production", "--vs", "-1"],
         "v1.2.4\nv1.2.3\n",
     )
     _check_successful_cmd(
         "which",
-        ["-r", path, "rf", "staging", "--all"],
+        ["-r", path, "rf", "staging", "--vs", "-1"],
         "v1.2.4\n",
     )
     _check_successful_cmd(
@@ -172,23 +172,29 @@ def test_commands(showcase):
     )
     _check_successful_cmd(
         "check-ref",
-        ["-r", path, "rf@v1.2.4", "--assignment"],
-        "",  # since this tag doesn't assign any stage
+        ["-r", path, "rf@v1.2.4", "--event"],
+        "registration\n",
     )
     _check_successful_cmd(
         "check-ref",
-        ["-r", path, "rf@v1.2.4", "--registration"],
+        ["-r", path, "rf@v1.2.4"],
         '✅  Version "v1.2.4" of artifact "rf" was registered\n',
     )
     _check_successful_cmd(
         "check-ref",
-        ["-r", path, "rf#production#3", "--registration"],
-        "",
+        ["-r", path, "rf#production#3", "--event"],
+        "assignment\n",
     )
     _check_successful_cmd(
         "check-ref",
-        ["-r", path, "rf#production#3", "--assignment"],
-        '✅  Stage "production" was assigned to version"v1.2.4" of artifact "rf"\n',
+        ["-r", path, "rf#production#3"],
+        '✅  Stage "production" was assigned to version "v1.2.4" of artifact "rf"\n',
+    )
+    # TODO: make unsuccessful
+    _check_successful_cmd(
+        "check-ref",
+        ["-r", path, "this-tag-does-not-exist"],
+        "",
     )
 
 
@@ -243,7 +249,7 @@ def test_annotate(empty_git_repo: Tuple[git.Repo, Callable]):
     artifact = (
         _get_index(repo.working_dir, file=True).get_index().state[name]
     )  # pylint: disable=protected-access
-    _check_obj(
+    check_obj(
         artifact,
         dict(
             type="new-type",
@@ -274,19 +280,23 @@ def test_register(repo_with_commit: Tuple[git.Repo, Callable]):
     _check_successful_cmd(
         "register",
         ["-r", repo.working_dir, "a1"],
-        "Created git tag 'a1@v0.0.1' that registers a new version\n",
+        "Created git tag 'a1@v0.0.1' that registers version\n"
+        "To push the changes upstream, run:\n"
+        "    git push a1@v0.0.1\n",
     )
 
     _check_successful_cmd(
         "register",
         ["-r", repo.working_dir, "a2", "--version", "v1.2.3"],
-        "Created git tag 'a2@v1.2.3' that registers a new version\n",
+        "Created git tag 'a2@v1.2.3' that registers version\n"
+        "To push the changes upstream, run:\n"
+        "    git push a2@v1.2.3\n",
     )
 
     _check_failing_cmd(
         "register",
         ["-r", repo.working_dir, "a3", "--version", "1.2.3"],
-        "❌ Version '1.2.3' is not valid. Example of valid version: 'v1.0.0'\n",
+        "❌ Supplied version '1.2.3' cannot be parsed\n",
     )
 
 
@@ -294,12 +304,20 @@ def test_assign(repo_with_commit: Tuple[git.Repo, Callable]):
     repo, write_file = repo_with_commit
 
     _check_successful_cmd(
+        "register",
+        ["-r", repo.working_dir, "nn1"],
+        "Created git tag 'nn1@v0.0.1' that registers version\n"
+        "To push the changes upstream, run:\n"
+        "    git push nn1@v0.0.1\n",
+    )
+    # this check depends on the previous one
+    _check_successful_cmd(
         "assign",
         ["-r", repo.working_dir, "nn1", "prod", "HEAD"],
-        "Created git tag 'nn1@v0.0.1' that registers a new version\n"
-        "Created git tag 'nn1#prod#1' that assigns 'prod' to 'v0.0.1'\n",
+        "Created git tag 'nn1#prod#1' that assigns stage to version 'v0.0.1'\n"
+        "To push the changes upstream, run:\n"
+        "    git push nn1#prod#1\n",
     )
-
     # this check depends on the previous assignment
     _check_failing_cmd(
         "assign",

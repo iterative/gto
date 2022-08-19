@@ -107,11 +107,21 @@ class UnknownStage(GTOException):
         super().__init__(self.message)
 
 
-class NoActivePromotion(GTOException):
+class NoActiveAssignment(GTOException):
     _message = "No version in stage '{stage}' was found for '{name}'"
 
     def __init__(self, stage, name) -> None:
         self.message = self._message.format(stage=stage, name=name)
+        super().__init__(self.message)
+
+
+class NoStageForVersion(GTOException):
+    _message = "The artifact '{artifact}' version '{version}' is not in stage '{stage}'"
+
+    def __init__(self, artifact, version, stage) -> None:
+        self.message = self._message.format(
+            artifact=artifact, version=version, stage=stage
+        )
         super().__init__(self.message)
 
 
@@ -121,6 +131,10 @@ class RefNotFound(GTOException):
     def __init__(self, ref) -> None:
         self.message = self._message.format(ref=ref)
         super().__init__(self.message)
+
+
+class AmbiguousArg(GTOException):
+    pass
 
 
 class InvalidVersion(GTOException):
@@ -165,6 +179,14 @@ class InvalidTagName(GTOException):
 
 class TagExists(GTOException):
     message = "tag '{name}' already exists"
+
+    def __init__(self, name) -> None:
+        self.message = self.message.format(name=name)
+        super().__init__(self.message)
+
+
+class TagNotFound(GTOException):
+    message = "tag '{name}' is not found"
 
     def __init__(self, name) -> None:
         self.message = self.message.format(name=name)

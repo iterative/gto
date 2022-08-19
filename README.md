@@ -43,15 +43,15 @@ $ git clone https://github.com/iterative/example-gto.git
 $ cd example-gto
 ```
 
-### Versioning
+### Versioning an artifact
 
-To register a new artifact or a new version, use `gto register`. This is usually
-done to mark significant changes to the artifact (such as a release or a
-deprecation).
+Registering a version is usually done to mark significant changes to the
+artifact. To release a new version (including the very first one), use
+`gto register`.
 
 ```console
-$ gto register awesome-model
-Created git tag 'awesome-model@v0.0.1' that registers a new version
+$ gto register awesome-model HEAD --version v0.0.1
+Created git tag 'awesome-model@v0.0.1' that registers a version
 ```
 
 <details summary="What happens under the hood?">
@@ -59,20 +59,22 @@ Created git tag 'awesome-model@v0.0.1' that registers a new version
 GTO creates a special Git tag for the artifact version, in a standard format:
 `{artifact_name}@{version_number}`.
 
-The version is now associated to the current Git commit (`HEAD`). You can have
-several versions in a given commit, ordered by their automatic version numbers.
+The version is now associated to the current Git commit (`HEAD`). You can use
+another Git commit if you provide it's hexsha as an additional argument, like
+`$ gto register awesome-model abc1234`.
 
 </details>
 
-### Assing a stage
+### Assigning a stage to version
 
-Assing an actionable stage for a specific artifact version with `gto assign`.
-Stages can mark it's readiness for a specific consumer. You can plug in a real
-downsteam system via CI/CD or web hooks. For example: redeploy an ML model.
+To assign an actionable stage for a specific artifact version use the same
+`gto assign` command. Stages can mark the artifact readiness for a specific
+consumer. You can plug in a real downsteam system via CI/CD or web hooks, e.g.
+to redeploy an ML model.
 
 ```console
-$ gto assign awesome-model prod
-Created git tag 'awesome-model#prod#1' that adds stage 'prod' to 'v0.0.1'
+$ gto assign awesome-model --version v0.0.1 --stage prod
+Created git tag 'awesome-model#prod#1' that assigns a stage to 'v0.0.1'
 ```
 
 <details summary="What happens under the hood?">
@@ -91,46 +93,12 @@ require deleting the existing tag.
 
 </details>
 
-### Unassign a stage
-
-Note: this functionality is in development and will be introduced soon.
-
-Sometimes you need to mark an artifact version no longer ready for a specific
-consumer, and maybe signal a downstream system about this. You can use
-`gto unassign` for that:
-
-```console
-$ gto unassign awesome-model prod
-Created git tag 'awesome-model#prod#2!' that unassigns stage 'prod' from 'v0.0.1'
-```
-
-<details summary="Some details and options">
-
-GTO creates a special Git tag in a standard format:
-`{artifact_name}#{stage}#{e}!`.
-
-Note, that later you can create this stage again, if you need to, by calling
-`$ gto assign`.
-
-You also may want to delete the git tag instead of creating a new one. This is
-useful if you don't want to keep extra tags in you Git repo, don't need history
-and don't want to trigger a CI/CD or another downstream system. For that, you
-can use:
-
-```console
-$ gto unassign --delete
-Deleted git tag 'awesome-model#prod#1' that assigned 'prod' to 'v0.0.1'
-To push the changes upsteam, run:
-git push origin awesome-model#prod#1 --delete
-```
-
-</details>
-
 ### Annotating
 
-So far we've seen how to register and assign a stage to an artifact versions,
-but we still don't have much information about them. What about the type of
-artifact (dataset, model, etc.) or the file path to find it in the working tree?
+So far we've seen how to register a new version and assign a stage to an
+artifact versions, but we still don't have much information about them. What
+about the type of artifact (dataset, model, etc.) or the file path to find it in
+the working tree?
 
 For simple projects (e.g. single artifact) we can assume the details in a
 downstream system. But for more advanced cases, we should codify them in the
@@ -158,7 +126,7 @@ GTO the artifact file is committed to Git.
 
 <details summary="Virtual vs. Physical artifacts">
 
-- Physical files/directories are committed to the repo. When you register a new
+- Physical files/directories are committed to the repo. When you create a new
   version or assign a stage to it, Git guarantees that it's immutable -- you can
   return a year later and get the same artifact by providing a version.
 
@@ -176,6 +144,99 @@ GTO the artifact file is committed to Git.
 
 </details>
 
+### Unassigning a stage
+
+Sometimes you need to mark an artifact version no longer ready for a specific
+consumer, and maybe signal a downstream system about this. You can use
+`gto deprecate` for that:
+
+```console
+$ gto deprecate awesome-model v0.0.1 prod
+Created git tag 'awesome-model#prod#2!' that unassigns a stage from 'v0.0.1'
+```
+
+<details summary="Some details and options">
+
+GTO creates a special Git tag in a standard format:
+`{artifact_name}#{stage}#{e}!`.
+
+Note, that later you can create this stage again, if you need to, by calling
+`$ gto assign` again.
+
+You also may want to delete the git tag instead of creating a new one. This is
+useful if you don't want to keep extra tags in you Git repo, don't need history
+and don't want to trigger a CI/CD or another downstream system. For that, you
+can use:
+
+```console
+$ gto deprecate awesome-model v0.0.1 prod --delete
+Deleted git tag 'awesome-model#prod#1' that assigned a stage to 'v0.0.1'
+To push the changes upstream, run:
+git push origin awesome-model#prod#1 --delete
+```
+
+</details>
+
+### Deregister a version
+
+Sometimes you need mark a specific artifact version as a no longer ready for
+usage. You could just delete a git tag, but if you want to preserve a history of
+the actions, you may again use `gto deprecate`.
+
+```console
+$ gto deprecate awesome-model v0.0.1
+Created git tag 'awesome-model@v0.0.1!' that deregistered a version.
+```
+
+<details summary="Some details and options">
+
+If you want to deregister the version by deleting the Git tags itself, you could
+use
+
+```console
+$ gto deprecate awesome-model v0.0.1 --delete
+Deleted git tag 'awesome-model@v0.0.1' that registered a version.
+Deleted git tag 'awesome-model#prod#1' that assigned a stage to 'v0.0.1'.
+Deleted git tag 'awesome-model#prod#2!' that unassigned a stage to 'v0.0.1'.
+To push the changes upstream, run:
+git push origin awesome-model@v0.0.1 awesome-model#prod#1 awesome-model#prod#2! --delete
+```
+
+This includes all Git tags related to the version: a tag that registered it and
+all tags that assigned stages to it.
+
+</details>
+
+### Deprecating an artifact
+
+Sometimes you need to need to mark the artifact as "deprecated", usually meaning
+it's outdated and will no longer be developed. To do this, you could run:
+
+```console
+$ gto deprecate awesome-model
+Created Git tag 'awesome-model@deprecated' that deprecates an artifact.
+```
+
+<details summary="Some details and options">
+
+With `awesome-model@deprecated` Git tag the artifact will be considered
+deprecated until you register a new version or assign a new stage to it after
+the deprecation.
+
+If you want to deprecate an artifact by deleting git tags, you'll need to delete
+all of them for the artifact. You could do that with
+
+```console
+$ gto deprecate awesome-model --delete
+Deleted git tag 'awesome-model@v0.0.1' that registered a version.
+Deleted git tag 'awesome-model#prod#1' that assigned a stage to 'v0.0.1'.
+Deleted git tag 'awesome-model#prod#2!' that unassigned a stage to 'v0.0.1'.
+To push the changes upstream, run:
+git push origin awesome-model@v0.0.1 awesome-model#prod#1 awesome-model#prod#2! --delete
+```
+
+</details>
+
 ## Using the registry locally
 
 Let's look at the usage of the `gto show` and `gto history`.
@@ -190,7 +251,7 @@ $ gto show
 ╒═══════════════╤══════════╤════════╤═════════╤════════════╕
 │ name          │ latest   │ #dev   │ #prod   │ #staging   │
 ╞═══════════════╪══════════╪════════╪═════════╪════════════╡
-│ churn         │ v3.1.0   │ v3.0.0 │ v3.0.0  │ v3.1.0     │
+│ churn         │ v3.1.0   │ v3.1.0 │ v3.0.0  │ v3.1.0     │
 │ segment       │ v0.4.1   │ v0.4.1 │ -       │ -          │
 │ cv-class      │ v0.1.13  │ -      │ -       │ -          │
 │ awesome-model │ v0.0.1   │ -      │ v0.0.1  │ -          │
@@ -205,35 +266,71 @@ Add an artifact name to print all of its versions instead:
 
 ```console
 $ gto show churn
-╒════════════╤═══════════╤═══════════╤═════════════════════╤═══════════════════╤══════════════╕
-│ artifact   │ version   │ stage     │ created_at          │ author            │ ref          │
-╞════════════╪═══════════╪═══════════╪═════════════════════╪═══════════════════╪══════════════╡
-│ churn      │ v3.1.0    │ staging   │ 2022-07-13 15:25:41 │ Alexander Guschin │ churn@v3.1.0 │
-│ churn      │ v3.0.0    │ prod, dev │ 2022-07-09 00:19:01 │ Alexander Guschin │ churn@v3.0.0 │
-╘════════════╧═══════════╧═══════════╧═════════════════════╧═══════════════════╧══════════════╛
+╒════════════╤═══════════╤══════════════╤═════════════════════╤══════════════╕
+│ artifact   │ version   │ stage        │ created_at          │ ref          │
+╞════════════╪═══════════╪══════════════╪═════════════════════╪══════════════╡
+│ churn      │ v3.1.0    │ staging, dev │ 2022-07-14 10:33:53 │ churn@v3.1.0 │
+│ churn      │ v3.0.0    │ prod         │ 2022-07-09 19:27:13 │ churn@v3.0.0 │
+╘════════════╧═══════════╧══════════════╧═════════════════════╧══════════════╛
 ```
+
+#### Enabling multiple versions in the same Stage workflow
+
+<details summary="Details">
+
+Note: this functionality is experimental and subject to change. If you find it
+useful, please share your feedback in GH issues to help us make it stable.
+
+If you would like to see more than a single version assigned in a stage, use
+`--av` (short for `--assignments-per-version`), e.g. `-1` to show all versions.
+
+```console
+$ gto show churn --av -1
+╒════════════╤═══════════╤══════════════╤═════════════════════╤══════════════╕
+│ artifact   │ version   │ stage        │ created_at          │ ref          │
+╞════════════╪═══════════╪══════════════╪═════════════════════╪══════════════╡
+│ churn      │ v3.1.0    │ staging, dev │ 2022-07-14 10:33:53 │ churn@v3.1.0 │
+│ churn      │ v3.0.0    │ dev, prod    │ 2022-07-09 19:27:13 │ churn@v3.0.0 │
+╘════════════╧═══════════╧══════════════╧═════════════════════╧══════════════╛
+```
+
+To enable this workflow, you need to supply the `--av` argument to `gto show`
+and `gto which` commands. Other commands behave the same way regardless of the
+approach you choose.
+
+</details>
 
 #### Enabling Kanban workflow
 
-In some cases, you would like to have a latest stage for an artifact version to
-replace all the previous stages. In this case the version will have a single
-stage. This resembles Kanban workflow, when you "move" your artifact version
-from one column ("stage-1") to another ("stage-2"). This is how MLFlow and some
-other Model Registries work.
+<details summary="Details">
 
-To achieve this, you can use `--last-stage` flag (or `--ls` for short):
+Note: this functionality is experimental and subject to change. If you find it
+useful, please share your feedback in GH issues to help us make it stable.
+
+If you would like the latest stage to replace all the previous stages for an
+artifact version, use `--vs` flag (or `--versions-per-stage` for short) combined
+with `--av`:
 
 ```console
-$ gto show --ls
-╒═══════════════╤══════════╤════════╤═════════╤════════════╕
-│ name          │ latest   │ #dev   │ #prod   │ #staging   │
-╞═══════════════╪══════════╪════════╪═════════╪════════════╡
-│ churn         │ v3.1.0   │ -      │ v3.0.0  │ v3.1.0     │
-│ segment       │ v0.4.1   │ v0.4.1 │ -       │ -          │
-│ cv-class      │ v0.1.13  │ -      │ -       │ -          │
-│ awesome-model │ v0.0.1   │ -      │ v0.0.1  │ -          │
-╘═══════════════╧══════════╧════════╧═════════╧════════════╛
+$ gto show churn --av 1 --vs -1
+╒════════════╤═══════════╤═════════╤═════════════════════╤══════════════╕
+│ artifact   │ version   │ stage   │ created_at          │ ref          │
+╞════════════╪═══════════╪═════════╪═════════════════════╪══════════════╡
+│ churn      │ v3.1.0    │ staging │ 2022-07-14 10:33:53 │ churn@v3.1.0 │
+│ churn      │ v3.0.0    │ dev     │ 2022-07-09 19:27:13 │ churn@v3.0.0 │
+╘════════════╧═══════════╧═════════╧═════════════════════╧══════════════╛
 ```
+
+In this case the version will always have a single stage (or have no stage at
+all). This resembles Kanban workflow, when you "move" your artifact version from
+one column ("stage-1") to another ("stage-2"). This is how MLFlow and some other
+Model Registries work.
+
+To enable this workflow, you need to supply the `--vs` and `--av` arguments to
+`gto show` and `gto which` commands. Other commands behave the same way
+regardless of the approach you choose.
+
+</details>
 
 ### See the history of an artifact
 
@@ -242,17 +339,19 @@ This allows you to audit the changes.
 
 ```console
 $ gto history churn
-╒═════════════════════╤════════════╤══════════════╤═══════════╤═════════╤══════════╤═══════════════════╕
-│ timestamp           │ artifact   │ event        │ version   │ stage   │ commit   │ author            │
-╞═════════════════════╪════════════╪══════════════╪═══════════╪═════════╪══════════╪═══════════════════╡
-│ 2022-07-17 02:45:41 │ churn      │ assignment    │ v3.0.0    │ prod    │ 631520b  │ Alexander Guschin │
-│ 2022-07-15 22:59:01 │ churn      │ assignment    │ v3.1.0    │ staging │ be340cc  │ Alexander Guschin │
-│ 2022-07-14 19:12:21 │ churn      │ assignment    │ v3.0.0    │ dev     │ 631520b  │ Alexander Guschin │
-│ 2022-07-13 15:25:41 │ churn      │ registration │ v3.1.0    │ -       │ be340cc  │ Alexander Guschin │
-│ 2022-07-12 11:39:01 │ churn      │ commit       │ -         │ -       │ be340cc  │ Alexander Guschin │
-│ 2022-07-09 00:19:01 │ churn      │ registration │ v3.0.0    │ -       │ 631520b  │ Alexander Guschin │
-│ 2022-07-07 20:32:21 │ churn      │ commit       │ -         │ -       │ 631520b  │ Alexander Guschin │
-╘═════════════════════╧════════════╧══════════════╧═══════════╧═════════╧══════════╧═══════════════════╛
+╒═════════════════════╤════════════╤══════════════╤═══════════╤═════════╤══════════╤═════════════════╕
+│ timestamp           │ artifact   │ event        │ version   │ stage   │ commit   │ ref             │
+╞═════════════════════╪════════════╪══════════════╪═══════════╪═════════╪══════════╪═════════════════╡
+│ 2022-07-29 14:50:10 │ churn      │ assignment   │ v3.1.0    │ dev     │ 8e4b8e9  │ churn#dev#4     │
+│ 2022-07-17 21:53:53 │ churn      │ assignment   │ v3.0.0    │ prod    │ 0d4e471  │ churn#prod#3    │
+│ 2022-07-16 18:07:13 │ churn      │ assignment   │ v3.1.0    │ staging │ 8e4b8e9  │ churn#staging#2 │
+│ 2022-07-15 14:20:33 │ churn      │ assignment   │ v3.0.0    │ dev     │ 0d4e471  │ churn#dev#1     │
+│ 2022-07-14 10:33:53 │ churn      │ registration │ v3.1.0    │ -       │ 8e4b8e9  │ churn@v3.1.0    │
+│ 2022-07-13 06:47:13 │ churn      │ commit       │ v3.1.0    │ -       │ 8e4b8e9  │ 8e4b8e9         │
+│ 2022-07-13 06:47:13 │ churn      │ commit       │ v3.1.0    │ -       │ 8e4b8e9  │ 8e4b8e9         │
+│ 2022-07-09 19:27:13 │ churn      │ registration │ v3.0.0    │ -       │ 0d4e471  │ churn@v3.0.0    │
+│ 2022-07-08 15:40:33 │ churn      │ commit       │ v3.0.0    │ -       │ 0d4e471  │ 0d4e471         │
+╘═════════════════════╧════════════╧══════════════╧═══════════╧═════════╧══════════╧═════════════════╛
 ```
 
 ## Consuming the registry downstream
@@ -316,25 +415,11 @@ To get the version that is currently assigned to an environment (stage), use
 
 ```console
 $ gto which churn dev
-v3.0.0
+v3.1.0
 
 $ gto which churn dev --ref
-churn#dev#1
+churn#dev#4
 ```
-
-<details summary="Kanban workflow">
-
-If you prefer Kanban workflow described above, you could use `--last` flag. This
-will take into account the last stage for a version only.
-
-```console
-$ gto which churn dev --last
-```
-
-Since the last stage for version `v3.0.0` was `prod`, this doesn't return
-anything.
-
-</details>
 
 To get details about an artifact (from `artifacts.yaml`) use `gto describe`:
 

@@ -1,152 +1,348 @@
-# pylint: disable=unused-variable
+# pylint: disable=unused-variable, too-many-locals
 from gto.registry import GitRegistry
 
-from .utils import _check_dict
+from .utils import check_obj
 
 EXPECTED_REGISTRY_TAG_TAG_STATE = {
     "artifacts": {
+        "rf": {
+            "artifact": "rf",
+            "versions": [
+                {
+                    "artifact": "rf",
+                    "commit_hexsha": "89de382074d472f8e6b8fd654490183c3c0fb497",
+                    "version": "v1.2.3",
+                    "enrichments": [
+                        {
+                            "priority": 0,
+                            "addition": True,
+                            "artifact": "rf",
+                            "created_at": "2022-08-04T16:56:57",
+                            "author": "Alexander Guschin",
+                            "author_email": "1aguschin@gmail.com",
+                            "message": "Add artifacts",
+                            "commit_hexsha": "89de382074d472f8e6b8fd654490183c3c0fb497",
+                            "version": "v1.2.3",
+                            "enrichments": [
+                                {
+                                    "source": "gto",
+                                    "artifact": {
+                                        "type": "model",
+                                        "path": "models/random-forest.pkl",
+                                        "virtual": False,
+                                        "labels": [],
+                                        "description": "",
+                                    },
+                                }
+                            ],
+                            "committer": "Alexander Guschin",
+                            "committer_email": "1aguschin@gmail.com",
+                        }
+                    ],
+                    "registrations": [
+                        {
+                            "priority": 3,
+                            "addition": True,
+                            "artifact": "rf",
+                            "created_at": "2022-08-04T16:56:57",
+                            "author": "Alexander Guschin",
+                            "author_email": "1aguschin@gmail.com",
+                            "message": "Registering artifact rf version v1.2.3",
+                            "commit_hexsha": "89de382074d472f8e6b8fd654490183c3c0fb497",
+                            "tag": "rf@v1.2.3",
+                            "version": "v1.2.3",
+                        }
+                    ],
+                    "deregistrations": [],
+                    "stages": {
+                        "production": {
+                            "artifact": "rf",
+                            "commit_hexsha": "89de382074d472f8e6b8fd654490183c3c0fb497",
+                            "version": "v1.2.3",
+                            "stage": "production",
+                            "assignments": [
+                                {
+                                    "priority": 5,
+                                    "addition": True,
+                                    "artifact": "rf",
+                                    "created_at": "2022-08-04T16:56:59",
+                                    "author": "Alexander Guschin",
+                                    "author_email": "1aguschin@gmail.com",
+                                    "message": "Assigning stage production to artifact rf version v1.2.3",
+                                    "commit_hexsha": "89de382074d472f8e6b8fd654490183c3c0fb497",
+                                    "tag": "rf#production#1",
+                                    "version": "v1.2.3",
+                                    "stage": "production",
+                                },
+                                {
+                                    "priority": 5,
+                                    "addition": True,
+                                    "artifact": "rf",
+                                    "created_at": "2022-08-04T16:57:02",
+                                    "author": "Alexander Guschin",
+                                    "author_email": "1aguschin@gmail.com",
+                                    "message": "Assigning stage production to artifact rf version v1.2.3",
+                                    "commit_hexsha": "89de382074d472f8e6b8fd654490183c3c0fb497",
+                                    "tag": "rf#production#4",
+                                    "version": "v1.2.3",
+                                    "stage": "production",
+                                },
+                            ],
+                            "unassignments": [],
+                        }
+                    },
+                },
+                {
+                    "artifact": "rf",
+                    "commit_hexsha": "04d79900801d9aa7ec726169706280a32a25d198",
+                    "version": "v1.2.4",
+                    "enrichments": [
+                        {
+                            "priority": 0,
+                            "addition": True,
+                            "artifact": "rf",
+                            "created_at": "2022-08-04T16:56:59",
+                            "author": "Alexander Guschin",
+                            "author_email": "1aguschin@gmail.com",
+                            "message": "Update model",
+                            "commit_hexsha": "04d79900801d9aa7ec726169706280a32a25d198",
+                            "version": "v1.2.4",
+                            "enrichments": [
+                                {
+                                    "source": "gto",
+                                    "artifact": {
+                                        "type": "model",
+                                        "path": "models/random-forest.pkl",
+                                        "virtual": False,
+                                        "labels": [],
+                                        "description": "",
+                                    },
+                                }
+                            ],
+                            "committer": "Alexander Guschin",
+                            "committer_email": "1aguschin@gmail.com",
+                        }
+                    ],
+                    "registrations": [
+                        {
+                            "priority": 3,
+                            "addition": True,
+                            "artifact": "rf",
+                            "created_at": "2022-08-04T16:56:59",
+                            "author": "Alexander Guschin",
+                            "author_email": "1aguschin@gmail.com",
+                            "message": "Registering artifact rf version v1.2.4",
+                            "commit_hexsha": "04d79900801d9aa7ec726169706280a32a25d198",
+                            "tag": "rf@v1.2.4",
+                            "version": "v1.2.4",
+                        }
+                    ],
+                    "deregistrations": [],
+                    "stages": {
+                        "staging": {
+                            "artifact": "rf",
+                            "commit_hexsha": "04d79900801d9aa7ec726169706280a32a25d198",
+                            "version": "v1.2.4",
+                            "stage": "staging",
+                            "assignments": [
+                                {
+                                    "priority": 5,
+                                    "addition": True,
+                                    "artifact": "rf",
+                                    "created_at": "2022-08-04T16:57:00",
+                                    "author": "Alexander Guschin",
+                                    "author_email": "1aguschin@gmail.com",
+                                    "message": "Assigning stage staging to artifact rf version v1.2.4",
+                                    "commit_hexsha": "04d79900801d9aa7ec726169706280a32a25d198",
+                                    "tag": "rf#staging#2",
+                                    "version": "v1.2.4",
+                                    "stage": "staging",
+                                }
+                            ],
+                            "unassignments": [],
+                        },
+                        "production": {
+                            "artifact": "rf",
+                            "commit_hexsha": "04d79900801d9aa7ec726169706280a32a25d198",
+                            "version": "v1.2.4",
+                            "stage": "production",
+                            "assignments": [
+                                {
+                                    "priority": 5,
+                                    "addition": True,
+                                    "artifact": "rf",
+                                    "created_at": "2022-08-04T16:57:01",
+                                    "author": "Alexander Guschin",
+                                    "author_email": "1aguschin@gmail.com",
+                                    "message": "Assigning stage production to artifact rf version v1.2.4",
+                                    "commit_hexsha": "04d79900801d9aa7ec726169706280a32a25d198",
+                                    "tag": "rf#production#3",
+                                    "version": "v1.2.4",
+                                    "stage": "production",
+                                }
+                            ],
+                            "unassignments": [],
+                        },
+                    },
+                },
+            ],
+            "creations": [],
+            "deprecations": [],
+        },
         "nn": {
+            "artifact": "nn",
             "versions": [
                 {
                     "artifact": "nn",
-                    "name": "v0.0.1",
-                    "created_at": "2022-04-11T21:51:56",
-                    "author": "Alexander Guschin",
-                    "author_email": "1aguschin@gmail.com",
-                    "commit_hexsha": "d1d973669cade722f2900e75379cee42fe6b0244",
-                    "discovered": False,
-                    "tag": "nn@v0.0.1",
-                    "assignments": [
+                    "commit_hexsha": "89de382074d472f8e6b8fd654490183c3c0fb497",
+                    "version": "v0.0.1",
+                    "enrichments": [
                         {
+                            "priority": 0,
+                            "addition": True,
                             "artifact": "nn",
+                            "created_at": "2022-08-04T16:56:57",
+                            "author": "Alexander Guschin",
+                            "author_email": "1aguschin@gmail.com",
+                            "message": "Add artifacts",
+                            "commit_hexsha": "89de382074d472f8e6b8fd654490183c3c0fb497",
+                            "version": "v0.0.1",
+                            "enrichments": [
+                                {
+                                    "source": "gto",
+                                    "artifact": {
+                                        "type": "model",
+                                        "path": "models/neural-network.pkl",
+                                        "virtual": False,
+                                        "labels": [],
+                                        "description": "",
+                                    },
+                                }
+                            ],
+                            "committer": "Alexander Guschin",
+                            "committer_email": "1aguschin@gmail.com",
+                        }
+                    ],
+                    "registrations": [
+                        {
+                            "priority": 3,
+                            "addition": True,
+                            "artifact": "nn",
+                            "created_at": "2022-08-04T16:56:58",
+                            "author": "Alexander Guschin",
+                            "author_email": "1aguschin@gmail.com",
+                            "message": "Registering artifact nn version v0.0.1",
+                            "commit_hexsha": "89de382074d472f8e6b8fd654490183c3c0fb497",
+                            "tag": "nn@v0.0.1",
+                            "version": "v0.0.1",
+                        }
+                    ],
+                    "deregistrations": [],
+                    "stages": {
+                        "staging": {
+                            "artifact": "nn",
+                            "commit_hexsha": "89de382074d472f8e6b8fd654490183c3c0fb497",
                             "version": "v0.0.1",
                             "stage": "staging",
-                            "created_at": "2022-04-11T21:51:57",
-                            "author": "Alexander Guschin",
-                            "author_email": "1aguschin@gmail.com",
-                            "commit_hexsha": "d1d973669cade722f2900e75379cee42fe6b0244",
-                            "tag": "nn#staging#1",
+                            "assignments": [
+                                {
+                                    "priority": 5,
+                                    "addition": True,
+                                    "artifact": "nn",
+                                    "created_at": "2022-08-04T16:56:59",
+                                    "author": "Alexander Guschin",
+                                    "author_email": "1aguschin@gmail.com",
+                                    "message": "Assigning stage staging to artifact nn version v0.0.1",
+                                    "commit_hexsha": "89de382074d472f8e6b8fd654490183c3c0fb497",
+                                    "tag": "nn#staging#1",
+                                    "version": "v0.0.1",
+                                    "stage": "staging",
+                                }
+                            ],
+                            "unassignments": [],
                         }
-                    ],
+                    },
+                },
+                {
+                    "artifact": "nn",
+                    "commit_hexsha": "04d79900801d9aa7ec726169706280a32a25d198",
+                    "version": "04d79900801d9aa7ec726169706280a32a25d198",
                     "enrichments": [
                         {
-                            "source": "gto",
-                            "artifact": {
-                                "type": "model",
-                                "name": "nn",
-                                "path": "models/neural-network.pkl",
-                                "virtual": False,
-                                "labels": [],
-                                "description": "",
-                            },
+                            "priority": 0,
+                            "addition": True,
+                            "artifact": "nn",
+                            "created_at": "2022-08-04T16:56:59",
+                            "author": "Alexander Guschin",
+                            "author_email": "1aguschin@gmail.com",
+                            "message": "Update model",
+                            "commit_hexsha": "04d79900801d9aa7ec726169706280a32a25d198",
+                            "version": "04d79900801d9aa7ec726169706280a32a25d198",
+                            "enrichments": [
+                                {
+                                    "source": "gto",
+                                    "artifact": {
+                                        "type": "model",
+                                        "path": "models/neural-network.pkl",
+                                        "virtual": False,
+                                        "labels": [],
+                                        "description": "",
+                                    },
+                                }
+                            ],
+                            "committer": "Alexander Guschin",
+                            "committer_email": "1aguschin@gmail.com",
                         }
                     ],
-                }
+                    "registrations": [],
+                    "deregistrations": [],
+                    "stages": {},
+                },
             ],
+            "creations": [],
+            "deprecations": [],
         },
-        "rf": {
+        "features": {
+            "artifact": "features",
             "versions": [
                 {
-                    "artifact": "rf",
-                    "name": "v1.2.3",
-                    "created_at": "2022-04-11T21:51:56",
-                    "author": "Alexander Guschin",
-                    "author_email": "1aguschin@gmail.com",
-                    "commit_hexsha": "d1d973669cade722f2900e75379cee42fe6b0244",
-                    "discovered": False,
-                    "tag": "rf@v1.2.3",
-                    "assignments": [
-                        {
-                            "artifact": "rf",
-                            "version": "v1.2.3",
-                            "stage": "production",
-                            "created_at": "2022-04-11T21:51:57",
-                            "author": "Alexander Guschin",
-                            "author_email": "1aguschin@gmail.com",
-                            "commit_hexsha": "d1d973669cade722f2900e75379cee42fe6b0244",
-                            "tag": "rf#production#1",
-                        },
-                        {
-                            "artifact": "rf",
-                            "version": "v1.2.3",
-                            "stage": "production",
-                            "created_at": "2022-04-11T21:52:01",
-                            "author": "Alexander Guschin",
-                            "author_email": "1aguschin@gmail.com",
-                            "commit_hexsha": "d1d973669cade722f2900e75379cee42fe6b0244",
-                            "tag": "rf#production#4",
-                        },
-                    ],
+                    "artifact": "features",
+                    "commit_hexsha": "04d79900801d9aa7ec726169706280a32a25d198",
+                    "version": "04d79900801d9aa7ec726169706280a32a25d198",
                     "enrichments": [
                         {
-                            "source": "gto",
-                            "artifact": {
-                                "type": "model",
-                                "name": "rf",
-                                "path": "models/random-forest.pkl",
-                                "virtual": False,
-                                "labels": [],
-                                "description": "",
-                            },
+                            "priority": 0,
+                            "addition": True,
+                            "artifact": "features",
+                            "created_at": "2022-08-04T16:56:59",
+                            "author": "Alexander Guschin",
+                            "author_email": "1aguschin@gmail.com",
+                            "message": "Update model",
+                            "commit_hexsha": "04d79900801d9aa7ec726169706280a32a25d198",
+                            "version": "04d79900801d9aa7ec726169706280a32a25d198",
+                            "enrichments": [
+                                {
+                                    "source": "gto",
+                                    "artifact": {
+                                        "type": "dataset",
+                                        "path": "datasets/features.csv",
+                                        "virtual": True,
+                                        "labels": [],
+                                        "description": "",
+                                    },
+                                }
+                            ],
+                            "committer": "Alexander Guschin",
+                            "committer_email": "1aguschin@gmail.com",
                         }
                     ],
-                },
-                {
-                    "artifact": "rf",
-                    "name": "v1.2.4",
-                    "created_at": "2022-04-12T19:03:44",
-                    "author": "Alexander Guschin",
-                    "author_email": "1aguschin@gmail.com",
-                    "commit_hexsha": "16b7b77f1219ea3c10ae5beeb8473fb49cbd8c13",
-                    "discovered": False,
-                    "tag": "rf@v1.2.4",
-                    "assignments": [
-                        {
-                            "artifact": "rf",
-                            "version": "v1.2.4",
-                            "stage": "staging",
-                            "created_at": "2022-04-11T21:51:58",
-                            "author": "Alexander Guschin",
-                            "author_email": "1aguschin@gmail.com",
-                            "commit_hexsha": "16b7b77f1219ea3c10ae5beeb8473fb49cbd8c13",
-                            "tag": "rf#staging#2",
-                        },
-                        {
-                            "artifact": "rf",
-                            "version": "v1.2.4",
-                            "stage": "production",
-                            "created_at": "2022-04-11T21:51:59",
-                            "author": "Alexander Guschin",
-                            "author_email": "1aguschin@gmail.com",
-                            "commit_hexsha": "16b7b77f1219ea3c10ae5beeb8473fb49cbd8c13",
-                            "tag": "rf#production#3",
-                        },
-                        {
-                            "artifact": "rf",
-                            "version": "v1.2.4",
-                            "stage": "stagegeg",
-                            "created_at": "2022-04-12T19:26:08",
-                            "author": "Alexander Guschin",
-                            "author_email": "1aguschin@gmail.com",
-                            "commit_hexsha": "16b7b77f1219ea3c10ae5beeb8473fb49cbd8c13",
-                            "tag": "rf#stagegeg#5",
-                        },
-                    ],
-                    "enrichments": [
-                        {
-                            "source": "gto",
-                            "artifact": {
-                                "type": "model",
-                                "name": "rf",
-                                "path": "models/random-forest.pkl",
-                                "virtual": False,
-                                "labels": [],
-                                "description": "",
-                            },
-                        }
-                    ],
-                },
+                    "registrations": [],
+                    "deregistrations": [],
+                    "stages": {},
+                }
             ],
+            "creations": [],
+            "deprecations": [],
         },
     }
 }
@@ -160,26 +356,10 @@ def iter_over(sequence):
     raise NotImplementedError
 
 
-def _check_state(appread_state, expected_state, exclude):
-    for name in expected_state["artifacts"]:
-        for part in ["versions"]:  # "commits"
-            for appeared, expected in zip(
-                iter_over(appread_state["artifacts"][name][part]),
-                iter_over(expected_state["artifacts"][name][part]),
-            ):
-                _check_dict(appeared, expected, exclude[part])
-        for appeared, expected in zip(
-            appread_state["artifacts"][name]["versions"],
-            expected_state["artifacts"][name]["versions"],
-        ):
-            for a, e in zip(appeared["assignments"], expected["assignments"]):
-                _check_dict(a, e, exclude["assignments"])
-
-
 def test_registry_state_tag_tag(showcase):
     path, repo, write_file, first_commit, second_commit = showcase
     reg = GitRegistry.from_repo(repo)
-    state = reg.get_state().dict()
+    appeared_state = reg.get_state().dict()
 
     # TODO: update state
     exclude = {
@@ -189,17 +369,68 @@ def test_registry_state_tag_tag(showcase):
             "author_email",
             "created_at",
             "commit_hexsha",
-            "assignments",
+            "registrations",
+            "deregistrations",
             "enrichments",
+            "stages",
             "message",
+            "version",
         ],
-        "assignments": [
+        "enrichments": [
             "author",
             "author_email",
             "created_at",
             "commit_hexsha",
             "message",
+            "version",
+            "committer",
+            "committer_email",
+        ],
+        "registrations": [
+            "author",
+            "author_email",
+            "created_at",
+            "commit_hexsha",
+            "message",
+            "version",
+        ],
+        "deregistrations": [
+            "author",
+            "author_email",
+            "created_at",
+            "commit_hexsha",
+            "message",
+            "version",
+        ],
+        "stages": [
+            "author",
+            "author_email",
+            "created_at",
+            "commit_hexsha",
+            "message",
+            "version",
+            "assignments",
+            "unassignments",
         ],
     }
 
-    _check_state(state, EXPECTED_REGISTRY_TAG_TAG_STATE, exclude)
+    expected_state = EXPECTED_REGISTRY_TAG_TAG_STATE
+    for artifact in expected_state["artifacts"]:
+
+        for appeared, expected in zip(
+            iter_over(appeared_state["artifacts"][artifact]["versions"]),
+            iter_over(expected_state["artifacts"][artifact]["versions"]),
+        ):
+            check_obj(appeared, expected, exclude["versions"])
+
+            for key in ["enrichments", "registrations", "deregistrations"]:
+                for a, e in zip(
+                    iter_over(appeared[key]),
+                    iter_over(expected[key]),
+                ):
+                    check_obj(a, e, exclude[key])
+
+            for key in appeared["stages"]:
+                check_obj(
+                    appeared["stages"][key], expected["stages"][key], exclude["stages"]
+                )

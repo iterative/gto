@@ -1,12 +1,19 @@
 from collections import OrderedDict
-from datetime import datetime
 from typing import List, Optional, Union
 
 from funcy import distinct
 from git import Repo
 
-from gto.constants import NAME, STAGE, VERSION, Event
-from gto.exceptions import NoRepo, WrongArgs
+from gto.constants import (
+    ARTIFACT,
+    ASSIGNMENTS_PER_VERSION,
+    COMMIT,
+    NAME,
+    STAGE,
+    VERSION,
+    VERSIONS_PER_STAGE,
+)
+from gto.exceptions import NoRepo, NotImplementedInGTO, WrongArgs
 from gto.ext import EnrichmentInfo
 from gto.index import (
     EnrichmentManager,
@@ -80,6 +87,8 @@ def register(
     ref: str,
     version: str = None,
     message: str = None,
+    simple: bool = None,
+    force: bool = False,
     bump_major: bool = False,
     bump_minor: bool = False,
     bump_patch: bool = False,
@@ -93,6 +102,8 @@ def register(
         ref=ref,
         version=version,
         message=message,
+        simple=simple if simple is not None else True,
+        force=force,
         bump_major=bump_major,
         bump_minor=bump_minor,
         bump_patch=bump_patch,
@@ -106,10 +117,10 @@ def assign(
     repo: Union[str, Repo],
     name: str,
     stage: str,
-    version: str = None,
-    ref: str = None,
-    name_version: str = None,
-    message: str = None,
+    version: Optional[str] = None,
+    ref: Optional[str] = None,
+    name_version: Optional[str] = None,
+    message: Optional[str] = None,
     simple: bool = False,
     force: bool = False,
     skip_registration: bool = False,
@@ -119,16 +130,95 @@ def assign(
 ):
     """Assign stage to specific artifact version"""
     return GitRegistry.from_repo(repo).assign(
-        name,
-        stage,
-        version,
-        ref,
-        name_version,
+        name=name,
+        stage=stage,
+        version=version,
+        ref=ref,
+        name_version=name_version,
         message=message,
         simple=simple,
         force=force,
         skip_registration=skip_registration,
         stdout=stdout,
+        author=author,
+        author_email=author_email,
+    )
+
+
+def unassign(
+    repo: Union[str, Repo],
+    name: str,
+    ref: str = None,
+    version: str = None,
+    stage: str = None,
+    message: str = None,
+    stdout: bool = False,
+    simple: Optional[bool] = None,
+    force: bool = False,
+    delete: bool = False,
+    author: Optional[str] = None,
+    author_email: Optional[str] = None,
+):
+    return GitRegistry.from_repo(repo).unassign(
+        name=name,
+        stage=stage,
+        ref=ref,
+        version=version,
+        message=message,
+        stdout=stdout,
+        simple=simple if simple is not None else False,
+        force=force,
+        delete=delete,
+        author=author,
+        author_email=author_email,
+    )
+
+
+def unregister(
+    repo: Union[str, Repo],
+    name: str,
+    ref: str = None,
+    version: str = None,
+    message: str = None,
+    stdout: bool = False,
+    simple: Optional[bool] = None,
+    force: bool = False,
+    delete: bool = False,
+    author: Optional[str] = None,
+    author_email: Optional[str] = None,
+):
+    return GitRegistry.from_repo(repo).unregister(
+        name=name,
+        ref=ref,
+        version=version,
+        message=message,
+        stdout=stdout,
+        simple=simple if simple is not None else True,
+        force=force,
+        delete=delete,
+        author=author,
+        author_email=author_email,
+    )
+
+
+def deprecate(
+    repo: Union[str, Repo],
+    name: str,
+    message: str = None,
+    stdout: bool = False,
+    simple: Optional[bool] = None,
+    force: bool = False,
+    delete: bool = False,
+    author: Optional[str] = None,
+    author_email: Optional[str] = None,
+):
+    return GitRegistry.from_repo(repo).deprecate(
+        name=name,
+        message=message,
+        stdout=stdout,
+        simple=simple if simple is not None else True,
+        force=force,
+        delete=delete,
         author=author,
         author_email=author_email,
     )
@@ -152,12 +242,18 @@ def find_versions_in_stage(
     repo: Union[str, Repo],
     name: str,
     stage: str,
-    all: bool = False,
+    assignments_per_version=ASSIGNMENTS_PER_VERSION,
+    versions_per_stage=VERSIONS_PER_STAGE,
     registered_only: bool = False,
 ):
     """Return version of artifact with specific stage active"""
     return GitRegistry.from_repo(repo).which(
-        name, stage, raise_if_not_found=False, all=all, registered_only=registered_only
+        name,
+        stage,
+        raise_if_not_found=False,
+        assignments_per_version=assignments_per_version,
+        versions_per_stage=versions_per_stage,
+        registered_only=registered_only,
     )
 
 
@@ -174,7 +270,8 @@ def show(
     all_commits=False,
     truncate_hexsha=False,
     registered_only=False,
-    last_stage=False,
+    assignments_per_version=ASSIGNMENTS_PER_VERSION,
+    versions_per_stage=1,
     table: bool = False,
 ):
     return (
@@ -184,7 +281,8 @@ def show(
             all_branches=all_branches,
             all_commits=all_commits,
             registered_only=registered_only,
-            last_stage=last_stage,
+            assignments_per_version=assignments_per_version,
+            versions_per_stage=versions_per_stage,
             table=table,
             truncate_hexsha=truncate_hexsha,
         )
@@ -194,7 +292,8 @@ def show(
             all_branches=all_branches,
             all_commits=all_commits,
             registered_only=registered_only,
-            last_stage=last_stage,
+            assignments_per_version=assignments_per_version,
+            versions_per_stage=versions_per_stage,
             table=table,
             truncate_hexsha=truncate_hexsha,
         )
@@ -206,7 +305,8 @@ def _show_registry(
     all_branches=False,
     all_commits=False,
     registered_only=False,
-    last_stage: bool = False,
+    assignments_per_version: int = ASSIGNMENTS_PER_VERSION,
+    versions_per_stage: int = VERSIONS_PER_STAGE,
     table: bool = False,
     truncate_hexsha: bool = False,
 ):
@@ -218,19 +318,26 @@ def _show_registry(
     reg = GitRegistry.from_repo(repo)
     stages = list(reg.get_stages())
     models_state = {
-        o.name: {
-            "version": format_hexsha(o.get_latest_version(registered_only=True).name)
+        o.artifact: {
+            "version": format_hexsha(o.get_latest_version(registered_only=True).version)
             if o.get_latest_version(registered_only=True)
             else None,
             "stage": {
-                name: format_hexsha(
-                    o.get_assignments(
-                        registered_only=registered_only, last_stage=last_stage
-                    )[name][0].version
+                name: ", ".join(
+                    [
+                        format_hexsha(s.version)
+                        for s in o.get_vstages(
+                            registered_only=registered_only,
+                            assignments_per_version=assignments_per_version,
+                            versions_per_stage=versions_per_stage,
+                        )[name]
+                    ]
                 )
                 if name
-                in o.get_assignments(
-                    registered_only=registered_only, last_stage=last_stage
+                in o.get_vstages(
+                    registered_only=registered_only,
+                    assignments_per_version=assignments_per_version,
+                    versions_per_stage=versions_per_stage,
                 )
                 else None
                 for name in stages
@@ -259,7 +366,8 @@ def _show_versions(  # pylint: disable=too-many-locals
     all_branches=False,
     all_commits=False,
     registered_only=False,
-    last_stage: bool = False,
+    assignments_per_version: int = None,
+    versions_per_stage: int = None,
     table: bool = False,
     truncate_hexsha: bool = False,
 ):
@@ -271,45 +379,50 @@ def _show_versions(  # pylint: disable=too-many-locals
     reg = GitRegistry.from_repo(repo)
     if raw:
         return reg.find_artifact(name).versions
-    versions = [
-        v.dict_status()
-        for v in reg.find_artifact(
-            name,
-            all_branches=all_branches,
-            all_commits=all_commits,
-        ).get_versions(
-            include_non_explicit=not registered_only, include_discovered=True
-        )
-    ]
+
+    artifact = reg.find_artifact(
+        name,
+        all_branches=all_branches,
+        all_commits=all_commits,
+    )
+    stages = artifact.get_vstages(
+        registered_only=registered_only,
+        assignments_per_version=assignments_per_version,
+        versions_per_stage=versions_per_stage,
+    )
+    versions = []
+    for v in artifact.get_versions(
+        include_non_explicit=not registered_only, include_discovered=True
+    ):
+        v = v.dict_state()
+        v["stages"] = [
+            vstage.dict_state()
+            for vstages in stages.values()
+            for vstage in vstages
+            if vstage.version == v["version"]
+        ]
+        versions.append(v)
+
     if not table:
         return versions
 
     first_keys = ["artifact", "version", "stage"]
     versions_ = []
     for v in versions:
-        v["version"] = format_hexsha(v["name"])
+        v["version"] = format_hexsha(v["version"])
         v["stage"] = ", ".join(
-            distinct(
-                s["stage"]
-                for s in (
-                    v["assignments"][::-1][:1] if last_stage else v["assignments"][::-1]
-                )
+            distinct(  # TODO: remove? no longer necessary
+                s["stage"] for s in v["stages"]
             )
         )
         v["commit_hexsha"] = format_hexsha(v["commit_hexsha"])
-        v["ref"] = v["tag"] or v["commit_hexsha"]
-        for key in (
-            "enrichments",
-            "discovered",
-            "tag",
-            "commit_hexsha",
-            "name",
-            "message",
-            "author_email",
-            "assignments",
-        ):
-            v.pop(key)
-        # v["enrichments"] = [e["source"] for e in v["enrichments"]]
+        if len(v["registrations"]) > 1:
+            raise NotImplementedInGTO(
+                "Multiple registrations are not supported currently. How you got in here?"
+            )
+        for key in list(v.keys()):
+            if key not in first_keys + ["created_at", "ref"]:
+                del v[key]
         v = OrderedDict(
             [(key, v[key]) for key in first_keys]
             + [(key, v[key]) for key in v if key not in first_keys]
@@ -332,7 +445,7 @@ def describe(
     raise NotImplementedError
 
 
-def history(  # pylint: disable=too-many-locals
+def history(
     repo: Union[str, Repo],
     artifact: str = None,
     # action: str = None,
@@ -352,62 +465,27 @@ def history(  # pylint: disable=too-many-locals
     def format_hexsha(hexsha):
         return hexsha[:7] if truncate_hexsha else hexsha
 
-    commits = [
+    events = [
         OrderedDict(
-            timestamp=datetime.fromtimestamp(
-                reg.repo.commit(v.commit_hexsha).committed_date
-            ),
-            artifact=o.name,
-            event=Event.COMMIT,
-            commit=format_hexsha(v.commit_hexsha),
-            author=reg.repo.commit(v.commit_hexsha).author.name,
-            author_email=reg.repo.commit(v.commit_hexsha).author.email,
-            message=reg.repo.commit(v.commit_hexsha).message,
+            timestamp=e.created_at,
+            artifact=e.artifact,
+            event=type(e).__name__.lower(),
+            priority=e.priority,
+            version=format_hexsha(e.version) if hasattr(e, "version") else None,
+            stage=getattr(e, "stage", None),
+            commit=format_hexsha(e.commit_hexsha),
+            author=e.author,
+            author_email=e.author_email,
+            message=e.message,
+            ref=format_hexsha(e.ref) if e.ref == e.commit_hexsha else e.ref,
         )
         for o in artifacts.values()
-        for v in o.get_versions(include_non_explicit=True, include_discovered=True)
+        for e in o.get_events()
     ]
 
-    registration = [
-        OrderedDict(
-            timestamp=v.created_at,
-            artifact=o.name,
-            event=Event.REGISTRATION,
-            version=format_hexsha(v.name),
-            commit=format_hexsha(v.commit_hexsha),
-            author=v.author,
-            author_email=v.author_email,
-            message=v.message,
-            # enrichments=[e.source for e in v.enrichments],
-        )
-        for o in artifacts.values()
-        for v in o.get_versions()
-    ]
-
-    assignment = [
-        OrderedDict(
-            timestamp=p.created_at,
-            artifact=o.name,
-            event=Event.ASSIGNMENT,
-            version=format_hexsha(p.version),
-            stage=p.stage,
-            commit=format_hexsha(p.commit_hexsha),
-            author=p.author,
-            author_email=p.author_email,
-            message=p.message,
-        )
-        for o in artifacts.values()
-        for p in o.stages
-    ]
-
-    events_order = {
-        Event.COMMIT: 1,
-        Event.REGISTRATION: 2,
-        Event.ASSIGNMENT: 3,
-    }
     events = sorted(
-        commits + registration + assignment,
-        key=lambda x: (x["timestamp"], events_order[x["event"]]),
+        events,
+        key=lambda x: (x["timestamp"], x["priority"]),
     )
     if not ascending:
         events.reverse()
@@ -417,13 +495,12 @@ def history(  # pylint: disable=too-many-locals
         return events
     keys_order = [
         "timestamp",
-        "artifact",
+        ARTIFACT,
         "event",
         VERSION,
         STAGE,
-        # "enrichments",
-        "commit",
-        "author",
+        COMMIT,
+        "ref",
     ]
     keys_order = [c for c in keys_order if any(c in event for event in events)]
     events = [

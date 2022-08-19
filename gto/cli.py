@@ -12,6 +12,7 @@ from typer import Argument, Option, Typer
 from typer.core import TyperCommand, TyperGroup
 
 import gto
+from gto.constants import ASSIGNMENTS_PER_VERSION, VERSIONS_PER_STAGE
 from gto.exceptions import GTOException, NotImplementedInGTO, WrongArgs
 from gto.ui import EMOJI_FAIL, EMOJI_GTO, EMOJI_OK, bold, cli_echo, color, echo
 from gto.utils import format_echo, make_ready_to_serialize
@@ -181,10 +182,24 @@ app = Typer(
     add_completion=False,
 )
 
+# General Typer arguments and options
 arg_name = Argument(..., help="Artifact name")
 arg_version = Argument(..., help="Artifact version")
 arg_stage = Argument(..., help="Stage to assign")
+option_version = Option(None, "--version", help="Version to register")
+option_stage = Option(None, "--stage", help="Stage to assign")
+option_to_version = Option(
+    None, "--to-version", help="Version to use for stage assignment"
+)
+option_delete = Option(
+    False,
+    "-d",
+    "--delete",
+    is_flag=True,
+    help="Delete the git tag(s) instead of creating the new one",
+)
 
+# Typer options to control git-related operations
 option_rev = Option(None, "--rev", help="Repo revision to use", show_default=True)
 option_repo = Option(".", "-r", "--repo", help="Repository to use", show_default=True)
 option_all_branches = Option(
@@ -197,14 +212,45 @@ option_all_branches = Option(
 option_all_commits = Option(
     False, "-A", "--all-commits", is_flag=True, help="Read all commits"
 )
-option_all = Option(False, "--all", "-a", help="Return all versions sorted")
-option_name = Option(None, "--name", "-n", help="Artifact name", show_default=True)
-option_ascending = Option(
+option_message = Option(
+    None, "--message", "-m", help="Message to annotate git tag with"
+)
+option_force = Option(
     False,
-    "--ascending",
-    "--asc",
-    help="Show new first",
-    show_default=True,
+    "--force",
+    is_flag=True,
+    help="Create a git tag even if it already exists and is in effect",
+)
+
+
+def name_callback(  # pylint: disable=inconsistent-return-statements
+    ctx: typer.Context,
+    param: typer.CallbackParam,  # pylint: disable=unused-argument
+    value: str,
+):
+    if ctx.resilient_parsing:
+        return
+    allowed_values = ["auto", "true", "false"]
+    if value not in allowed_values:
+        raise typer.BadParameter(f"Only one of {allowed_values} is allowed")
+    return {"auto": None, "true": True, "false": False}[value]
+
+
+option_simple = Option(
+    "auto",
+    "--simple",
+    help="[auto, true, false] Use simple notation, e.g. rf#prod instead of rf#prod-5",
+    callback=name_callback,
+)
+
+# Typer options to control and filter the output
+option_all = Option(False, "--all", "-a", help="Return all versions sorted")
+option_registered_only = Option(
+    False,
+    "--registered-only",
+    "--ro",
+    is_flag=True,
+    help="Show only registered versions",
 )
 option_expected = Option(
     False,
@@ -214,16 +260,43 @@ option_expected = Option(
     help="Return exit code 1 if no result",
     show_default=True,
 )
-option_type_bool = Option(
+option_assignments_per_version = Option(
+    ASSIGNMENTS_PER_VERSION,
+    "--av",
+    "--assignments-per-version",
+    help="Show N last stages for each version. -1 for all",
+)
+option_versions_per_stage = Option(
+    VERSIONS_PER_STAGE,
+    "--vs",
+    "--versions-per-stage",
+    help="Show N last versions for each stage. -1 for all. Applied after 'assignments-per-version'",
+)
+
+# Typer options to format the output
+option_ascending = Option(
+    False,
+    "--ascending",
+    "--asc",
+    help="Show new first",
+    show_default=True,
+)
+option_show_name = Option(False, "--name", is_flag=True, help="Output artifact name")
+option_show_version = Option(
+    False, "--version", is_flag=True, help="Output artifact version"
+)
+option_show_event = Option(False, "--event", is_flag=True, help="Output the event")
+option_show_stage = Option(False, "--stage", is_flag=True, help="Output artifact stage")
+option_show_type = Option(
     False, "--type", is_flag=True, help="Show type", show_default=True
 )
-option_path_bool = Option(
+option_show_path = Option(
     False, "--path", is_flag=True, help="Show path", show_default=True
 )
-option_ref_bool = Option(
+option_show_ref = Option(
     False, "--ref", is_flag=True, help="Show ref", show_default=True
 )
-option_description_bool = Option(
+option_show_description = Option(
     False, "--description", is_flag=True, help="Show description", show_default=True
 )
 option_json = Option(
@@ -253,13 +326,6 @@ option_table = Option(
     is_flag=True,
     help="Print output in table format",
     show_default=True,
-)
-option_registered_only = Option(
-    False,
-    "--registered-only",
-    "--ro",
-    is_flag=True,
-    help="Show only registered versions",
 )
 
 
@@ -340,7 +406,7 @@ def gto_command(*args, section="other", aliases=None, parent=app, **kwargs):
                         )
                     )
                     echo(
-                        "Please report it here: <https://github.com/iterative/gto/issues>"
+                        "Please report it here running with '--traceback' flag: <https://github.com/iterative/gto/issues>"
                     )
                 raise typer.Exit(1) from e
             finally:
@@ -407,9 +473,7 @@ def register(
     version: Optional[str] = Option(
         None, "--version", "--ver", help="Version name in SemVer format"
     ),
-    message: Optional[str] = Option(
-        None, "--message", "-m", help="Message to annotate git tag with"
-    ),
+    message: Optional[str] = option_message,
     bump_major: bool = Option(
         False, "--bump-major", is_flag=True, help="Bump major version"
     ),
@@ -459,18 +523,9 @@ def assign(
         "--version",
         help="If you provide REF, this will be used to name new version",
     ),
-    message: Optional[str] = Option(
-        None, "--message", "-m", help="Message to annotate git tag with"
-    ),
-    simple: bool = Option(
-        False,
-        "--simple",
-        is_flag=True,
-        help="Use simple notation, e.g. rf#prod instead of rf#prod-5",
-    ),
-    force: bool = Option(
-        False, help="Assign even if version is already in required Stage"
-    ),
+    message: Optional[str] = option_message,
+    simple: str = option_simple,
+    force: bool = option_force,
     skip_registration: bool = Option(
         False,
         "--sr",
@@ -479,7 +534,7 @@ def assign(
         help="Don't register a version at specified commit",
     ),
 ):
-    """Move an artifact version to a specific stage
+    """Assign stage to specific artifact version
 
     Examples:
         Assign "nn" to "prod" at specific ref:
@@ -511,18 +566,76 @@ def assign(
         ref,
         name_version,
         message=message,
-        simple=simple,
+        simple=simple,  # type: ignore
         force=force,
         skip_registration=skip_registration,
         stdout=True,
     )
 
 
+@gto_command(section=CommandGroups.modifying)
+def deprecate(
+    repo: str = option_repo,
+    name: str = arg_name,
+    version: str = Argument(None, help="Artifact version"),
+    stage: str = Argument(None, help="Stage to unassign"),
+    message: Optional[str] = option_message,
+    simple: str = option_simple,
+    force: bool = option_force,
+    delete: bool = option_delete,
+):
+    """Deprecate artifact, deregister a version, or unassign a stage
+
+    Examples:
+        Deprecate an artifact:
+        $ gto deprecate nn
+
+        Deprecate a version:
+        $ gto deprecate nn v0.0.1
+
+        Unassign a stage:
+        $ gto deprecate nn v0.0.1 prod
+    """
+    if stage:
+        gto.api.unassign(
+            repo=repo,
+            name=name,
+            version=version,
+            stage=stage,
+            message=message,
+            simple=simple,  # type: ignore
+            force=force,
+            delete=delete,
+            stdout=True,
+        )
+    elif version:
+        gto.api.unregister(
+            repo=repo,
+            name=name,
+            version=version,
+            message=message,
+            simple=simple,  # type: ignore
+            force=force,
+            delete=delete,
+            stdout=True,
+        )
+    else:
+        gto.api.deprecate(
+            repo=repo,
+            name=name,
+            message=message,
+            simple=simple,  # type: ignore
+            force=force,
+            delete=delete,
+            stdout=True,
+        )
+
+
 @gto_command(section=CommandGroups.querying)
 def latest(
     repo: str = option_repo,
     name: str = arg_name,
-    ref: bool = option_ref_bool,
+    ref: bool = option_show_ref,
 ):
     """Find the latest version of artifact
 
@@ -532,9 +645,9 @@ def latest(
     latest_version = gto.api.find_latest_version(repo, name)
     if latest_version:
         if ref:
-            echo(latest_version.tag or latest_version.commit_hexsha)
+            echo(latest_version.ref or latest_version.commit_hexsha)
         else:
-            echo(latest_version.name)
+            echo(latest_version.version)
 
 
 @gto_command(section=CommandGroups.querying)
@@ -542,8 +655,9 @@ def which(
     repo: str = option_repo,
     name: str = arg_name,
     stage: str = arg_stage,
-    ref: bool = option_ref_bool,
-    all: bool = option_all,
+    ref: bool = option_show_ref,
+    assignments_per_version: int = option_assignments_per_version,
+    versions_per_stage: int = option_versions_per_stage,
     registered_only: bool = option_registered_only,
     # ascending: bool = option_ascending,
 ):
@@ -555,18 +669,19 @@ def which(
         Print git tag that did the assignment:
         $ gto which nn prod --ref
     """
-    version = gto.api.find_versions_in_stage(
-        repo, name, stage, all=all, registered_only=registered_only
+    versions = gto.api.find_versions_in_stage(
+        repo,
+        name,
+        stage,
+        assignments_per_version=assignments_per_version,
+        versions_per_stage=versions_per_stage,
+        registered_only=registered_only,
     )
-    if version:
-        if all:
-            # if ascending:
-            #     version.reverse()
-            format_echo([v.version for v in version], "lines")
-        elif ref:
-            echo(version.tag or version.commit_hexsha)
+    if versions:
+        if ref:
+            format_echo([v.ref for v in versions], "lines")
         else:
-            echo(version.version)
+            format_echo([v.version for v in versions], "lines")
 
 
 @gto_command(hidden=True)
@@ -591,17 +706,10 @@ def check_ref(
     repo: str = option_repo,
     ref: str = Argument(..., help="Git reference to analyze"),
     json: bool = option_json,
-    registration: bool = Option(
-        False, "--registration", is_flag=True, help="Check if ref registers a version"
-    ),
-    assignment: bool = Option(
-        False, "--assignment", is_flag=True, help="Check if ref assigns a stage"
-    ),
-    name: bool = Option(False, "--name", is_flag=True, help="Output artifact name"),
-    version: bool = Option(
-        False, "--version", is_flag=True, help="Output artifact version"
-    ),
-    stage: bool = Option(False, "--stage", is_flag=True, help="Output artifact stage"),
+    name: bool = option_show_name,
+    version: bool = option_show_version,
+    event: bool = option_show_event,
+    stage: bool = option_show_stage,
 ):
     """Find out the artifact version registered/assigned with ref
 
@@ -611,44 +719,28 @@ def check_ref(
         $ gto check-ref rf#prod --version
     """
     assert (
-        sum(bool(i) for i in (json, registration, assignment, name, version, stage))
-        <= 1
+        sum(bool(i) for i in (json, event, name, version, stage)) <= 1
     ), "Only one output formatting flags is allowed"
-    result = {
-        action: {name: version.dict() for name, version in found.items()}
-        for action, found in gto.api.check_ref(repo, ref).items()
-    }
-    version_dict = list(result["version"].values())[0] if result["version"] else {}
-    stage_dict = list(result["stage"].values())[0] if result["stage"] else {}
+    result = gto.api.check_ref(repo, ref)
+    if len(result) > 1:
+        NotImplementedInGTO("Checking refs that created 1+ events is not supported")
+    if len(result) == 0:
+        return
+    found_event = result[0]
     if json:
-        format_echo(result, "json")
+        format_echo(found_event.dict_state(exclude={"priority", "addition"}), "json")
     elif name:
-        if version_dict:
-            echo(version_dict["artifact"])
-        if stage_dict:
-            echo(stage_dict["artifact"])
+        format_echo(found_event.artifact, "line")
     elif version:
-        if version_dict:
-            echo(version_dict["name"])
-        if stage_dict:
-            echo(stage_dict["version"])
+        if hasattr(found_event, "version"):
+            format_echo(found_event.version, "line")
     elif stage:
-        if version_dict:
-            raise NotImplementedInGTO(
-                "--stage is not implemented for version assignment git tag"
-            )
-        if stage_dict:
-            echo(stage_dict["stage"])
-    elif (registration or not assignment) and version_dict:
-        echo(
-            f"""{EMOJI_OK} Version "{version_dict["name"]}" of artifact """
-            f""""{version_dict["artifact"]}" was registered"""
-        )
-    elif (assignment or not registration) and stage_dict:
-        echo(
-            f"""{EMOJI_OK} Stage "{stage_dict["stage"]}" was assigned to version"""
-            f'''"{stage_dict["version"]}" of artifact "{stage_dict["artifact"]}"'''
-        )
+        if hasattr(found_event, "stage"):
+            format_echo(found_event.stage, "line")
+    elif event:
+        format_echo(found_event.event, "line")
+    else:
+        echo(f"{EMOJI_OK} {found_event}")
 
 
 @gto_command(section=CommandGroups.querying)
@@ -661,9 +753,8 @@ def show(
     plain: bool = option_plain,
     name_only: bool = option_name_only,
     registered_only: bool = option_registered_only,
-    last_stage: bool = Option(
-        False, "--ls", "--last-stage", help="Show only the last stage for each version"
-    ),
+    assignments_per_version: int = option_assignments_per_version,
+    versions_per_stage: int = option_versions_per_stage,
 ):
     """Show the registry state
 
@@ -688,7 +779,8 @@ def show(
             all_branches=all_branches,
             all_commits=all_commits,
             registered_only=registered_only,
-            last_stage=last_stage,
+            assignments_per_version=assignments_per_version,
+            versions_per_stage=versions_per_stage,
             table=False,
         )
         if name_only:
@@ -703,7 +795,8 @@ def show(
                 all_branches=all_branches,
                 all_commits=all_commits,
                 registered_only=registered_only,
-                last_stage=last_stage,
+                assignments_per_version=assignments_per_version,
+                versions_per_stage=versions_per_stage,
                 table=True,
                 truncate_hexsha=True,
             ),
@@ -711,16 +804,6 @@ def show(
             format_table="plain" if plain else "fancy_outline",
             if_empty="Nothing found in the current workspace",
         )
-
-
-# Actions = StrEnum("Actions", ALIAS.REGISTER + ALIAS.PROMOTE, type=str)  # type: ignore
-# action: List[Actions] = Argument(None),  # type: ignore
-# @click.option(
-#     "--action",
-#     required=False,
-#     type=click.Choice(ALIAS.COMMIT + ALIAS.REGISTER + ALIAS.PROMOTE),
-#     nargs=-1,
-# )
 
 
 @gto_command(section=CommandGroups.querying)
@@ -834,9 +917,9 @@ def describe(
     repo: str = option_repo,
     name: str = arg_name,
     rev: str = option_rev,
-    type: Optional[bool] = option_type_bool,
-    path: Optional[bool] = option_path_bool,
-    description: Optional[bool] = option_description_bool,
+    type: Optional[bool] = option_show_type,
+    path: Optional[bool] = option_show_path,
+    description: Optional[bool] = option_show_description,
 ):
     """Display enrichments for an artifact
 

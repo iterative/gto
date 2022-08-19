@@ -8,11 +8,10 @@ import git
 import pytest
 
 import gto
-from gto.constants import STAGE, VERSION, Action
 from gto.exceptions import PathIsUsed, WrongArgs
 from gto.tag import find
 from gto.versions import SemVer
-from tests.utils import _check_obj
+from tests.utils import check_obj
 
 
 def test_empty_index(empty_git_repo: Tuple[git.Repo, Callable]):
@@ -43,7 +42,7 @@ def test_add_remove(empty_git_repo: Tuple[git.Repo, Callable]):
         gto.api.annotate(repo.working_dir, "other-name", path=path)
     index = gto.api._get_index(repo.working_dir).get_index()
     assert name in index
-    _check_obj(
+    check_obj(
         index.state[name],
         dict(
             type=type,
@@ -86,12 +85,12 @@ def test_api_info_commands_repo_with_artifact(
     gto.api.history(repo.working_dir)
 
 
-def test_register(repo_with_artifact):
+def test_register_deregister(repo_with_artifact):
     repo, name = repo_with_artifact
     vname1, vname2 = "v1.0.0", "v1.0.1"
     gto.api.register(repo.working_dir, name, "HEAD", vname1)
     latest = gto.api.find_latest_version(repo.working_dir, name)
-    assert latest.name == vname1
+    assert latest.version == vname1
     gto.api.annotate(
         repo.working_dir,
         "something-irrelevant",
@@ -99,7 +98,9 @@ def test_register(repo_with_artifact):
         "anything",
         must_exist=False,
     )
-    repo.index.commit("Irrelevant action to create a git commit")
+    repo.index.commit(
+        "Irrelevant action to create a git commit to register another version"
+    )
     message = "Some message"
     author = "GTO"
     author_email = "gto@iterative.ai"
@@ -112,10 +113,14 @@ def test_register(repo_with_artifact):
         author_email=author_email,
     )
     latest = gto.api.find_latest_version(repo.working_dir, name)
-    assert latest.name == vname2
+    assert latest.version == vname2
     assert latest.message == message
     assert latest.author == author
     assert latest.author_email == author_email
+
+    gto.api.unregister(repo=repo.working_dir, name=name, version=vname2)
+    latest = gto.api.find_latest_version(repo.working_dir, name)
+    assert latest.version == vname1
 
 
 def test_assign(repo_with_artifact: Tuple[git.Repo, str]):
@@ -126,7 +131,7 @@ def test_assign(repo_with_artifact: Tuple[git.Repo, str]):
     message = "some msg"
     author = "GTO"
     author_email = "gto@iterative.ai"
-    gto.api.assign(
+    event = gto.api.assign(
         repo.working_dir,
         name,
         stage,
@@ -136,9 +141,10 @@ def test_assign(repo_with_artifact: Tuple[git.Repo, str]):
         author=author,
         author_email=author_email,
     )
-    assignment = gto.api.find_versions_in_stage(repo.working_dir, name, stage)
-    _check_obj(
-        assignment,
+    assignments = gto.api.find_versions_in_stage(repo.working_dir, name, stage)
+    assert len(assignments) == 1
+    check_obj(
+        assignments[0].dict_state(),
         dict(
             artifact=name,
             version="v0.0.1",
@@ -147,8 +153,10 @@ def test_assign(repo_with_artifact: Tuple[git.Repo, str]):
             author_email=author_email,
             message=message,
             commit_hexsha=repo.commit().hexsha,
+            is_active=True,
+            ref=event.ref,
         ),
-        {"created_at", "assignments", "tag"},
+        {"created_at", "assignments", "unassignments", "tag", "activated_at"},
     )
 
 
@@ -165,8 +173,9 @@ def test_assign_skip_registration(repo_with_artifact: Tuple[git.Repo, str]):
             skip_registration=True,
         )
     gto.api.assign(repo.working_dir, name, stage, ref="HEAD", skip_registration=True)
-    assignment = gto.api.find_versions_in_stage(repo.working_dir, name, stage)
-    assert not SemVer.is_valid(assignment.version)
+    assignments = gto.api.find_versions_in_stage(repo.working_dir, name, stage)
+    assert len(assignments) == 1
+    assert not SemVer.is_valid(assignments[0].version)
 
 
 def test_assign_force_is_needed(repo_with_artifact: Tuple[git.Repo, str]):
@@ -212,20 +221,19 @@ def test_check_ref_detailed(repo_with_artifact: Tuple[git.Repo, Callable]):
     ):
         gto.api.register(repo, name=NAME, ref="HEAD", version=SEMVER)
 
-    info = gto.api.check_ref(repo, f"{NAME}@{SEMVER}")[VERSION][NAME]
-    _check_obj(
-        info,
+    events = gto.api.check_ref(repo, f"{NAME}@{SEMVER}")
+    assert len(events) == 1, "Should return one event"
+    check_obj(
+        events[0].dict_state(),
         {
+            "event": "registration",
             "artifact": NAME,
-            "name": SEMVER,
+            "version": SEMVER,
             "author": GIT_COMMITTER_NAME,
             "author_email": GIT_COMMITTER_EMAIL,
-            "discovered": False,
             "tag": f"{NAME}@{SEMVER}",
-            "assignments": [],
-            "enrichments": [],
         },
-        skip_keys={"commit_hexsha", "created_at", "message"},
+        skip_keys={"commit_hexsha", "created_at", "message", "priority", "addition"},
     )
 
 
@@ -239,15 +247,10 @@ def test_check_ref_multiple_showcase(showcase):
         second_commit,
     ) = showcase
 
-    tags = find(repo=repo, action=Action.REGISTER)
-    for tag in tags:
-        info = list(gto.api.check_ref(repo, tag.name)[VERSION].values())[0]
-        assert info.tag == tag.name
-
-    tags = find(repo=repo, action=Action.ASSIGN)
-    for tag in tags:
-        info = list(gto.api.check_ref(repo, tag.name)[STAGE].values())[0]
-        assert info.tag == tag.name
+    for tag in find(repo=repo):
+        events = gto.api.check_ref(repo, tag.name)
+        assert len(events) == 1, "Should return one event"
+        assert events[0].ref == tag.name
 
 
 def test_check_ref_catch_the_bug(repo_with_artifact: Tuple[git.Repo, Callable]):
@@ -261,8 +264,9 @@ def test_check_ref_catch_the_bug(repo_with_artifact: Tuple[git.Repo, Callable]):
         [assignment1, assignment2, assignment3],
         [f"{NAME}#staging#1", f"{NAME}#prod#2", f"{NAME}#dev#3"],
     ):
-        info = gto.api.check_ref(repo, tag)[STAGE][NAME]
-        assert info.tag == assignment.tag == tag
+        events = gto.api.check_ref(repo, tag)
+        assert len(events) == 1, events
+        assert events[0].ref == assignment.tag == tag
 
 
 def test_is_not_gto_repo(empty_git_repo):

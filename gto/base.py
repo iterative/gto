@@ -1,61 +1,340 @@
 from datetime import datetime
-from typing import Dict, FrozenSet, List, Optional, Union
+from typing import Any, Dict, FrozenSet, List, Optional, Sequence, Union
 
 import git
 from pydantic import BaseModel
 
 from gto.config import RegistryConfig
-from gto.constants import Action, VersionSort
-from gto.ext import Enrichment
+from gto.constants import (
+    ASSIGNMENTS_PER_VERSION,
+    VERSIONS_PER_STAGE,
+    Action,
+    VersionSort,
+)
 from gto.versions import SemVer
 
-from .exceptions import ArtifactNotFound, ManyVersions, VersionRequired
+from .exceptions import (
+    ArtifactNotFound,
+    ManyVersions,
+    NoStageForVersion,
+    NotImplementedInGTO,
+    VersionRequired,
+    WrongArgs,
+)
 
 
-class BaseAssignment(BaseModel):
+# EVENTS: deprecation, registration, deregistration, assignment, unassignment
+class BaseEvent(BaseModel):
+    priority: int
+    addition: bool
+    # some fields here are implementation details of tag-based
+    # if we add other approaches beside tags, we'll need to fix this
     artifact: str
-    version: str
-    stage: str
     created_at: datetime
     author: str
-    author_email: Optional[str]  # remove as optional later
-    message: Optional[str]  # remove as optional later
+    author_email: str
+    message: str
     commit_hexsha: str
+
+    @property
+    def event(self):
+        return self.__class__.__name__.lower()
+
+    def dict_state(self, exclude=None):
+        state = self.dict(exclude=exclude)
+        state["event"] = self.event
+        return state
+
+    @property
+    def ref(self):
+        return getattr(self, "tag", self.commit_hexsha)
+
+
+class Commit(BaseEvent):
+    priority = 0
+    addition = True
+    version: str
+    enrichments: List[Any]
+    committer: str
+    committer_email: str
+
+    def __str__(self):
+        return f'Artifact "{self.artifact}" is annotated'
+
+
+class Creation(BaseEvent):
+    priority = 1
+    addition = True
     tag: str
 
+    def __str__(self):
+        return f'Artifact "{self.artifact}" was created'
 
-class BaseVersion(BaseModel):
+
+class Deprecation(BaseEvent):
+    priority = 2
+    addition = False
+    tag: str
+
+    def __str__(self):
+        return f'Artifact "{self.artifact}" was deprecated'
+
+
+class Registration(BaseEvent):
+    priority = 3
+    addition = True
+    tag: str
+    version: str
+
+    def __str__(self):
+        return f'Version "{self.version}" of artifact "{self.artifact}" was registered'
+
+
+class Deregistration(BaseEvent):
+    priority = 4
+    addition = False
+    tag: str
+    version: str
+
+    def __str__(self):
+        return (
+            f'Version "{self.version}" of artifact "{self.artifact}" was deregistered'
+        )
+
+
+class Assignment(BaseEvent):
+    priority = 5
+    addition = True
+    tag: str
+    version: str
+    stage: str
+
+    def __str__(self) -> str:
+        return f'Stage "{self.stage}" was assigned to version "{self.version}" of artifact "{self.artifact}"'
+
+
+class Unassignment(BaseEvent):
+    priority = 6
+    addition = False
+    tag: str
+    version: str
+    stage: str
+
+    def __str__(self) -> str:
+        return f'Stage "{self.stage}" was unassigned from version "{self.version}" of artifact "{self.artifact}"'
+
+
+# ENTITIES: Artifact, Version, Stage
+class BaseObject(BaseModel):
     artifact: str
-    name: str
-    created_at: datetime
-    author: str
-    author_email: Optional[str]  # remove as optional later
-    message: Optional[str]  # remove as optional later
+
+    def add_event(self, event: BaseEvent):
+        raise NotImplementedError()
+
+    def get_events(
+        self, direct=True, indirect=True, ascending: bool = False
+    ) -> Sequence[BaseEvent]:
+        raise NotImplementedError()
+
+    @property
+    def is_active(self):
+        raise NotImplementedError()
+
+    @property
+    def activated_at(self):
+        raise NotImplementedError()
+
+    @property
+    def authoring_event(self):
+        addition_events = [
+            e for e in self.get_events(direct=True, indirect=False) if e.addition
+        ]
+        if addition_events:
+            return addition_events[0]
+        events = self.get_events(direct=False, indirect=True)
+        except_enrichment = [e for e in events if e.event != "enrichment"]
+        if except_enrichment:
+            return except_enrichment[0]
+        return events[0]
+
+    @property
+    def created_at(self):
+        return self.authoring_event.created_at
+
+    @property
+    def author(self):
+        return self.authoring_event.author
+
+    @property
+    def author_email(self):
+        return self.authoring_event.author_email
+
+    @property
+    def message(self):
+        return self.authoring_event.message
+
+    @property
+    def ref(self):
+        return self.authoring_event.ref
+
+    def dict_state(self, exclude=None):
+        version = self.dict(exclude=exclude)
+        version["is_active"] = self.is_active
+        version["activated_at"] = self.activated_at
+        version["created_at"] = self.created_at
+        version["author"] = self.author
+        version["author_email"] = self.author_email
+        version["message"] = self.message
+        version["ref"] = self.ref
+        return version
+
+
+class VStage(BaseObject):
     commit_hexsha: str
-    discovered: bool = False
-    tag: Optional[str] = None
-    assignments: List[BaseAssignment] = []
-    enrichments: List[Enrichment] = []
+    version: str
+    stage: str
+    assignments: List[Assignment] = []
+    unassignments: List[Unassignment] = []
+
+    def add_event(self, event: BaseEvent):
+        if event in self.get_events():
+            return event
+        if isinstance(event, Assignment):
+            self.assignments.append(event)
+            self.assignments.sort(key=lambda e: e.created_at)
+        elif isinstance(event, Unassignment):
+            self.unassignments.append(event)
+            self.unassignments.sort(key=lambda e: e.created_at)
+        else:
+            raise NotImplementedInGTO(f"Unknown event {event} of class {type(event)}")
+        return event
+
+    def get_events(
+        self, direct=True, indirect=True, ascending=False
+    ) -> Sequence[BaseEvent]:  # pylint: disable=unused-argument
+        return sorted(
+            self.assignments + self.unassignments if direct else [], key=lambda e: e.created_at  # type: ignore
+        )[:: 1 if ascending else -1]
+
+    @property
+    def is_active(self):
+        return isinstance(self.get_events()[0], Assignment)
+
+    @property
+    def activated_at(self):
+        if isinstance(self.get_events()[0], Assignment):
+            return self.get_events()[0].created_at
+        return None
+
+    def dict_state(self, exclude=None):
+        state = super().dict_state(exclude=exclude)
+        state["assignments"] = [a.dict_state() for a in self.assignments]
+        state["unassignments"] = [a.dict_state() for a in self.unassignments]
+        return state
+
+
+class Version(BaseObject):
+    commit_hexsha: str
+    version: str
+    enrichments: List[Commit] = []
+    registrations: List[Registration] = []
+    deregistrations: List[Deregistration] = []
+    stages: Dict[str, VStage] = {}
+
+    def add_event(self, event: BaseEvent):
+        if event in self.get_events():
+            return event
+        if isinstance(event, Registration):
+            self.registrations.append(event)
+            self.registrations.sort(key=lambda e: e.created_at)
+        elif isinstance(event, Deregistration):
+            self.deregistrations.append(event)
+            self.deregistrations.sort(key=lambda e: e.created_at)
+        elif isinstance(event, Commit):
+            self.enrichments.append(event)
+            self.enrichments.sort(key=lambda e: e.created_at)
+        elif isinstance(event, (Assignment, Unassignment)):
+            self.get_vstage(event.stage, create_new=True).add_event(event)
+        else:
+            raise NotImplementedInGTO(f"Unknown event {event} of class {type(event)}")
+        return event
+
+    def get_events(self, direct=True, indirect=True, ascending=False):
+        return sorted(
+            (self.registrations + self.deregistrations if direct else [])
+            + (
+                self.enrichments
+                + [e for s in self.stages.values() for e in s.get_events()]
+                if indirect
+                else []
+            ),
+            key=lambda e: e.created_at,
+        )[:: 1 if ascending else -1]
+
+    @property
+    def is_active(self):
+        direct_events = self.get_events(direct=True, indirect=False)
+        if direct_events:
+            return isinstance(direct_events[0], Registration)
+        indirect_events = self.get_events(direct=False, indirect=True)
+        if indirect_events:
+            return True
+        return False
+
+    @property
+    def activated_at(self):
+        # TODO: handle the case with deregistration?
+        if self.registrations:
+            return self.registrations[0].created_at
+        return self.get_events(ascending=True)[0].created_at
 
     @property
     def is_registered(self):
         """Tells if this is an explicitly registered version"""
-        return self.tag is not None  # SemVer.is_valid(self.name)
+        return len(self.registrations) > 0  # SemVer.is_valid(self.name)
 
     @property
-    def version(self):
-        # TODO: this should be read from config, how to pass it down here?
-        return SemVer(self.name)
+    def discovered(self):
+        return len(self.get_events(direct=True, indirect=False)) == 0
 
-    def add_assignment(self, assignment: BaseAssignment):
-        self.assignments.append(assignment)
-        self.assignments.sort(key=lambda p: p.created_at)
+    @property
+    def get_enrichments_info(self):
+        if len(self.enrichments) > 1:
+            raise NotImplementedInGTO(
+                "Multiple enrichments for a single version are not supported"
+            )
+        return self.enrichments[0].enrichments
 
-    def dict_status(self):
-        version = self.dict(exclude={"assignments"})
-        version["assignments"] = (
-            [a.dict() for a in self.assignments] if self.assignments else None
-        )
+    @property
+    def semver(self):
+        return SemVer(self.version)
+
+    def get_vstage(self, stage, create_new=False):
+        if create_new and stage not in self.stages:
+            self.stages[stage] = VStage(
+                artifact=self.artifact,
+                version=self.version,
+                stage=stage,
+                commit_hexsha=self.commit_hexsha,
+            )
+        if stage in self.stages:
+            return self.stages[stage]
+        raise NoStageForVersion(self.artifact, self.version, stage)
+
+    def get_vstages(self, active_only=True, ascending=False):
+        return sorted(
+            [s for s in self.stages.values() if not active_only or s.is_active],
+            key=lambda s: s.activated_at,
+        )[:: 1 if ascending else -1]
+
+    def dict_state(self, exclude=None, assignments_per_version=ASSIGNMENTS_PER_VERSION):
+        if assignments_per_version < -1:
+            raise WrongArgs("'assignments_per_version' must be >= -1")
+        version = super().dict_state(exclude=exclude)
+        version["discovered"] = self.discovered
+        version["stages"] = [stage.dict_state() for stage in self.get_vstages()]
+        if assignments_per_version >= 0:
+            version["stages"] = version["stages"][:assignments_per_version]
         return version
 
 
@@ -63,9 +342,11 @@ def sort_versions(
     versions,
     sort=VersionSort.SemVer,
     ascending=False,
-    version="name",
+    version="version",
     timestamp="created_at",
 ):
+    """This function is used both in Studio and in GTO"""
+
     def get(obj, key):
         if isinstance(obj, dict):
             return obj[key]
@@ -92,29 +373,63 @@ def sort_versions(
             versions,
             key=lambda x: get(x, timestamp),
         )[:: 1 if ascending else -1]
-    # if ascending:
-    #     sorted_versions.reverse()
     return sorted_versions
 
 
-class BaseArtifact(BaseModel):
-    name: str
-    versions: List[BaseVersion]
+class Artifact(BaseObject):
+    versions: List[Version]
+    creations: List[Creation] = []
+    deprecations: List[Deprecation] = []
+
+    def add_event(self, event: BaseEvent):
+        if event in self.get_events():
+            return event
+        if isinstance(event, Creation):
+            self.creations.append(event)
+            self.creations.sort(key=lambda e: e.created_at)
+        elif isinstance(event, Deprecation):
+            self.deprecations.append(event)
+            self.deprecations.sort(key=lambda e: e.created_at)
+        elif isinstance(
+            event, (Registration, Deregistration, Assignment, Unassignment, Commit)
+        ):
+            self.find_version(
+                event.version, commit_hexsha=event.commit_hexsha, create_new=True
+            ).add_event(  # type: ignore
+                event
+            )
+        else:
+            raise NotImplementedInGTO(f"Unknown event {event} of class {type(event)}")
+        return event
+
+    def get_events(
+        self, direct=True, indirect=True, ascending=False
+    ) -> Sequence[BaseEvent]:
+        return sorted(
+            (self.creations + self.deprecations if direct else [])  # type: ignore
+            + ([e for v in self.versions for e in v.get_events()] if indirect else []),
+            key=lambda e: e.created_at,
+        )[:: 1 if ascending else -1]
 
     @property
-    def stages(self):
-        return [
-            assignment
-            for version in self.versions
-            for assignment in version.assignments
-        ]
+    def is_active(self):
+        if len(self.get_events()) == 0:
+            return False
+        return not isinstance(self.get_events()[0], Deprecation)
+
+    @property
+    def activated_at(self):
+        # TODO: handle the case with deprecation
+        if self.creations:
+            return self.creations[0].created_at
+        return self.get_events(ascending=True)[0].created_at
 
     @property
     def unique_stages(self):
-        return {assignment.stage for assignment in self.stages}
+        return set(self.get_vstages())
 
     def __repr__(self) -> str:
-        versions = ", ".join(f"'{v.name}'" for v in self.versions)
+        versions = ", ".join(f"'{v.version}'" for v in self.versions)
         stages = ", ".join(f"'{p}'" for p in self.unique_stages)
         return f"Artifact(versions=[{versions}], stages=[{stages}])"
 
@@ -124,19 +439,22 @@ class BaseArtifact(BaseModel):
         include_discovered=False,
         sort=VersionSort.SemVer,
         ascending=False,
-    ) -> List[BaseVersion]:
+    ) -> List[Version]:
         versions = [
             v
             for v in self.versions
-            if (v.is_registered and not v.discovered)
-            or (include_discovered and v.discovered)
-            or (include_non_explicit and not v.is_registered)
+            if v.is_active
+            and (
+                (v.is_registered and not v.discovered)
+                or (include_discovered and v.discovered)
+                or (include_non_explicit and not v.is_registered)
+            )
         ]
         return sort_versions(versions, sort=sort, ascending=ascending)
 
     def get_latest_version(
         self, registered_only=False, sort=VersionSort.SemVer
-    ) -> Optional[BaseVersion]:
+    ) -> Optional[Version]:
         versions = self.get_versions(
             include_non_explicit=not registered_only, sort=sort
         )
@@ -144,12 +462,17 @@ class BaseArtifact(BaseModel):
             return versions[0]
         return None
 
-    def get_assignments(
+    def get_vstages(
         self,
         registered_only=False,
-        last_stage=False,
+        assignments_per_version=ASSIGNMENTS_PER_VERSION,
+        versions_per_stage=VERSIONS_PER_STAGE,
         sort=VersionSort.SemVer,
-    ) -> Dict[str, Union[BaseAssignment, List[BaseAssignment]]]:
+    ):
+        if assignments_per_version < -1:
+            raise WrongArgs("'assignments_per_version' must be >= -1")
+        if versions_per_stage < -1:
+            raise WrongArgs("'versions_per_stage' must be >=-1")
         versions = self.get_versions(
             include_non_explicit=not registered_only, sort=sort
         )
@@ -157,61 +480,27 @@ class BaseArtifact(BaseModel):
             # for this sort we need to sort not versions, as above ^
             # but assignments themselves
             raise NotImplementedError("Sorting by timestamp is not implemented yet")
-        stages: Dict[str, List[BaseAssignment]] = {}
+        stages: Dict[str, List[VStage]] = {}
         for version in versions:
             for a in (
-                version.assignments[::-1][:1] if last_stage else version.assignments
+                version.get_vstages(ascending=True)[:assignments_per_version]
+                if assignments_per_version > -1
+                else version.get_vstages(ascending=True)
             ):
                 if a.stage not in stages:
                     stages[a.stage] = []
+                if (
+                    versions_per_stage > -1  # pylint: disable=chained-comparison
+                    and len(stages[a.stage]) >= versions_per_stage
+                ):
+                    continue
                 if a.version not in [i.version for i in stages[a.stage]]:
                     stages[a.stage].append(a)
-        return stages  # type: ignore
-
-    def add_version(self, version: BaseVersion):
-        self.versions.append(version)
-
-    def add_assignment(self, assignment: BaseAssignment):
-        self.find_version(name=assignment.version).add_assignment(assignment)  # type: ignore
-
-    def update_enrichments(self, version, enrichments):
-        self.find_version(
-            name=version, include_discovered=True
-        ).enrichments = enrichments
+        return stages
 
     @property
     def discovered(self):
         return any(not v.discovered for v in self.versions)
-
-    # @overload
-    # def find_version(
-    #     self,
-    #     name: str = None,
-    #     commit_hexsha: str = None,
-    #     raise_if_not_found: Literal[True] = ...,
-    #     allow_multiple: Literal[False] = ...,
-    # ) -> BaseVersion:
-    #     ...
-
-    # @overload
-    # def find_version(
-    #     self,
-    #     name: str = None,
-    #     commit_hexsha: str = None,
-    #     raise_if_not_found: Literal[False] = ...,
-    #     allow_multiple: Literal[False] = ...,
-    # ) -> Optional[BaseVersion]:
-    #     ...
-
-    # @overload
-    # def find_version(
-    #     self,
-    #     name: str = None,
-    #     commit_hexsha: str = None,
-    #     raise_if_not_found: Literal[False] = ...,
-    #     allow_multiple: Literal[True] = ...,
-    # ) -> List[BaseVersion]:
-    #     ...
 
     def find_version(
         self,
@@ -220,23 +509,31 @@ class BaseArtifact(BaseModel):
         raise_if_not_found: bool = False,
         allow_multiple=False,
         include_discovered=False,
-    ) -> Union[None, BaseVersion, List[BaseVersion]]:
+        create_new=False,
+    ) -> Union[None, Version, List[Version]]:
         versions = [
             v
             for v in self.versions
-            if (v.name == name if name else True)
+            if (v.version == name if name else True)
             and (v.commit_hexsha == commit_hexsha if commit_hexsha else True)
             and (True if include_discovered else not v.discovered)
         ]
-
-        if allow_multiple:
+        if create_new and not versions:
+            v = Version(
+                artifact=self.artifact,
+                version=name or commit_hexsha,
+                commit_hexsha=commit_hexsha,
+            )
+            self.versions.append(v)
+            versions = [v]
+        if allow_multiple and versions:
             return versions
         if raise_if_not_found and not versions:
-            raise VersionRequired(name=self.name)
+            raise VersionRequired(name=self.artifact)
         if len(versions) > 1:
             raise ManyVersions(
-                name=self.name,
-                versions=[v.name for v in versions],
+                name=self.artifact,
+                versions=[v.version for v in versions],
             )
         return versions[0] if versions else None
 
@@ -250,31 +547,29 @@ class BaseArtifact(BaseModel):
                 raise_if_not_found=True,
                 allow_multiple=True,
             )
-            if (v.created_at <= latest_datetime if latest_datetime else True)  # type: ignore
+            if (v.activated_at <= latest_datetime if latest_datetime else True)  # type: ignore
         ][-1]
 
 
 class BaseRegistryState(BaseModel):
-    artifacts: Dict[str, BaseArtifact] = {}
+    artifacts: Dict[str, Artifact] = {}
 
     class Config:
         arbitrary_types_allowed = True
 
     def add_artifact(self, name):
-        self.artifacts[name] = BaseArtifact(name=name, versions=[])
+        self.artifacts[name] = Artifact(artifact=name, versions=[])
 
-    def update_artifact(self, artifact: BaseArtifact):
-        self.artifacts[artifact.name] = artifact
+    def update_artifact(self, artifact: Artifact):
+        self.artifacts[artifact.artifact] = artifact
 
     def get_artifacts(self):
         return self.artifacts
 
-    def find_artifact(self, name: str, create_new=False) -> BaseArtifact:
-        if not name:
-            raise ValueError("Artifact name is required")
+    def find_artifact(self, name: str, create_new=False) -> Artifact:
         if name not in self.artifacts:
             if create_new:
-                self.artifacts[name] = BaseArtifact(name=name, versions=[])
+                self.artifacts[name] = Artifact(artifact=name, versions=[])
             else:
                 raise ArtifactNotFound(name)
         return self.artifacts[name]
@@ -291,24 +586,25 @@ class BaseRegistryState(BaseModel):
         )
 
     def which(
-        self, name, stage, raise_if_not_found=True, all=False, registered_only=False
+        self,
+        name,
+        stage,
+        raise_if_not_found=True,
+        assignments_per_version=None,
+        versions_per_stage=None,
+        registered_only=False,
     ):
         """Return stage active in specific stage"""
-        assigned = self.find_artifact(name).get_assignments(
-            registered_only=registered_only
+        assigned = self.find_artifact(name).get_vstages(
+            registered_only=registered_only,
+            assignments_per_version=assignments_per_version,
+            versions_per_stage=versions_per_stage,
         )
         if stage in assigned:
-            return assigned[stage] if all else assigned[stage][0]
+            return assigned[stage]
         if raise_if_not_found:
             raise ValueError(f"Stage {stage} not found for {name}")
         return None
-
-    def sort(self):
-        for name in self.artifacts:  # pylint: disable=consider-using-dict-items
-            self.artifacts[name].versions.sort(key=lambda x: (x.created_at, x.name))
-            self.artifacts[name].stages.sort(
-                key=lambda x: (x.created_at, x.version, x.stage)
-            )
 
 
 class BaseManager(BaseModel):
@@ -322,15 +618,4 @@ class BaseManager(BaseModel):
     def update_state(
         self, state: BaseRegistryState
     ) -> BaseRegistryState:  # pylint: disable=no-self-use
-        raise NotImplementedError
-
-    # better to uncomment this for typing, but it breaks the pylint
-
-    # def register(self, name, version, ref, message):
-    #     raise NotImplementedError
-
-    # def assign(self, name, stage, ref, message):
-    #     raise NotImplementedError
-
-    def check_ref(self, ref: str, state: BaseRegistryState):
         raise NotImplementedError
