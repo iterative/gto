@@ -81,47 +81,29 @@ def remove(repo: Union[str, Repo], name: str):
     return init_index_manager(path=repo).remove(name)
 
 
-def tag(  # pylint: disable=too-many-locals
+def register(
     repo: Union[str, Repo],
     name: str,
-    ref: str = None,
+    ref: str,
     version: str = None,
-    stage: str = None,
-    to_version: str = None,
     message: str = None,
+    simple: bool = None,
+    force: bool = False,
     bump_major: bool = False,
     bump_minor: bool = False,
     bump_patch: bool = False,
     stdout: bool = False,
     author: Optional[str] = None,
     author_email: Optional[str] = None,
-    simple: Optional[bool] = None,
-    force: bool = False,
-    skip_registration: bool = False,
 ):
-    """Register new artifact version or assign stage to specific artifact version"""
-    if stage and version:
-        raise WrongArgs("Can't register both version and assign a stage")
-    if stage:
-        return GitRegistry.from_repo(repo).assign(
-            name,
-            stage,
-            version=to_version,
-            ref=ref,
-            message=message,
-            simple=simple if simple is not None else False,
-            force=force,
-            skip_registration=skip_registration,
-            stdout=stdout,
-            author=author,
-            author_email=author_email,
-        )
+    """Register new artifact version"""
     return GitRegistry.from_repo(repo).register(
         name=name,
         ref=ref,
         version=version,
         message=message,
         simple=simple if simple is not None else True,
+        force=force,
         bump_major=bump_major,
         bump_minor=bump_minor,
         bump_patch=bump_patch,
@@ -131,10 +113,41 @@ def tag(  # pylint: disable=too-many-locals
     )
 
 
-def untag(
+def assign(
     repo: Union[str, Repo],
     name: str,
+    stage: str,
+    version: str = None,
     ref: str = None,
+    name_version: str = None,
+    message: str = None,
+    simple: bool = False,
+    force: bool = False,
+    skip_registration: bool = False,
+    stdout: bool = False,
+    author: Optional[str] = None,
+    author_email: Optional[str] = None,
+):
+    """Assign stage to specific artifact version"""
+    return GitRegistry.from_repo(repo).assign(
+        name=name,
+        stage=stage,
+        version=version,
+        ref=ref,
+        name_version=name_version,
+        message=message,
+        simple=simple,
+        force=force,
+        skip_registration=skip_registration,
+        stdout=stdout,
+        author=author,
+        author_email=author_email,
+    )
+
+
+def deprecate(
+    repo: Union[str, Repo],
+    name: str,
     version: str = None,
     stage: str = None,
     message: str = None,
@@ -145,50 +158,33 @@ def untag(
     author: Optional[str] = None,
     author_email: Optional[str] = None,
 ):
-    "Deregister version or unassign stage"
-    if stage is not None:
+    if stage:
         return GitRegistry.from_repo(repo).unassign(
-            name,
-            stage,
-            version,
-            ref,
+            name=name,
+            stage=stage,
+            version=version,
             message=message,
+            stdout=stdout,
             simple=simple if simple is not None else False,
             force=force,
             delete=delete,
-            stdout=stdout,
             author=author,
             author_email=author_email,
         )
-    return GitRegistry.from_repo(repo).deregister(
-        name=name,
-        ref=ref,
-        version=version,
-        message=message,
-        simple=simple if simple is not None else True,
-        force=force,
-        delete=delete,
-        stdout=stdout,
-        author=author,
-        author_email=author_email,
-    )
-
-
-def deprecate(
-    repo: Union[str, Repo],
-    name: str,
-    ref: str = None,
-    message: str = None,
-    stdout: bool = False,
-    simple: Optional[bool] = None,
-    force: bool = False,
-    delete: bool = False,
-    author: Optional[str] = None,
-    author_email: Optional[str] = None,
-):
+    if version:
+        return GitRegistry.from_repo(repo).deregister(
+            name=name,
+            version=version,
+            message=message,
+            stdout=stdout,
+            simple=simple if simple is not None else True,
+            force=force,
+            delete=delete,
+            author=author,
+            author_email=author_email,
+        )
     return GitRegistry.from_repo(repo).deprecate(
         name=name,
-        ref=ref,
         message=message,
         stdout=stdout,
         simple=simple if simple is not None else True,

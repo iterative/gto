@@ -198,88 +198,6 @@ def test_commands(showcase):
     )
 
 
-def test_tag_untag(repo_with_commit: Tuple[git.Repo, Callable]):
-    repo, write_file = repo_with_commit
-    _check_successful_cmd(
-        "tag",
-        ["-r", repo.working_dir, "x1"],
-        "Created git tag 'x1@v0.0.1'\n",
-    )
-    _check_successful_cmd(
-        "untag",
-        ["-r", repo.working_dir, "x1"],
-        "Created git tag 'x1@v0.0.1!'\n",
-    )
-
-    _check_successful_cmd(
-        "tag",
-        ["-r", repo.working_dir, "x2", "HEAD"],
-        "Created git tag 'x2@v0.0.1'\n",
-    )
-    _check_successful_cmd(
-        "untag",
-        ["-r", repo.working_dir, "x2", "HEAD"],
-        "Created git tag 'x2@v0.0.1!'\n",
-    )
-
-    _check_successful_cmd(
-        "tag",
-        ["-r", repo.working_dir, "x3", repo.commit().hexsha],
-        "Created git tag 'x3@v0.0.1'\n",
-    )
-    _check_successful_cmd(
-        "tag",
-        ["-r", repo.working_dir, "x3", repo.commit().hexsha, "--stage", "prod"],
-        "Created git tag 'x3#prod#1'\n",
-    )
-    _check_successful_cmd(
-        "tag",
-        ["-r", repo.working_dir, "x3", "--version", "v0.0.1", "--stage", "dev"],
-        "Created git tag 'x3#dev#2'\n",
-    )
-    _check_successful_cmd(
-        "untag",
-        ["-r", repo.working_dir, "x3", repo.commit().hexsha, "--stage", "prod"],
-        "Created git tag 'x3#prod!#3'\n",
-    )
-    _check_successful_cmd(
-        "untag",
-        ["-r", repo.working_dir, "x3", "--version", "v0.0.1", "--stage", "dev"],
-        "Created git tag 'x3#dev!#4'\n",
-    )
-    _check_successful_cmd(
-        "untag",
-        ["-r", repo.working_dir, "x3", repo.commit().hexsha],
-        "Created git tag 'x3@v0.0.1!'\n",
-    )
-
-    _check_successful_cmd(
-        "tag",
-        ["-r", repo.working_dir, "x4", repo.commit().hexsha, "--version", "v1.0.0"],
-        "Created git tag 'x4@v1.0.0'\n",
-    )
-    _check_successful_cmd(
-        "untag",
-        ["-r", repo.working_dir, "x4", "--version", "v1.0.0"],
-        "Created git tag 'x4@v1.0.0!'\n",
-    )
-
-    _check_failing_cmd(
-        "tag",
-        [
-            "-r",
-            repo.working_dir,
-            "x4",
-            repo.commit().hexsha,
-            "--version",
-            "v1.0.0",
-            "--stage",
-            "prod",
-        ],
-        "❌ One and only one of (version, ref) must be specified.\n",
-    )
-
-
 EXPECTED_DESCRIBE_OUTPUT_2 = """{
     "type": "new-type",
     "path": "new/path",
@@ -362,19 +280,23 @@ def test_register(repo_with_commit: Tuple[git.Repo, Callable]):
     _check_successful_cmd(
         "register",
         ["-r", repo.working_dir, "a1"],
-        "Created git tag 'a1@v0.0.1'\n",
+        "Created git tag 'a1@v0.0.1' that registers version\n"
+        "To push the changes upstream, run:\n"
+        "    git push a1@v0.0.1\n",
     )
 
     _check_successful_cmd(
         "register",
         ["-r", repo.working_dir, "a2", "--version", "v1.2.3"],
-        "Created git tag 'a2@v1.2.3'\n",
+        "Created git tag 'a2@v1.2.3' that registers version\n"
+        "To push the changes upstream, run:\n"
+        "    git push a2@v1.2.3\n",
     )
 
     _check_failing_cmd(
         "register",
         ["-r", repo.working_dir, "a3", "--version", "1.2.3"],
-        "❌ Cannot parse tag name 'a3@1.2.3'\n",
+        "❌ Supplied version '1.2.3' cannot be parsed\n",
     )
 
 
@@ -382,11 +304,20 @@ def test_assign(repo_with_commit: Tuple[git.Repo, Callable]):
     repo, write_file = repo_with_commit
 
     _check_successful_cmd(
+        "register",
+        ["-r", repo.working_dir, "nn1"],
+        "Created git tag 'nn1@v0.0.1' that registers version\n"
+        "To push the changes upstream, run:\n"
+        "    git push nn1@v0.0.1\n",
+    )
+    # this check depends on the previous one
+    _check_successful_cmd(
         "assign",
         ["-r", repo.working_dir, "nn1", "prod", "HEAD"],
-        "Created git tag 'nn1@v0.0.1'\n" "Created git tag 'nn1#prod#1'\n",
+        "Created git tag 'nn1#prod#1' that assigns stage to version 'v0.0.1'\n"
+        "To push the changes upstream, run:\n"
+        "    git push nn1#prod#1\n",
     )
-
     # this check depends on the previous assignment
     _check_failing_cmd(
         "assign",

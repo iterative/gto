@@ -132,6 +132,7 @@ class GitRegistry(BaseModel):
         version=None,
         message=None,
         simple=None,
+        force=False,
         bump_major=False,
         bump_minor=False,
         bump_patch=False,
@@ -150,10 +151,16 @@ class GitRegistry(BaseModel):
         found_artifact = self.find_artifact(name, create_new=True)
         # check that this commit don't have a version already
         found_version = found_artifact.find_version(commit_hexsha=ref)
-        if found_version is not None and found_version.is_registered:
-            raise VersionExistsForCommit(name, found_version.version)
+        if found_version is not None:
+            if not force and found_version.is_registered:
+                raise VersionExistsForCommit(name, found_version.version)
+            if force and found_version.version != version:
+                raise WrongArgs(
+                    f"For this REF you can only register {found_version.version}"
+                )
         # if version name is provided, use it
         if version:
+            SemVer(version)
             if found_artifact.find_version(name=version) is not None:
                 raise VersionAlreadyRegistered(version)
         else:
@@ -214,6 +221,10 @@ class GitRegistry(BaseModel):
             if not found_version.is_registered:
                 raise WrongArgs(
                     f"The version at ref '{found_version.commit_hexsha}' is not registered"
+                )
+            if not found_version.is_active:
+                raise WrongArgs(
+                    f"The version at ref '{found_version.commit_hexsha}' was deregistered already"
                 )
 
         found_version = found_artifact.find_version(name=version, commit_hexsha=ref)

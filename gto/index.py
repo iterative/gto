@@ -183,7 +183,7 @@ class BaseIndexManager(BaseModel, ABC):
         raise NotImplementedError
 
     def add(self, name, type, path, must_exist, labels, description, update):
-        for arg in [name] + (labels or []):
+        for arg in [name] + (list(labels) or []):
             assert_name_is_valid(arg)
         if type:
             self.config.assert_type(type)

@@ -466,13 +466,13 @@ def remove(repo: str = option_repo, name: str = arg_name):
 
 
 @gto_command(section=CommandGroups.modifying)
-def tag(
+def register(
     repo: str = option_repo,
     name: str = arg_name,
-    ref: str = Argument(None, help="Git reference to use for registration"),
-    version: Optional[str] = option_version,
-    stage: Optional[str] = option_stage,
-    to_version: Optional[str] = option_to_version,
+    ref: str = Argument("HEAD", help="Git reference to use for registration"),
+    version: Optional[str] = Option(
+        None, "--version", "--ver", help="Version name in SemVer format"
+    ),
     message: Optional[str] = option_message,
     bump_major: bool = Option(
         False, "--bump-major", is_flag=True, help="Bump major version"
@@ -483,6 +483,47 @@ def tag(
     bump_patch: bool = Option(
         False, "--bump-patch", is_flag=True, help="Bump patch version"
     ),
+):
+    """Create an artifact version to signify an important, published or released iteration
+
+    Examples:
+        Register new version at HEAD:
+        $ gto register nn
+
+        Register new version at a specific ref:
+        $ gto register nn abc1234
+
+        Assign version name explicitly:
+        $ gto register nn --version v1.0.0
+
+        Choose a part to bump version by:
+        $ gto register nn --bump-minor
+    """
+    gto.api.register(
+        repo=repo,
+        name=name,
+        ref=ref or "HEAD",
+        version=version,
+        message=message,
+        bump_major=bump_major,
+        bump_minor=bump_minor,
+        bump_patch=bump_patch,
+        stdout=True,
+    )
+
+
+@gto_command(section=CommandGroups.modifying, aliases=["promote"])
+def assign(
+    repo: str = option_repo,
+    name: str = arg_name,
+    stage: str = arg_stage,
+    ref: Optional[str] = Argument(None, help="Git reference to use"),
+    version: Optional[str] = Option(
+        None,
+        "--version",
+        help="If you provide REF, this will be used to name new version",
+    ),
+    message: Optional[str] = option_message,
     simple: str = option_simple,
     force: bool = option_force,
     skip_registration: bool = Option(
@@ -493,26 +534,38 @@ def tag(
         help="Don't register a version at specified commit",
     ),
 ):
-    """Register a new version or assing a stage
+    """Assign stage to specific artifact version
 
     Examples:
-        Register a new version:
-        $ gto tag nn --version v1.0.0
+        Assign "nn" to "prod" at specific ref:
+        $ gto assign nn prod abcd123
 
-        Assign "prod" to "nn" version "v1.0.0":
-        $ gto tag nn --version v1.0.0 --stage prod
+        Assign specific version:
+        $ gto assign nn prod --version v1.0.0
+
+        Assign at specific ref and name version explicitly:
+        $ gto assign nn prod abcd123 --version v1.0.0
+
+        Assign without increment
+        $ gto assign nn prod HEAD --simple
     """
-    gto.api.tag(
+    if ref is not None:
+        name_version = version
+        version = None
+    elif version is not None:
+        name_version = None
+    else:
+        ref = "HEAD"
+        name_version = None
+        version = None
+    gto.api.assign(
         repo,
         name,
-        ref=ref,
-        version=version,
-        stage=stage,
-        to_version=to_version,
+        stage,
+        version,
+        ref,
+        name_version,
         message=message,
-        bump_major=bump_major,
-        bump_minor=bump_minor,
-        bump_patch=bump_patch,
         simple=simple,  # type: ignore
         force=force,
         skip_registration=skip_registration,
@@ -521,68 +574,33 @@ def tag(
 
 
 @gto_command(section=CommandGroups.modifying)
-def untag(
-    repo: str = option_repo,
-    name: str = arg_name,
-    ref: Optional[str] = Argument(None, help="Git reference to use"),
-    version: Optional[str] = option_version,
-    stage: Optional[str] = option_stage,
-    message: Optional[str] = option_message,
-    simple: str = option_simple,
-    force: bool = option_force,
-    delete: bool = Option(
-        False,
-        "-d",
-        "--delete",
-        is_flag=True,
-        help="Delete the git tag that did the assignment instead of creating the new one",
-    ),
-):
-    """Deregister a version or unassign a stage
-
-    Examples:
-        Deregister a version "v1.0.0" of "nn":
-        $ gto untag nn --version v1.0.0
-
-        Unassign "prod" from "nn" version "v1.0.0":
-        $ gto untag nn --version v1.0.0 --stage prod
-    """
-    if ref is None and version is None:
-        ref = "HEAD"
-    gto.api.untag(
-        repo=repo,
-        name=name,
-        ref=ref,
-        version=version,
-        stage=stage,
-        message=message,
-        simple=simple,  # type: ignore
-        force=force,
-        delete=delete,
-        stdout=True,
-    )
-
-
-@gto_command(section=CommandGroups.modifying)
 def deprecate(
     repo: str = option_repo,
     name: str = arg_name,
-    ref: Optional[str] = Argument(None, help="Git reference to use"),
+    version: str = Argument(None, help="Artifact version"),
+    stage: str = Argument(None, help="Stage to unassign"),
     message: Optional[str] = option_message,
     simple: str = option_simple,
     force: bool = option_force,
     delete: bool = option_delete,
 ):
-    """Deregister a version or unassign a stage
+    """Deprecate artifact, deregister a version, or unassign a stage
 
     Examples:
-        Deprecate an artifact "nn":
+        Deprecate an artifact:
         $ gto deprecate nn
+
+        Deprecate a version:
+        $ gto deprecate nn v0.0.1
+
+        Unassign a stage:
+        $ gto deprecate nn v0.0.1 prod
     """
     gto.api.deprecate(
         repo=repo,
         name=name,
-        ref=ref,
+        version=version,
+        stage=stage,
         message=message,
         simple=simple,  # type: ignore
         force=force,

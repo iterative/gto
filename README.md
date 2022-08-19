@@ -73,7 +73,7 @@ consumer. You can plug in a real downsteam system via CI/CD or web hooks, e.g.
 to redeploy an ML model.
 
 ```console
-$ gto assign awesome-model v0.0.1 prod
+$ gto assign awesome-model --version v0.0.1 --stage prod
 Created git tag 'awesome-model#prod#1' that assigns a stage to 'v0.0.1'
 ```
 
