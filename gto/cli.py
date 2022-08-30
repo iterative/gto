@@ -474,6 +474,8 @@ def register(
         None, "--version", "--ver", help="Version name in SemVer format"
     ),
     message: Optional[str] = option_message,
+    simple: str = option_simple,
+    force: bool = option_force,
     bump_major: bool = Option(
         False, "--bump-major", is_flag=True, help="Bump major version"
     ),
@@ -505,6 +507,8 @@ def register(
         ref=ref or "HEAD",
         version=version,
         message=message,
+        simple=simple,  # type: ignore
+        force=force,
         bump_major=bump_major,
         bump_minor=bump_minor,
         bump_patch=bump_patch,
