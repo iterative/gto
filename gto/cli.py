@@ -223,7 +223,7 @@ option_force = Option(
 )
 
 
-def name_callback(  # pylint: disable=inconsistent-return-statements
+def callback_simple(  # pylint: disable=inconsistent-return-statements
     ctx: typer.Context,
     param: typer.CallbackParam,  # pylint: disable=unused-argument
     value: str,
@@ -240,7 +240,7 @@ option_simple = Option(
     "auto",
     "--simple",
     help="[auto, true, false] Use simple notation, e.g. rf#prod instead of rf#prod-5",
-    callback=name_callback,
+    callback=callback_simple,
 )
 
 # Typer options to control and filter the output
