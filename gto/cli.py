@@ -223,7 +223,7 @@ option_force = Option(
 )
 
 
-def name_callback(  # pylint: disable=inconsistent-return-statements
+def callback_simple(  # pylint: disable=inconsistent-return-statements
     ctx: typer.Context,
     param: typer.CallbackParam,  # pylint: disable=unused-argument
     value: str,
@@ -240,7 +240,7 @@ option_simple = Option(
     "auto",
     "--simple",
     help="[auto, true, false] Use simple notation, e.g. rf#prod instead of rf#prod-5",
-    callback=name_callback,
+    callback=callback_simple,
 )
 
 # Typer options to control and filter the output
@@ -474,6 +474,8 @@ def register(
         None, "--version", "--ver", help="Version name in SemVer format"
     ),
     message: Optional[str] = option_message,
+    simple: str = option_simple,
+    force: bool = option_force,
     bump_major: bool = Option(
         False, "--bump-major", is_flag=True, help="Bump major version"
     ),
@@ -505,6 +507,8 @@ def register(
         ref=ref or "HEAD",
         version=version,
         message=message,
+        simple=simple,  # type: ignore
+        force=force,
         bump_major=bump_major,
         bump_minor=bump_minor,
         bump_patch=bump_patch,
