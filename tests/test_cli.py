@@ -313,7 +313,7 @@ def test_assign(repo_with_commit: Tuple[git.Repo, Callable]):
     # this check depends on the previous one
     _check_successful_cmd(
         "assign",
-        ["-r", repo.working_dir, "nn1", "prod", "HEAD"],
+        ["-r", repo.working_dir, "nn1", "HEAD", "--stage", "prod"],
         "Created git tag 'nn1#prod#1' that assigns stage to version 'v0.0.1'\n"
         "To push the changes upstream, run:\n"
         "    git push nn1#prod#1\n",
@@ -321,12 +321,30 @@ def test_assign(repo_with_commit: Tuple[git.Repo, Callable]):
     # this check depends on the previous assignment
     _check_failing_cmd(
         "assign",
-        ["-r", repo.working_dir, "nn1", "stage", "HEAD", "--version", "v1.0.0"],
+        [
+            "-r",
+            repo.working_dir,
+            "nn1",
+            "HEAD",
+            "--version",
+            "v1.0.0",
+            "--stage",
+            "stage",
+        ],
         "❌ Can't register 'v1.0.0', since 'v0.0.1' is registered already at this ref\n",
     )
 
     _check_failing_cmd(
         "assign",
-        ["-r", repo.working_dir, "nn2", "prod", "HEAD", "--version", "1.0.0"],
+        [
+            "-r",
+            repo.working_dir,
+            "nn2",
+            "HEAD",
+            "--version",
+            "1.0.0",
+            "--stage",
+            "prod",
+        ],
         "❌ Version '1.0.0' is not valid. Example of valid version: 'v1.0.0'\n",
     )

@@ -520,13 +520,13 @@ def register(
 def assign(
     repo: str = option_repo,
     name: str = arg_name,
-    stage: str = arg_stage,
     ref: Optional[str] = Argument(None, help="Git reference to use"),
     version: Optional[str] = Option(
         None,
         "--version",
         help="If you provide REF, this will be used to name new version",
     ),
+    stage: str = option_stage,
     message: Optional[str] = option_message,
     simple: str = option_simple,
     force: bool = option_force,
