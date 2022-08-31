@@ -342,6 +342,7 @@ def _show_registry(
                 else None
                 for name in stages
             },
+            "registered": o.is_registered,
         }
         for o in reg.get_artifacts(
             all_branches=all_branches,
@@ -352,7 +353,8 @@ def _show_registry(
         return models_state
 
     result = [
-        [name, d["version"]] + [d["stage"][name] for name in stages]
+        [name if d["registered"] else f"*{name}", d["version"]]
+        + [d["stage"][name] for name in stages]
         for name, d in models_state.items()
     ]
     headers = ["name", "latest"] + [f"#{e}" for e in stages]
