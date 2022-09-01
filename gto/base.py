@@ -476,26 +476,28 @@ class Artifact(BaseObject):
         versions = self.get_versions(
             include_non_explicit=not registered_only, sort=sort
         )
-        if sort == VersionSort.Timestamp:
-            # for this sort we need to sort not versions, as above ^
-            # but assignments themselves
-            raise NotImplementedError("Sorting by timestamp is not implemented yet")
         stages: Dict[str, List[VStage]] = {}
-        for version in versions:
+        assignments = [
+            a
+            for version in versions
             for a in (
                 version.get_vstages(ascending=True)[:assignments_per_version]
                 if assignments_per_version > -1
                 else version.get_vstages(ascending=True)
+            )
+        ]
+        if sort == VersionSort.Timestamp:
+            assignments = sorted(assignments, key=lambda a: a.created_at)[::-1]
+        for a in assignments:
+            if a.stage not in stages:
+                stages[a.stage] = []
+            if (
+                versions_per_stage > -1  # pylint: disable=chained-comparison
+                and len(stages[a.stage]) >= versions_per_stage
             ):
-                if a.stage not in stages:
-                    stages[a.stage] = []
-                if (
-                    versions_per_stage > -1  # pylint: disable=chained-comparison
-                    and len(stages[a.stage]) >= versions_per_stage
-                ):
-                    continue
-                if a.version not in [i.version for i in stages[a.stage]]:
-                    stages[a.stage].append(a)
+                continue
+            if a.version not in [i.version for i in stages[a.stage]]:
+                stages[a.stage].append(a)
         return stages
 
     @property

@@ -12,6 +12,7 @@ from gto.constants import (
     STAGE,
     VERSION,
     VERSIONS_PER_STAGE,
+    VersionSort,
 )
 from gto.exceptions import NoRepo, NotImplementedInGTO, WrongArgs
 from gto.ext import EnrichmentInfo
@@ -271,7 +272,8 @@ def show(
     truncate_hexsha=False,
     registered_only=False,
     assignments_per_version=ASSIGNMENTS_PER_VERSION,
-    versions_per_stage=1,
+    versions_per_stage=VERSIONS_PER_STAGE,
+    sort=VersionSort.Timestamp,
     table: bool = False,
 ):
     return (
@@ -283,6 +285,7 @@ def show(
             registered_only=registered_only,
             assignments_per_version=assignments_per_version,
             versions_per_stage=versions_per_stage,
+            sort=sort,
             table=table,
             truncate_hexsha=truncate_hexsha,
         )
@@ -294,6 +297,7 @@ def show(
             registered_only=registered_only,
             assignments_per_version=assignments_per_version,
             versions_per_stage=versions_per_stage,
+            sort=sort,
             table=table,
             truncate_hexsha=truncate_hexsha,
         )
@@ -305,8 +309,9 @@ def _show_registry(
     all_branches=False,
     all_commits=False,
     registered_only=False,
-    assignments_per_version: int = ASSIGNMENTS_PER_VERSION,
-    versions_per_stage: int = VERSIONS_PER_STAGE,
+    assignments_per_version: int = None,
+    versions_per_stage: int = None,
+    sort: VersionSort = None,
     table: bool = False,
     truncate_hexsha: bool = False,
 ):
@@ -330,16 +335,11 @@ def _show_registry(
                             registered_only=registered_only,
                             assignments_per_version=assignments_per_version,
                             versions_per_stage=versions_per_stage,
-                        )[name]
+                            sort=sort,
+                        ).get(name, [])
                     ]
                 )
-                if name
-                in o.get_vstages(
-                    registered_only=registered_only,
-                    assignments_per_version=assignments_per_version,
-                    versions_per_stage=versions_per_stage,
-                )
-                else None
+                or None
                 for name in stages
             },
         }
@@ -368,6 +368,7 @@ def _show_versions(  # pylint: disable=too-many-locals
     registered_only=False,
     assignments_per_version: int = None,
     versions_per_stage: int = None,
+    sort: VersionSort = None,
     table: bool = False,
     truncate_hexsha: bool = False,
 ):
@@ -389,6 +390,7 @@ def _show_versions(  # pylint: disable=too-many-locals
         registered_only=registered_only,
         assignments_per_version=assignments_per_version,
         versions_per_stage=versions_per_stage,
+        sort=sort,
     )
     versions = []
     for v in artifact.get_versions(

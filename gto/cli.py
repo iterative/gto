@@ -12,7 +12,11 @@ from typer import Argument, Option, Typer
 from typer.core import TyperCommand, TyperGroup
 
 import gto
-from gto.constants import ASSIGNMENTS_PER_VERSION, VERSIONS_PER_STAGE
+from gto.constants import (
+    ASSIGNMENTS_PER_VERSION,
+    VERSIONS_PER_STAGE,
+    VersionSort,
+)
 from gto.exceptions import GTOException, NotImplementedInGTO, WrongArgs
 from gto.ui import EMOJI_FAIL, EMOJI_GTO, EMOJI_OK, bold, cli_echo, color, echo
 from gto.utils import format_echo, make_ready_to_serialize
@@ -243,7 +247,21 @@ option_simple = Option(
     callback=callback_simple,
 )
 
+
 # Typer options to control and filter the output
+def callback_sort(  # pylint: disable=inconsistent-return-statements
+    ctx: typer.Context,
+    param: typer.CallbackParam,  # pylint: disable=unused-argument
+    value: str,
+):
+    if ctx.resilient_parsing:
+        return
+    allowed_values = ["timestamp", "semver"]
+    if value not in allowed_values:
+        raise typer.BadParameter(f"Only one of {allowed_values} is allowed")
+    return VersionSort.Timestamp if value == "timestamp" else VersionSort.SemVer
+
+
 option_all = Option(False, "--all", "-a", help="Return all versions sorted")
 option_registered_only = Option(
     False,
@@ -259,6 +277,12 @@ option_expected = Option(
     is_flag=True,
     help="Return exit code 1 if no result",
     show_default=True,
+)
+option_sort = Option(
+    "timestamp",
+    "--sort",
+    help="Order assignments by timestamp or semver",
+    callback=callback_sort,
 )
 option_assignments_per_version = Option(
     ASSIGNMENTS_PER_VERSION,
@@ -655,10 +679,10 @@ def latest(
 
 
 @gto_command(section=CommandGroups.querying)
-def which(
+def greatest(
     repo: str = option_repo,
     name: str = arg_name,
-    stage: str = arg_stage,
+    stage: str = Argument(None, help="Assigned stage"),
     ref: bool = option_show_ref,
     assignments_per_version: int = option_assignments_per_version,
     versions_per_stage: int = option_versions_per_stage,
@@ -668,11 +692,19 @@ def which(
     """Find the latest artifact version in a given stage
 
     Examples:
-        $ gto which nn prod
+        $ gto greatest nn prod
 
         Print git tag that did the assignment:
-        $ gto which nn prod --ref
+        $ gto greatest nn prod --ref
     """
+    if not stage:
+        latest_version = gto.api.find_latest_version(repo, name)
+        if latest_version:
+            if ref:
+                echo(latest_version.ref or latest_version.commit_hexsha)
+            else:
+                echo(latest_version.version)
+        return
     versions = gto.api.find_versions_in_stage(
         repo,
         name,
@@ -759,6 +791,7 @@ def show(
     registered_only: bool = option_registered_only,
     assignments_per_version: int = option_assignments_per_version,
     versions_per_stage: int = option_versions_per_stage,
+    sort: str = option_sort,
 ):
     """Show the registry state
 
@@ -785,10 +818,13 @@ def show(
             registered_only=registered_only,
             assignments_per_version=assignments_per_version,
             versions_per_stage=versions_per_stage,
+            sort=sort,
             table=False,
         )
         if name_only:
-            format_echo([v["name"] for v in output], "lines")
+            format_echo(
+                [v["version"] if isinstance(v, dict) else v for v in output], "lines"
+            )
         else:
             format_echo(output, "json")
     else:
@@ -801,6 +837,7 @@ def show(
                 registered_only=registered_only,
                 assignments_per_version=assignments_per_version,
                 versions_per_stage=versions_per_stage,
+                sort=sort,
                 table=True,
                 truncate_hexsha=True,
             ),
