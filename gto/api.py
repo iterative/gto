@@ -1,3 +1,4 @@
+import re
 from collections import OrderedDict
 from typing import List, Optional, Union
 
@@ -13,6 +14,7 @@ from gto.constants import (
     VERSION,
     VERSIONS_PER_STAGE,
     VersionSort,
+    shortcut_regexp,
 )
 from gto.exceptions import NoRepo, NotImplementedInGTO, WrongArgs
 from gto.ext import EnrichmentInfo
@@ -377,6 +379,10 @@ def _show_versions(  # pylint: disable=too-many-locals
     def format_hexsha(hexsha):
         return hexsha[:7] if truncate_hexsha else hexsha
 
+    match = re.search(shortcut_regexp, name)
+    if match:
+        name = match["artifact"]
+
     reg = GitRegistry.from_repo(repo)
     if raw:
         return reg.find_artifact(name).versions
@@ -404,6 +410,13 @@ def _show_versions(  # pylint: disable=too-many-locals
             if vstage.version == v["version"]
         ]
         versions.append(v)
+
+    if match and match["greatest"]:
+        versions = versions[:1]
+    if match and match["stage"]:
+        versions = [
+            v for v in versions for a in v["stages"] if match["stage"] in a["stage"]
+        ]
 
     if not table:
         return versions

@@ -802,6 +802,10 @@ def show(
         Show versions of specific artifact in registry:
         $ gto show nn
 
+        Show greatest version or what's in stage:
+        $ gto show nn@greatest
+        $ gto show nn#prod
+
         Use --all-branches and --all-commits to read more than just HEAD:
         $ gto show --all-branches
         $ gto show nn --all-commits

@@ -31,6 +31,9 @@ name_regexp = re.compile(f"^{name}$")
 tag_regexp = re.compile(
     f"^(?P<artifact>{name})(((#(?P<stage>{name})|@(?P<version>v{semver}))(?P<cancel>!?))|@((?P<deprecated>deprecated)|(?P<created>created)))(#({counter}))?$"
 )
+shortcut_regexp = re.compile(
+    f"^(?P<artifact>{name})(((#(?P<stage>{name})|@(?P<latest>latest)|@(?P<greatest>greatest))))$"
+)
 
 
 class VersionSort(Enum):
