@@ -152,13 +152,13 @@ consumer, and maybe signal a downstream system about this. You can use
 
 ```console
 $ gto deprecate awesome-model v0.0.1 prod
-Created git tag 'awesome-model#prod#2!' that unassigns a stage from 'v0.0.1'
+Created git tag 'awesome-model#prod!#2' that unassigns a stage from 'v0.0.1'
 ```
 
 <details summary="Some details and options">
 
 GTO creates a special Git tag in a standard format:
-`{artifact_name}#{stage}#{e}!`.
+`{artifact_name}#{stage}!#{e}`.
 
 Note, that later you can create this stage again, if you need to, by calling
 `$ gto assign` again.
@@ -197,9 +197,9 @@ use
 $ gto deprecate awesome-model v0.0.1 --delete
 Deleted git tag 'awesome-model@v0.0.1' that registered a version.
 Deleted git tag 'awesome-model#prod#1' that assigned a stage to 'v0.0.1'.
-Deleted git tag 'awesome-model#prod#2!' that unassigned a stage to 'v0.0.1'.
+Deleted git tag 'awesome-model#prod!#2' that unassigned a stage to 'v0.0.1'.
 To push the changes upstream, run:
-git push origin awesome-model@v0.0.1 awesome-model#prod#1 awesome-model#prod#2! --delete
+git push origin awesome-model@v0.0.1 awesome-model#prod#1 awesome-model#prod!#2 --delete
 ```
 
 This includes all Git tags related to the version: a tag that registered it and
@@ -230,9 +230,9 @@ all of them for the artifact. You could do that with
 $ gto deprecate awesome-model --delete
 Deleted git tag 'awesome-model@v0.0.1' that registered a version.
 Deleted git tag 'awesome-model#prod#1' that assigned a stage to 'v0.0.1'.
-Deleted git tag 'awesome-model#prod#2!' that unassigned a stage to 'v0.0.1'.
+Deleted git tag 'awesome-model#prod!#2' that unassigned a stage to 'v0.0.1'.
 To push the changes upstream, run:
-git push origin awesome-model@v0.0.1 awesome-model#prod#1 awesome-model#prod#2! --delete
+git push origin awesome-model@v0.0.1 awesome-model#prod#1 awesome-model#prod!#2 --delete
 ```
 
 </details>
@@ -244,7 +244,7 @@ Let's look at the usage of the `gto show` and `gto history`.
 ### Show the current state
 
 This is the entire state of the registry: all artifacts, their latest versions,
-and the greatest versions for each stage.
+and the versions in each stage.
 
 ```console
 $ gto show
@@ -269,10 +269,14 @@ $ gto show churn
 ╒════════════╤═══════════╤══════════════╤═════════════════════╤══════════════╕
 │ artifact   │ version   │ stage        │ created_at          │ ref          │
 ╞════════════╪═══════════╪══════════════╪═════════════════════╪══════════════╡
-│ churn      │ v3.1.0    │ staging, dev │ 2022-07-14 10:33:53 │ churn@v3.1.0 │
-│ churn      │ v3.0.0    │ prod         │ 2022-07-09 19:27:13 │ churn@v3.0.0 │
+│ churn      │ v3.1.0    │ dev, staging │ 2022-08-28 16:58:50 │ churn@v3.1.0 │
+│ churn      │ v3.0.0    │ prod         │ 2022-08-24 01:52:10 │ churn@v3.0.0 │
 ╘════════════╧═══════════╧══════════════╧═════════════════════╧══════════════╛
 ```
+
+Note, that by default, assignments are sorted by the creation time (the latest
+assignment wins). You can sort them by Semver with `--sort semver` option (the
+greatest version in stage wins).
 
 #### Enabling multiple versions in the same Stage workflow
 
@@ -282,21 +286,17 @@ Note: this functionality is experimental and subject to change. If you find it
 useful, please share your feedback in GH issues to help us make it stable.
 
 If you would like to see more than a single version assigned in a stage, use
-`--av` (short for `--assignments-per-version`), e.g. `-1` to show all versions.
+`--vs` (short for `--versions-per-stage`), e.g. `-1` to show all versions.
 
 ```console
-$ gto show churn --av -1
+$ gto show churn --vs -1
 ╒════════════╤═══════════╤══════════════╤═════════════════════╤══════════════╕
 │ artifact   │ version   │ stage        │ created_at          │ ref          │
 ╞════════════╪═══════════╪══════════════╪═════════════════════╪══════════════╡
-│ churn      │ v3.1.0    │ staging, dev │ 2022-07-14 10:33:53 │ churn@v3.1.0 │
-│ churn      │ v3.0.0    │ dev, prod    │ 2022-07-09 19:27:13 │ churn@v3.0.0 │
+│ churn      │ v3.1.0    │ dev, staging │ 2022-08-28 16:58:50 │ churn@v3.1.0 │
+│ churn      │ v3.0.0    │ dev, prod    │ 2022-08-24 01:52:10 │ churn@v3.0.0 │
 ╘════════════╧═══════════╧══════════════╧═════════════════════╧══════════════╛
 ```
-
-To enable this workflow, you need to supply the `--av` argument to `gto show`
-and `gto which` commands. Other commands behave the same way regardless of the
-approach you choose.
 
 </details>
 
@@ -308,16 +308,16 @@ Note: this functionality is experimental and subject to change. If you find it
 useful, please share your feedback in GH issues to help us make it stable.
 
 If you would like the latest stage to replace all the previous stages for an
-artifact version, use `--vs` flag (or `--versions-per-stage` for short) combined
-with `--av`:
+artifact version, use `--vs` flag combined with `--av`
+(`--assignments-per-version` for short):
 
 ```console
 $ gto show churn --av 1 --vs -1
 ╒════════════╤═══════════╤═════════╤═════════════════════╤══════════════╕
 │ artifact   │ version   │ stage   │ created_at          │ ref          │
 ╞════════════╪═══════════╪═════════╪═════════════════════╪══════════════╡
-│ churn      │ v3.1.0    │ staging │ 2022-07-14 10:33:53 │ churn@v3.1.0 │
-│ churn      │ v3.0.0    │ dev     │ 2022-07-09 19:27:13 │ churn@v3.0.0 │
+│ churn      │ v3.1.0    │ staging │ 2022-08-28 16:58:50 │ churn@v3.1.0 │
+│ churn      │ v3.0.0    │ dev     │ 2022-08-24 01:52:10 │ churn@v3.0.0 │
 ╘════════════╧═══════════╧═════════╧═════════════════════╧══════════════╛
 ```
 
@@ -325,10 +325,6 @@ In this case the version will always have a single stage (or have no stage at
 all). This resembles Kanban workflow, when you "move" your artifact version from
 one column ("stage-1") to another ("stage-2"). This is how MLFlow and some other
 Model Registries work.
-
-To enable this workflow, you need to supply the `--vs` and `--av` arguments to
-`gto show` and `gto which` commands. Other commands behave the same way
-regardless of the approach you choose.
 
 </details>
 
@@ -342,22 +338,21 @@ $ gto history churn
 ╒═════════════════════╤════════════╤══════════════╤═══════════╤═════════╤══════════╤═════════════════╕
 │ timestamp           │ artifact   │ event        │ version   │ stage   │ commit   │ ref             │
 ╞═════════════════════╪════════════╪══════════════╪═══════════╪═════════╪══════════╪═════════════════╡
-│ 2022-07-29 14:50:10 │ churn      │ assignment   │ v3.1.0    │ dev     │ 8e4b8e9  │ churn#dev#4     │
-│ 2022-07-17 21:53:53 │ churn      │ assignment   │ v3.0.0    │ prod    │ 0d4e471  │ churn#prod#3    │
-│ 2022-07-16 18:07:13 │ churn      │ assignment   │ v3.1.0    │ staging │ 8e4b8e9  │ churn#staging#2 │
-│ 2022-07-15 14:20:33 │ churn      │ assignment   │ v3.0.0    │ dev     │ 0d4e471  │ churn#dev#1     │
-│ 2022-07-14 10:33:53 │ churn      │ registration │ v3.1.0    │ -       │ 8e4b8e9  │ churn@v3.1.0    │
-│ 2022-07-13 06:47:13 │ churn      │ commit       │ v3.1.0    │ -       │ 8e4b8e9  │ 8e4b8e9         │
-│ 2022-07-13 06:47:13 │ churn      │ commit       │ v3.1.0    │ -       │ 8e4b8e9  │ 8e4b8e9         │
-│ 2022-07-09 19:27:13 │ churn      │ registration │ v3.0.0    │ -       │ 0d4e471  │ churn@v3.0.0    │
-│ 2022-07-08 15:40:33 │ churn      │ commit       │ v3.0.0    │ -       │ 0d4e471  │ 0d4e471         │
+│ 2022-09-02 08:05:30 │ churn      │ assignment   │ v3.1.0    │ dev     │ dd5fb99  │ churn#dev#4     │
+│ 2022-09-01 04:18:50 │ churn      │ assignment   │ v3.0.0    │ prod    │ 708402b  │ churn#prod#3    │
+│ 2022-08-31 00:32:10 │ churn      │ assignment   │ v3.1.0    │ staging │ dd5fb99  │ churn#staging#2 │
+│ 2022-08-29 20:45:30 │ churn      │ assignment   │ v3.0.0    │ dev     │ 708402b  │ churn#dev#1     │
+│ 2022-08-28 16:58:50 │ churn      │ registration │ v3.1.0    │ -       │ dd5fb99  │ churn@v3.1.0    │
+│ 2022-08-27 13:12:10 │ churn      │ commit       │ v3.1.0    │ -       │ dd5fb99  │ dd5fb99         │
+│ 2022-08-24 01:52:10 │ churn      │ registration │ v3.0.0    │ -       │ 708402b  │ churn@v3.0.0    │
+│ 2022-08-22 22:05:30 │ churn      │ commit       │ v3.0.0    │ -       │ 708402b  │ 708402b         │
 ╘═════════════════════╧════════════╧══════════════╧═══════════╧═════════╧══════════╧═════════════════╛
 ```
 
 ## Consuming the registry downstream
 
 Let's look at integrating with GTO via Git as well as using the `gto check-ref`,
-`gto latest`, `gto which`, and `gto describe` utility commands downstream.
+`gto show`, and `gto describe` utility commands downstream.
 
 ### Act on new versions and stage assignments in CI
 
@@ -399,26 +394,34 @@ $ gto check-ref awesome-model@v0.0.1
 
 ### Getting the right version
 
-To get the latest artifact version, its path, and Git reference, use
-`gto latest`:
+To get the highest artifact version or Git reference, use
+`gto show artifact@greatest`:
 
 ```console
-$ gto latest churn
-v3.1.0
+$ gto show churn@greatest
+╒════════════╤═══════════╤══════════════╤═════════════════════╤══════════════╕
+│ artifact   │ version   │ stage        │ created_at          │ ref          │
+╞════════════╪═══════════╪══════════════╪═════════════════════╪══════════════╡
+│ churn      │ v3.1.0    │ dev, staging │ 2022-08-28 16:58:50 │ churn@v3.1.0 │
+╘════════════╧═══════════╧══════════════╧═════════════════════╧══════════════╛
 
-$ gto latest churn --ref
+$ gto show churn@greatest --ref
 churn@v3.1.0
 ```
 
-To get the version that is currently assigned to an environment (stage), use
-`gto which`:
+To get the version that is currently assigned to a stage, use
+`gto show artifact#stage`:
 
 ```console
-$ gto which churn dev
-v3.1.0
+$ gto show churn#prod
+╒════════════╤═══════════╤═════════╤═════════════════════╤══════════════╕
+│ artifact   │ version   │ stage   │ created_at          │ ref          │
+╞════════════╪═══════════╪═════════╪═════════════════════╪══════════════╡
+│ churn      │ v3.0.0    │ prod    │ 2022-08-24 01:52:10 │ churn@v3.0.0 │
+╘════════════╧═══════════╧═════════╧═════════════════════╧══════════════╛
 
-$ gto which churn dev --ref
-churn#dev#4
+$ gto show churn#prod --ref
+churn@v3.0.0
 ```
 
 To get details about an artifact (from `artifacts.yaml`) use `gto describe`:
@@ -453,16 +456,27 @@ GTO applies the config from the workspace, so if want to apply the config from
 $ GTO_EMOJIS=false gto show
 ```
 
-## Setup GTO development environment
 
-### 1. Clone this repository
+## Contributing
+
+Contributions are welcome! Please see our [Contributing Guide](https://mlem.ai/doc/contributing/core)
+for more details.
+
+Check out the [MLEM+GTO weekly board](https://github.com/orgs/iterative/projects/322/views/4)
+to learn about what we do, and about the exciting new functionality that is going to be added soon.
+
+Thanks to all our contributors!
+
+### Setup GTO development environment
+
+#### 1. Clone this repository
 
 ```console
 $ git clone git@github.com:iterative/gto.git
 $ cd gto
 ```
 
-### 2. Create virtual environment named `venv`
+#### 2. Create virtual environment named `venv`
 
 ```console
 $ python3 -m venv venv
@@ -475,7 +489,7 @@ Install python libraries
 $ pip install --upgrade pip setuptools wheel ".[tests]"
 ```
 
-### 3. Run
+#### 3. Run
 
 ```console
 $ pytest --basetemp=pytest-basetemp
@@ -495,3 +509,9 @@ The code that generates this folder could be found
 [in this fixture](https://github.com/iterative/gto/blob/main/tests/conftest.py#L58).
 
 To continue experimenting, call `gto --help`
+
+## Copyright
+
+This project is distributed under the Apache license version 2.0 (see the LICENSE file in the project root).
+
+By submitting a pull request to this project, you agree to license your contribution under the Apache license version 2.0 to this project.
