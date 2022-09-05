@@ -353,12 +353,15 @@ def _show_registry(
     if not table:
         return models_state
 
-    result = [
-        [name, d["version"]] + [d["stage"][name] for name in stages]
+    return [
+        OrderedDict(
+            zip(
+                ["name", "latest"] + [f"#{e}" for e in stages],
+                [name, d["version"]] + [d["stage"][name] for name in stages],
+            ),
+        )
         for name, d in models_state.items()
-    ]
-    headers = ["name", "latest"] + [f"#{e}" for e in stages]
-    return result, headers
+    ], "keys"
 
 
 def _show_versions(  # pylint: disable=too-many-locals

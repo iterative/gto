@@ -305,12 +305,12 @@ option_ascending = Option(
     help="Show new first",
     show_default=True,
 )
-option_show_name = Option(False, "--name", is_flag=True, help="Output artifact name")
+option_show_name = Option(False, "--name", is_flag=True, help="Show artifact name")
 option_show_version = Option(
     False, "--version", is_flag=True, help="Output artifact version"
 )
-option_show_event = Option(False, "--event", is_flag=True, help="Output the event")
-option_show_stage = Option(False, "--stage", is_flag=True, help="Output artifact stage")
+option_show_event = Option(False, "--event", is_flag=True, help="Show event")
+option_show_stage = Option(False, "--stage", is_flag=True, help="Show artifact stage")
 option_show_type = Option(
     False, "--type", is_flag=True, help="Show type", show_default=True
 )
@@ -335,13 +335,6 @@ option_plain = Option(
     "--plain",
     is_flag=True,
     help="Print table in grep-able format",
-    show_default=True,
-)
-option_name_only = Option(
-    False,
-    "--name-only",
-    is_flag=True,
-    help="Print names only",
     show_default=True,
 )
 option_table = Option(
@@ -659,67 +652,6 @@ def deprecate(
         )
 
 
-@gto_command(section=CommandGroups.querying)
-def latest(
-    repo: str = option_repo,
-    name: str = arg_name,
-    ref: bool = option_show_ref,
-):
-    """Find the latest version of artifact
-
-    Examples:
-        $ gto latest nn
-    """
-    latest_version = gto.api.find_latest_version(repo, name)
-    if latest_version:
-        if ref:
-            echo(latest_version.ref or latest_version.commit_hexsha)
-        else:
-            echo(latest_version.version)
-
-
-@gto_command(section=CommandGroups.querying)
-def greatest(
-    repo: str = option_repo,
-    name: str = arg_name,
-    stage: str = Argument(None, help="Assigned stage"),
-    ref: bool = option_show_ref,
-    assignments_per_version: int = option_assignments_per_version,
-    versions_per_stage: int = option_versions_per_stage,
-    registered_only: bool = option_registered_only,
-    # ascending: bool = option_ascending,
-):
-    """Find the latest artifact version in a given stage
-
-    Examples:
-        $ gto greatest nn prod
-
-        Print git tag that did the assignment:
-        $ gto greatest nn prod --ref
-    """
-    if not stage:
-        latest_version = gto.api.find_latest_version(repo, name)
-        if latest_version:
-            if ref:
-                echo(latest_version.ref or latest_version.commit_hexsha)
-            else:
-                echo(latest_version.version)
-        return
-    versions = gto.api.find_versions_in_stage(
-        repo,
-        name,
-        stage,
-        assignments_per_version=assignments_per_version,
-        versions_per_stage=versions_per_stage,
-        registered_only=registered_only,
-    )
-    if versions:
-        if ref:
-            format_echo([v.ref for v in versions], "lines")
-        else:
-            format_echo([v.version for v in versions], "lines")
-
-
 @gto_command(hidden=True)
 def parse_tag(
     name: str = arg_name,
@@ -780,14 +712,17 @@ def check_ref(
 
 
 @gto_command(section=CommandGroups.querying)
-def show(
+def show(  # pylint: disable=too-many-locals
     repo: str = option_repo,
     name: str = Argument(None, help="Artifact name to show. If empty, show registry"),
     all_branches: bool = option_all_branches,
     all_commits: bool = option_all_commits,
     json: bool = option_json,
     plain: bool = option_plain,
-    name_only: bool = option_name_only,
+    show_name: bool = option_show_name,
+    show_version: bool = option_show_version,
+    show_stage: bool = option_show_stage,
+    show_ref: bool = option_show_ref,
     registered_only: bool = option_registered_only,
     assignments_per_version: int = option_assignments_per_version,
     versions_per_stage: int = option_versions_per_stage,
@@ -810,10 +745,11 @@ def show(
         $ gto show --all-branches
         $ gto show nn --all-commits
     """
+    show_options = [show_name, show_version, show_stage, show_ref]
     assert (
-        sum(bool(i) for i in (json, plain, name_only)) <= 1
+        sum(bool(i) for i in [json, plain] + show_options) <= 1
     ), "Only one output format allowed"
-    if name_only or json:
+    if json:
         output = gto.api.show(
             repo,
             name=name,
@@ -825,30 +761,38 @@ def show(
             sort=sort,
             table=False,
         )
-        if name_only:
+        format_echo(output, "json")
+    else:
+        output = gto.api.show(
+            repo,
+            name=name,
+            all_branches=all_branches,
+            all_commits=all_commits,
+            registered_only=registered_only,
+            assignments_per_version=assignments_per_version,
+            versions_per_stage=versions_per_stage,
+            sort=sort,
+            table=True,
+            truncate_hexsha=True,
+        )
+        arg = None
+        arg = "name" if show_name else arg
+        arg = "version" if show_version else arg
+        arg = "stage" if show_stage else arg
+        arg = "ref" if show_ref else arg
+        if arg:
+            if arg not in output[0][0]:
+                raise WrongArgs(f"Cannot apply --{arg}")
             format_echo(
-                [v["version"] if isinstance(v, dict) else v for v in output], "lines"
+                [v[arg] if isinstance(v, dict) else v for v in output[0]], "lines"
             )
         else:
-            format_echo(output, "json")
-    else:
-        format_echo(
-            gto.api.show(
-                repo,
-                name=name,
-                all_branches=all_branches,
-                all_commits=all_commits,
-                registered_only=registered_only,
-                assignments_per_version=assignments_per_version,
-                versions_per_stage=versions_per_stage,
-                sort=sort,
-                table=True,
-                truncate_hexsha=True,
-            ),
-            format="table",
-            format_table="plain" if plain else "fancy_outline",
-            if_empty="Nothing found in the current workspace",
-        )
+            format_echo(
+                output,
+                format="table",
+                format_table="plain" if plain else "fancy_outline",
+                if_empty="Nothing found in the current workspace",
+            )
 
 
 @gto_command(section=CommandGroups.querying)
