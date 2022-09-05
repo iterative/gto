@@ -102,34 +102,34 @@ EXPECTED_DESCRIBE_OUTPUT = """{
 def test_commands(showcase):
     path, repo, write_file, first_commit, second_commit = showcase
     _check_successful_cmd(
-        "latest",
-        ["-r", path, "rf"],
+        "show",
+        ["-r", path, "rf@greatest", "--version"],
         "v1.2.4\n",
     )
     _check_successful_cmd(
-        "latest",
-        ["-r", path, "rf", "--ref"],
+        "show",
+        ["-r", path, "rf@greatest", "--ref"],
         "rf@v1.2.4\n",
     )
     _check_successful_cmd(
-        "which",
-        ["-r", path, "rf", "production"],
-        "v1.2.4\n",
+        "show",
+        ["-r", path, "rf#production", "--version"],
+        "v1.2.3\n",
     )
     _check_successful_cmd(
-        "which",
-        ["-r", path, "rf", "production", "--vs", "-1"],
+        "show",
+        ["-r", path, "rf#production", "--vs", "-1", "--version"],
         "v1.2.4\nv1.2.3\n",
     )
     _check_successful_cmd(
-        "which",
-        ["-r", path, "rf", "staging", "--vs", "-1"],
+        "show",
+        ["-r", path, "rf#staging", "--vs", "-1", "--version"],
         "v1.2.4\n",
     )
     _check_successful_cmd(
-        "which",
-        ["-r", path, "rf", "production", "--ref"],
-        "rf#production#3\n",
+        "show",
+        ["-r", path, "rf#production", "--ref"],
+        "rf@v1.2.3\n",
     )
     _check_successful_cmd("describe", ["-r", path, "rf"], EXPECTED_DESCRIBE_OUTPUT)
     _check_successful_cmd(

@@ -12,7 +12,11 @@ from typer import Argument, Option, Typer
 from typer.core import TyperCommand, TyperGroup
 
 import gto
-from gto.constants import ASSIGNMENTS_PER_VERSION, VERSIONS_PER_STAGE
+from gto.constants import (
+    ASSIGNMENTS_PER_VERSION,
+    VERSIONS_PER_STAGE,
+    VersionSort,
+)
 from gto.exceptions import GTOException, NotImplementedInGTO, WrongArgs
 from gto.ui import EMOJI_FAIL, EMOJI_GTO, EMOJI_OK, bold, cli_echo, color, echo
 from gto.utils import format_echo, make_ready_to_serialize
@@ -243,7 +247,21 @@ option_simple = Option(
     callback=callback_simple,
 )
 
+
 # Typer options to control and filter the output
+def callback_sort(  # pylint: disable=inconsistent-return-statements
+    ctx: typer.Context,
+    param: typer.CallbackParam,  # pylint: disable=unused-argument
+    value: str,
+):
+    if ctx.resilient_parsing:
+        return
+    allowed_values = ["timestamp", "semver"]
+    if value not in allowed_values:
+        raise typer.BadParameter(f"Only one of {allowed_values} is allowed")
+    return VersionSort.Timestamp if value == "timestamp" else VersionSort.SemVer
+
+
 option_all = Option(False, "--all", "-a", help="Return all versions sorted")
 option_registered_only = Option(
     False,
@@ -259,6 +277,12 @@ option_expected = Option(
     is_flag=True,
     help="Return exit code 1 if no result",
     show_default=True,
+)
+option_sort = Option(
+    "timestamp",
+    "--sort",
+    help="Order assignments by timestamp or semver",
+    callback=callback_sort,
 )
 option_assignments_per_version = Option(
     ASSIGNMENTS_PER_VERSION,
@@ -281,12 +305,12 @@ option_ascending = Option(
     help="Show new first",
     show_default=True,
 )
-option_show_name = Option(False, "--name", is_flag=True, help="Output artifact name")
+option_show_name = Option(False, "--name", is_flag=True, help="Show artifact name")
 option_show_version = Option(
     False, "--version", is_flag=True, help="Output artifact version"
 )
-option_show_event = Option(False, "--event", is_flag=True, help="Output the event")
-option_show_stage = Option(False, "--stage", is_flag=True, help="Output artifact stage")
+option_show_event = Option(False, "--event", is_flag=True, help="Show event")
+option_show_stage = Option(False, "--stage", is_flag=True, help="Show artifact stage")
 option_show_type = Option(
     False, "--type", is_flag=True, help="Show type", show_default=True
 )
@@ -311,13 +335,6 @@ option_plain = Option(
     "--plain",
     is_flag=True,
     help="Print table in grep-able format",
-    show_default=True,
-)
-option_name_only = Option(
-    False,
-    "--name-only",
-    is_flag=True,
-    help="Print names only",
     show_default=True,
 )
 option_table = Option(
@@ -635,59 +652,6 @@ def deprecate(
         )
 
 
-@gto_command(section=CommandGroups.querying)
-def latest(
-    repo: str = option_repo,
-    name: str = arg_name,
-    ref: bool = option_show_ref,
-):
-    """Find the latest version of artifact
-
-    Examples:
-        $ gto latest nn
-    """
-    latest_version = gto.api.find_latest_version(repo, name)
-    if latest_version:
-        if ref:
-            echo(latest_version.ref or latest_version.commit_hexsha)
-        else:
-            echo(latest_version.version)
-
-
-@gto_command(section=CommandGroups.querying)
-def which(
-    repo: str = option_repo,
-    name: str = arg_name,
-    stage: str = arg_stage,
-    ref: bool = option_show_ref,
-    assignments_per_version: int = option_assignments_per_version,
-    versions_per_stage: int = option_versions_per_stage,
-    registered_only: bool = option_registered_only,
-    # ascending: bool = option_ascending,
-):
-    """Find the latest artifact version in a given stage
-
-    Examples:
-        $ gto which nn prod
-
-        Print git tag that did the assignment:
-        $ gto which nn prod --ref
-    """
-    versions = gto.api.find_versions_in_stage(
-        repo,
-        name,
-        stage,
-        assignments_per_version=assignments_per_version,
-        versions_per_stage=versions_per_stage,
-        registered_only=registered_only,
-    )
-    if versions:
-        if ref:
-            format_echo([v.ref for v in versions], "lines")
-        else:
-            format_echo([v.version for v in versions], "lines")
-
-
 @gto_command(hidden=True)
 def parse_tag(
     name: str = arg_name,
@@ -748,17 +712,21 @@ def check_ref(
 
 
 @gto_command(section=CommandGroups.querying)
-def show(
+def show(  # pylint: disable=too-many-locals
     repo: str = option_repo,
     name: str = Argument(None, help="Artifact name to show. If empty, show registry"),
     all_branches: bool = option_all_branches,
     all_commits: bool = option_all_commits,
     json: bool = option_json,
     plain: bool = option_plain,
-    name_only: bool = option_name_only,
+    show_name: bool = option_show_name,
+    show_version: bool = option_show_version,
+    show_stage: bool = option_show_stage,
+    show_ref: bool = option_show_ref,
     registered_only: bool = option_registered_only,
     assignments_per_version: int = option_assignments_per_version,
     versions_per_stage: int = option_versions_per_stage,
+    sort: str = option_sort,
 ):
     """Show the registry state
 
@@ -769,14 +737,19 @@ def show(
         Show versions of specific artifact in registry:
         $ gto show nn
 
+        Show greatest version or what's in stage:
+        $ gto show nn@greatest
+        $ gto show nn#prod
+
         Use --all-branches and --all-commits to read more than just HEAD:
         $ gto show --all-branches
         $ gto show nn --all-commits
     """
+    show_options = [show_name, show_version, show_stage, show_ref]
     assert (
-        sum(bool(i) for i in (json, plain, name_only)) <= 1
+        sum(bool(i) for i in [json, plain] + show_options) <= 1
     ), "Only one output format allowed"
-    if name_only or json:
+    if json:
         output = gto.api.show(
             repo,
             name=name,
@@ -785,29 +758,41 @@ def show(
             registered_only=registered_only,
             assignments_per_version=assignments_per_version,
             versions_per_stage=versions_per_stage,
+            sort=sort,
             table=False,
         )
-        if name_only:
-            format_echo([v["name"] for v in output], "lines")
-        else:
-            format_echo(output, "json")
+        format_echo(output, "json")
     else:
-        format_echo(
-            gto.api.show(
-                repo,
-                name=name,
-                all_branches=all_branches,
-                all_commits=all_commits,
-                registered_only=registered_only,
-                assignments_per_version=assignments_per_version,
-                versions_per_stage=versions_per_stage,
-                table=True,
-                truncate_hexsha=True,
-            ),
-            format="table",
-            format_table="plain" if plain else "fancy_outline",
-            if_empty="Nothing found in the current workspace",
+        output = gto.api.show(
+            repo,
+            name=name,
+            all_branches=all_branches,
+            all_commits=all_commits,
+            registered_only=registered_only,
+            assignments_per_version=assignments_per_version,
+            versions_per_stage=versions_per_stage,
+            sort=sort,
+            table=True,
+            truncate_hexsha=True,
         )
+        arg = None
+        arg = "name" if show_name else arg
+        arg = "version" if show_version else arg
+        arg = "stage" if show_stage else arg
+        arg = "ref" if show_ref else arg
+        if arg:
+            if arg not in output[0][0]:
+                raise WrongArgs(f"Cannot apply --{arg}")
+            format_echo(
+                [v[arg] if isinstance(v, dict) else v for v in output[0]], "lines"
+            )
+        else:
+            format_echo(
+                output,
+                format="table",
+                format_table="plain" if plain else "fancy_outline",
+                if_empty="Nothing found in the current workspace",
+            )
 
 
 @gto_command(section=CommandGroups.querying)

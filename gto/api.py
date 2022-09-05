@@ -1,3 +1,4 @@
+import re
 from collections import OrderedDict
 from typing import List, Optional, Union
 
@@ -12,6 +13,8 @@ from gto.constants import (
     STAGE,
     VERSION,
     VERSIONS_PER_STAGE,
+    VersionSort,
+    shortcut_regexp,
 )
 from gto.exceptions import NoRepo, NotImplementedInGTO, WrongArgs
 from gto.ext import EnrichmentInfo
@@ -271,7 +274,8 @@ def show(
     truncate_hexsha=False,
     registered_only=False,
     assignments_per_version=ASSIGNMENTS_PER_VERSION,
-    versions_per_stage=1,
+    versions_per_stage=VERSIONS_PER_STAGE,
+    sort=VersionSort.Timestamp,
     table: bool = False,
 ):
     return (
@@ -283,6 +287,7 @@ def show(
             registered_only=registered_only,
             assignments_per_version=assignments_per_version,
             versions_per_stage=versions_per_stage,
+            sort=sort,
             table=table,
             truncate_hexsha=truncate_hexsha,
         )
@@ -294,6 +299,7 @@ def show(
             registered_only=registered_only,
             assignments_per_version=assignments_per_version,
             versions_per_stage=versions_per_stage,
+            sort=sort,
             table=table,
             truncate_hexsha=truncate_hexsha,
         )
@@ -305,8 +311,9 @@ def _show_registry(
     all_branches=False,
     all_commits=False,
     registered_only=False,
-    assignments_per_version: int = ASSIGNMENTS_PER_VERSION,
-    versions_per_stage: int = VERSIONS_PER_STAGE,
+    assignments_per_version: int = None,
+    versions_per_stage: int = None,
+    sort: VersionSort = None,
     table: bool = False,
     truncate_hexsha: bool = False,
 ):
@@ -330,16 +337,11 @@ def _show_registry(
                             registered_only=registered_only,
                             assignments_per_version=assignments_per_version,
                             versions_per_stage=versions_per_stage,
-                        )[name]
+                            sort=sort,
+                        ).get(name, [])
                     ]
                 )
-                if name
-                in o.get_vstages(
-                    registered_only=registered_only,
-                    assignments_per_version=assignments_per_version,
-                    versions_per_stage=versions_per_stage,
-                )
-                else None
+                or None
                 for name in stages
             },
         }
@@ -351,12 +353,15 @@ def _show_registry(
     if not table:
         return models_state
 
-    result = [
-        [name, d["version"]] + [d["stage"][name] for name in stages]
+    return [
+        OrderedDict(
+            zip(
+                ["name", "latest"] + [f"#{e}" for e in stages],
+                [name, d["version"]] + [d["stage"][name] for name in stages],
+            ),
+        )
         for name, d in models_state.items()
-    ]
-    headers = ["name", "latest"] + [f"#{e}" for e in stages]
-    return result, headers
+    ], "keys"
 
 
 def _show_versions(  # pylint: disable=too-many-locals
@@ -368,6 +373,7 @@ def _show_versions(  # pylint: disable=too-many-locals
     registered_only=False,
     assignments_per_version: int = None,
     versions_per_stage: int = None,
+    sort: VersionSort = None,
     table: bool = False,
     truncate_hexsha: bool = False,
 ):
@@ -375,6 +381,10 @@ def _show_versions(  # pylint: disable=too-many-locals
 
     def format_hexsha(hexsha):
         return hexsha[:7] if truncate_hexsha else hexsha
+
+    match = re.search(shortcut_regexp, name)
+    if match:
+        name = match["artifact"]
 
     reg = GitRegistry.from_repo(repo)
     if raw:
@@ -389,6 +399,7 @@ def _show_versions(  # pylint: disable=too-many-locals
         registered_only=registered_only,
         assignments_per_version=assignments_per_version,
         versions_per_stage=versions_per_stage,
+        sort=sort,
     )
     versions = []
     for v in artifact.get_versions(
@@ -402,6 +413,13 @@ def _show_versions(  # pylint: disable=too-many-locals
             if vstage.version == v["version"]
         ]
         versions.append(v)
+
+    if match and match["greatest"]:
+        versions = versions[:1]
+    if match and match["stage"]:
+        versions = [
+            v for v in versions for a in v["stages"] if match["stage"] in a["stage"]
+        ]
 
     if not table:
         return versions
