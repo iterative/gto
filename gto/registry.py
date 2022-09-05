@@ -152,16 +152,18 @@ class GitRegistry(BaseModel):
         # check that this commit don't have a version already
         found_version = found_artifact.find_version(commit_hexsha=ref)
         if found_version is not None:
-            if not force and found_version.is_registered:
+            if not force and found_version.is_registered and found_version.is_active:
                 raise VersionExistsForCommit(name, found_version.version)
-            if force and found_version.version != version:
+            if not version:
+                version = found_version.version
+            elif found_version.version != version:
                 raise WrongArgs(
                     f"For this REF you can only register {found_version.version}"
                 )
         # if version name is provided, use it
         if version:
             SemVer(version)
-            if found_artifact.find_version(name=version) is not None:
+            if found_artifact.find_version(name=version) != found_version:
                 raise VersionAlreadyRegistered(version)
         else:
             # if version name wasn't provided but there were some, bump the last one
