@@ -178,7 +178,7 @@ def unassign(
     )
 
 
-def unregister(
+def deregister(
     repo: Union[str, Repo],
     name: str,
     ref: str = None,
@@ -191,7 +191,7 @@ def unregister(
     author: Optional[str] = None,
     author_email: Optional[str] = None,
 ):
-    return GitRegistry.from_repo(repo).unregister(
+    return GitRegistry.from_repo(repo).deregister(
         name=name,
         ref=ref,
         version=version,

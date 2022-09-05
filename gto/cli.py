@@ -630,7 +630,7 @@ def deprecate(
             stdout=True,
         )
     elif version:
-        gto.api.unregister(
+        gto.api.deregister(
             repo=repo,
             name=name,
             version=version,
