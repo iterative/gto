@@ -14,6 +14,7 @@ from gto.constants import (
     VERSION,
     VERSIONS_PER_STAGE,
     VersionSort,
+    mark_artifact_unregistered,
     shortcut_regexp,
 )
 from gto.exceptions import NoRepo, NotImplementedInGTO, WrongArgs
@@ -358,7 +359,11 @@ def _show_registry(
         OrderedDict(
             zip(
                 ["name", "latest"] + [f"#{e}" for e in stages],
-                [name, d["version"]] + [d["stage"][name] for name in stages],
+                [
+                    name if d["registered"] else mark_artifact_unregistered(name),
+                    d["version"],
+                ]
+                + [d["stage"][name] for name in stages],
             ),
         )
         for name, d in models_state.items()
@@ -428,6 +433,11 @@ def _show_versions(  # pylint: disable=too-many-locals
     first_keys = ["artifact", "version", "stage"]
     versions_ = []
     for v in versions:
+        v["artifact"] = (
+            v["artifact"]
+            if artifact.is_registered
+            else mark_artifact_unregistered(v["artifact"])
+        )
         v["version"] = format_hexsha(v["version"])
         v["stage"] = ", ".join(
             distinct(  # TODO: remove? no longer necessary
