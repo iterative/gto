@@ -152,13 +152,13 @@ consumer, and maybe signal a downstream system about this. You can use
 
 ```console
 $ gto deprecate awesome-model v0.0.1 prod
-Created git tag 'awesome-model#prod#2!' that unassigns a stage from 'v0.0.1'
+Created git tag 'awesome-model#prod!#2' that unassigns a stage from 'v0.0.1'
 ```
 
 <details summary="Some details and options">
 
 GTO creates a special Git tag in a standard format:
-`{artifact_name}#{stage}#{e}!`.
+`{artifact_name}#{stage}!#{e}`.
 
 Note, that later you can create this stage again, if you need to, by calling
 `$ gto assign` again.
@@ -197,9 +197,9 @@ use
 $ gto deprecate awesome-model v0.0.1 --delete
 Deleted git tag 'awesome-model@v0.0.1' that registered a version.
 Deleted git tag 'awesome-model#prod#1' that assigned a stage to 'v0.0.1'.
-Deleted git tag 'awesome-model#prod#2!' that unassigned a stage to 'v0.0.1'.
+Deleted git tag 'awesome-model#prod!#2' that unassigned a stage to 'v0.0.1'.
 To push the changes upstream, run:
-git push origin awesome-model@v0.0.1 awesome-model#prod#1 awesome-model#prod#2! --delete
+git push origin awesome-model@v0.0.1 awesome-model#prod#1 awesome-model#prod!#2 --delete
 ```
 
 This includes all Git tags related to the version: a tag that registered it and
@@ -230,9 +230,9 @@ all of them for the artifact. You could do that with
 $ gto deprecate awesome-model --delete
 Deleted git tag 'awesome-model@v0.0.1' that registered a version.
 Deleted git tag 'awesome-model#prod#1' that assigned a stage to 'v0.0.1'.
-Deleted git tag 'awesome-model#prod#2!' that unassigned a stage to 'v0.0.1'.
+Deleted git tag 'awesome-model#prod!#2' that unassigned a stage to 'v0.0.1'.
 To push the changes upstream, run:
-git push origin awesome-model@v0.0.1 awesome-model#prod#1 awesome-model#prod#2! --delete
+git push origin awesome-model@v0.0.1 awesome-model#prod#1 awesome-model#prod!#2 --delete
 ```
 
 </details>
@@ -244,7 +244,7 @@ Let's look at the usage of the `gto show` and `gto history`.
 ### Show the current state
 
 This is the entire state of the registry: all artifacts, their latest versions,
-and the greatest versions for each stage.
+and the versions in each stage.
 
 ```console
 $ gto show
@@ -295,7 +295,7 @@ $ gto show churn --av -1
 ```
 
 To enable this workflow, you need to supply the `--av` argument to `gto show`
-and `gto which` commands. Other commands behave the same way regardless of the
+command. Other commands behave the same way regardless of the
 approach you choose.
 
 </details>
@@ -327,7 +327,7 @@ one column ("stage-1") to another ("stage-2"). This is how MLFlow and some other
 Model Registries work.
 
 To enable this workflow, you need to supply the `--vs` and `--av` arguments to
-`gto show` and `gto which` commands. Other commands behave the same way
+`gto show` command. Other commands behave the same way
 regardless of the approach you choose.
 
 </details>
@@ -357,7 +357,7 @@ $ gto history churn
 ## Consuming the registry downstream
 
 Let's look at integrating with GTO via Git as well as using the `gto check-ref`,
-`gto latest`, `gto which`, and `gto describe` utility commands downstream.
+`gto show`, and `gto describe` utility commands downstream.
 
 ### Act on new versions and stage assignments in CI
 
@@ -399,26 +399,33 @@ $ gto check-ref awesome-model@v0.0.1
 
 ### Getting the right version
 
-To get the latest artifact version, its path, and Git reference, use
-`gto latest`:
+To get the highest artifact version or Git reference, use `gto show artifact@greatest`:
 
 ```console
-$ gto latest churn
-v3.1.0
+$ gto show churn@greatest
+╒════════════╤═══════════╤═════════╤═════════════════════╤══════════════╕
+│ artifact   │ version   │ stage   │ created_at          │ ref          │
+╞════════════╪═══════════╪═════════╪═════════════════════╪══════════════╡
+│ churn      │ v3.1.0    │ staging │ 2022-08-24 08:02:53 │ churn@v3.1.0 │
+╘════════════╧═══════════╧═════════╧═════════════════════╧══════════════╛
 
-$ gto latest churn --ref
+$ gto show churn@greatest --ref
 churn@v3.1.0
 ```
 
-To get the version that is currently assigned to an environment (stage), use
-`gto which`:
+To get the version that is currently assigned to a stage, use
+`gto show artifact#stage`:
 
 ```console
-$ gto which churn dev
-v3.1.0
+$ gto show churn#prod
+╒════════════╤═══════════╤═════════╤═════════════════════╤══════════════╕
+│ artifact   │ version   │ stage   │ created_at          │ ref          │
+╞════════════╪═══════════╪═════════╪═════════════════════╪══════════════╡
+│ churn      │ v3.0.0    │ prod    │ 2022-08-19 16:56:13 │ churn@v3.0.0 │
+╘════════════╧═══════════╧═════════╧═════════════════════╧══════════════╛
 
-$ gto which churn dev --ref
-churn#dev#4
+$ gto show churn#prod --ref
+churn@v3.0.0
 ```
 
 To get details about an artifact (from `artifacts.yaml`) use `gto describe`:
