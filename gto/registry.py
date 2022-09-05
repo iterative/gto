@@ -196,7 +196,7 @@ class GitRegistry(BaseModel):
             self._echo_git_suggestion(tag)
         return self._return_event(tag)
 
-    def unregister(  # pylint: disable=too-many-locals
+    def deregister(  # pylint: disable=too-many-locals
         self,
         name,
         ref=None,
