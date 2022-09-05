@@ -154,7 +154,9 @@ class GitRegistry(BaseModel):
         if found_version is not None:
             if not force and found_version.is_registered and found_version.is_active:
                 raise VersionExistsForCommit(name, found_version.version)
-            if force and found_version.version != version:
+            if not version:
+                version = found_version.version
+            elif found_version.version != version:
                 raise WrongArgs(
                     f"For this REF you can only register {found_version.version}"
                 )
