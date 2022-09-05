@@ -425,6 +425,13 @@ class Artifact(BaseObject):
         return self.get_events(ascending=True)[0].created_at
 
     @property
+    def is_registered(self):
+        """Tells if this is an a registered artifact - i.e. there Git tags for it"""
+        return not all(
+            isinstance(e, Commit) for e in self.get_events(direct=True, indirect=True)
+        )
+
+    @property
     def unique_stages(self):
         return set(self.get_vstages())
 

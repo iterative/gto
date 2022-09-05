@@ -36,6 +36,10 @@ shortcut_regexp = re.compile(
 )
 
 
+def mark_artifact_unregistered(artifact_name):
+    return f"*{artifact_name}"
+
+
 class VersionSort(Enum):
     SemVer = "semver"
     Timestamp = "timestamp"

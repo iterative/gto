@@ -258,9 +258,11 @@ $ gto show
 ╘═══════════════╧══════════╧════════╧═════════╧════════════╛
 ```
 
-Here we'll see both artifacts that have Git tags only and those annotated in
-`artifacts.yaml`. Use `--all-branches` or `--all-commits` to read
-`artifacts.yaml` from more commits than just `HEAD`.
+Here we'll see artifacts that have Git tags or are annotated in
+`artifacts.yaml`. The artifacts that have annotation, but have no Git tags, are
+considered yet `unregistered` and will be marked with an asterisk, e.g.
+`*annotated`. Use `--all-branches` or `--all-commits` to read `artifacts.yaml`
+from more commits than just `HEAD`.
 
 Add an artifact name to print all of its versions instead:
 
@@ -456,14 +458,15 @@ GTO applies the config from the workspace, so if want to apply the config from
 $ GTO_EMOJIS=false gto show
 ```
 
-
 ## Contributing
 
-Contributions are welcome! Please see our [Contributing Guide](https://mlem.ai/doc/contributing/core)
-for more details.
+Contributions are welcome! Please see our
+[Contributing Guide](https://mlem.ai/doc/contributing/core) for more details.
 
-Check out the [MLEM+GTO weekly board](https://github.com/orgs/iterative/projects/322/views/4)
-to learn about what we do, and about the exciting new functionality that is going to be added soon.
+Check out the
+[MLEM+GTO weekly board](https://github.com/orgs/iterative/projects/322/views/4)
+to learn about what we do, and about the exciting new functionality that is
+going to be added soon.
 
 Thanks to all our contributors!
 
@@ -512,6 +515,8 @@ To continue experimenting, call `gto --help`
 
 ## Copyright
 
-This project is distributed under the Apache license version 2.0 (see the LICENSE file in the project root).
+This project is distributed under the Apache license version 2.0 (see the
+LICENSE file in the project root).
 
-By submitting a pull request to this project, you agree to license your contribution under the Apache license version 2.0 to this project.
+By submitting a pull request to this project, you agree to license your
+contribution under the Apache license version 2.0 to this project.
