@@ -258,8 +258,9 @@ $ gto show
 ╘═══════════════╧══════════╧════════╧═════════╧════════════╛
 ```
 
-Here we'll see both artifacts that have Git tags only and those that are
-annotated only in `artifacts.yaml` (the latter will be mark with asteriks, e.g.
+Here we'll see artifacts that have Git tags or are annotated in
+`artifacts.yaml`. The artifacts that have annotation, but have no Git tags, are
+considered yet `unregistered` and will be marked with an asterisk, e.g.
 `*annotated`. Use `--all-branches` or `--all-commits` to read `artifacts.yaml`
 from more commits than just `HEAD`.
 
