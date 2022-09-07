@@ -728,7 +728,7 @@ def show(  # pylint: disable=too-many-locals
     versions_per_stage: int = option_versions_per_stage,
     sort: str = option_sort,
 ):
-    """Show the registry state
+    """Show the registry state, highest version, or what's assigned in stage
 
     Examples:
         Show the registry:
@@ -740,10 +740,6 @@ def show(  # pylint: disable=too-many-locals
         Show greatest version or what's in stage:
         $ gto show nn@greatest
         $ gto show nn#prod
-
-        Use --all-branches and --all-commits to read more than just HEAD:
-        $ gto show --all-branches
-        $ gto show nn --all-commits
     """
     show_options = [show_name, show_version, show_stage, show_ref]
     assert (
