@@ -299,8 +299,14 @@ class GitRegistry(BaseModel):
                     raise WrongArgs(
                         f"Can't register '{SemVer(name_version).version}', since '{found_version.version}' is registered already at this ref"
                     )
-            elif not skip_registration:
-                self.register(name, version=name_version, ref=ref, stdout=stdout)
+            else:
+                if not skip_registration:
+                    self.register(
+                        name, version=name_version, ref=ref, simple=True, stdout=stdout
+                    )
+                found_version = self.find_artifact(name, create_new=True).find_version(
+                    commit_hexsha=ref, create_new=True
+                )
         if (
             not force
             and found_version
