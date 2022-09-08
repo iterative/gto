@@ -364,3 +364,14 @@ def test_assign(repo_with_commit: Tuple[git.Repo, Callable]):
         ],
         "❌ Version '1.0.0' is not valid. Example of valid version: 'v1.0.0'\n",
     )
+
+    _check_successful_cmd(
+        "assign",
+        ["-r", repo.working_dir, "nn2", "HEAD", "--stage", "prod"],
+        "Created git tag 'nn2@v0.0.1' that registers version\n"
+        "To push the changes upstream, run:\n"
+        "    git push nn2@v0.0.1\n"
+        "Created git tag 'nn2#prod#1' that assigns stage to version 'v0.0.1'\n"
+        "To push the changes upstream, run:\n"
+        "    git push nn2#prod#1\n",
+    )
