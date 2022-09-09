@@ -358,41 +358,25 @@ Let's look at integrating with GTO via Git as well as using the `gto check-ref`,
 
 ### Act on new versions and stage assignments in CI
 
-To act upon annotations (Git tags), you can create simple CI workflow. With
-[GitHub Actions](https://github.com/features/actions) for example, it can look
-like this:
+To act upon registrations and assignments (Git tags), you can create simple CI
+workflow. Check out
+[the example workflow in `example-gto` repo](https://github.com/iterative/example-gto/blob/main/.github/workflows/gto-act-on-tags.yml).
+The workflow uses [the GTO GH Action](https://github.com/iterative/gto-action)
+that fetches all Git tags (to correctly interpret the Registry) and finds out
+the version of the artifact that was registered, or the stage that was assigned,
+so you could use them in later steps of the CI.
 
-```yaml
-name: Act on versions or stage assignments of the "churn" actifact
-on:
-  push:
-    tags:
-      - "churn*"
-```
+### Inspecting Git tags
 
-When CI is triggered, you can use the Git reference to determine the version of
-the artifact. In GH Actions, you can use the `GITHUB_REF` environment variable
-(check out our
-[example workflow](/gto/blob/main/.github/workflows/check-test-release.yml)).
-You can parse tags manually or use `gto check-ref`:
+You can use `gto check-ref` to interpret the Git tag:
 
 ```console
-$ gto check-ref awesome-model@v0.0.1
-{
-    "version": {
-        "awesome-model": {
-            "artifact": "awesome-model",
-            "name": "v0.0.1",
-            "created_at": "2022-04-21T17:39:14",
-            "author": "Alexander Guschin",
-            "commit_hexsha": "26cafe958dca65d726b3c9023fbae71ed259b566",
-            "discovered": false,
-            "tag": "awesome-model@v0.0.1",
-        }
-    },
-    "stage": {}
-}
+$ gto check-ref -r build/example-gto churn#prod#3
+✅  Stage "prod" was assigned to version "v3.0.0" of artifact "churn"
 ```
+
+For machine-consumable format, use `--json` flag or output specific pieces of
+information with `--name`, `--version`, `--stage` or `--event`.
 
 ### Getting the right version
 
