@@ -436,7 +436,7 @@ stages: [dev, stage, prod]  # list of allowed Stages
 When allowed Stages or Types are specified, GTO will check commands you run and
 error out if you provided a value that doesn't exist in the config. Note, that
 GTO applies the config from the workspace, so if want to apply the config from
-`main` branch, you need to check out it first with `git checkout main`.
+`main` branch, you need to check it out first with `git checkout main`.
 
 ```console
 $ GTO_EMOJIS=false gto show
