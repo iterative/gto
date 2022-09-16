@@ -19,6 +19,7 @@ from gto.constants import (
 )
 from gto.exceptions import NoRepo, NotImplementedInGTO, WrongArgs
 from gto.ext import EnrichmentInfo
+from gto.git_utils import git_clone_if_repo_is_remote
 from gto.index import (
     EnrichmentManager,
     FileIndexManager,
@@ -267,6 +268,7 @@ def check_ref(repo: Union[str, Repo], ref: str):
     return reg.check_ref(ref)
 
 
+@git_clone_if_repo_is_remote
 def show(
     repo: Union[str, Repo],
     name: Optional[str] = None,
