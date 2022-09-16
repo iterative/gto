@@ -6,7 +6,7 @@ import pytest
 from git import Repo
 
 from gto.git_utils import git_clone, git_clone_if_repo_is_remote
-from tests.git_utils.data.remote_repositories import get_all_examples
+from tests.git_utils.data import get_example_http_remote_repo
 
 
 def test_if_repo_is_a_meaningless_string_then_leave_it_unchanged():
@@ -24,14 +24,13 @@ def test_if_repo_gitpython_object_then_leave_it_unchanged(tmp_local_git_repo):
     assert_f_called_with_repo_return_repo(repo=repo)
 
 
-@pytest.mark.parametrize("remote_repo", get_all_examples())
-def test_if_repo_is_remote_url_then_clone_and_set_repo_to_its_local_path(
-    remote_repo: str,
-):
+def test_if_repo_is_remote_url_then_clone_and_set_repo_to_its_local_path():
     with patch("gto.git_utils.git_clone") as mocked_git_clone:
         mocked_git_clone.side_effect = git_clone
-        local_repo = decorated_func(repo=remote_repo, spam=0, jam=3)
-        mocked_git_clone.assert_called_once_with(repo=remote_repo, dir=local_repo)
+        local_repo = decorated_func(repo=get_example_http_remote_repo(), spam=0, jam=3)
+        mocked_git_clone.assert_called_once_with(
+            repo=get_example_http_remote_repo(), dir=local_repo
+        )
 
 
 @git_clone_if_repo_is_remote

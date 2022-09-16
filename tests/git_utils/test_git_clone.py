@@ -1,16 +1,13 @@
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-import pytest
-
 from gto.git_utils import git_clone
-from tests.git_utils.data.remote_repositories import get_all_examples
+from tests.git_utils.data import get_example_http_remote_repo
 
 
-@pytest.mark.parametrize("repo", get_all_examples())
-def test_clone_remote_git_repo_in_specified_folder(repo: str):
+def test_clone_remote_git_repo_in_specified_folder():
     with TemporaryDirectory() as tmp_repo_dir:
-        git_clone(repo=repo, dir=tmp_repo_dir)
+        git_clone(repo=get_example_http_remote_repo(), dir=tmp_repo_dir)
         assert_dir_contain_git_repo(dir=tmp_repo_dir)
 
 
