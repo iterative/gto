@@ -6,7 +6,7 @@ from unittest.mock import patch
 import pytest
 from git import Repo
 
-from gto.git_utils import git_clone, git_clone_if_repo_is_remote
+from gto.git_utils import git_clone, git_clone_if_repo_is_remote, is_url_to_remote_repo
 from tests.data.remote_repositories import get_all_examples
 
 
@@ -29,7 +29,7 @@ def test_git_clone_if_repo_is_remote__if_repo_gitpython_object_then_leave_it_unc
 def test_git_clone_if_repo_is_remote__if_repo_is_remote_url_then_clone_and_set_repo_to_its_local_path(remote_repo: str):
     with patch("gto.git_utils.git_clone") as mocked_git_clone:
         mocked_git_clone.side_effect = git_clone
-        local_repo = f(repo=remote_repo, spam=0, jam=3)
+        local_repo = decorated_func(repo=remote_repo, spam=0, jam=3)
         mocked_git_clone.assert_called_once_with(repo=remote_repo, dir=local_repo)
 
 
@@ -40,16 +40,21 @@ def test_git_clone__clone_remote_git_repo_in_specified_folder(repo: str):
         assert_dir_contain_git_repo(dir=tmp_repo_dir)
 
 
+@pytest.mark.parametrize("url, expected_result", zip(get_all_examples() + ["/local/path"], [True] * len(get_all_examples()) + [False]))
+def test_is_url_to_remote_repo(url: str, expected_result: bool):
+    assert is_url_to_remote_repo(repo=url) == expected_result
+
+
 @git_clone_if_repo_is_remote
-def f(spam: int, repo: Union[Repo, str], jam: int):
+def decorated_func(spam: int, repo: Union[Repo, str], jam: int):
     return repo
 
 
 def assert_f_called_with_repo_return_repo(repo: Union[str, Repo]) -> None:
-    assert f(0, repo, 3) is repo
-    assert f(0, repo, jam=3) is repo
-    assert f(0, jam=3, repo=repo) is repo
-    assert f(spam=0, jam=3, repo=repo) is repo
+    assert decorated_func(0, repo, 3) is repo
+    assert decorated_func(0, repo, jam=3) is repo
+    assert decorated_func(0, jam=3, repo=repo) is repo
+    assert decorated_func(spam=0, jam=3, repo=repo) is repo
 
 
 @pytest.fixture
