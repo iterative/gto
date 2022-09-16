@@ -7,5 +7,9 @@ def get_sample_remote_repo_url() -> str:
 
 
 def get_sample_remote_repo_expected_registry() -> dict:
-    with open(Path(__file__).parent / "sample_remote_repo_expected_registry.json", "r") as f:
+    with open(
+        Path(__file__).parent / "sample_remote_repo_expected_registry.json",
+        "r",
+        encoding="utf-8",
+    ) as f:
         return json.load(f)
