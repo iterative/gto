@@ -58,9 +58,9 @@ def git_clone(repo: str, dir: str) -> None:
 
 
 def is_url_to_remote_repo(repo: str) -> bool:
-    # taken from https://stackoverflow.com/a/22312124/19782654
+    # taken from https://stackoverflow.com/a/22312124/19782654, modified to include url without .git at the end
     REGEX_REMOTE_GIT_REPO = (
-        r"((git|ssh|http(s)?)|(git@[\w\.]+))(:(//)?)([\w\.@\:/\-~]+)(\.git)(/)?"
+        r"((git|ssh|http(s)?)|(git@[\w\.]+))(:(//)?)([\w\.@\:/\-~]+)(/)?"
     )
 
     if re.fullmatch(REGEX_REMOTE_GIT_REPO, repo) is not None:
