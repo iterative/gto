@@ -26,9 +26,11 @@ def git_clone_if_repo_is_remote(f: Callable):
                     git_clone(repo=kwargs["repo"], dir=tmp_dir)
                     kwargs["repo"] = tmp_dir
                     result = f(**kwargs)
-            except NotADirectoryError as e:
-                raise NotADirectoryError(
-                    "Are you using windows with python < 3.9? This may be the reason of this error: https://bugs.python.org/issue42796. Consider upgrading python."
+            except (NotADirectoryError, PermissionError) as e:
+                raise e.__class__(
+                    "Are you using windows with python < 3.9? "
+                    "This may be the reason of this error: https://bugs.python.org/issue42796. "
+                    "Consider upgrading python."
                 ) from e
             logging.debug("temporary directory %s has been deleted", tmp_dir)
         else:
