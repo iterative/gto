@@ -19,12 +19,17 @@ def git_clone_if_repo_is_remote(f: Callable):
         if isinstance(kwargs["repo"], str) and is_url_to_remote_repo(
             repo=kwargs["repo"]
         ):
-            with TemporaryDirectory() as tmp_dir:
-                logging.debug("create temporary directory %s", tmp_dir)
-                # noinspection PyTypeChecker
-                git_clone(repo=kwargs["repo"], dir=tmp_dir)
-                kwargs["repo"] = tmp_dir
-                result = f(**kwargs)
+            try:
+                with TemporaryDirectory() as tmp_dir:
+                    logging.debug("create temporary directory %s", tmp_dir)
+                    # noinspection PyTypeChecker
+                    git_clone(repo=kwargs["repo"], dir=tmp_dir)
+                    kwargs["repo"] = tmp_dir
+                    result = f(**kwargs)
+            except NotADirectoryError as e:
+                raise NotADirectoryError(
+                    "Are you using windows with python < 3.9? This may be the reason of this error: https://bugs.python.org/issue42796. Consider upgrading python."
+                ) from e
             logging.debug("temporary directory %s has been deleted", tmp_dir)
         else:
             result = f(**kwargs)

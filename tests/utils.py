@@ -1,3 +1,4 @@
+import os
 from copy import deepcopy
 from typing import Any, Dict, Sequence, Set, Union
 
@@ -32,3 +33,10 @@ def check_obj(
         obj_values = omit(obj, skip_keys)
     values = omit(values, skip_keys)
     assert_equals(obj_values, values)
+
+
+def is_os_windows_and_py_lt_3_9() -> bool:
+    return (
+        os.environ.get("GITHUB_MATRIX_OS") == "windows-latest"
+        and os.environ.get("GITHUB_MATRIX_PYTHON", "2") < "3.9"
+    )
