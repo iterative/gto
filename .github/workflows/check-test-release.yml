@@ -71,6 +71,9 @@ jobs:
         git config --global user.email "olivaw@iterative.ai"
         git config --global user.name "Olivaw"
         pytest
+      env:
+        GITHUB_MATRIX_OS: ${{ matrix.os }}
+        GITHUB_MATRIX_PYTHON: ${{ matrix.python }}
     - name: "Upload coverage to Codecov"
       uses: codecov/codecov-action@v3
       with:
