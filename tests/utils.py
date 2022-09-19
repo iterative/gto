@@ -40,3 +40,10 @@ def is_os_windows_and_py_lt_3_9() -> bool:
         os.environ.get("GITHUB_MATRIX_OS") == "windows-latest"
         and os.environ.get("GITHUB_MATRIX_PYTHON", "2") < "3.9"
     )
+
+
+def is_os_windows_and_py_lt_3_8() -> bool:
+    return (
+        os.environ.get("GITHUB_MATRIX_OS") == "windows-latest"
+        and os.environ.get("GITHUB_MATRIX_PYTHON", "2") < "3.8"
+    )
