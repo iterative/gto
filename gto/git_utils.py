@@ -43,7 +43,7 @@ def git_clone_if_repo_is_remote(f: Callable):
         kwargs_complement = {
             k: args[i]
             for i, k in enumerate(inspect.getfullargspec(f).args)
-            if k not in kwargs.keys() and i < len(args)
+            if i < len(args)
         }
         kwargs.update(kwargs_complement)
         return kwargs
