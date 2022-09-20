@@ -1,6 +1,6 @@
 import pytest
 
-from gto.git_utils import is_url_to_remote_repo
+from gto.git_utils import is_url_of_remote_repo
 from tests.git_utils import data
 
 
@@ -12,7 +12,7 @@ from tests.git_utils import data
     ),
 )
 def test_if_remote_url_then_true(repo: str):
-    assert is_url_to_remote_repo(repo=repo) is True
+    assert is_url_of_remote_repo(repo=repo) is True
 
 
 @pytest.mark.parametrize(
@@ -24,4 +24,4 @@ def test_if_remote_url_then_true(repo: str):
     ),
 )
 def test_if_local_url_then_true(repo: str):
-    assert is_url_to_remote_repo(repo=repo) is False
+    assert is_url_of_remote_repo(repo=repo) is False
