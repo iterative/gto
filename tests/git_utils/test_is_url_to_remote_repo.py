@@ -18,5 +18,13 @@ def test_if_remote_url_then_true(repo: str):
     assert is_url_to_remote_repo(repo=repo) is True
 
 
-def test_if_local_url_then_true():
-    assert is_url_to_remote_repo(repo="/local/path") is False
+@pytest.mark.parametrize(
+    "repo",
+    (
+        "/local/path",
+        "/local/path",
+        ".",
+    ),
+)
+def test_if_local_url_then_true(repo: str):
+    assert is_url_to_remote_repo(repo=repo) is False
