@@ -6,7 +6,6 @@ from typing import Callable, Dict
 
 from git import Repo
 
-# TODO: make a new type out of Union[str, Repo]
 from gto.constants import remote_git_repo_regex
 
 
