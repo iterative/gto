@@ -6,7 +6,7 @@ import pytest
 from git import Repo
 
 from gto.git_utils import git_clone, git_clone_if_repo_is_remote
-from tests.git_utils.data import get_example_http_remote_repo
+from tests.git_utils import data
 from tests.skip_presets import (
     only_for_windows_py_lt_3_8,
     skip_for_windows_py_lt_3_9,
@@ -29,16 +29,16 @@ def test_if_repo_gitpython_object_then_leave_it_unchanged(tmp_local_git_repo):
 def test_if_repo_is_remote_url_then_clone_and_set_repo_to_its_local_path():
     with patch("gto.git_utils.git_clone") as mocked_git_clone:
         mocked_git_clone.side_effect = git_clone
-        local_repo = decorated_func(repo=get_example_http_remote_repo(), spam=0, jam=3)
+        local_repo = decorated_func(repo=data.SAMPLE_HTTP_REMOTE_REPO, spam=0, jam=3)
         mocked_git_clone.assert_called_once_with(
-            repo=get_example_http_remote_repo(), dir=local_repo
+            repo=data.SAMPLE_HTTP_REMOTE_REPO, dir=local_repo
         )
 
 
 @only_for_windows_py_lt_3_8
 def test_if_repo_is_remote_url_and_windows_os_error_then_hint_win_with_py_lt_3_9_may_be_the_cause():
     with pytest.raises(OSError) as e:
-        decorated_func(repo=get_example_http_remote_repo(), spam=0, jam=3)
+        decorated_func(repo=data.SAMPLE_HTTP_REMOTE_REPO, spam=0, jam=3)
     assert e.type in (NotADirectoryError, PermissionError)
     assert "windows" in str(e)
     assert "python" in str(e)

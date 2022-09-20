@@ -1,6 +1,4 @@
-def get_example_http_remote_repo() -> str:
-    return "https://github.com/iterative/example-gto.git"
-
-
-def get_example_http_remote_repo_without_dot_git_suffix() -> str:
-    return "https://github.com/iterative/example-gto"
+SAMPLE_HTTP_REMOTE_REPO = "https://github.com/iterative/example-gto.git"
+SAMPLE_HTTP_REMOTE_REPO_WITHOUT_DOT_GIT_SUFFIX = (
+    "https://github.com/iterative/example-gto"
+)

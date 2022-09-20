@@ -1,17 +1,14 @@
 import pytest
 
 from gto.git_utils import is_url_to_remote_repo
-from tests.git_utils.data import (
-    get_example_http_remote_repo,
-    get_example_http_remote_repo_without_dot_git_suffix,
-)
+from tests.git_utils import data
 
 
 @pytest.mark.parametrize(
     "repo",
     (
-        get_example_http_remote_repo(),
-        get_example_http_remote_repo_without_dot_git_suffix(),
+        data.SAMPLE_HTTP_REMOTE_REPO,
+        data.SAMPLE_HTTP_REMOTE_REPO_WITHOUT_DOT_GIT_SUFFIX,
     ),
 )
 def test_if_remote_url_then_true(repo: str):

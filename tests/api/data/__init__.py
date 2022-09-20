@@ -1,9 +1,7 @@
 import json
 from pathlib import Path
 
-
-def get_sample_remote_repo_url() -> str:
-    return r"https://github.com/iterative/example-gto-frozen.git"
+SAMPLE_REMOTE_REPO_URL = r"https://github.com/iterative/example-gto-frozen.git"
 
 
 def get_sample_remote_repo_expected_registry() -> dict:
