@@ -1,6 +1,5 @@
 import inspect
 import logging
-import re
 from functools import wraps
 from tempfile import TemporaryDirectory
 from typing import Callable, Dict
@@ -8,6 +7,7 @@ from typing import Callable, Dict
 from git import Repo
 
 # TODO: make a new type out of Union[str, Repo]
+from gto.constants import remote_git_repo_regex
 
 
 def git_clone_if_repo_is_remote(f: Callable):
@@ -58,12 +58,7 @@ def git_clone(repo: str, dir: str) -> None:
 
 
 def is_url_to_remote_repo(repo: str) -> bool:
-    # taken from https://stackoverflow.com/a/22312124/19782654, modified to include url without .git at the end
-    REGEX_REMOTE_GIT_REPO = (
-        r"((git|ssh|http(s)?)|(git@[\w\.]+))(:(//)?)([\w\.@\:/\-~]+)(/)?"
-    )
-
-    if re.fullmatch(REGEX_REMOTE_GIT_REPO, repo) is not None:
+    if remote_git_repo_regex.fullmatch(repo) is not None:
         logging.debug("%s recognized as remote git repo", repo)
         return True
 
