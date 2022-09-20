@@ -10,7 +10,7 @@ from git import Repo
 from gto.constants import remote_git_repo_regex
 
 
-def git_clone_if_repo_is_remote(f: Callable):
+def git_clone_remote_repo(f: Callable):
     @wraps(f)
     def wrapped_f(*args, **kwargs):
         kwargs = _turn_args_into_kwargs(args, kwargs)
