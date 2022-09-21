@@ -15,3 +15,12 @@ def get_sample_remote_repo_expected_registry() -> dict:
         encoding="utf-8",
     ) as f:
         return json.load(f)
+
+
+def get_sample_remote_repo_expected_history_churn() -> dict:
+    with open(
+        Path(__file__).parent / "sample_remote_repo_expected_history_churn.json",
+        "r",
+        encoding="utf-8",
+    ) as f:
+        return json.load(f)

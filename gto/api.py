@@ -477,6 +477,7 @@ def describe(
     raise NotImplementedError
 
 
+@git_clone_remote_repo
 def history(
     repo: Union[str, Repo],
     artifact: str = None,

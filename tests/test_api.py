@@ -14,7 +14,10 @@ from gto.exceptions import PathIsUsed, WrongArgs
 from gto.tag import find
 from gto.versions import SemVer
 from tests.skip_presets import skip_for_windows_py_lt_3_9
-from tests.utils import check_obj
+from tests.utils import (
+    check_obj,
+    convert_objects_to_str_in_json_serializable_object,
+)
 
 
 def test_empty_index(empty_git_repo: Tuple[git.Repo, Callable]):
@@ -322,3 +325,14 @@ def test_if_check_ref_on_remote_git_repo_then_return_expected_reference(
         assert hasattr(result[0], "stage") is False
     assert result[0].version == expected_version
     assert result[0].artifact == expected_artifact
+
+
+@skip_for_windows_py_lt_3_9
+def test_if_history_on_remote_git_repo_then_return_expected_history():
+    result = gto.api.history(
+        repo=tests.resources.SAMPLE_REMOTE_REPO_URL, artifact="churn"
+    )
+    assert (
+        convert_objects_to_str_in_json_serializable_object(result)
+        == tests.resources.get_sample_remote_repo_expected_history_churn()
+    )
