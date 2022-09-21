@@ -2,7 +2,7 @@
 """TODO: add more tests for API"""
 import os
 from contextlib import contextmanager
-from typing import Callable, Tuple
+from typing import Callable, Optional, Tuple
 
 import git
 import pytest
@@ -298,3 +298,27 @@ def test_is_gto_repo_because_of_artifacts_yaml(empty_git_repo):
 def test_if_show_on_remote_git_repo_then_return_expected_registry():
     result = show(repo=tests.resources.SAMPLE_REMOTE_REPO_URL)
     assert result == tests.resources.get_sample_remote_repo_expected_registry()
+
+
+@skip_for_windows_py_lt_3_9
+@pytest.mark.parametrize(
+    "ref,expected_stage,expected_version,expected_artifact",
+    (
+        ("churn#prod#2", "prod", "v3.0.0", "churn"),
+        ("segment@v0.4.1", None, "v0.4.1", "segment"),
+    ),
+)
+def test_if_check_ref_on_remote_git_repo_then_return_expected_reference(
+    ref: str,
+    expected_stage: Optional[str],
+    expected_version: str,
+    expected_artifact: str,
+):
+    result = gto.api.check_ref(repo=tests.resources.SAMPLE_REMOTE_REPO_URL, ref=ref)
+    assert len(result) == 1
+    if expected_stage is not None:
+        assert result[0].stage == expected_stage
+    else:
+        assert hasattr(result[0], "stage") is False
+    assert result[0].version == expected_version
+    assert result[0].artifact == expected_artifact
