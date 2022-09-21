@@ -6,6 +6,7 @@ from typing import Callable, Optional, Tuple
 
 import git
 import pytest
+from freezegun import freeze_time
 
 import gto
 import tests.resources
@@ -327,6 +328,7 @@ def test_if_check_ref_on_remote_git_repo_then_return_expected_reference(
     assert result[0].artifact == expected_artifact
 
 
+@freeze_time("1996-06-09 00:00:00", tz_offset=0)
 @skip_for_windows_py_lt_3_9
 def test_if_history_on_remote_git_repo_then_return_expected_history():
     result = gto.api.history(
