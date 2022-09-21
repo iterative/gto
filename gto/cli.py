@@ -565,16 +565,16 @@ def assign(
 
     Examples:
         Assign "nn" to "prod" at specific ref:
-        $ gto assign nn prod abcd123
+        $ gto assign nn abcd123 --stage prod
 
         Assign specific version:
-        $ gto assign nn prod --version v1.0.0
+        $ gto assign nn --version v1.0.0 --stage prod
 
         Assign at specific ref and name version explicitly:
-        $ gto assign nn prod abcd123 --version v1.0.0
+        $ gto assign nn abcd123 --version v1.0.0 --stage prod
 
-        Assign without increment
-        $ gto assign nn prod HEAD --simple
+        Assign without increment:
+        $ gto assign nn HEAD --stage prod --simple
     """
     if ref is not None:
         name_version = version

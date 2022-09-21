@@ -314,7 +314,7 @@ class GitRegistry(BaseModel):
             and any(vstage.stage == stage for vstage in found_version.get_vstages())
         ):
             raise WrongArgs(
-                f"Version '{found_version.version}' is already in stage '{stage}'"
+                f"Version '{found_version.version}' is already in stage '{stage}. Use the '--force' flag to create a new Git tag nevertheless."
             )
         # TODO: getting tag name as a result and using it
         # is leaking implementation details in base module
