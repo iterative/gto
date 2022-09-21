@@ -8,9 +8,12 @@ import git
 import pytest
 
 import gto
+import tests.resources
+from gto.api import show
 from gto.exceptions import PathIsUsed, WrongArgs
 from gto.tag import find
 from gto.versions import SemVer
+from tests.skip_presets import skip_for_windows_py_lt_3_9
 from tests.utils import check_obj
 
 
@@ -289,3 +292,9 @@ def test_is_gto_repo_because_of_artifacts_yaml(empty_git_repo):
     repo, write_file = empty_git_repo
     write_file("artifacts.yaml", "{}")
     assert gto.api._is_gto_repo(repo)
+
+
+@skip_for_windows_py_lt_3_9
+def test_if_show_on_remote_git_repo_then_return_expected_registry():
+    result = show(repo=tests.resources.SAMPLE_REMOTE_REPO_URL)
+    assert result == tests.resources.get_sample_remote_repo_expected_registry()

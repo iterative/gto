@@ -205,7 +205,13 @@ option_delete = Option(
 
 # Typer options to control git-related operations
 option_rev = Option(None, "--rev", help="Repo revision to use", show_default=True)
-option_repo = Option(".", "-r", "--repo", help="Repository to use", show_default=True)
+option_repo = Option(
+    ".",
+    "-r",
+    "--repo",
+    help="Repository to use (remote repos accepted)",
+    show_default=True,
+)
 option_all_branches = Option(
     False,
     "-a",

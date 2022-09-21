@@ -1,0 +1,47 @@
+{
+  "deprecated-model": {
+    "version": "v0.0.1",
+    "stage": {
+      "dev": null,
+      "prod": null,
+      "staging": null
+    },
+    "registered": true
+  },
+  "churn": {
+    "version": "v3.1.0",
+    "stage": {
+      "dev": null,
+      "prod": "v3.0.0",
+      "staging": "v3.1.0"
+    },
+    "registered": true
+  },
+  "segment": {
+    "version": "v0.4.1",
+    "stage": {
+      "dev": "v0.4.1",
+      "prod": null,
+      "staging": null
+    },
+    "registered": true
+  },
+  "cv-class": {
+    "version": "v0.1.13",
+    "stage": {
+      "dev": null,
+      "prod": null,
+      "staging": null
+    },
+    "registered": true
+  },
+  "model-a": {
+    "version": "v0.0.2",
+    "stage": {
+      "dev": "v0.0.2",
+      "prod": null,
+      "staging": null
+    },
+    "registered": true
+  }
+}
