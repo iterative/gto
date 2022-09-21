@@ -6,7 +6,7 @@ from typing import Callable, Optional, Tuple
 
 import git
 import pytest
-from freezegun import freeze_time  # type: ignore
+from freezegun import freeze_time
 
 import gto
 import tests.resources
