@@ -15,12 +15,10 @@ def git_clone_remote_repo(f: Callable):
     def wrapped_f(*args, **kwargs):
         kwargs = _turn_args_into_kwargs(args, kwargs)
 
-        # noinspection PyTypeChecker
         if isinstance(kwargs["repo"], str) and is_url_of_remote_repo(
             repo=kwargs["repo"]
         ):
             try:
-                # noinspection PyTypeChecker
                 with cloned_git_repo(repo=kwargs["repo"]) as tmp_dir:
                     kwargs["repo"] = tmp_dir
                     return f(**kwargs)
