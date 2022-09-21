@@ -54,6 +54,7 @@ def _get_state(repo: Union[str, Repo]):
     return GitRegistry.from_repo(repo).get_state()
 
 
+@git_clone_remote_repo
 def get_stages(repo: Union[str, Repo], allowed: bool = False, used: bool = False):
     return GitRegistry.from_repo(repo).get_stages(allowed=allowed, used=used)
 
@@ -262,6 +263,7 @@ def find_versions_in_stage(
     )
 
 
+@git_clone_remote_repo
 def check_ref(repo: Union[str, Repo], ref: str):
     """Find out what have been registered/assigned in the provided ref"""
     reg = GitRegistry.from_repo(repo)
@@ -476,6 +478,7 @@ def describe(
     raise NotImplementedError
 
 
+@git_clone_remote_repo
 def history(
     repo: Union[str, Repo],
     artifact: str = None,

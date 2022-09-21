@@ -1,0 +1,93 @@
+[
+  {
+    "timestamp": "2022-08-26 04:55:09",
+    "artifact": "churn",
+    "event": "commit",
+    "priority": 0,
+    "version": "e1cc719a8486a083c033844ef8fe29f81f7c5b48",
+    "stage": null,
+    "commit": "e1cc719a8486a083c033844ef8fe29f81f7c5b48",
+    "author": "Amrit Ghimire",
+    "author_email": "mail@amritghimire.com",
+    "message": "Add new model to test deprecation\n",
+    "ref": "e1cc719a8486a083c033844ef8fe29f81f7c5b48"
+  },
+  {
+    "timestamp": "2022-05-26 23:49:52",
+    "artifact": "churn",
+    "event": "assignment",
+    "priority": 5,
+    "version": "v3.0.0",
+    "stage": "prod",
+    "commit": "e19353d623660452e97a351ab0ba56a92126bd70",
+    "author": "Alexander Guschin",
+    "author_email": "1aguschin@gmail.com",
+    "message": "Promoting churn version v3.0.0 to stage prod",
+    "ref": "churn#prod#2"
+  },
+  {
+    "timestamp": "2022-05-25 20:03:12",
+    "artifact": "churn",
+    "event": "assignment",
+    "priority": 5,
+    "version": "v3.1.0",
+    "stage": "staging",
+    "commit": "299e82a7b3244899a84e715a39b786a4451c25cd",
+    "author": "Alexander Guschin",
+    "author_email": "1aguschin@gmail.com",
+    "message": "Promoting churn version None to stage staging",
+    "ref": "churn#staging#1"
+  },
+  {
+    "timestamp": "2022-05-24 16:16:32",
+    "artifact": "churn",
+    "event": "registration",
+    "priority": 3,
+    "version": "v3.1.0",
+    "stage": null,
+    "commit": "299e82a7b3244899a84e715a39b786a4451c25cd",
+    "author": "Alexander Guschin",
+    "author_email": "1aguschin@gmail.com",
+    "message": "Registering artifact churn version v3.1.0",
+    "ref": "churn@v3.1.0"
+  },
+  {
+    "timestamp": "2022-05-23 12:29:52",
+    "artifact": "churn",
+    "event": "commit",
+    "priority": 0,
+    "version": "v3.1.0",
+    "stage": null,
+    "commit": "299e82a7b3244899a84e715a39b786a4451c25cd",
+    "author": "Alexander Guschin",
+    "author_email": "1aguschin@gmail.com",
+    "message": "Update model\n",
+    "ref": "299e82a7b3244899a84e715a39b786a4451c25cd"
+  },
+  {
+    "timestamp": "2022-05-20 01:09:52",
+    "artifact": "churn",
+    "event": "registration",
+    "priority": 3,
+    "version": "v3.0.0",
+    "stage": null,
+    "commit": "e19353d623660452e97a351ab0ba56a92126bd70",
+    "author": "Alexander Guschin",
+    "author_email": "1aguschin@gmail.com",
+    "message": "Registering artifact churn version v3.0.0",
+    "ref": "churn@v3.0.0"
+  },
+  {
+    "timestamp": "2022-05-18 21:23:12",
+    "artifact": "churn",
+    "event": "commit",
+    "priority": 0,
+    "version": "v3.0.0",
+    "stage": null,
+    "commit": "e19353d623660452e97a351ab0ba56a92126bd70",
+    "author": "Alexander Guschin",
+    "author_email": "1aguschin@gmail.com",
+    "message": "Annotate models with GTO\n",
+    "ref": "e19353d623660452e97a351ab0ba56a92126bd70"
+  }
+]

@@ -1,3 +1,4 @@
+import json
 import os
 from copy import deepcopy
 from typing import Any, Dict, Sequence, Set, Union
@@ -33,6 +34,12 @@ def check_obj(
         obj_values = omit(obj, skip_keys)
     values = omit(values, skip_keys)
     assert_equals(obj_values, values)
+
+
+def convert_objects_to_str_in_json_serializable_object(
+    o: Union[list, dict]
+) -> Union[list, dict]:
+    return json.loads(json.dumps(o, default=str))
 
 
 def is_os_windows_and_py_lt_3_9() -> bool:
