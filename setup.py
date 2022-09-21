@@ -27,6 +27,7 @@ tests = [
     # and, protected method calls in our tests
     "pylint-plugin-utils",
     "freezegun",
+    "types-freezegun",
 ]
 
 
