@@ -1,6 +1,6 @@
 [
   {
-    "timestamp": "2022-08-26 06:55:09",
+    "timestamp": "2022-08-26 04:55:09",
     "artifact": "churn",
     "event": "commit",
     "priority": 0,
@@ -13,7 +13,7 @@
     "ref": "e1cc719a8486a083c033844ef8fe29f81f7c5b48"
   },
   {
-    "timestamp": "2022-05-27 01:49:52",
+    "timestamp": "2022-05-26 23:49:52",
     "artifact": "churn",
     "event": "assignment",
     "priority": 5,
@@ -26,7 +26,7 @@
     "ref": "churn#prod#2"
   },
   {
-    "timestamp": "2022-05-25 22:03:12",
+    "timestamp": "2022-05-25 20:03:12",
     "artifact": "churn",
     "event": "assignment",
     "priority": 5,
@@ -39,7 +39,7 @@
     "ref": "churn#staging#1"
   },
   {
-    "timestamp": "2022-05-24 18:16:32",
+    "timestamp": "2022-05-24 16:16:32",
     "artifact": "churn",
     "event": "registration",
     "priority": 3,
@@ -52,7 +52,7 @@
     "ref": "churn@v3.1.0"
   },
   {
-    "timestamp": "2022-05-23 14:29:52",
+    "timestamp": "2022-05-23 12:29:52",
     "artifact": "churn",
     "event": "commit",
     "priority": 0,
@@ -65,7 +65,7 @@
     "ref": "299e82a7b3244899a84e715a39b786a4451c25cd"
   },
   {
-    "timestamp": "2022-05-20 03:09:52",
+    "timestamp": "2022-05-20 01:09:52",
     "artifact": "churn",
     "event": "registration",
     "priority": 3,
@@ -78,7 +78,7 @@
     "ref": "churn@v3.0.0"
   },
   {
-    "timestamp": "2022-05-18 23:23:12",
+    "timestamp": "2022-05-18 21:23:12",
     "artifact": "churn",
     "event": "commit",
     "priority": 0,
