@@ -464,6 +464,7 @@ def _show_versions(  # pylint: disable=too-many-locals
     return versions_, "keys"
 
 
+@git_clone_remote_repo
 def describe(
     repo: Union[str, Repo], name: str, rev: str = None
 ) -> List[EnrichmentInfo]:

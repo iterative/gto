@@ -344,3 +344,13 @@ def test_if_history_on_remote_git_repo_then_return_expected_history():
 def test_if_stages_on_remote_git_repo_then_return_expected_stages():
     result = gto.api.get_stages(repo=tests.resources.SAMPLE_REMOTE_REPO_URL)
     assert result == ["dev", "prod", "staging"]
+
+
+@skip_for_windows_py_lt_3_9
+def test_if_describe_on_remote_git_repo_then_return_expected_info():
+    result = gto.api.describe(repo=tests.resources.SAMPLE_REMOTE_REPO_URL, name="churn")
+    assert result[0].get_object().dict(exclude_defaults=True) == {
+        "type": "model",
+        "path": "models/churn.pkl",
+        "virtual": False,
+    }
