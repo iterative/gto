@@ -1,36 +1,56 @@
 # pylint: disable=unused-variable, redefined-outer-name
 from typing import Callable, Optional, Tuple
+from unittest import mock
 
 import git
 import pytest
 import typer
 from packaging import version
 from typer.main import get_command_from_info
-from typer.testing import CliRunner
 
 from gto.api import _get_index
 from gto.cli import app
+from gto.exceptions import GTOException
+from tests.conftest import Runner
 
 from .utils import check_obj
 
 
-def _check_successful_cmd(cmd: str, args: list, expected_stdout: Optional[str]):
-    runner = CliRunner()
-    result = runner.invoke(app, [cmd] + args)
-    assert result.exit_code == 0, (result.output, result.exception)
+def _check_output_contains(output: str, search_value: str) -> bool:
+    return search_value in output
+
+
+def _check_output_exact_match(output: str, search_value: str) -> bool:
+    return search_value == output
+
+
+def _check_successful_cmd(
+    cmd: str,
+    args: list,
+    expected_stdout: Optional[str],
+    search_func: Optional[Callable] = _check_output_exact_match,
+):
+    runner = Runner()
+    result = runner.invoke([cmd] + args)
+    assert result.exit_code == 0, (result.stdout, result.stderr, result.exception)
     if expected_stdout is not None:
         if len(expected_stdout):
-            assert len(result.output) > 0, "Output is empty, but should not be"
-        assert result.output == expected_stdout
+            assert len(result.stdout) > 0, "Output is empty, but should not be"
+        assert search_func(result.stdout, expected_stdout)
 
 
-def _check_failing_cmd(cmd: str, args: list, expected_stderr: str):
-    runner = CliRunner()
-    result = runner.invoke(app, [cmd] + args)
-    assert result.exit_code != 0, (result.output, result.exception)
+def _check_failing_cmd(
+    cmd: str,
+    args: list,
+    expected_stderr: str,
+    search_func: Optional[Callable] = _check_output_exact_match,
+):
+    runner = Runner()
+    result = runner.invoke([cmd] + args)
+    assert result.exit_code != 0, (result.stdout, result.stderr, result.exception)
     if expected_stderr is not None:
-        assert len(result.output) > 0, "Output is empty, but should not be"
-    assert result.output == expected_stderr
+        assert len(result.stderr) > 0, "Output is empty, but should not be"
+    assert search_func(result.stderr, expected_stderr)
 
 
 @pytest.fixture
@@ -375,3 +395,21 @@ def test_assign(repo_with_commit: Tuple[git.Repo, Callable]):
         "To push the changes upstream, run:\n"
         "    git push nn2#prod#1\n",
     )
+
+
+GTO_EXCEPTION_MESSAGE = "Test GTOException Message"
+
+
+def test_stderr_gto_exception():
+    # patch gto show to throw gto exception.
+    with mock.patch("gto.api.show", side_effect=GTOException(GTO_EXCEPTION_MESSAGE)):
+        _check_failing_cmd("show", [], GTO_EXCEPTION_MESSAGE, _check_output_contains)
+
+
+EXCEPTION_MESSAGE = "Test Exception Message"
+
+
+def test_stderr_exception():
+    # patch gto show to throw exception.
+    with mock.patch("gto.api.show", side_effect=Exception(EXCEPTION_MESSAGE)):
+        _check_failing_cmd("show", [], EXCEPTION_MESSAGE, _check_output_contains)
