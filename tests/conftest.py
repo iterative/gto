@@ -4,9 +4,25 @@ from typing import Callable, Tuple
 
 import git
 import pytest
+from click.testing import Result
+from typer.testing import CliRunner
 
 import gto
+from gto.cli import app
 from gto.config import CONFIG_FILE_NAME
+
+
+class Runner:
+    def __init__(self):
+        self._runner = CliRunner(mix_stderr=False)
+
+    def invoke(self, *args, **kwargs) -> Result:
+        return self._runner.invoke(app, *args, **kwargs)
+
+
+@pytest.fixture
+def runner() -> Runner:
+    return Runner()
 
 
 @pytest.fixture
