@@ -18,7 +18,16 @@ from gto.constants import (
     VersionSort,
 )
 from gto.exceptions import GTOException, NotImplementedInGTO, WrongArgs
-from gto.ui import EMOJI_FAIL, EMOJI_GTO, EMOJI_OK, bold, cli_echo, color, echo
+from gto.ui import (
+    EMOJI_FAIL,
+    EMOJI_GTO,
+    EMOJI_OK,
+    bold,
+    cli_echo,
+    color,
+    echo,
+    stderr_echo,
+)
 from gto.utils import format_echo, make_ready_to_serialize
 
 
@@ -414,14 +423,14 @@ def gto_command(*args, section="other", aliases=None, parent=app, **kwargs):
                 error = str(type(e))
                 if ctx.obj["traceback"]:
                     raise
-                with cli_echo():
+                with stderr_echo():
                     echo(EMOJI_FAIL + color(str(e), col=typer.colors.RED))
                 raise typer.Exit(1) from e
             except Exception as e:  # pylint: disable=broad-except
                 error = str(type(e))
                 if ctx.obj["traceback"]:
                     raise
-                with cli_echo():
+                with stderr_echo():
                     echo(
                         (
                             EMOJI_FAIL
@@ -429,7 +438,7 @@ def gto_command(*args, section="other", aliases=None, parent=app, **kwargs):
                         )
                     )
                     echo(
-                        "Please report it here running with '--traceback' flag: <https://github.com/iterative/gto/issues>"
+                        "Please report it here running with '--traceback' flag: <https://github.com/iterative/gto/issues>\n"
                     )
                 raise typer.Exit(1) from e
             finally:
