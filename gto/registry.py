@@ -466,7 +466,7 @@ class GitRegistry(BaseModel):
     @staticmethod
     def _echo_git_suggestion(tag):
         echo("To push the changes upstream, run:")
-        echo(f"    git push {tag}")
+        echo(f"    git push origin {tag}")
 
     def _delete_tags(self, tags, stdout):
         tags = list(tags)
