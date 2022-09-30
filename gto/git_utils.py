@@ -69,14 +69,15 @@ def git_clone(repo: str, dir: str) -> None:
     Repo.clone_from(url=repo, to_path=dir)
 
 
-def git_push_tags(path: str, remote_name: str = "origin") -> None:
-    repo = Repo(path=path)
+def git_push_tag(repo_path: str, tag_name: str, remote_name: str = "origin") -> None:
+    repo = Repo(path=repo_path)
     remote = repo.remote(name=remote_name)
     remote_url = "unknown" if not hasattr(remote, "url") else remote.url
     logging.debug(
-        "push --tags from directory %s to remote %s with url %s",
-        path,
+        "push tag %s from directory %s to remote %s with url %s",
+        tag_name,
+        repo_path,
         remote_name,
         remote_url,
     )
-    remote.push("--tags")
+    remote.push(tag_name)

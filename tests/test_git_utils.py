@@ -10,7 +10,7 @@ import tests.resources
 from gto.git_utils import (
     git_clone,
     git_clone_remote_repo,
-    git_push_tags,
+    git_push_tag,
     is_url_of_remote_repo,
 )
 from tests.skip_presets import (
@@ -99,15 +99,16 @@ def test_git_push_tags_if_called_then_gitpython_corresponding_methods_are_correc
     mocked_repo = MagicMock()
     path = "git_repo_path"
     remote_name = "git_remote_name"
+    tag_name = "test_tag"
 
     with patch("gto.git_utils.Repo") as MockedRepo:
         MockedRepo.return_value = mocked_repo
         mocked_repo.remote.return_value = mocked_remote
-        git_push_tags(path=path, remote_name=remote_name)
+        git_push_tag(repo_path=path, tag_name=tag_name, remote_name=remote_name)
 
     MockedRepo.assert_called_once_with(path=path)
     mocked_repo.remote.assert_called_once_with(name=remote_name)
-    mocked_remote.push.assert_called_once_with("--tags")
+    mocked_remote.push.assert_called_once_with(tag_name)
 
 
 @git_clone_remote_repo
