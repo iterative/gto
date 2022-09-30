@@ -1,5 +1,6 @@
 import logging
 import os
+from pathlib import Path
 from typing import Optional, TypeVar, Union
 
 import git
@@ -30,6 +31,7 @@ from gto.exceptions import (
     VersionExistsForCommit,
     WrongArgs,
 )
+from gto.git_utils import git_push_tag
 from gto.index import EnrichmentManager
 from gto.tag import (
     TagArtifactManager,
@@ -136,6 +138,7 @@ class GitRegistry(BaseModel):
         bump_major=False,
         bump_minor=False,
         bump_patch=False,
+        auto_push=False,
         stdout=False,
         author: Optional[str] = None,
         author_email: Optional[str] = None,
@@ -195,7 +198,9 @@ class GitRegistry(BaseModel):
         )
         if stdout:
             echo(f"Created git tag '{tag}' that registers version")
-            self._echo_git_suggestion(tag)
+        self._push_tag_or_echo_reminder(
+            tag_name=tag, auto_push=auto_push, stdout=stdout
+        )
         return self._return_event(tag)
 
     def deregister(  # pylint: disable=too-many-locals
@@ -554,3 +559,13 @@ class GitRegistry(BaseModel):
             return self._get_allowed_stages()
         # if stages aren't set in config, return those in use
         return self._get_used_stages()
+
+    def _push_tag_or_echo_reminder(
+        self, tag_name: str, auto_push: bool, stdout: bool
+    ) -> None:
+        if auto_push:
+            git_push_tag(
+                repo_path=Path(self.repo.git_dir).parent.as_posix(), tag_name=tag_name
+            )
+        elif stdout:
+            self._echo_git_suggestion(tag_name)

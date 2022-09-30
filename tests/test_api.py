@@ -3,6 +3,7 @@
 import os
 from contextlib import contextmanager
 from typing import Callable, Optional, Tuple
+from unittest.mock import patch
 
 import git
 import pytest
@@ -354,3 +355,14 @@ def test_if_describe_on_remote_git_repo_then_return_expected_info():
         "path": "models/churn.pkl",
         "virtual": False,
     }
+
+
+def test_if_register_with_auto_push_then_invoke_git_push_tag(repo_with_artifact):
+    repo, _ = repo_with_artifact
+    with patch("gto.registry.git_push_tag") as mocked_git_push_tags:
+        gto.api.register(
+            repo=repo.working_dir, name="model", ref="HEAD", auto_push=True
+        )
+    mocked_git_push_tags.assert_called_once_with(
+        repo_path=repo.working_dir, tag_name="model@v0.0.1"
+    )

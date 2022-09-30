@@ -517,6 +517,9 @@ def register(
     bump_patch: bool = Option(
         False, "--bump-patch", is_flag=True, help="Bump patch version"
     ),
+    auto_push: bool = Option(
+        False, "--auto-push", is_flag=True, help="Push created tag automatically"
+    ),
 ):
     """Create an artifact version to signify an important, published or released iteration
 
@@ -544,6 +547,7 @@ def register(
         bump_major=bump_major,
         bump_minor=bump_minor,
         bump_patch=bump_patch,
+        auto_push=auto_push,
         stdout=True,
     )
 
