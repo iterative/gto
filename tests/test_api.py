@@ -2,6 +2,7 @@
 """TODO: add more tests for API"""
 import os
 from contextlib import contextmanager
+from pathlib import Path
 from typing import Callable, Optional, Tuple
 from unittest.mock import patch
 
@@ -364,5 +365,5 @@ def test_if_register_with_auto_push_then_invoke_git_push_tag(repo_with_artifact)
             repo=repo.working_dir, name="model", ref="HEAD", auto_push=True
         )
     mocked_git_push_tags.assert_called_once_with(
-        repo_path=repo.working_dir, tag_name="model@v0.0.1"
+        repo_path=Path(repo.working_dir).as_posix(), tag_name="model@v0.0.1"
     )
