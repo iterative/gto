@@ -302,7 +302,7 @@ def test_register(repo_with_commit: Tuple[git.Repo, Callable]):
         ["-r", repo.working_dir, "a1"],
         "Created git tag 'a1@v0.0.1' that registers version\n"
         "To push the changes upstream, run:\n"
-        "    git push a1@v0.0.1\n",
+        "    git push origin a1@v0.0.1\n",
     )
 
     _check_successful_cmd(
@@ -310,7 +310,7 @@ def test_register(repo_with_commit: Tuple[git.Repo, Callable]):
         ["-r", repo.working_dir, "a2", "--version", "v1.2.3"],
         "Created git tag 'a2@v1.2.3' that registers version\n"
         "To push the changes upstream, run:\n"
-        "    git push a2@v1.2.3\n",
+        "    git push origin a2@v1.2.3\n",
     )
 
     _check_successful_cmd(
@@ -318,7 +318,7 @@ def test_register(repo_with_commit: Tuple[git.Repo, Callable]):
         ["-r", repo.working_dir, "a2", "v1.2.3"],
         "Created git tag 'a2@v1.2.3!' that deregisters version\n"
         "To push the changes upstream, run:\n"
-        "    git push a2@v1.2.3!\n",
+        "    git push origin a2@v1.2.3!\n",
     )
 
     _check_successful_cmd(
@@ -326,7 +326,7 @@ def test_register(repo_with_commit: Tuple[git.Repo, Callable]):
         ["-r", repo.working_dir, "a2", "--simple", "false"],
         "Created git tag 'a2@v1.2.3#1' that registers version\n"
         "To push the changes upstream, run:\n"
-        "    git push a2@v1.2.3#1\n",
+        "    git push origin a2@v1.2.3#1\n",
     )
 
     _check_failing_cmd(
@@ -344,7 +344,7 @@ def test_assign(repo_with_commit: Tuple[git.Repo, Callable]):
         ["-r", repo.working_dir, "nn1"],
         "Created git tag 'nn1@v0.0.1' that registers version\n"
         "To push the changes upstream, run:\n"
-        "    git push nn1@v0.0.1\n",
+        "    git push origin nn1@v0.0.1\n",
     )
     # this check depends on the previous one
     _check_successful_cmd(
@@ -352,7 +352,7 @@ def test_assign(repo_with_commit: Tuple[git.Repo, Callable]):
         ["-r", repo.working_dir, "nn1", "HEAD", "--stage", "prod"],
         "Created git tag 'nn1#prod#1' that assigns stage to version 'v0.0.1'\n"
         "To push the changes upstream, run:\n"
-        "    git push nn1#prod#1\n",
+        "    git push origin nn1#prod#1\n",
     )
     # this check depends on the previous assignment
     _check_failing_cmd(
@@ -390,10 +390,10 @@ def test_assign(repo_with_commit: Tuple[git.Repo, Callable]):
         ["-r", repo.working_dir, "nn2", "HEAD", "--stage", "prod"],
         "Created git tag 'nn2@v0.0.1' that registers version\n"
         "To push the changes upstream, run:\n"
-        "    git push nn2@v0.0.1\n"
+        "    git push origin nn2@v0.0.1\n"
         "Created git tag 'nn2#prod#1' that assigns stage to version 'v0.0.1'\n"
         "To push the changes upstream, run:\n"
-        "    git push nn2#prod#1\n",
+        "    git push origin nn2#prod#1\n",
     )
 
 
