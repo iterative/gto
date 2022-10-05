@@ -4,7 +4,7 @@ import os
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Callable, Optional, Tuple
-from unittest.mock import patch
+from unittest.mock import call, patch
 
 import git
 import pytest
@@ -390,6 +390,7 @@ def test_if_unassign_with_auto_push_then_invoke_git_push_tag(repo_with_artifact)
         repo.working_dir, name="model", stage="dev", ref="HEAD", auto_push=False
     )
     with patch("gto.registry.git_push_tag") as mocked_git_push_tags:
+        # TODO: ask alex why this does not work without specifying ref="HEAD"
         gto.api.unassign(
             repo.working_dir, name="model", stage="dev", ref="HEAD", auto_push=True
         )
@@ -419,3 +420,50 @@ def test_if_unassign_with_delete_and_auto_push_then_invoke_git_push_tag(
     mocked_git_push_tags.assert_called_once_with(
         repo_path=Path(repo.working_dir).as_posix(), tag_name="model#dev#1", delete=True
     )
+
+
+def test_if_deregister_with_auto_push_then_invoke_git_push_tag(repo_with_artifact):
+    repo, _ = repo_with_artifact
+    gto.api.assign(
+        repo.working_dir, name="model", stage="dev", ref="HEAD", auto_push=False
+    )
+    with patch("gto.registry.git_push_tag") as mocked_git_push_tags:
+        gto.api.deregister(
+            repo.working_dir, name="model", version="v0.0.1", auto_push=True
+        )
+    mocked_git_push_tags.assert_called_once_with(
+        repo_path=Path(repo.working_dir).as_posix(),
+        tag_name="model@v0.0.1!",
+        delete=False,
+    )
+
+
+def test_if_deregister_with_delete_and_auto_push_then_invoke_git_push_tag(
+    repo_with_artifact,
+):
+    repo, _ = repo_with_artifact
+    gto.api.assign(
+        repo.working_dir, name="model", stage="dev", ref="HEAD", auto_push=False
+    )
+    with patch("gto.registry.git_push_tag") as mocked_git_push_tags:
+        gto.api.deregister(
+            repo.working_dir,
+            name="model",
+            version="v0.0.1",
+            auto_push=True,
+            delete=True,
+        )
+    assert mocked_git_push_tags.call_count == 2
+    calls = [
+        call(
+            repo_path=Path(repo.working_dir).as_posix(),
+            tag_name="model@v0.0.1",
+            delete=True,
+        ),
+        call(
+            repo_path=Path(repo.working_dir).as_posix(),
+            tag_name="model#dev#1",
+            delete=True,
+        ),
+    ]
+    mocked_git_push_tags.assert_has_calls(calls)

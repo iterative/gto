@@ -665,6 +665,7 @@ def deprecate(
             simple=simple,  # type: ignore
             force=force,
             delete=delete,
+            auto_push=auto_push,
             stdout=True,
         )
     else:

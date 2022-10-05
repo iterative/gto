@@ -212,6 +212,7 @@ class GitRegistry(BaseModel):
         simple=None,
         force=False,
         delete=False,
+        auto_push: bool = False,
         stdout=False,
         author: Optional[str] = None,
         author_email: Optional[str] = None,
@@ -248,7 +249,7 @@ class GitRegistry(BaseModel):
                     if hasattr(e, "tag")
                 ]
             )
-            return self._delete_tags(tags, stdout=stdout)
+            return self._delete_tags(tags, stdout=stdout, auto_push=auto_push)
 
         tag = self.version_manager.deregister(
             name,
@@ -259,9 +260,9 @@ class GitRegistry(BaseModel):
             author=author,
             author_email=author_email,
         )
-        if stdout:
-            echo(f"Created git tag '{tag}' that deregisters version")
-            self._echo_git_suggestion(tag)
+        self._push_tag_or_echo_reminder(
+            tag_name=tag, auto_push=auto_push, stdout=stdout, delete=delete
+        )
         return self._return_event(tag)
 
     def assign(  # pylint: disable=too-many-locals
@@ -404,7 +405,7 @@ class GitRegistry(BaseModel):
                 f"Created git tag '{tag}' that unassigns stage from version '{found_version.version}'"
             )
         self._push_tag_or_echo_reminder(
-            tag_name=tag, auto_push=auto_push, stdout=stdout
+            tag_name=tag, auto_push=auto_push, stdout=stdout, delete=delete
         )
         return self._return_event(tag)
 
@@ -486,7 +487,10 @@ class GitRegistry(BaseModel):
             if stdout:
                 echo(f"Deleted git tag '{tag}'")
             self._push_tag_or_echo_reminder(
-                tag_name=tag, delete=True, auto_push=auto_push, stdout=stdout
+                tag_name=tag,
+                auto_push=auto_push,
+                stdout=stdout,
+                delete=True,
             )
 
     def check_ref(self, ref: str):
