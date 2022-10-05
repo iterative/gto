@@ -564,8 +564,12 @@ class GitRegistry(BaseModel):
         self, tag_name: str, auto_push: bool, stdout: bool
     ) -> None:
         if auto_push:
+            if stdout:
+                echo(f"Running git push origin {tag_name}")
             git_push_tag(
                 repo_path=Path(self.repo.git_dir).parent.as_posix(), tag_name=tag_name
             )
+            if stdout:
+                echo(f"Successfully pushed git tag {tag_name} to the remote.")
         elif stdout:
             self._echo_git_suggestion(tag_name)
