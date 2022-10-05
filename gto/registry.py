@@ -274,6 +274,7 @@ class GitRegistry(BaseModel):
         message=None,
         simple=False,
         force=False,
+        auto_push: bool = False,
         skip_registration=False,
         stdout=False,
         author: Optional[str] = None,
@@ -342,7 +343,9 @@ class GitRegistry(BaseModel):
             echo(
                 f"Created git tag '{tag}' that assigns stage to version '{found_version.version}'"
             )
-            self._echo_git_suggestion(tag)
+        self._push_tag_or_echo_reminder(
+            tag_name=tag, auto_push=auto_push, stdout=stdout
+        )
         return self._return_event(tag)
 
     def unassign(  # pylint: disable=too-many-locals

@@ -566,6 +566,9 @@ def assign(
     message: Optional[str] = option_message,
     simple: str = option_simple,
     force: bool = option_force,
+    auto_push: bool = Option(
+        False, "--auto-push", is_flag=True, help="Push created tag automatically"
+    ),
     skip_registration: bool = Option(
         False,
         "--sr",
@@ -608,6 +611,7 @@ def assign(
         message=message,
         simple=simple,  # type: ignore
         force=force,
+        auto_push=auto_push,
         skip_registration=skip_registration,
         stdout=True,
     )
