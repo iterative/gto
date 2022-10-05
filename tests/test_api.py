@@ -365,7 +365,9 @@ def test_if_register_with_auto_push_then_invoke_git_push_tag(repo_with_artifact)
             repo=repo.working_dir, name="model", ref="HEAD", auto_push=True
         )
     mocked_git_push_tags.assert_called_once_with(
-        repo_path=Path(repo.working_dir).as_posix(), tag_name="model@v0.0.1"
+        repo_path=Path(repo.working_dir).as_posix(),
+        tag_name="model@v0.0.1",
+        delete=False,
     )
 
 
@@ -376,5 +378,44 @@ def test_if_assign_with_auto_push_then_invoke_git_push_tag(repo_with_artifact):
             repo.working_dir, name="model", stage="dev", ref="HEAD", auto_push=True
         )
     mocked_git_push_tags.assert_called_once_with(
-        repo_path=Path(repo.working_dir).as_posix(), tag_name="model#dev#1"
+        repo_path=Path(repo.working_dir).as_posix(),
+        tag_name="model#dev#1",
+        delete=False,
+    )
+
+
+def test_if_unassign_with_auto_push_then_invoke_git_push_tag(repo_with_artifact):
+    repo, _ = repo_with_artifact
+    gto.api.assign(
+        repo.working_dir, name="model", stage="dev", ref="HEAD", auto_push=False
+    )
+    with patch("gto.registry.git_push_tag") as mocked_git_push_tags:
+        gto.api.unassign(
+            repo.working_dir, name="model", stage="dev", ref="HEAD", auto_push=True
+        )
+    mocked_git_push_tags.assert_called_once_with(
+        repo_path=Path(repo.working_dir).as_posix(),
+        tag_name="model#dev!#2",
+        delete=False,
+    )
+
+
+def test_if_unassign_with_delete_and_auto_push_then_invoke_git_push_tag(
+    repo_with_artifact,
+):
+    repo, _ = repo_with_artifact
+    gto.api.assign(
+        repo.working_dir, name="model", stage="dev", ref="HEAD", auto_push=False
+    )
+    with patch("gto.registry.git_push_tag") as mocked_git_push_tags:
+        gto.api.unassign(
+            repo.working_dir,
+            name="model",
+            stage="dev",
+            ref="HEAD",
+            delete=True,
+            auto_push=True,
+        )
+    mocked_git_push_tags.assert_called_once_with(
+        repo_path=Path(repo.working_dir).as_posix(), tag_name="model#dev#1", delete=True
     )

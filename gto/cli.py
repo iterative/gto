@@ -627,6 +627,9 @@ def deprecate(
     simple: str = option_simple,
     force: bool = option_force,
     delete: bool = option_delete,
+    auto_push: bool = Option(
+        False, "--auto-push", is_flag=True, help="Push created tag automatically"
+    ),
 ):
     """Deprecate artifact, deregister a version, or unassign a stage
 
@@ -650,6 +653,7 @@ def deprecate(
             simple=simple,  # type: ignore
             force=force,
             delete=delete,
+            auto_push=auto_push,
             stdout=True,
         )
     elif version:

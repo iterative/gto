@@ -358,6 +358,7 @@ class GitRegistry(BaseModel):
         simple=False,
         force=False,
         delete=False,
+        auto_push: bool = False,
         stdout=False,
         author: Optional[str] = None,
         author_email: Optional[str] = None,
@@ -382,7 +383,7 @@ class GitRegistry(BaseModel):
                     if hasattr(e, "tag") and hasattr(e, "stage") and e.stage == stage
                 ]
             )
-            return self._delete_tags(tags, stdout=stdout)
+            return self._delete_tags(tags, auto_push=auto_push, stdout=stdout)
 
         # TODO: getting tag name as a result and using it
         # is leaking implementation details in base module
@@ -402,7 +403,9 @@ class GitRegistry(BaseModel):
             echo(
                 f"Created git tag '{tag}' that unassigns stage from version '{found_version.version}'"
             )
-            self._echo_git_suggestion(tag)
+        self._push_tag_or_echo_reminder(
+            tag_name=tag, auto_push=auto_push, stdout=stdout
+        )
         return self._return_event(tag)
 
     def deprecate(
@@ -476,15 +479,15 @@ class GitRegistry(BaseModel):
         echo("To push the changes upstream, run:")
         echo(f"    git push origin {tag}")
 
-    def _delete_tags(self, tags, stdout):
+    def _delete_tags(self, tags, stdout, auto_push: bool = False):
         tags = list(tags)
         for tag in tags:
             delete_tag(self.repo, tag)
             if stdout:
                 echo(f"Deleted git tag '{tag}'")
-        if stdout:
-            echo("To push the changes upstream, run:")
-            echo(f"    git push {' '.join(tags)} --delete".replace("!", "/!"))
+            self._push_tag_or_echo_reminder(
+                tag_name=tag, delete=True, auto_push=auto_push, stdout=stdout
+            )
 
     def check_ref(self, ref: str):
         "Find out what was registered/assigned in this ref"
@@ -564,13 +567,15 @@ class GitRegistry(BaseModel):
         return self._get_used_stages()
 
     def _push_tag_or_echo_reminder(
-        self, tag_name: str, auto_push: bool, stdout: bool
+        self, tag_name: str, auto_push: bool, stdout: bool, delete: bool = False
     ) -> None:
         if auto_push:
             if stdout:
                 echo(f"Running git push origin {tag_name}")
             git_push_tag(
-                repo_path=Path(self.repo.git_dir).parent.as_posix(), tag_name=tag_name
+                repo_path=Path(self.repo.git_dir).parent.as_posix(),
+                tag_name=tag_name,
+                delete=delete,
             )
             if stdout:
                 echo(f"Successfully pushed git tag {tag_name} to the remote.")

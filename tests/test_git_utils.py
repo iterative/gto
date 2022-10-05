@@ -111,6 +111,25 @@ def test_git_push_tags_if_called_then_gitpython_corresponding_methods_are_correc
     mocked_remote.push.assert_called_once_with(tag_name)
 
 
+def test_git_push_tags_if_called_with_delete_then_gitpython_corresponding_methods_are_correctly_invoked():
+    mocked_remote = MagicMock()
+    mocked_repo = MagicMock()
+    path = "git_repo_path"
+    remote_name = "git_remote_name"
+    tag_name = "test_tag"
+
+    with patch("gto.git_utils.Repo") as MockedRepo:
+        MockedRepo.return_value = mocked_repo
+        mocked_repo.remote.return_value = mocked_remote
+        git_push_tag(
+            repo_path=path, tag_name=tag_name, delete=True, remote_name=remote_name
+        )
+
+    MockedRepo.assert_called_once_with(path=path)
+    mocked_repo.remote.assert_called_once_with(name=remote_name)
+    mocked_remote.push.assert_called_once_with("--delete", tag_name)
+
+
 @git_clone_remote_repo
 def decorated_func(
     spam: int, repo: Union[Repo, str], jam: int
