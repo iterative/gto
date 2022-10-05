@@ -223,6 +223,7 @@ def deprecate(
     simple: Optional[bool] = None,
     force: bool = False,
     delete: bool = False,
+    auto_push: bool = False,
     author: Optional[str] = None,
     author_email: Optional[str] = None,
 ):
@@ -233,6 +234,7 @@ def deprecate(
         simple=simple if simple is not None else True,
         force=force,
         delete=delete,
+        auto_push=auto_push,
         author=author,
         author_email=author_email,
     )

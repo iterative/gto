@@ -417,10 +417,12 @@ class GitRegistry(BaseModel):
         simple=False,
         force=False,
         delete=False,
+        auto_push: bool = False,
         stdout=False,
         author: Optional[str] = None,
         author_email: Optional[str] = None,
     ) -> Optional[Deprecation]:
+        print()
         if not force:
             found_artifact = self.find_artifact(name)
             if not found_artifact.is_active:
@@ -433,7 +435,7 @@ class GitRegistry(BaseModel):
                     if hasattr(e, "tag")
                 ]
             )
-            return self._delete_tags(tags, stdout=stdout)
+            return self._delete_tags(tags, stdout=stdout, auto_push=auto_push)
         if ref is None:
             if name in self.get_artifacts():
                 ref = self.find_artifact(name=name).get_events()[0].commit_hexsha
@@ -447,9 +449,9 @@ class GitRegistry(BaseModel):
             author=author,
             author_email=author_email,
         )
-        if stdout:
-            echo(f"Created git tag '{tag}' that deprecates artifact")
-            self._echo_git_suggestion(tag)
+        self._push_tag_or_echo_reminder(
+            tag_name=tag, auto_push=auto_push, stdout=stdout, delete=delete
+        )
         return self._return_event(tag)
 
     def _check_args(self, name, version, ref, stage=None):
@@ -480,9 +482,11 @@ class GitRegistry(BaseModel):
         echo("To push the changes upstream, run:")
         echo(f"    git push origin {tag}")
 
-    def _delete_tags(self, tags, stdout, auto_push: bool = False):
+    def _delete_tags(self, tags, stdout, auto_push: bool):
         tags = list(tags)
+        print()
         for tag in tags:
+            print(f"{tag=}")
             delete_tag(self.repo, tag)
             if stdout:
                 echo(f"Deleted git tag '{tag}'")
