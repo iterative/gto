@@ -8,6 +8,7 @@ from typing import Callable, Dict
 from git import Repo
 
 from gto.constants import remote_git_repo_regex
+from gto.exceptions import WrongArgs
 
 
 def git_clone_remote_repo(f: Callable):
@@ -74,14 +75,17 @@ def git_push_tag(
 ) -> None:
     repo = Repo(path=repo_path)
     remote = repo.remote(name=remote_name)
-    remote_url = "unknown" if not hasattr(remote, "url") else remote.url
+    if not hasattr(remote, "url"):
+        raise WrongArgs(
+            f"provided repo_path={repo_path} does not appear to have a remote to push to"
+        )
     logging.debug(
         "push %s tag %s from directory %s to remote %s with url %s",
         "--delete" if delete else "",
         tag_name,
         repo_path,
         remote_name,
-        remote_url,
+        remote.url,
     )
     remote_push_args = [tag_name]
     if delete:
