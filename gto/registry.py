@@ -260,6 +260,8 @@ class GitRegistry(BaseModel):
             author=author,
             author_email=author_email,
         )
+        if stdout:
+            echo(f"Created git tag '{tag}' that deregisters version")
         self._push_tag_or_echo_reminder(
             tag_name=tag, auto_push=auto_push, stdout=stdout, delete=delete
         )
@@ -449,6 +451,8 @@ class GitRegistry(BaseModel):
             author=author,
             author_email=author_email,
         )
+        if stdout:
+            echo(f"Created git tag '{tag}' that deprecates artifact")
         self._push_tag_or_echo_reminder(
             tag_name=tag, auto_push=auto_push, stdout=stdout, delete=delete
         )
