@@ -138,5 +138,6 @@ dmypy.json
 cython_debug/
 
 .idea
+.vscode
 
 gto/_gto_version.py
