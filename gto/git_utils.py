@@ -90,4 +90,4 @@ def git_push_tag(
     remote_push_args = [tag_name]
     if delete:
         remote_push_args = ["--delete"] + remote_push_args
-    remote.push(*remote_push_args)
+    remote.push(remote_push_args)

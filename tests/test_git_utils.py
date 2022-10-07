@@ -108,7 +108,7 @@ def test_git_push_tags_if_called_then_gitpython_corresponding_methods_are_correc
 
     MockedRepo.assert_called_once_with(path=path)
     mocked_repo.remote.assert_called_once_with(name=remote_name)
-    mocked_remote.push.assert_called_once_with(tag_name)
+    mocked_remote.push.assert_called_once_with([tag_name])
 
 
 def test_git_push_tags_if_called_with_delete_then_gitpython_corresponding_methods_are_correctly_invoked():
@@ -127,7 +127,7 @@ def test_git_push_tags_if_called_with_delete_then_gitpython_corresponding_method
 
     MockedRepo.assert_called_once_with(path=path)
     mocked_repo.remote.assert_called_once_with(name=remote_name)
-    mocked_remote.push.assert_called_once_with("--delete", tag_name)
+    mocked_remote.push.assert_called_once_with(["--delete", tag_name])
 
 
 @git_clone_remote_repo
