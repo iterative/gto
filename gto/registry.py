@@ -424,7 +424,6 @@ class GitRegistry(BaseModel):
         author: Optional[str] = None,
         author_email: Optional[str] = None,
     ) -> Optional[Deprecation]:
-        print()
         if not force:
             found_artifact = self.find_artifact(name)
             if not found_artifact.is_active:
@@ -488,9 +487,7 @@ class GitRegistry(BaseModel):
 
     def _delete_tags(self, tags, stdout, auto_push: bool):
         tags = list(tags)
-        print()
         for tag in tags:
-            print(f"{tag=}")
             delete_tag(self.repo, tag)
             if stdout:
                 echo(f"Deleted git tag '{tag}'")
