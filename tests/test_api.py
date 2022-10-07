@@ -390,9 +390,12 @@ def test_if_unassign_with_auto_push_then_invoke_git_push_tag(repo_with_artifact)
         repo.working_dir, name="model", stage="dev", ref="HEAD", auto_push=False
     )
     with patch("gto.registry.git_push_tag") as mocked_git_push_tags:
-        # TODO: ask alex why this does not work without specifying ref="HEAD"
         gto.api.unassign(
-            repo.working_dir, name="model", stage="dev", ref="HEAD", auto_push=True
+            repo.working_dir,
+            name="model",
+            stage="dev",
+            version="v0.0.1",
+            auto_push=True,
         )
     mocked_git_push_tags.assert_called_once_with(
         repo_path=Path(repo.working_dir).as_posix(),
@@ -413,7 +416,7 @@ def test_if_unassign_with_delete_and_auto_push_then_invoke_git_push_tag(
             repo.working_dir,
             name="model",
             stage="dev",
-            ref="HEAD",
+            version="v0.0.1",
             delete=True,
             auto_push=True,
         )
