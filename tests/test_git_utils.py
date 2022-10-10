@@ -7,6 +7,7 @@ import pytest
 from git import Repo
 
 import tests.resources
+from gto.exceptions import GTOException
 from gto.git_utils import (
     git_clone,
     git_clone_remote_repo,
@@ -94,8 +95,9 @@ def test_git_clone_if_valid_remote_then_clone(repo: str):
         assert_dir_contain_git_repo(dir=tmp_repo_dir)
 
 
-def test_git_push_tags_if_called_then_gitpython_corresponding_methods_are_correctly_invoked():
+def test_git_push_tag_if_called_then_gitpython_corresponding_methods_are_correctly_invoked():
     mocked_remote = MagicMock()
+    mocked_remote.push.return_value = None
     mocked_repo = MagicMock()
     path = "git_repo_path"
     remote_name = "git_remote_name"
@@ -111,8 +113,9 @@ def test_git_push_tags_if_called_then_gitpython_corresponding_methods_are_correc
     mocked_remote.push.assert_called_once_with([tag_name])
 
 
-def test_git_push_tags_if_called_with_delete_then_gitpython_corresponding_methods_are_correctly_invoked():
+def test_git_push_tag_if_called_with_delete_then_gitpython_corresponding_methods_are_correctly_invoked():
     mocked_remote = MagicMock()
+    mocked_remote.push.return_value = None
     mocked_repo = MagicMock()
     path = "git_repo_path"
     remote_name = "git_remote_name"
@@ -128,6 +131,25 @@ def test_git_push_tags_if_called_with_delete_then_gitpython_corresponding_method
     MockedRepo.assert_called_once_with(path=path)
     mocked_repo.remote.assert_called_once_with(name=remote_name)
     mocked_remote.push.assert_called_once_with(["--delete", tag_name])
+
+
+def test_git_push_tag_if_error_then_exit_with_code_1():
+    mocked_remote = MagicMock()
+    mocked_remote.push.return_value = MagicMock()
+    mocked_repo = MagicMock()
+    path = "git_repo_path"
+    remote_name = "git_remote_name"
+    tag_name = "test_tag"
+
+    with patch("gto.git_utils.Repo") as MockedRepo:
+        MockedRepo.return_value = mocked_repo
+        mocked_repo.remote.return_value = mocked_remote
+        with pytest.raises(GTOException) as error:
+            git_push_tag(repo_path=path, tag_name=tag_name, remote_name=remote_name)
+    assert f"git push {remote_name} {tag_name}" in error.value.msg
+    assert (
+        "Make sure your local repository is in sync with the remote" in error.value.msg
+    )
 
 
 @git_clone_remote_repo

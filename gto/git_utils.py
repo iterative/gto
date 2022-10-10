@@ -8,7 +8,7 @@ from typing import Callable, Dict
 from git import Repo
 
 from gto.constants import remote_git_repo_regex
-from gto.exceptions import WrongArgs
+from gto.exceptions import GTOException, WrongArgs
 
 
 def git_clone_remote_repo(f: Callable):
@@ -90,4 +90,9 @@ def git_push_tag(
     remote_push_args = [tag_name]
     if delete:
         remote_push_args = ["--delete"] + remote_push_args
-    remote.push(remote_push_args)
+    push_info = remote.push(remote_push_args)
+    if push_info is not None:
+        raise GTOException(
+            msg=f"The command `git push {remote_name} {' '.join(remote_push_args)}` failed. "
+            f"Make sure your local repository is in sync with the remote."
+        )
