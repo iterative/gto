@@ -2,7 +2,9 @@
 """TODO: add more tests for API"""
 import os
 from contextlib import contextmanager
+from pathlib import Path
 from typing import Callable, Optional, Tuple
+from unittest.mock import call, patch
 
 import git
 import pytest
@@ -354,3 +356,140 @@ def test_if_describe_on_remote_git_repo_then_return_expected_info():
         "path": "models/churn.pkl",
         "virtual": False,
     }
+
+
+def test_if_register_with_auto_push_then_invoke_git_push_tag(repo_with_artifact):
+    repo, _ = repo_with_artifact
+    with patch("gto.registry.git_push_tag") as mocked_git_push_tags:
+        gto.api.register(
+            repo=repo.working_dir, name="model", ref="HEAD", auto_push=True
+        )
+    mocked_git_push_tags.assert_called_once_with(
+        repo_path=Path(repo.working_dir).as_posix(),
+        tag_name="model@v0.0.1",
+        delete=False,
+    )
+
+
+def test_if_assign_with_auto_push_then_invoke_git_push_tag_2_times_for_registration_and_promotion(
+    repo_with_artifact,
+):
+    repo, _ = repo_with_artifact
+    with patch("gto.registry.git_push_tag") as mocked_git_push_tags:
+        gto.api.assign(
+            repo.working_dir, name="model", stage="dev", ref="HEAD", auto_push=True
+        )
+    expected_calls = [
+        call(
+            repo_path=Path(repo.working_dir).as_posix(),
+            tag_name="model@v0.0.1",
+            delete=False,
+        ),
+        call(
+            repo_path=Path(repo.working_dir).as_posix(),
+            tag_name="model#dev#1",
+            delete=False,
+        ),
+    ]
+    mocked_git_push_tags.assert_has_calls(expected_calls)
+
+
+def test_if_unassign_with_auto_push_then_invoke_git_push_tag(repo_with_artifact):
+    repo, _ = repo_with_artifact
+    gto.api.assign(
+        repo.working_dir, name="model", stage="dev", ref="HEAD", auto_push=False
+    )
+    with patch("gto.registry.git_push_tag") as mocked_git_push_tags:
+        gto.api.unassign(
+            repo.working_dir,
+            name="model",
+            stage="dev",
+            version="v0.0.1",
+            auto_push=True,
+        )
+    mocked_git_push_tags.assert_called_once_with(
+        repo_path=Path(repo.working_dir).as_posix(),
+        tag_name="model#dev!#2",
+        delete=False,
+    )
+
+
+def test_if_unassign_with_delete_and_auto_push_then_invoke_git_push_tag(
+    repo_with_artifact,
+):
+    repo, _ = repo_with_artifact
+    gto.api.assign(
+        repo.working_dir, name="model", stage="dev", ref="HEAD", auto_push=False
+    )
+    with patch("gto.registry.git_push_tag") as mocked_git_push_tags:
+        gto.api.unassign(
+            repo.working_dir,
+            name="model",
+            stage="dev",
+            version="v0.0.1",
+            delete=True,
+            auto_push=True,
+        )
+    mocked_git_push_tags.assert_called_once_with(
+        repo_path=Path(repo.working_dir).as_posix(), tag_name="model#dev#1", delete=True
+    )
+
+
+def test_if_deregister_with_auto_push_then_invoke_git_push_tag(repo_with_artifact):
+    repo, _ = repo_with_artifact
+    gto.api.register(repo.working_dir, name="model", ref="HEAD", auto_push=False)
+    with patch("gto.registry.git_push_tag") as mocked_git_push_tags:
+        gto.api.deregister(
+            repo.working_dir, name="model", version="v0.0.1", auto_push=True
+        )
+    mocked_git_push_tags.assert_called_once_with(
+        repo_path=Path(repo.working_dir).as_posix(),
+        tag_name="model@v0.0.1!",
+        delete=False,
+    )
+
+
+def test_if_deregister_with_delete_and_auto_push_then_invoke_git_push_tag(
+    repo_with_artifact,
+):
+    repo, _ = repo_with_artifact
+    gto.api.register(repo.working_dir, name="model", ref="HEAD", auto_push=False)
+    with patch("gto.registry.git_push_tag") as mocked_git_push_tags:
+        gto.api.deregister(
+            repo.working_dir,
+            name="model",
+            version="v0.0.1",
+            auto_push=True,
+            delete=True,
+        )
+    mocked_git_push_tags.assert_called_once_with(
+        repo_path=Path(repo.working_dir).as_posix(),
+        tag_name="model@v0.0.1",
+        delete=True,
+    )
+
+
+def test_if_deprecate_with_auto_push_then_invoke_git_push_tag(repo_with_artifact):
+    repo, _ = repo_with_artifact
+    gto.api.register(repo.working_dir, name="model", ref="HEAD", auto_push=False)
+    with patch("gto.registry.git_push_tag") as mocked_git_push_tags:
+        gto.api.deprecate(repo.working_dir, name="model", auto_push=True)
+    mocked_git_push_tags.assert_called_once_with(
+        repo_path=Path(repo.working_dir).as_posix(),
+        tag_name="model@deprecated",
+        delete=False,
+    )
+
+
+def test_if_deprecate_with_delete_and_auto_push_then_invoke_git_push_tag(
+    repo_with_artifact,
+):
+    repo, _ = repo_with_artifact
+    gto.api.register(repo.working_dir, name="model", ref="HEAD", auto_push=False)
+    with patch("gto.registry.git_push_tag") as mocked_git_push_tags:
+        gto.api.deprecate(repo.working_dir, name="model", auto_push=True, delete=True)
+    mocked_git_push_tags.assert_called_once_with(
+        repo_path=Path(repo.working_dir).as_posix(),
+        tag_name="model@v0.0.1",
+        delete=True,
+    )

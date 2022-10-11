@@ -98,6 +98,7 @@ def register(
     bump_major: bool = False,
     bump_minor: bool = False,
     bump_patch: bool = False,
+    auto_push: bool = False,
     stdout: bool = False,
     author: Optional[str] = None,
     author_email: Optional[str] = None,
@@ -113,6 +114,7 @@ def register(
         bump_major=bump_major,
         bump_minor=bump_minor,
         bump_patch=bump_patch,
+        auto_push=auto_push,
         stdout=stdout,
         author=author,
         author_email=author_email,
@@ -129,6 +131,7 @@ def assign(
     message: Optional[str] = None,
     simple: bool = False,
     force: bool = False,
+    auto_push: bool = False,
     skip_registration: bool = False,
     stdout: bool = False,
     author: Optional[str] = None,
@@ -144,6 +147,7 @@ def assign(
         message=message,
         simple=simple,
         force=force,
+        auto_push=auto_push,
         skip_registration=skip_registration,
         stdout=stdout,
         author=author,
@@ -162,6 +166,7 @@ def unassign(
     simple: Optional[bool] = None,
     force: bool = False,
     delete: bool = False,
+    auto_push: bool = False,
     author: Optional[str] = None,
     author_email: Optional[str] = None,
 ):
@@ -175,6 +180,7 @@ def unassign(
         simple=simple if simple is not None else False,
         force=force,
         delete=delete,
+        auto_push=auto_push,
         author=author,
         author_email=author_email,
     )
@@ -190,6 +196,7 @@ def deregister(
     simple: Optional[bool] = None,
     force: bool = False,
     delete: bool = False,
+    auto_push: bool = False,
     author: Optional[str] = None,
     author_email: Optional[str] = None,
 ):
@@ -202,6 +209,7 @@ def deregister(
         simple=simple if simple is not None else True,
         force=force,
         delete=delete,
+        auto_push=auto_push,
         author=author,
         author_email=author_email,
     )
@@ -215,6 +223,7 @@ def deprecate(
     simple: Optional[bool] = None,
     force: bool = False,
     delete: bool = False,
+    auto_push: bool = False,
     author: Optional[str] = None,
     author_email: Optional[str] = None,
 ):
@@ -225,6 +234,7 @@ def deprecate(
         simple=simple if simple is not None else True,
         force=force,
         delete=delete,
+        auto_push=auto_push,
         author=author,
         author_email=author_email,
     )

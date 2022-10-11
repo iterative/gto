@@ -359,6 +359,12 @@ option_table = Option(
     help="Print output in table format",
     show_default=True,
 )
+option_auto_push = Option(
+    False,
+    "--auto-push",
+    is_flag=True,
+    help="Push created tag automatically (experimental)",
+)
 
 
 @app.callback("gto", invoke_without_command=True, no_args_is_help=True)
@@ -517,6 +523,7 @@ def register(
     bump_patch: bool = Option(
         False, "--bump-patch", is_flag=True, help="Bump patch version"
     ),
+    auto_push: bool = option_auto_push,
 ):
     """Create an artifact version to signify an important, published or released iteration
 
@@ -544,6 +551,7 @@ def register(
         bump_major=bump_major,
         bump_minor=bump_minor,
         bump_patch=bump_patch,
+        auto_push=auto_push,
         stdout=True,
     )
 
@@ -562,6 +570,7 @@ def assign(
     message: Optional[str] = option_message,
     simple: str = option_simple,
     force: bool = option_force,
+    auto_push: bool = option_auto_push,
     skip_registration: bool = Option(
         False,
         "--sr",
@@ -604,6 +613,7 @@ def assign(
         message=message,
         simple=simple,  # type: ignore
         force=force,
+        auto_push=auto_push,
         skip_registration=skip_registration,
         stdout=True,
     )
@@ -619,6 +629,7 @@ def deprecate(
     simple: str = option_simple,
     force: bool = option_force,
     delete: bool = option_delete,
+    auto_push: bool = option_auto_push,
 ):
     """Deprecate artifact, deregister a version, or unassign a stage
 
@@ -642,6 +653,7 @@ def deprecate(
             simple=simple,  # type: ignore
             force=force,
             delete=delete,
+            auto_push=auto_push,
             stdout=True,
         )
     elif version:
@@ -653,6 +665,7 @@ def deprecate(
             simple=simple,  # type: ignore
             force=force,
             delete=delete,
+            auto_push=auto_push,
             stdout=True,
         )
     else:
@@ -663,6 +676,7 @@ def deprecate(
             simple=simple,  # type: ignore
             force=force,
             delete=delete,
+            auto_push=auto_push,
             stdout=True,
         )
 

@@ -1,15 +1,17 @@
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Union
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from git import Repo
 
 import tests.resources
+from gto.exceptions import GTOException
 from gto.git_utils import (
     git_clone,
     git_clone_remote_repo,
+    git_push_tag,
     is_url_of_remote_repo,
 )
 from tests.skip_presets import (
@@ -23,13 +25,13 @@ def test_git_clone_remote_repo_if_repo_is_a_meaningless_string_then_leave_it_unc
 
 
 def test_git_clone_remote_repo_if_repo_is_a_local_git_repo_then_leave_it_unchanged(
-    tmp_local_git_repo,
+    tmp_local_git_repo: str,
 ):
     assert_f_called_with_repo_return_repo_itself(repo=tmp_local_git_repo)
 
 
 def test_git_clone_remote_repo_if_repo_gitpython_object_then_leave_it_unchanged(
-    tmp_local_git_repo,
+    tmp_local_git_repo: str,
 ):
     assert_f_called_with_repo_return_repo_itself(repo=Repo(path=tmp_local_git_repo))
 
@@ -93,6 +95,68 @@ def test_git_clone_if_valid_remote_then_clone(repo: str):
         assert_dir_contain_git_repo(dir=tmp_repo_dir)
 
 
+def test_git_push_tag_if_called_then_gitpython_corresponding_methods_are_correctly_invoked(
+    with_mocked_repo_with_remote: tuple,
+):
+    (
+        path,
+        remote_name,
+        MockedRepo,
+        mocked_repo,
+        mocked_remote,
+    ) = with_mocked_repo_with_remote
+    tag_name = "test_tag"
+
+    git_push_tag(repo_path=path, tag_name=tag_name, remote_name=remote_name)
+
+    MockedRepo.assert_called_once_with(path=path)
+    mocked_repo.remote.assert_called_once_with(name=remote_name)
+    mocked_remote.push.assert_called_once_with([tag_name])
+
+
+def test_git_push_tag_if_called_with_delete_then_gitpython_corresponding_methods_are_correctly_invoked(
+    with_mocked_repo_with_remote: tuple,
+):
+    (
+        path,
+        remote_name,
+        MockedRepo,
+        mocked_repo,
+        mocked_remote,
+    ) = with_mocked_repo_with_remote
+    tag_name = "test_tag"
+
+    git_push_tag(
+        repo_path=path, tag_name=tag_name, delete=True, remote_name=remote_name
+    )
+
+    MockedRepo.assert_called_once_with(path=path)
+    mocked_repo.remote.assert_called_once_with(name=remote_name)
+    mocked_remote.push.assert_called_once_with(["--delete", tag_name])
+
+
+def test_git_push_tag_if_error_then_exit_with_code_1(
+    with_mocked_repo_with_remote: tuple,
+):
+    (
+        path,
+        remote_name,
+        _,
+        _,
+        mocked_remote,
+    ) = with_mocked_repo_with_remote
+    mocked_remote.push.return_value = MagicMock()
+    tag_name = "test_tag"
+
+    with pytest.raises(GTOException) as error:
+        git_push_tag(repo_path=path, tag_name=tag_name, remote_name=remote_name)
+
+    assert f"git push {remote_name} {tag_name}" in error.value.msg
+    assert (
+        "Make sure your local repository is in sync with the remote" in error.value.msg
+    )
+
+
 @git_clone_remote_repo
 def decorated_func(
     spam: int, repo: Union[Repo, str], jam: int
@@ -118,3 +182,17 @@ def tmp_local_git_repo() -> str:
 def assert_dir_contain_git_repo(dir: str) -> None:
     assert (Path(dir) / ".git").is_dir()
     assert (Path(dir) / ".git/HEAD").is_file()
+
+
+@pytest.fixture
+def with_mocked_repo_with_remote() -> tuple:
+    mocked_remote = MagicMock()
+    mocked_remote.push.return_value = None
+    mocked_repo = MagicMock()
+    path = "git_repo_path"
+    remote_name = "git_remote_name"
+
+    with patch("gto.git_utils.Repo") as MockedRepo:
+        MockedRepo.return_value = mocked_repo
+        mocked_repo.remote.return_value = mocked_remote
+        yield path, remote_name, MockedRepo, mocked_repo, mocked_remote

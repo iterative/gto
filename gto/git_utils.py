@@ -8,6 +8,7 @@ from typing import Callable, Dict
 from git import Repo
 
 from gto.constants import remote_git_repo_regex
+from gto.exceptions import GTOException, WrongArgs
 
 
 def git_clone_remote_repo(f: Callable):
@@ -67,3 +68,31 @@ def cloned_git_repo(repo: str):
 def git_clone(repo: str, dir: str) -> None:
     logging.debug("clone %s in directory %s", repo, dir)
     Repo.clone_from(url=repo, to_path=dir)
+
+
+def git_push_tag(
+    repo_path: str, tag_name: str, delete: bool = False, remote_name: str = "origin"
+) -> None:
+    repo = Repo(path=repo_path)
+    remote = repo.remote(name=remote_name)
+    if not hasattr(remote, "url"):
+        raise WrongArgs(
+            f"provided repo_path={repo_path} does not appear to have a remote to push to"
+        )
+    logging.debug(
+        "push %s tag %s from directory %s to remote %s with url %s",
+        "--delete" if delete else "",
+        tag_name,
+        repo_path,
+        remote_name,
+        remote.url,
+    )
+    remote_push_args = [tag_name]
+    if delete:
+        remote_push_args = ["--delete"] + remote_push_args
+    push_info = remote.push(remote_push_args)
+    if push_info is not None:
+        raise GTOException(
+            msg=f"The command `git push {remote_name} {' '.join(remote_push_args)}` failed. "
+            f"Make sure your local repository is in sync with the remote."
+        )

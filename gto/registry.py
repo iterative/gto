@@ -1,5 +1,6 @@
 import logging
 import os
+from pathlib import Path
 from typing import Optional, TypeVar, Union
 
 import git
@@ -30,6 +31,7 @@ from gto.exceptions import (
     VersionExistsForCommit,
     WrongArgs,
 )
+from gto.git_utils import git_push_tag
 from gto.index import EnrichmentManager
 from gto.tag import (
     TagArtifactManager,
@@ -136,6 +138,7 @@ class GitRegistry(BaseModel):
         bump_major=False,
         bump_minor=False,
         bump_patch=False,
+        auto_push=False,
         stdout=False,
         author: Optional[str] = None,
         author_email: Optional[str] = None,
@@ -195,7 +198,9 @@ class GitRegistry(BaseModel):
         )
         if stdout:
             echo(f"Created git tag '{tag}' that registers version")
-            self._echo_git_suggestion(tag)
+        self._push_tag_or_echo_reminder(
+            tag_name=tag, auto_push=auto_push, stdout=stdout
+        )
         return self._return_event(tag)
 
     def deregister(  # pylint: disable=too-many-locals
@@ -207,6 +212,7 @@ class GitRegistry(BaseModel):
         simple=None,
         force=False,
         delete=False,
+        auto_push: bool = False,
         stdout=False,
         author: Optional[str] = None,
         author_email: Optional[str] = None,
@@ -243,7 +249,7 @@ class GitRegistry(BaseModel):
                     if hasattr(e, "tag")
                 ]
             )
-            return self._delete_tags(tags, stdout=stdout)
+            return self._delete_tags(tags, stdout=stdout, auto_push=auto_push)
 
         tag = self.version_manager.deregister(
             name,
@@ -256,7 +262,9 @@ class GitRegistry(BaseModel):
         )
         if stdout:
             echo(f"Created git tag '{tag}' that deregisters version")
-            self._echo_git_suggestion(tag)
+        self._push_tag_or_echo_reminder(
+            tag_name=tag, auto_push=auto_push, stdout=stdout, delete=delete
+        )
         return self._return_event(tag)
 
     def assign(  # pylint: disable=too-many-locals
@@ -269,6 +277,7 @@ class GitRegistry(BaseModel):
         message=None,
         simple=False,
         force=False,
+        auto_push: bool = False,
         skip_registration=False,
         stdout=False,
         author: Optional[str] = None,
@@ -302,7 +311,12 @@ class GitRegistry(BaseModel):
             else:
                 if not skip_registration:
                     self.register(
-                        name, version=name_version, ref=ref, simple=True, stdout=stdout
+                        name,
+                        version=name_version,
+                        ref=ref,
+                        simple=True,
+                        stdout=stdout,
+                        auto_push=auto_push,
                     )
                 found_version = self.find_artifact(name, create_new=True).find_version(
                     commit_hexsha=ref, create_new=True
@@ -337,7 +351,9 @@ class GitRegistry(BaseModel):
             echo(
                 f"Created git tag '{tag}' that assigns stage to version '{found_version.version}'"
             )
-            self._echo_git_suggestion(tag)
+        self._push_tag_or_echo_reminder(
+            tag_name=tag, auto_push=auto_push, stdout=stdout
+        )
         return self._return_event(tag)
 
     def unassign(  # pylint: disable=too-many-locals
@@ -350,6 +366,7 @@ class GitRegistry(BaseModel):
         simple=False,
         force=False,
         delete=False,
+        auto_push: bool = False,
         stdout=False,
         author: Optional[str] = None,
         author_email: Optional[str] = None,
@@ -374,7 +391,7 @@ class GitRegistry(BaseModel):
                     if hasattr(e, "tag") and hasattr(e, "stage") and e.stage == stage
                 ]
             )
-            return self._delete_tags(tags, stdout=stdout)
+            return self._delete_tags(tags, auto_push=auto_push, stdout=stdout)
 
         # TODO: getting tag name as a result and using it
         # is leaking implementation details in base module
@@ -394,7 +411,9 @@ class GitRegistry(BaseModel):
             echo(
                 f"Created git tag '{tag}' that unassigns stage from version '{found_version.version}'"
             )
-            self._echo_git_suggestion(tag)
+        self._push_tag_or_echo_reminder(
+            tag_name=tag, auto_push=auto_push, stdout=stdout, delete=delete
+        )
         return self._return_event(tag)
 
     def deprecate(
@@ -405,6 +424,7 @@ class GitRegistry(BaseModel):
         simple=False,
         force=False,
         delete=False,
+        auto_push: bool = False,
         stdout=False,
         author: Optional[str] = None,
         author_email: Optional[str] = None,
@@ -421,7 +441,7 @@ class GitRegistry(BaseModel):
                     if hasattr(e, "tag")
                 ]
             )
-            return self._delete_tags(tags, stdout=stdout)
+            return self._delete_tags(tags, stdout=stdout, auto_push=auto_push)
         if ref is None:
             if name in self.get_artifacts():
                 ref = self.find_artifact(name=name).get_events()[0].commit_hexsha
@@ -437,7 +457,9 @@ class GitRegistry(BaseModel):
         )
         if stdout:
             echo(f"Created git tag '{tag}' that deprecates artifact")
-            self._echo_git_suggestion(tag)
+        self._push_tag_or_echo_reminder(
+            tag_name=tag, auto_push=auto_push, stdout=stdout, delete=delete
+        )
         return self._return_event(tag)
 
     def _check_args(self, name, version, ref, stage=None):
@@ -466,17 +488,20 @@ class GitRegistry(BaseModel):
     @staticmethod
     def _echo_git_suggestion(tag):
         echo("To push the changes upstream, run:")
-        echo(f"    git push {tag}")
+        echo(f"    git push origin {tag}")
 
-    def _delete_tags(self, tags, stdout):
+    def _delete_tags(self, tags, stdout, auto_push: bool):
         tags = list(tags)
         for tag in tags:
             delete_tag(self.repo, tag)
             if stdout:
                 echo(f"Deleted git tag '{tag}'")
-        if stdout:
-            echo("To push the changes upstream, run:")
-            echo(f"    git push {' '.join(tags)} --delete".replace("!", "/!"))
+            self._push_tag_or_echo_reminder(
+                tag_name=tag,
+                auto_push=auto_push,
+                stdout=stdout,
+                delete=True,
+            )
 
     def check_ref(self, ref: str):
         "Find out what was registered/assigned in this ref"
@@ -554,3 +579,23 @@ class GitRegistry(BaseModel):
             return self._get_allowed_stages()
         # if stages aren't set in config, return those in use
         return self._get_used_stages()
+
+    def _push_tag_or_echo_reminder(
+        self, tag_name: str, auto_push: bool, stdout: bool, delete: bool = False
+    ) -> None:
+        if auto_push:
+            if stdout:
+                echo(
+                    f"Running `git push{' --delete ' if delete else ' '}origin {tag_name}`"
+                )
+            git_push_tag(
+                repo_path=Path(self.repo.git_dir).parent.as_posix(),
+                tag_name=tag_name,
+                delete=delete,
+            )
+            if stdout:
+                echo(
+                    f"Successfully {'deleted' if delete else 'pushed'} git tag {tag_name} on remote."
+                )
+        elif stdout:
+            self._echo_git_suggestion(tag_name)
