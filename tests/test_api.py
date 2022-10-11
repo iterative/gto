@@ -509,7 +509,7 @@ def test_if_register_with_remote_repo_then_invoke_git_push_tag():
                 ref="HEAD",
             )
             mocked_git_push_tag.assert_called_once_with(
-                repo_path=tmp_dir.name,
+                repo_path=Path(tmp_dir.name).as_posix(),
                 tag_name="model@v0.0.1",
                 delete=False,
             )
@@ -531,12 +531,12 @@ def test_if_assign_with_remote_repo_then_invoke_git_push_tag():
             )
             expected_calls = [
                 call(
-                    repo_path=tmp_dir.name,
+                    repo_path=Path(tmp_dir.name).as_posix(),
                     tag_name="model@v0.0.1",
                     delete=False,
                 ),
                 call(
-                    repo_path=tmp_dir.name,
+                    repo_path=Path(tmp_dir.name).as_posix(),
                     tag_name="model#dev#1",
                     delete=False,
                 ),
@@ -557,7 +557,7 @@ def test_if_deprecate_with_remote_repo_then_invoke_git_push_tag():
                 name="churn",
             )
             mocked_git_push_tag.assert_called_once_with(
-                repo_path=tmp_dir.name,
+                repo_path=Path(tmp_dir.name).as_posix(),
                 tag_name="churn@deprecated",
                 delete=False,
             )
@@ -577,7 +577,7 @@ def test_if_deregister_with_remote_repo_then_invoke_git_push_tag():
                 version="v3.0.0",
             )
             mocked_git_push_tag.assert_called_once_with(
-                repo_path=tmp_dir.name,
+                repo_path=Path(tmp_dir.name).as_posix(),
                 tag_name="churn@v3.0.0!",
                 delete=False,
             )
@@ -598,7 +598,7 @@ def test_if_unassign_with_remote_repo_then_invoke_git_push_tag():
                 version="v3.1.0",
             )
             mocked_git_push_tag.assert_called_once_with(
-                repo_path=tmp_dir.name,
+                repo_path=Path(tmp_dir.name).as_posix(),
                 tag_name="churn#staging!#3",
                 delete=False,
             )
