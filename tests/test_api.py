@@ -3,6 +3,7 @@
 import os
 from contextlib import contextmanager
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import Callable, Optional, Tuple
 from unittest.mock import call, patch
 
@@ -493,3 +494,22 @@ def test_if_deprecate_with_delete_and_auto_push_then_invoke_git_push_tag(
         tag_name="model@v0.0.1",
         delete=True,
     )
+
+
+def test_if_register_with_remote_repo_then_invoke_git_push_tag():
+    with patch("gto.registry.git_push_tag") as mocked_git_push_tag:
+        with patch("gto.git_utils.TemporaryDirectory") as MockedTemporaryDirectory:
+            # pylint: disable=consider-using-with
+            tmp_dir = TemporaryDirectory()
+            MockedTemporaryDirectory.return_value = tmp_dir
+            gto.api.register(
+                repo=tests.resources.SAMPLE_REMOTE_REPO_URL,
+                name="model",
+                ref="HEAD",
+            )
+            mocked_git_push_tag.assert_called_once_with(
+                repo_path=tmp_dir.name,
+                tag_name="model@v0.0.1",
+                delete=False,
+            )
+            tmp_dir.cleanup()
