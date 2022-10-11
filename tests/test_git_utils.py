@@ -146,7 +146,7 @@ def test_git_push_tag_if_error_then_exit_with_code_1(
         _,
         mocked_remote,
     ) = with_mocked_repo_with_remote
-    mocked_remote.push.return_value = MagicMock()
+    mocked_remote.push.return_value.error = MagicMock()
     tag_name = "test_tag"
 
     with pytest.raises(GTOException) as error:
@@ -239,7 +239,9 @@ def assert_dir_contain_git_repo(dir: str) -> None:
 @pytest.fixture
 def with_mocked_repo_with_remote() -> tuple:
     mocked_remote = MagicMock()
-    mocked_remote.push.return_value = None
+    mocked_push_info = MagicMock()
+    mocked_push_info.error = None
+    mocked_remote.push.return_value = mocked_push_info
     mocked_repo = MagicMock()
     path = "git_repo_path"
     remote_name = "git_remote_name"
