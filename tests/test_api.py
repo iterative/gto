@@ -496,6 +496,7 @@ def test_if_deprecate_with_delete_and_auto_push_then_invoke_git_push_tag(
     )
 
 
+@skip_for_windows_py_lt_3_9
 def test_if_register_with_remote_repo_then_invoke_git_push_tag():
     with patch("gto.registry.git_push_tag") as mocked_git_push_tag:
         with patch("gto.git_utils.TemporaryDirectory") as MockedTemporaryDirectory:
@@ -515,6 +516,7 @@ def test_if_register_with_remote_repo_then_invoke_git_push_tag():
             tmp_dir.cleanup()
 
 
+@skip_for_windows_py_lt_3_9
 def test_if_assign_with_remote_repo_then_invoke_git_push_tag():
     with patch("gto.registry.git_push_tag") as mocked_git_push_tag:
         with patch("gto.git_utils.TemporaryDirectory") as MockedTemporaryDirectory:
@@ -543,6 +545,7 @@ def test_if_assign_with_remote_repo_then_invoke_git_push_tag():
             tmp_dir.cleanup()
 
 
+@skip_for_windows_py_lt_3_9
 def test_if_deprecate_with_remote_repo_then_invoke_git_push_tag():
     with patch("gto.registry.git_push_tag") as mocked_git_push_tag:
         with patch("gto.git_utils.TemporaryDirectory") as MockedTemporaryDirectory:
@@ -561,6 +564,7 @@ def test_if_deprecate_with_remote_repo_then_invoke_git_push_tag():
             tmp_dir.cleanup()
 
 
+@skip_for_windows_py_lt_3_9
 def test_if_deregister_with_remote_repo_then_invoke_git_push_tag():
     with patch("gto.registry.git_push_tag") as mocked_git_push_tag:
         with patch("gto.git_utils.TemporaryDirectory") as MockedTemporaryDirectory:
@@ -580,6 +584,7 @@ def test_if_deregister_with_remote_repo_then_invoke_git_push_tag():
             tmp_dir.cleanup()
 
 
+@skip_for_windows_py_lt_3_9
 def test_if_unassign_with_remote_repo_then_invoke_git_push_tag():
     with patch("gto.registry.git_push_tag") as mocked_git_push_tag:
         with patch("gto.git_utils.TemporaryDirectory") as MockedTemporaryDirectory:

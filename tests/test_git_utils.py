@@ -167,6 +167,7 @@ def test_auto_push_on_remote_repo_if_not_remote_then_auto_push_is_not_changed(
     ]
 
 
+@skip_for_windows_py_lt_3_9
 def test_auto_push_on_remote_repo_if_remote_then_auto_push_is_set_to_true():
     assert decorated_write_func(
         spam=37, repo=tests.resources.SAMPLE_HTTP_REMOTE_REPO, auto_push=True
@@ -189,6 +190,7 @@ def test_auto_push_on_remote_repo_if_not_remote_then_repo_is_not_cloned(
     )
 
 
+@skip_for_windows_py_lt_3_9
 def test_auto_push_on_remote_repo_if_remote_then_repo_is_cloned(tmp_local_git_repo):
     with patch("gto.git_utils.git_clone") as mocked_git_clone:
         mocked_git_clone.side_effect = git_clone
