@@ -513,3 +513,31 @@ def test_if_register_with_remote_repo_then_invoke_git_push_tag():
                 delete=False,
             )
             tmp_dir.cleanup()
+
+
+def test_if_assign_with_remote_repo_then_invoke_git_push_tag():
+    with patch("gto.registry.git_push_tag") as mocked_git_push_tag:
+        with patch("gto.git_utils.TemporaryDirectory") as MockedTemporaryDirectory:
+            # pylint: disable=consider-using-with
+            tmp_dir = TemporaryDirectory()
+            MockedTemporaryDirectory.return_value = tmp_dir
+            gto.api.assign(
+                repo=tests.resources.SAMPLE_REMOTE_REPO_URL,
+                name="model",
+                stage="dev",
+                ref="HEAD",
+            )
+            expected_calls = [
+                call(
+                    repo_path=tmp_dir.name,
+                    tag_name="model@v0.0.1",
+                    delete=False,
+                ),
+                call(
+                    repo_path=tmp_dir.name,
+                    tag_name="model#dev#1",
+                    delete=False,
+                ),
+            ]
+            mocked_git_push_tag.assert_has_calls(expected_calls)
+            tmp_dir.cleanup()

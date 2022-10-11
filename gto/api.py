@@ -122,6 +122,7 @@ def register(
     )
 
 
+@auto_push_on_remote_repo
 def assign(
     repo: Union[str, Repo],
     name: str,
