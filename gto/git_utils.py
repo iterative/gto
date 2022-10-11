@@ -35,6 +35,22 @@ def git_clone_remote_repo(f: Callable):
     return wrapped_f
 
 
+def auto_push_on_remote_repo(f: Callable):
+    @wraps(f)
+    def wrapped_f(*args, **kwargs):
+        kwargs = _turn_args_into_kwargs(f, args, kwargs)
+
+        if isinstance(kwargs["repo"], str) and is_url_of_remote_repo(
+            repo=kwargs["repo"]
+        ):
+            kwargs["auto_push"] = True
+            return git_clone_remote_repo(f)(**kwargs)
+
+        return f(**kwargs)
+
+    return wrapped_f
+
+
 def is_url_of_remote_repo(repo: str) -> bool:
     if remote_git_repo_regex.fullmatch(repo) is not None:
         logging.debug("%s recognized as remote git repo", repo)
