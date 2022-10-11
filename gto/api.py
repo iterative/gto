@@ -217,6 +217,7 @@ def deregister(
     )
 
 
+@auto_push_on_remote_repo
 def deprecate(
     repo: Union[str, Repo],
     name: str,
