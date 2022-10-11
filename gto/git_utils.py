@@ -96,7 +96,7 @@ def git_push_tag(
     if delete:
         remote_push_args = ["--delete"] + remote_push_args
     push_info = remote.push(remote_push_args)
-    if push_info is not None:
+    if push_info.error is not None:
         raise GTOException(
             msg=f"The command `git push {remote_name} {' '.join(remote_push_args)}` failed. "
             f"Make sure your local repository is in sync with the remote."
