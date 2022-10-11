@@ -559,3 +559,42 @@ def test_if_deprecate_with_remote_repo_then_invoke_git_push_tag():
                 delete=False,
             )
             tmp_dir.cleanup()
+
+
+def test_if_deregister_with_remote_repo_then_invoke_git_push_tag():
+    with patch("gto.registry.git_push_tag") as mocked_git_push_tag:
+        with patch("gto.git_utils.TemporaryDirectory") as MockedTemporaryDirectory:
+            # pylint: disable=consider-using-with
+            tmp_dir = TemporaryDirectory()
+            MockedTemporaryDirectory.return_value = tmp_dir
+            gto.api.deregister(
+                repo=tests.resources.SAMPLE_REMOTE_REPO_URL,
+                name="churn",
+                version="v3.0.0",
+            )
+            mocked_git_push_tag.assert_called_once_with(
+                repo_path=tmp_dir.name,
+                tag_name="churn@v3.0.0!",
+                delete=False,
+            )
+            tmp_dir.cleanup()
+
+
+def test_if_unassign_with_remote_repo_then_invoke_git_push_tag():
+    with patch("gto.registry.git_push_tag") as mocked_git_push_tag:
+        with patch("gto.git_utils.TemporaryDirectory") as MockedTemporaryDirectory:
+            # pylint: disable=consider-using-with
+            tmp_dir = TemporaryDirectory()
+            MockedTemporaryDirectory.return_value = tmp_dir
+            gto.api.unassign(
+                repo=tests.resources.SAMPLE_REMOTE_REPO_URL,
+                name="churn",
+                stage="staging",
+                version="v3.1.0",
+            )
+            mocked_git_push_tag.assert_called_once_with(
+                repo_path=tmp_dir.name,
+                tag_name="churn#staging!#3",
+                delete=False,
+            )
+            tmp_dir.cleanup()

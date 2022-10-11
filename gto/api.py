@@ -157,6 +157,7 @@ def assign(
     )
 
 
+@auto_push_on_remote_repo
 def unassign(
     repo: Union[str, Repo],
     name: str,
@@ -188,6 +189,7 @@ def unassign(
     )
 
 
+@auto_push_on_remote_repo
 def deregister(
     repo: Union[str, Repo],
     name: str,
