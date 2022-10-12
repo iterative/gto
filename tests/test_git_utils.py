@@ -10,8 +10,8 @@ import tests.resources
 from gto.exceptions import GTOException
 from gto.git_utils import (
     auto_push_on_remote_repo,
+    clone_on_remote_repo,
     git_clone,
-    git_clone_remote_repo,
     git_push_tag,
     is_url_of_remote_repo,
 )
@@ -21,24 +21,24 @@ from tests.skip_presets import (
 )
 
 
-def test_git_clone_remote_repo_if_repo_is_a_meaningless_string_then_leave_it_unchanged():
+def test_clone_on_remote_repo_if_repo_is_a_meaningless_string_then_leave_it_unchanged():
     assert_f_called_with_repo_return_repo_itself(repo="meaningless_string")
 
 
-def test_git_clone_remote_repo_if_repo_is_a_local_git_repo_then_leave_it_unchanged(
+def test_clone_on_remote_repo_if_repo_is_a_local_git_repo_then_leave_it_unchanged(
     tmp_local_git_repo: str,
 ):
     assert_f_called_with_repo_return_repo_itself(repo=tmp_local_git_repo)
 
 
-def test_git_clone_remote_repo_if_repo_gitpython_object_then_leave_it_unchanged(
+def test_clone_on_remote_repo_if_repo_gitpython_object_then_leave_it_unchanged(
     tmp_local_git_repo: str,
 ):
     assert_f_called_with_repo_return_repo_itself(repo=Repo(path=tmp_local_git_repo))
 
 
 @skip_for_windows_py_lt_3_9
-def test_git_clone_remote_repo_if_repo_is_remote_url_then_clone_and_set_repo_to_its_local_path():
+def test_clone_on_remote_repo_if_repo_is_remote_url_then_clone_and_set_repo_to_its_local_path():
     with patch("gto.git_utils.git_clone") as mocked_git_clone:
         mocked_git_clone.side_effect = git_clone
         local_repo = decorated_read_func(
@@ -209,7 +209,7 @@ def decorated_write_func(
     return auto_push, repo
 
 
-@git_clone_remote_repo
+@clone_on_remote_repo
 def decorated_read_func(
     spam: int, repo: Union[Repo, str], jam: int
 ):  # pylint: disable=unused-argument

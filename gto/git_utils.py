@@ -11,7 +11,7 @@ from gto.constants import remote_git_repo_regex
 from gto.exceptions import GTOException, WrongArgs
 
 
-def git_clone_remote_repo(f: Callable):
+def clone_on_remote_repo(f: Callable):
     @wraps(f)
     def wrapped_f(*args, **kwargs):
         kwargs = _turn_args_into_kwargs(f, args, kwargs)
@@ -44,7 +44,7 @@ def auto_push_on_remote_repo(f: Callable):
             repo=kwargs["repo"]
         ):
             kwargs["auto_push"] = True
-            return git_clone_remote_repo(f)(**kwargs)
+            return clone_on_remote_repo(f)(**kwargs)
 
         return f(**kwargs)
 
