@@ -3,6 +3,7 @@
 import os
 from contextlib import contextmanager
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import Callable, Optional, Tuple
 from unittest.mock import call, patch
 
@@ -493,3 +494,112 @@ def test_if_deprecate_with_delete_and_auto_push_then_invoke_git_push_tag(
         tag_name="model@v0.0.1",
         delete=True,
     )
+
+
+@skip_for_windows_py_lt_3_9
+def test_if_register_with_remote_repo_then_invoke_git_push_tag():
+    with patch("gto.registry.git_push_tag") as mocked_git_push_tag:
+        with patch("gto.git_utils.TemporaryDirectory") as MockedTemporaryDirectory:
+            # pylint: disable=consider-using-with
+            tmp_dir = TemporaryDirectory()
+            MockedTemporaryDirectory.return_value = tmp_dir
+            gto.api.register(
+                repo=tests.resources.SAMPLE_REMOTE_REPO_URL,
+                name="model",
+                ref="HEAD",
+            )
+            mocked_git_push_tag.assert_called_once_with(
+                repo_path=Path(tmp_dir.name).as_posix(),
+                tag_name="model@v0.0.1",
+                delete=False,
+            )
+            tmp_dir.cleanup()
+
+
+@skip_for_windows_py_lt_3_9
+def test_if_assign_with_remote_repo_then_invoke_git_push_tag():
+    with patch("gto.registry.git_push_tag") as mocked_git_push_tag:
+        with patch("gto.git_utils.TemporaryDirectory") as MockedTemporaryDirectory:
+            # pylint: disable=consider-using-with
+            tmp_dir = TemporaryDirectory()
+            MockedTemporaryDirectory.return_value = tmp_dir
+            gto.api.assign(
+                repo=tests.resources.SAMPLE_REMOTE_REPO_URL,
+                name="model",
+                stage="dev",
+                ref="HEAD",
+            )
+            expected_calls = [
+                call(
+                    repo_path=Path(tmp_dir.name).as_posix(),
+                    tag_name="model@v0.0.1",
+                    delete=False,
+                ),
+                call(
+                    repo_path=Path(tmp_dir.name).as_posix(),
+                    tag_name="model#dev#1",
+                    delete=False,
+                ),
+            ]
+            mocked_git_push_tag.assert_has_calls(expected_calls)
+            tmp_dir.cleanup()
+
+
+@skip_for_windows_py_lt_3_9
+def test_if_deprecate_with_remote_repo_then_invoke_git_push_tag():
+    with patch("gto.registry.git_push_tag") as mocked_git_push_tag:
+        with patch("gto.git_utils.TemporaryDirectory") as MockedTemporaryDirectory:
+            # pylint: disable=consider-using-with
+            tmp_dir = TemporaryDirectory()
+            MockedTemporaryDirectory.return_value = tmp_dir
+            gto.api.deprecate(
+                repo=tests.resources.SAMPLE_REMOTE_REPO_URL,
+                name="churn",
+            )
+            mocked_git_push_tag.assert_called_once_with(
+                repo_path=Path(tmp_dir.name).as_posix(),
+                tag_name="churn@deprecated",
+                delete=False,
+            )
+            tmp_dir.cleanup()
+
+
+@skip_for_windows_py_lt_3_9
+def test_if_deregister_with_remote_repo_then_invoke_git_push_tag():
+    with patch("gto.registry.git_push_tag") as mocked_git_push_tag:
+        with patch("gto.git_utils.TemporaryDirectory") as MockedTemporaryDirectory:
+            # pylint: disable=consider-using-with
+            tmp_dir = TemporaryDirectory()
+            MockedTemporaryDirectory.return_value = tmp_dir
+            gto.api.deregister(
+                repo=tests.resources.SAMPLE_REMOTE_REPO_URL,
+                name="churn",
+                version="v3.0.0",
+            )
+            mocked_git_push_tag.assert_called_once_with(
+                repo_path=Path(tmp_dir.name).as_posix(),
+                tag_name="churn@v3.0.0!",
+                delete=False,
+            )
+            tmp_dir.cleanup()
+
+
+@skip_for_windows_py_lt_3_9
+def test_if_unassign_with_remote_repo_then_invoke_git_push_tag():
+    with patch("gto.registry.git_push_tag") as mocked_git_push_tag:
+        with patch("gto.git_utils.TemporaryDirectory") as MockedTemporaryDirectory:
+            # pylint: disable=consider-using-with
+            tmp_dir = TemporaryDirectory()
+            MockedTemporaryDirectory.return_value = tmp_dir
+            gto.api.unassign(
+                repo=tests.resources.SAMPLE_REMOTE_REPO_URL,
+                name="churn",
+                stage="staging",
+                version="v3.1.0",
+            )
+            mocked_git_push_tag.assert_called_once_with(
+                repo_path=Path(tmp_dir.name).as_posix(),
+                tag_name="churn#staging!#3",
+                delete=False,
+            )
+            tmp_dir.cleanup()

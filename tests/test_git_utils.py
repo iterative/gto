@@ -9,8 +9,9 @@ from git import Repo
 import tests.resources
 from gto.exceptions import GTOException
 from gto.git_utils import (
+    auto_push_on_remote_repo,
+    clone_on_remote_repo,
     git_clone,
-    git_clone_remote_repo,
     git_push_tag,
     is_url_of_remote_repo,
 )
@@ -20,27 +21,27 @@ from tests.skip_presets import (
 )
 
 
-def test_git_clone_remote_repo_if_repo_is_a_meaningless_string_then_leave_it_unchanged():
+def test_clone_on_remote_repo_if_repo_is_a_meaningless_string_then_leave_it_unchanged():
     assert_f_called_with_repo_return_repo_itself(repo="meaningless_string")
 
 
-def test_git_clone_remote_repo_if_repo_is_a_local_git_repo_then_leave_it_unchanged(
+def test_clone_on_remote_repo_if_repo_is_a_local_git_repo_then_leave_it_unchanged(
     tmp_local_git_repo: str,
 ):
     assert_f_called_with_repo_return_repo_itself(repo=tmp_local_git_repo)
 
 
-def test_git_clone_remote_repo_if_repo_gitpython_object_then_leave_it_unchanged(
+def test_clone_on_remote_repo_if_repo_gitpython_object_then_leave_it_unchanged(
     tmp_local_git_repo: str,
 ):
     assert_f_called_with_repo_return_repo_itself(repo=Repo(path=tmp_local_git_repo))
 
 
 @skip_for_windows_py_lt_3_9
-def test_git_clone_remote_repo_if_repo_is_remote_url_then_clone_and_set_repo_to_its_local_path():
+def test_clone_on_remote_repo_if_repo_is_remote_url_then_clone_and_set_repo_to_its_local_path():
     with patch("gto.git_utils.git_clone") as mocked_git_clone:
         mocked_git_clone.side_effect = git_clone
-        local_repo = decorated_func(
+        local_repo = decorated_read_func(
             repo=tests.resources.SAMPLE_HTTP_REMOTE_REPO, spam=0, jam=3
         )
         mocked_git_clone.assert_called_once_with(
@@ -51,7 +52,7 @@ def test_git_clone_remote_repo_if_repo_is_remote_url_then_clone_and_set_repo_to_
 @only_for_windows_py_lt_3_8
 def test_if_repo_is_remote_url_and_windows_os_error_then_hint_win_with_py_lt_3_9_may_be_the_cause():
     with pytest.raises(OSError) as e:
-        decorated_func(repo=tests.resources.SAMPLE_HTTP_REMOTE_REPO, spam=0, jam=3)
+        decorated_read_func(repo=tests.resources.SAMPLE_HTTP_REMOTE_REPO, spam=0, jam=3)
     assert e.type in (NotADirectoryError, PermissionError)
     assert "windows" in str(e)
     assert "python" in str(e)
@@ -145,7 +146,7 @@ def test_git_push_tag_if_error_then_exit_with_code_1(
         _,
         mocked_remote,
     ) = with_mocked_repo_with_remote
-    mocked_remote.push.return_value = MagicMock()
+    mocked_remote.push.return_value.error = MagicMock()
     tag_name = "test_tag"
 
     with pytest.raises(GTOException) as error:
@@ -157,18 +158,69 @@ def test_git_push_tag_if_error_then_exit_with_code_1(
     )
 
 
-@git_clone_remote_repo
-def decorated_func(
+def test_auto_push_on_remote_repo_if_not_remote_then_auto_push_is_not_changed(
+    tmp_local_git_repo: str,
+):
+    assert decorated_write_func(spam=37, repo=tmp_local_git_repo, auto_push=True)[0]
+    assert not decorated_write_func(spam=37, repo=tmp_local_git_repo, auto_push=False)[
+        0
+    ]
+
+
+@skip_for_windows_py_lt_3_9
+def test_auto_push_on_remote_repo_if_remote_then_auto_push_is_set_to_true():
+    assert decorated_write_func(
+        spam=37, repo=tests.resources.SAMPLE_HTTP_REMOTE_REPO, auto_push=True
+    )[0]
+    assert decorated_write_func(
+        spam=37, repo=tests.resources.SAMPLE_HTTP_REMOTE_REPO, auto_push=False
+    )[0]
+
+
+def test_auto_push_on_remote_repo_if_not_remote_then_repo_is_not_cloned(
+    tmp_local_git_repo,
+):
+    assert (
+        decorated_write_func(spam=37, repo=tmp_local_git_repo, auto_push=True)[1]
+        == tmp_local_git_repo
+    )
+    assert (
+        decorated_write_func(spam=37, repo=tmp_local_git_repo, auto_push=False)[1]
+        == tmp_local_git_repo
+    )
+
+
+@skip_for_windows_py_lt_3_9
+def test_auto_push_on_remote_repo_if_remote_then_repo_is_cloned(tmp_local_git_repo):
+    with patch("gto.git_utils.git_clone") as mocked_git_clone:
+        mocked_git_clone.side_effect = git_clone
+        local_repo = decorated_write_func(
+            repo=tests.resources.SAMPLE_HTTP_REMOTE_REPO, spam=0, auto_push=False
+        )[1]
+        mocked_git_clone.assert_called_once_with(
+            repo=tests.resources.SAMPLE_HTTP_REMOTE_REPO, dir=local_repo
+        )
+
+
+@auto_push_on_remote_repo
+def decorated_write_func(
+    spam: int, repo: Union[Repo, str], auto_push: bool
+):  # pylint: disable=unused-argument
+    return auto_push, repo
+
+
+@clone_on_remote_repo
+def decorated_read_func(
     spam: int, repo: Union[Repo, str], jam: int
 ):  # pylint: disable=unused-argument
     return repo
 
 
 def assert_f_called_with_repo_return_repo_itself(repo: Union[str, Repo]) -> None:
-    assert decorated_func(0, repo, 3) is repo
-    assert decorated_func(0, repo, jam=3) is repo
-    assert decorated_func(0, jam=3, repo=repo) is repo
-    assert decorated_func(spam=0, jam=3, repo=repo) is repo
+    assert decorated_read_func(0, repo, 3) is repo
+    assert decorated_read_func(0, repo, jam=3) is repo
+    assert decorated_read_func(0, jam=3, repo=repo) is repo
+    assert decorated_read_func(spam=0, jam=3, repo=repo) is repo
 
 
 @pytest.fixture
@@ -187,7 +239,9 @@ def assert_dir_contain_git_repo(dir: str) -> None:
 @pytest.fixture
 def with_mocked_repo_with_remote() -> tuple:
     mocked_remote = MagicMock()
-    mocked_remote.push.return_value = None
+    mocked_push_info = MagicMock()
+    mocked_push_info.error = None
+    mocked_remote.push.return_value = mocked_push_info
     mocked_repo = MagicMock()
     path = "git_repo_path"
     remote_name = "git_remote_name"

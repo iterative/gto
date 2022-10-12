@@ -11,10 +11,10 @@ from gto.constants import remote_git_repo_regex
 from gto.exceptions import GTOException, WrongArgs
 
 
-def git_clone_remote_repo(f: Callable):
+def clone_on_remote_repo(f: Callable):
     @wraps(f)
     def wrapped_f(*args, **kwargs):
-        kwargs = _turn_args_into_kwargs(args, kwargs)
+        kwargs = _turn_args_into_kwargs(f, args, kwargs)
 
         if isinstance(kwargs["repo"], str) and is_url_of_remote_repo(
             repo=kwargs["repo"]
@@ -32,16 +32,21 @@ def git_clone_remote_repo(f: Callable):
 
         return f(**kwargs)
 
-    def _turn_args_into_kwargs(
-        args: tuple, kwargs: Dict[str, object]
-    ) -> Dict[str, object]:
-        kwargs_complement = {
-            k: args[i]
-            for i, k in enumerate(inspect.getfullargspec(f).args)
-            if i < len(args)
-        }
-        kwargs.update(kwargs_complement)
-        return kwargs
+    return wrapped_f
+
+
+def auto_push_on_remote_repo(f: Callable):
+    @wraps(f)
+    def wrapped_f(*args, **kwargs):
+        kwargs = _turn_args_into_kwargs(f, args, kwargs)
+
+        if isinstance(kwargs["repo"], str) and is_url_of_remote_repo(
+            repo=kwargs["repo"]
+        ):
+            kwargs["auto_push"] = True
+            return clone_on_remote_repo(f)(**kwargs)
+
+        return f(**kwargs)
 
     return wrapped_f
 
@@ -91,8 +96,20 @@ def git_push_tag(
     if delete:
         remote_push_args = ["--delete"] + remote_push_args
     push_info = remote.push(remote_push_args)
-    if push_info is not None:
+    if push_info.error is not None:
         raise GTOException(
             msg=f"The command `git push {remote_name} {' '.join(remote_push_args)}` failed. "
             f"Make sure your local repository is in sync with the remote."
         )
+
+
+def _turn_args_into_kwargs(
+    f: Callable, args: tuple, kwargs: Dict[str, object]
+) -> Dict[str, object]:
+    kwargs_complement = {
+        k: args[i]
+        for i, k in enumerate(inspect.getfullargspec(f).args)
+        if i < len(args)
+    }
+    kwargs.update(kwargs_complement)
+    return kwargs

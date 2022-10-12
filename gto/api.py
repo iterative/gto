@@ -19,7 +19,7 @@ from gto.constants import (
 )
 from gto.exceptions import NoRepo, NotImplementedInGTO, WrongArgs
 from gto.ext import EnrichmentInfo
-from gto.git_utils import git_clone_remote_repo
+from gto.git_utils import auto_push_on_remote_repo, clone_on_remote_repo
 from gto.index import (
     EnrichmentManager,
     FileIndexManager,
@@ -54,7 +54,7 @@ def _get_state(repo: Union[str, Repo]):
     return GitRegistry.from_repo(repo).get_state()
 
 
-@git_clone_remote_repo
+@clone_on_remote_repo
 def get_stages(repo: Union[str, Repo], allowed: bool = False, used: bool = False):
     return GitRegistry.from_repo(repo).get_stages(allowed=allowed, used=used)
 
@@ -87,6 +87,7 @@ def remove(repo: Union[str, Repo], name: str):
     return init_index_manager(path=repo).remove(name)
 
 
+@auto_push_on_remote_repo
 def register(
     repo: Union[str, Repo],
     name: str,
@@ -121,6 +122,7 @@ def register(
     )
 
 
+@auto_push_on_remote_repo
 def assign(
     repo: Union[str, Repo],
     name: str,
@@ -155,6 +157,7 @@ def assign(
     )
 
 
+@auto_push_on_remote_repo
 def unassign(
     repo: Union[str, Repo],
     name: str,
@@ -186,6 +189,7 @@ def unassign(
     )
 
 
+@auto_push_on_remote_repo
 def deregister(
     repo: Union[str, Repo],
     name: str,
@@ -215,6 +219,7 @@ def deregister(
     )
 
 
+@auto_push_on_remote_repo
 def deprecate(
     repo: Union[str, Repo],
     name: str,
@@ -273,14 +278,14 @@ def find_versions_in_stage(
     )
 
 
-@git_clone_remote_repo
+@clone_on_remote_repo
 def check_ref(repo: Union[str, Repo], ref: str):
     """Find out what have been registered/assigned in the provided ref"""
     reg = GitRegistry.from_repo(repo)
     return reg.check_ref(ref)
 
 
-@git_clone_remote_repo
+@clone_on_remote_repo
 def show(
     repo: Union[str, Repo],
     name: Optional[str] = None,
@@ -474,7 +479,7 @@ def _show_versions(  # pylint: disable=too-many-locals
     return versions_, "keys"
 
 
-@git_clone_remote_repo
+@clone_on_remote_repo
 def describe(
     repo: Union[str, Repo], name: str, rev: str = None
 ) -> List[EnrichmentInfo]:
@@ -489,7 +494,7 @@ def describe(
     raise NotImplementedError
 
 
-@git_clone_remote_repo
+@clone_on_remote_repo
 def history(
     repo: Union[str, Repo],
     artifact: str = None,
