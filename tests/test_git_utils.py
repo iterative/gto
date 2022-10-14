@@ -12,6 +12,7 @@ from gto.git_utils import (
     auto_push_on_remote_repo,
     clone_on_remote_repo,
     git_clone,
+    git_commit_specific_files,
     git_push_tag,
     is_url_of_remote_repo,
 )
@@ -20,21 +21,30 @@ from tests.skip_presets import (
     skip_for_windows_py_lt_3_9,
 )
 
+TEST_COMMIT_FILE = "foo.txt"
+TEST_COMMIT_UNTRACKED_FILE = "untracked_foo.txt"
+FIRST_TEST_FILE_MODIFICATION = " First file modification"
+SECOND_TEST_FILE_MODIFICATION = " Second file modification"
+FIRST_TEST_COMMIT_MESSAGE = "first test commit"
+SECOND_TEST_COMMIT_MESSAGE = "second test commit"
+
 
 def test_clone_on_remote_repo_if_repo_is_a_meaningless_string_then_leave_it_unchanged():
     assert_f_called_with_repo_return_repo_itself(repo="meaningless_string")
 
 
 def test_clone_on_remote_repo_if_repo_is_a_local_git_repo_then_leave_it_unchanged(
-    tmp_local_git_repo: str,
+    tmp_local_empty_git_repo,
 ):
-    assert_f_called_with_repo_return_repo_itself(repo=tmp_local_git_repo)
+    assert_f_called_with_repo_return_repo_itself(repo=tmp_local_empty_git_repo)
 
 
 def test_clone_on_remote_repo_if_repo_gitpython_object_then_leave_it_unchanged(
-    tmp_local_git_repo: str,
+    tmp_local_empty_git_repo,
 ):
-    assert_f_called_with_repo_return_repo_itself(repo=Repo(path=tmp_local_git_repo))
+    assert_f_called_with_repo_return_repo_itself(
+        repo=Repo(path=tmp_local_empty_git_repo)
+    )
 
 
 @skip_for_windows_py_lt_3_9
@@ -159,12 +169,14 @@ def test_git_push_tag_if_error_then_exit_with_code_1(
 
 
 def test_auto_push_on_remote_repo_if_not_remote_then_auto_push_is_not_changed(
-    tmp_local_git_repo: str,
+    tmp_local_empty_git_repo,
 ):
-    assert decorated_write_func(spam=37, repo=tmp_local_git_repo, auto_push=True)[0]
-    assert not decorated_write_func(spam=37, repo=tmp_local_git_repo, auto_push=False)[
+    assert decorated_write_func(spam=37, repo=tmp_local_empty_git_repo, auto_push=True)[
         0
     ]
+    assert not decorated_write_func(
+        spam=37, repo=tmp_local_empty_git_repo, auto_push=False
+    )[0]
 
 
 @skip_for_windows_py_lt_3_9
@@ -178,20 +190,22 @@ def test_auto_push_on_remote_repo_if_remote_then_auto_push_is_set_to_true():
 
 
 def test_auto_push_on_remote_repo_if_not_remote_then_repo_is_not_cloned(
-    tmp_local_git_repo,
+    tmp_local_empty_git_repo,
 ):
     assert (
-        decorated_write_func(spam=37, repo=tmp_local_git_repo, auto_push=True)[1]
-        == tmp_local_git_repo
+        decorated_write_func(spam=37, repo=tmp_local_empty_git_repo, auto_push=True)[1]
+        == tmp_local_empty_git_repo
     )
     assert (
-        decorated_write_func(spam=37, repo=tmp_local_git_repo, auto_push=False)[1]
-        == tmp_local_git_repo
+        decorated_write_func(spam=37, repo=tmp_local_empty_git_repo, auto_push=False)[1]
+        == tmp_local_empty_git_repo
     )
 
 
 @skip_for_windows_py_lt_3_9
-def test_auto_push_on_remote_repo_if_remote_then_repo_is_cloned(tmp_local_git_repo):
+def test_auto_push_on_remote_repo_if_remote_then_repo_is_cloned(
+    tmp_local_empty_git_repo,
+):
     with patch("gto.git_utils.git_clone") as mocked_git_clone:
         mocked_git_clone.side_effect = git_clone
         local_repo = decorated_write_func(
@@ -200,6 +214,107 @@ def test_auto_push_on_remote_repo_if_remote_then_repo_is_cloned(tmp_local_git_re
         mocked_git_clone.assert_called_once_with(
             repo=tests.resources.SAMPLE_HTTP_REMOTE_REPO, dir=local_repo
         )
+
+
+def test_git_commit_specific_files_if_no_files_provided_then_no_commit(
+    tmp_local_empty_git_repo,
+):
+    git_commit_specific_files(
+        repo_path=tmp_local_empty_git_repo, files=[], message=SECOND_TEST_COMMIT_MESSAGE
+    )
+    assert_repo_without_commit(repo_path=tmp_local_empty_git_repo)
+
+
+def test_git_commit_specific_files_if_files_not_changed_then_no_commit(
+    tmp_local_git_repo_with_first_test_commit,
+):
+    git_commit_specific_files(
+        repo_path=tmp_local_git_repo_with_first_test_commit[0],
+        files=[tmp_local_git_repo_with_first_test_commit[1]],
+        message=SECOND_TEST_COMMIT_MESSAGE,
+    )
+    assert_repo_as_expected_after_first_test_commit(
+        repo_path=tmp_local_git_repo_with_first_test_commit[0]
+    )
+
+
+def test_git_commit_specific_files_if_tracked_file_is_changed_then_new_commit(
+    tmp_local_git_repo_with_first_test_commit,
+):
+    with open(tmp_local_git_repo_with_first_test_commit[1], "a", encoding="utf") as f:
+        f.write(SECOND_TEST_FILE_MODIFICATION)
+
+    git_commit_specific_files(
+        repo_path=tmp_local_git_repo_with_first_test_commit[0],
+        files=[tmp_local_git_repo_with_first_test_commit[1]],
+        message=SECOND_TEST_COMMIT_MESSAGE,
+    )
+
+    assert_repo_as_expected_after_second_test_commit(
+        repo_path=tmp_local_git_repo_with_first_test_commit[0],
+        second_commit_on_untracked_file=False,
+    )
+
+
+def test_git_commit_specific_files_if_tracked_file_is_changed_and_passed_as_relative_path_then_new_commit(
+    tmp_local_git_repo_with_first_test_commit,
+):
+    with open(tmp_local_git_repo_with_first_test_commit[1], "a", encoding="utf") as f:
+        f.write(SECOND_TEST_FILE_MODIFICATION)
+
+    git_commit_specific_files(
+        repo_path=tmp_local_git_repo_with_first_test_commit[0],
+        files=[Path(tmp_local_git_repo_with_first_test_commit[1]).name],
+        message=SECOND_TEST_COMMIT_MESSAGE,
+    )
+
+    assert_repo_as_expected_after_second_test_commit(
+        repo_path=tmp_local_git_repo_with_first_test_commit[0],
+        second_commit_on_untracked_file=False,
+    )
+
+
+def test_git_commit_specific_files_if_untracked_file_is_changed_then_new_commit(
+    tmp_local_git_repo_with_first_test_commit,
+):
+    untracked_file = (
+        Path(tmp_local_git_repo_with_first_test_commit[0]) / TEST_COMMIT_UNTRACKED_FILE
+    )
+    with open(untracked_file, "w", encoding="utf") as f:
+        f.write(SECOND_TEST_FILE_MODIFICATION)
+
+    git_commit_specific_files(
+        repo_path=tmp_local_git_repo_with_first_test_commit[0],
+        files=[untracked_file.name],
+        message=SECOND_TEST_COMMIT_MESSAGE,
+    )
+
+    assert_repo_as_expected_after_second_test_commit(
+        repo_path=tmp_local_git_repo_with_first_test_commit[0],
+        second_commit_on_untracked_file=True,
+    )
+
+
+def test_git_commit_specific_files_if_untracked_file_is_changed_and_passed_as_relative_path_then_new_commit(
+    tmp_local_git_repo_with_first_test_commit,
+):
+    with open(
+        Path(tmp_local_git_repo_with_first_test_commit[0]) / TEST_COMMIT_UNTRACKED_FILE,
+        "w",
+        encoding="utf",
+    ) as f:
+        f.write(SECOND_TEST_FILE_MODIFICATION)
+
+    git_commit_specific_files(
+        repo_path=tmp_local_git_repo_with_first_test_commit[0],
+        files=[TEST_COMMIT_UNTRACKED_FILE],
+        message=SECOND_TEST_COMMIT_MESSAGE,
+    )
+
+    assert_repo_as_expected_after_second_test_commit(
+        repo_path=tmp_local_git_repo_with_first_test_commit[0],
+        second_commit_on_untracked_file=True,
+    )
 
 
 @auto_push_on_remote_repo
@@ -224,11 +339,26 @@ def assert_f_called_with_repo_return_repo_itself(repo: Union[str, Repo]) -> None
 
 
 @pytest.fixture
-def tmp_local_git_repo() -> str:
+def tmp_local_empty_git_repo() -> str:
     tmp_repo_dir = TemporaryDirectory()  # pylint: disable=consider-using-with
     Repo.init(path=tmp_repo_dir.name)
     yield tmp_repo_dir.name
     tmp_repo_dir.cleanup()
+
+
+@pytest.fixture
+def tmp_local_git_repo_with_first_test_commit(tmp_local_empty_git_repo) -> str:
+    new_file_path = Path(tmp_local_empty_git_repo) / TEST_COMMIT_FILE
+    repo = Repo(path=tmp_local_empty_git_repo)
+    with open(new_file_path, "w", encoding="utf") as test_file:
+        test_file.write(FIRST_TEST_FILE_MODIFICATION)
+    with open(
+        Path(tmp_local_empty_git_repo) / "README.md", "w", encoding="utf"
+    ) as readme:
+        readme.write("Read me")
+    repo.index.add(items=[test_file.name, readme.name])
+    repo.index.commit(message=FIRST_TEST_COMMIT_MESSAGE)
+    yield tmp_local_empty_git_repo, new_file_path.as_posix()
 
 
 def assert_dir_contain_git_repo(dir: str) -> None:
@@ -250,3 +380,57 @@ def with_mocked_repo_with_remote() -> tuple:
         MockedRepo.return_value = mocked_repo
         mocked_repo.remote.return_value = mocked_remote
         yield path, remote_name, MockedRepo, mocked_repo, mocked_remote
+
+
+def assert_repo_without_commit(repo_path: str) -> None:
+    with pytest.raises(ValueError) as e:
+        Repo(path=repo_path).iter_commits()
+    assert "Reference at 'refs/heads/master' does not exist" in str(e)
+
+
+def assert_repo_as_expected_after_first_test_commit(repo_path: str) -> None:
+    assert (
+        list(Repo(path=repo_path).iter_commits())[0].message
+        == FIRST_TEST_COMMIT_MESSAGE
+    )
+    assert_test_commit_file_content(
+        repo_path=repo_path,
+        file_name=TEST_COMMIT_FILE,
+        expected_content=FIRST_TEST_FILE_MODIFICATION,
+    )
+
+
+def assert_repo_as_expected_after_second_test_commit(
+    repo_path: str, second_commit_on_untracked_file: bool
+) -> None:
+    assert [c.message for c in Repo(path=repo_path).iter_commits()] == [
+        SECOND_TEST_COMMIT_MESSAGE,
+        FIRST_TEST_COMMIT_MESSAGE,
+    ]
+    if second_commit_on_untracked_file:
+        assert_test_commit_file_content(
+            repo_path=repo_path,
+            file_name=TEST_COMMIT_FILE,
+            expected_content=FIRST_TEST_FILE_MODIFICATION,
+        )
+        assert_test_commit_file_content(
+            repo_path=repo_path,
+            file_name=TEST_COMMIT_UNTRACKED_FILE,
+            expected_content=SECOND_TEST_FILE_MODIFICATION,
+        )
+    else:
+        assert_test_commit_file_content(
+            repo_path=repo_path,
+            file_name=TEST_COMMIT_FILE,
+            expected_content=FIRST_TEST_FILE_MODIFICATION
+            + SECOND_TEST_FILE_MODIFICATION,
+        )
+
+
+def assert_test_commit_file_content(
+    repo_path: str, file_name: str, expected_content: str
+) -> None:
+    with TemporaryDirectory() as td:
+        Repo.clone_from(url=repo_path, to_path=td)
+        with open(Path(td) / file_name, "r", encoding="utf") as f:
+            assert f.read() == expected_content

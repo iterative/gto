@@ -2,8 +2,9 @@ import inspect
 import logging
 from contextlib import contextmanager
 from functools import wraps
+from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Callable, Dict
+from typing import Callable, Dict, Sequence
 
 from git import Repo
 
@@ -101,6 +102,32 @@ def git_push_tag(
             msg=f"The command `git push {remote_name} {' '.join(remote_push_args)}` failed. "
             f"Make sure your local repository is in sync with the remote."
         )
+
+
+def git_commit_specific_files(
+    repo_path: str, files: Sequence[str], message: str
+) -> None:
+    repo = Repo(path=repo_path)
+    changed_tracked_files = {
+        (Path(repo_path) / item.a_path).as_posix() for item in repo.index.diff(None)
+    }
+    all_tracked_files = {
+        (Path(repo_path) / f[0]).as_posix() for f in repo.index.entries
+    }
+    untracked_files_to_commit = {f for f in files if f not in all_tracked_files}
+    print()
+    print(f"{files=}")
+    print(f"{all_tracked_files=}")
+    print(f"{changed_tracked_files=}")
+    print(f"{untracked_files_to_commit=}")
+    files_to_commit = changed_tracked_files.intersection(files).union(
+        untracked_files_to_commit
+    )
+    print(f"{files_to_commit=}")
+    if len(files_to_commit) > 0:
+        logging.debug("Adding and committing the files %s", files_to_commit)
+        repo.index.add(items=tuple(files_to_commit))
+        repo.index.commit(message=message)
 
 
 def _turn_args_into_kwargs(
