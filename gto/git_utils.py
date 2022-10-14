@@ -115,19 +115,24 @@ def git_commit_specific_files(
         (Path(repo_path) / f[0]).as_posix() for f in repo.index.entries
     }
     untracked_files_to_commit = {f for f in files if f not in all_tracked_files}
-    print()
-    print(f"{files=}")
-    print(f"{all_tracked_files=}")
-    print(f"{changed_tracked_files=}")
-    print(f"{untracked_files_to_commit=}")
     files_to_commit = changed_tracked_files.intersection(files).union(
         untracked_files_to_commit
     )
-    print(f"{files_to_commit=}")
     if len(files_to_commit) > 0:
         logging.debug("Adding and committing the files %s", files_to_commit)
         repo.index.add(items=tuple(files_to_commit))
         repo.index.commit(message=message)
+
+
+@contextmanager
+def stashed_changes(repo_path: str, include_untracked: bool = False):
+    repo = Repo(path=repo_path)
+    stash_arguments = ["push"]
+    if include_untracked:
+        stash_arguments += ["--include-untracked"]
+    repo.git.stash(stash_arguments)
+    yield None
+    repo.git.stash("pop")
 
 
 def _turn_args_into_kwargs(

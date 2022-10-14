@@ -1,6 +1,6 @@
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Union
+from typing import Tuple, Union
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -15,18 +15,12 @@ from gto.git_utils import (
     git_commit_specific_files,
     git_push_tag,
     is_url_of_remote_repo,
+    stashed_changes,
 )
 from tests.skip_presets import (
     only_for_windows_py_lt_3_8,
     skip_for_windows_py_lt_3_9,
 )
-
-TEST_COMMIT_FILE = "foo.txt"
-TEST_COMMIT_UNTRACKED_FILE = "untracked_foo.txt"
-FIRST_TEST_FILE_MODIFICATION = " First file modification"
-SECOND_TEST_FILE_MODIFICATION = " Second file modification"
-FIRST_TEST_COMMIT_MESSAGE = "first test commit"
-SECOND_TEST_COMMIT_MESSAGE = "second test commit"
 
 
 def test_clone_on_remote_repo_if_repo_is_a_meaningless_string_then_leave_it_unchanged():
@@ -317,6 +311,61 @@ def test_git_commit_specific_files_if_untracked_file_is_changed_and_passed_as_re
     )
 
 
+def test_stashed_changes_if_tracked_file_was_changed_then_inside_with_statement_is_rolled_back(
+    tmp_local_git_repo_with_first_test_commit,
+):
+    tracked_file, _ = change_tracked_file(
+        repo_path=tmp_local_git_repo_with_first_test_commit[0]
+    )
+
+    with stashed_changes(repo_path=tmp_local_git_repo_with_first_test_commit[0]):
+        with open(tracked_file, "r", encoding="utf") as f:
+            assert f.read() == FIRST_TEST_FILE_MODIFICATION
+
+
+def test_stashed_changes_if_tracked_file_was_changed_then_outside_with_statement_is_as_before(
+    tmp_local_git_repo_with_first_test_commit,
+):
+    tracked_file, new_file_content = change_tracked_file(
+        repo_path=tmp_local_git_repo_with_first_test_commit[0]
+    )
+
+    with stashed_changes(repo_path=tmp_local_git_repo_with_first_test_commit[0]):
+        pass
+
+    with open(tracked_file, "r", encoding="utf") as f:
+        assert f.read() == new_file_content
+
+
+def test_stashed_changes_if_untracked_file_was_changed_then_inside_with_statement_is_rolled_back(
+    tmp_local_git_repo_with_first_test_commit,
+):
+    untracked_file, _ = change_untracked_file(
+        repo_path=tmp_local_git_repo_with_first_test_commit[0]
+    )
+
+    with stashed_changes(
+        repo_path=tmp_local_git_repo_with_first_test_commit[0], include_untracked=True
+    ):
+        assert not untracked_file.is_file()
+
+
+def test_stashed_changes_if_untracked_file_was_changed_then_outside_with_statement_is_as_before(
+    tmp_local_git_repo_with_first_test_commit,
+):
+    untracked_file, new_file_content = change_untracked_file(
+        repo_path=tmp_local_git_repo_with_first_test_commit[0]
+    )
+
+    with stashed_changes(
+        repo_path=tmp_local_git_repo_with_first_test_commit[0], include_untracked=True
+    ):
+        pass
+
+    with open(untracked_file, "r", encoding="utf") as f:
+        assert f.read() == new_file_content
+
+
 @auto_push_on_remote_repo
 def decorated_write_func(
     spam: int, repo: Union[Repo, str], auto_push: bool
@@ -359,6 +408,24 @@ def tmp_local_git_repo_with_first_test_commit(tmp_local_empty_git_repo) -> str:
     repo.index.add(items=[test_file.name, readme.name])
     repo.index.commit(message=FIRST_TEST_COMMIT_MESSAGE)
     yield tmp_local_empty_git_repo, new_file_path.as_posix()
+
+
+def change_tracked_file(repo_path: str) -> Tuple[Path, str]:
+    tracked_file = Path(repo_path) / TEST_COMMIT_FILE
+    new_file_content = "Same changes"
+    with open(tracked_file, "w", encoding="utf") as f:
+        f.write(new_file_content)
+    return tracked_file, new_file_content
+
+
+def change_untracked_file(
+    repo_path: str,
+) -> Tuple[Path, str]:
+    untracked_file = Path(repo_path) / TEST_COMMIT_UNTRACKED_FILE
+    new_file_content = "Same changes to an untracked file"
+    with open(untracked_file, "w", encoding="utf") as f:
+        f.write(new_file_content)
+    return untracked_file, new_file_content
 
 
 def assert_dir_contain_git_repo(dir: str) -> None:
@@ -434,3 +501,11 @@ def assert_test_commit_file_content(
         Repo.clone_from(url=repo_path, to_path=td)
         with open(Path(td) / file_name, "r", encoding="utf") as f:
             assert f.read() == expected_content
+
+
+TEST_COMMIT_FILE = "foo.txt"
+TEST_COMMIT_UNTRACKED_FILE = "untracked_foo.txt"
+FIRST_TEST_FILE_MODIFICATION = " First file modification"
+SECOND_TEST_FILE_MODIFICATION = " Second file modification"
+FIRST_TEST_COMMIT_MESSAGE = "first test commit"
+SECOND_TEST_COMMIT_MESSAGE = "second test commit"
