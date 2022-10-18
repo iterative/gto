@@ -503,13 +503,17 @@ def annotate(
 
 
 @gto_command(section=CommandGroups.enriching)
-def remove(repo: str = option_repo, name: str = arg_name):
+def remove(
+    repo: str = option_repo,
+    name: str = arg_name,
+    auto_commit: bool = option_auto_commit,
+):
     """Remove the enrichment for given artifact
 
     Examples:
          $ gto remove nn
     """
-    gto.api.remove(repo, name)
+    gto.api.remove(repo, name, auto_commit)
 
 
 @gto_command(section=CommandGroups.modifying)

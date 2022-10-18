@@ -631,3 +631,32 @@ def test_if_annotate_with_auto_commit_then_invoke_stash_and_commit(
     mocked_git_add_and_commit_all_changes.assert_called_once_with(
         repo_path=repo.working_dir, message=""
     )
+
+
+def test_if_remove_with_auto_commit_then_invoke_stash_and_commit(
+    init_showcase_semver,
+):
+    repo, write_file = init_showcase_semver
+    name, type, path, must_exist = "new-artifact", "new-type", "new/path", False
+    repo.index.commit(message="first commit")
+    gto.api.annotate(
+        repo.working_dir,
+        name,
+        type=type,
+        path=path,
+        must_exist=must_exist,
+        auto_commit=True,
+    )
+
+    with patch("gto.git_utils.stashed_changes") as mocked_stashed_changes:
+        with patch(
+            "gto.git_utils.git_add_and_commit_all_changes"
+        ) as mocked_git_add_and_commit_all_changes:
+            gto.api.remove(repo=repo.working_dir, name=name, auto_commit=True)
+
+    mocked_stashed_changes.assert_called_once_with(
+        repo_path=repo.working_dir, include_untracked=True
+    )
+    mocked_git_add_and_commit_all_changes.assert_called_once_with(
+        repo_path=repo.working_dir, message=""
+    )

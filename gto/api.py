@@ -88,7 +88,10 @@ def annotate(
     )
 
 
-def remove(repo: Union[str, Repo], name: str):
+@commit_produced_changes_on_auto_commit
+def remove(
+    repo: Union[str, Repo], name: str, auto_commit: bool = False
+):  # pylint: disable=unused-argument
     """Remove an artifact from the Index"""
     return init_index_manager(path=repo).remove(name)
 
