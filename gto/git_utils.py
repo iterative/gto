@@ -4,7 +4,7 @@ from contextlib import contextmanager
 from functools import wraps
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Callable, Dict, List, Sequence, Tuple
+from typing import Callable, Dict, List, Tuple
 
 from git import Repo
 
@@ -104,23 +104,15 @@ def git_push_tag(
         )
 
 
-def git_commit_specific_files(
-    repo_path: str, files: Sequence[str], message: str
-) -> None:
+def git_add_and_commit_all_changes(repo_path: str, message: str) -> None:
     repo = Repo(path=repo_path)
-    changed_tracked_files = {
-        (Path(repo_path) / item.a_path).as_posix() for item in repo.index.diff(None)
-    }
-    all_tracked_files = {
-        (Path(repo_path) / f[0]).as_posix() for f in repo.index.entries
-    }
-    untracked_files_to_commit = {f for f in files if f not in all_tracked_files}
-    files_to_commit = changed_tracked_files.intersection(files).union(
-        untracked_files_to_commit
+    tracked, untracked = _get_repo_changed_tracked_and_untracked_files(
+        repo_path=repo_path
     )
-    if len(files_to_commit) > 0:
-        logging.debug("Adding and committing the files %s", files_to_commit)
-        repo.index.add(items=tuple(files_to_commit))
+    if len(tracked) + len(untracked) > 0:
+        logging.debug("Adding to the index the untracked files %s", untracked)
+        logging.debug("Add and commit changes to files %s", tracked + untracked)
+        repo.index.add(items=tracked + untracked)
         repo.index.commit(message=message)
 
 

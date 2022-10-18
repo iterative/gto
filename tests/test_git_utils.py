@@ -11,8 +11,8 @@ from gto.exceptions import GTOException
 from gto.git_utils import (
     auto_push_on_remote_repo,
     clone_on_remote_repo,
+    git_add_and_commit_all_changes,
     git_clone,
-    git_commit_specific_files,
     git_push_tag,
     is_url_of_remote_repo,
     stashed_changes,
@@ -210,21 +210,11 @@ def test_auto_push_on_remote_repo_if_remote_then_repo_is_cloned(
         )
 
 
-def test_git_commit_specific_files_if_no_files_provided_then_no_commit(
-    tmp_local_empty_git_repo,
-):
-    git_commit_specific_files(
-        repo_path=tmp_local_empty_git_repo, files=[], message=SECOND_TEST_COMMIT_MESSAGE
-    )
-    assert_repo_without_commit(repo_path=tmp_local_empty_git_repo)
-
-
-def test_git_commit_specific_files_if_files_not_changed_then_no_commit(
+def test_git_add_and_commit_all_changes_if_files_not_changed_then_no_new_commit(
     tmp_local_git_repo_with_first_test_commit,
 ):
-    git_commit_specific_files(
+    git_add_and_commit_all_changes(
         repo_path=tmp_local_git_repo_with_first_test_commit[0],
-        files=[tmp_local_git_repo_with_first_test_commit[1]],
         message=SECOND_TEST_COMMIT_MESSAGE,
     )
     assert_repo_as_expected_after_first_test_commit(
@@ -232,33 +222,14 @@ def test_git_commit_specific_files_if_files_not_changed_then_no_commit(
     )
 
 
-def test_git_commit_specific_files_if_tracked_file_is_changed_then_new_commit(
+def test_git_add_and_commit_all_changes_if_tracked_file_is_changed_then_new_commit(
     tmp_local_git_repo_with_first_test_commit,
 ):
     with open(tmp_local_git_repo_with_first_test_commit[1], "a", encoding="utf") as f:
         f.write(SECOND_TEST_FILE_MODIFICATION)
 
-    git_commit_specific_files(
+    git_add_and_commit_all_changes(
         repo_path=tmp_local_git_repo_with_first_test_commit[0],
-        files=[tmp_local_git_repo_with_first_test_commit[1]],
-        message=SECOND_TEST_COMMIT_MESSAGE,
-    )
-
-    assert_repo_as_expected_after_second_test_commit(
-        repo_path=tmp_local_git_repo_with_first_test_commit[0],
-        second_commit_on_untracked_file=False,
-    )
-
-
-def test_git_commit_specific_files_if_tracked_file_is_changed_and_passed_as_relative_path_then_new_commit(
-    tmp_local_git_repo_with_first_test_commit,
-):
-    with open(tmp_local_git_repo_with_first_test_commit[1], "a", encoding="utf") as f:
-        f.write(SECOND_TEST_FILE_MODIFICATION)
-
-    git_commit_specific_files(
-        repo_path=tmp_local_git_repo_with_first_test_commit[0],
-        files=[Path(tmp_local_git_repo_with_first_test_commit[1]).name],
         message=SECOND_TEST_COMMIT_MESSAGE,
     )
 
@@ -277,31 +248,8 @@ def test_git_commit_specific_files_if_untracked_file_is_changed_then_new_commit(
     with open(untracked_file, "w", encoding="utf") as f:
         f.write(SECOND_TEST_FILE_MODIFICATION)
 
-    git_commit_specific_files(
+    git_add_and_commit_all_changes(
         repo_path=tmp_local_git_repo_with_first_test_commit[0],
-        files=[untracked_file.name],
-        message=SECOND_TEST_COMMIT_MESSAGE,
-    )
-
-    assert_repo_as_expected_after_second_test_commit(
-        repo_path=tmp_local_git_repo_with_first_test_commit[0],
-        second_commit_on_untracked_file=True,
-    )
-
-
-def test_git_commit_specific_files_if_untracked_file_is_changed_and_passed_as_relative_path_then_new_commit(
-    tmp_local_git_repo_with_first_test_commit,
-):
-    with open(
-        Path(tmp_local_git_repo_with_first_test_commit[0]) / TEST_COMMIT_UNTRACKED_FILE,
-        "w",
-        encoding="utf",
-    ) as f:
-        f.write(SECOND_TEST_FILE_MODIFICATION)
-
-    git_commit_specific_files(
-        repo_path=tmp_local_git_repo_with_first_test_commit[0],
-        files=[TEST_COMMIT_UNTRACKED_FILE],
         message=SECOND_TEST_COMMIT_MESSAGE,
     )
 
