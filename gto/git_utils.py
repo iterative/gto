@@ -4,7 +4,7 @@ from contextlib import contextmanager
 from functools import wraps
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Callable, Dict, Sequence
+from typing import Callable, Dict, List, Sequence, Tuple
 
 from git import Repo
 
@@ -126,13 +126,31 @@ def git_commit_specific_files(
 
 @contextmanager
 def stashed_changes(repo_path: str, include_untracked: bool = False):
+    tracked, untracked = _get_repo_changed_tracked_and_untracked_files(
+        repo_path=repo_path
+    )
+
     repo = Repo(path=repo_path)
     stash_arguments = ["push"]
     if include_untracked:
         stash_arguments += ["--include-untracked"]
+    else:
+        untracked = []
     repo.git.stash(stash_arguments)
-    yield None
-    repo.git.stash("pop")
+
+    yield tracked, untracked
+
+    if len(tracked) > 0 or len(untracked) > 0:
+        repo.git.stash("pop")
+
+
+def _get_repo_changed_tracked_and_untracked_files(
+    repo_path: str,
+) -> Tuple[List[str], List[str]]:
+    repo = Repo(path=repo_path)
+    return [
+        (Path(repo_path) / item.a_path).as_posix() for item in repo.index.diff(None)
+    ], [(Path(repo_path) / f).as_posix() for f in repo.untracked_files]
 
 
 def _turn_args_into_kwargs(

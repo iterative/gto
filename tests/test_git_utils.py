@@ -337,6 +337,34 @@ def test_stashed_changes_if_tracked_file_was_changed_then_outside_with_statement
         assert f.read() == new_file_content
 
 
+def test_stashed_changes_if_tracked_file_was_changed_then_return_its_path(
+    tmp_local_git_repo_with_first_test_commit,
+):
+    tracked_file, _ = change_tracked_file(
+        repo_path=tmp_local_git_repo_with_first_test_commit[0]
+    )
+
+    with stashed_changes(repo_path=tmp_local_git_repo_with_first_test_commit[0]) as (
+        tracked,
+        untracked,
+    ):
+        assert tracked == [tracked_file.as_posix()]
+        assert len(untracked) == 0
+
+
+def test_stashed_changes_if_untracked_file_was_changed_but_include_untracked_is_false_then_do_not_roll_back(
+    tmp_local_git_repo_with_first_test_commit,
+):
+    untracked_file, _ = change_untracked_file(
+        repo_path=tmp_local_git_repo_with_first_test_commit[0]
+    )
+
+    with stashed_changes(
+        repo_path=tmp_local_git_repo_with_first_test_commit[0], include_untracked=False
+    ):
+        assert untracked_file.is_file()
+
+
 def test_stashed_changes_if_untracked_file_was_changed_then_inside_with_statement_is_rolled_back(
     tmp_local_git_repo_with_first_test_commit,
 ):
@@ -364,6 +392,20 @@ def test_stashed_changes_if_untracked_file_was_changed_then_outside_with_stateme
 
     with open(untracked_file, "r", encoding="utf") as f:
         assert f.read() == new_file_content
+
+
+def test_stashed_changes_if_untracked_file_was_changed_then_return_its_path(
+    tmp_local_git_repo_with_first_test_commit,
+):
+    untracked_file, _ = change_untracked_file(
+        repo_path=tmp_local_git_repo_with_first_test_commit[0]
+    )
+
+    with stashed_changes(
+        repo_path=tmp_local_git_repo_with_first_test_commit[0], include_untracked=True
+    ) as (tracked, untracked):
+        assert len(tracked) == 0
+        assert untracked == [untracked_file.as_posix()]
 
 
 @auto_push_on_remote_repo
