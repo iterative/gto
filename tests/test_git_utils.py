@@ -260,6 +260,14 @@ def test_git_commit_specific_files_if_untracked_file_is_changed_then_new_commit(
     )
 
 
+def test_stashed_changes_if_repo_has_no_ref_then_raise_exception(
+    tmp_local_empty_git_repo,
+):
+    with pytest.raises(RuntimeError):
+        with stashed_changes(repo_path=tmp_local_empty_git_repo):
+            pass
+
+
 def test_stashed_changes_if_tracked_file_was_changed_then_inside_with_statement_is_rolled_back(
     tmp_local_git_repo_with_first_test_commit,
 ):

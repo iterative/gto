@@ -56,7 +56,7 @@ def commit_produced_changes_on_auto_commit(f: Callable):
     def wrapped_f(*args, **kwargs):
         kwargs = _turn_args_into_kwargs(f, args, kwargs)
 
-        if kwargs.get("auto_commit", False):
+        if kwargs.get("auto_commit", False) is True:
             if "repo" in kwargs:
                 with stashed_changes(repo_path=kwargs["repo"], include_untracked=True):
                     result = f(**kwargs)
@@ -140,21 +140,28 @@ def git_add_and_commit_all_changes(repo_path: str, message: str) -> None:
 
 @contextmanager
 def stashed_changes(repo_path: str, include_untracked: bool = False):
+    repo = Repo(path=repo_path)
+    if len(repo.refs) == 0:
+        raise RuntimeError(
+            "Cannot stash because repository has no ref. Please create a first commit."
+        )
+
     tracked, untracked = _get_repo_changed_tracked_and_untracked_files(
         repo_path=repo_path
     )
 
-    repo = Repo(path=repo_path)
     stash_arguments = ["push"]
     if include_untracked:
         stash_arguments += ["--include-untracked"]
     else:
         untracked = []
-    repo.git.stash(stash_arguments)
+
+    if len(tracked + untracked) > 0:
+        repo.git.stash(stash_arguments)
 
     yield tracked, untracked
 
-    if len(tracked) > 0 or len(untracked) > 0:
+    if len(tracked + untracked) > 0:
         repo.git.stash("pop")
 
 
