@@ -211,6 +211,7 @@ def test_auto_push_on_remote_repo_if_remote_then_repo_is_cloned(
         )
 
 
+@skip_for_windows_py_lt_3_9
 def test_git_add_and_commit_all_changes_if_files_not_changed_then_no_new_commit(
     tmp_local_git_repo_with_first_test_commit,
 ):
@@ -268,6 +269,7 @@ def test_stashed_changes_if_repo_has_no_ref_then_raise_exception(
             pass
 
 
+@skip_for_windows_py_lt_3_9
 def test_stashed_changes_if_tracked_file_was_changed_then_inside_with_statement_is_rolled_back(
     tmp_local_git_repo_with_first_test_commit,
 ):
@@ -280,6 +282,7 @@ def test_stashed_changes_if_tracked_file_was_changed_then_inside_with_statement_
             assert f.read() == FIRST_TEST_FILE_MODIFICATION
 
 
+@skip_for_windows_py_lt_3_9
 def test_stashed_changes_if_tracked_file_was_changed_then_outside_with_statement_is_as_before(
     tmp_local_git_repo_with_first_test_commit,
 ):
@@ -294,6 +297,7 @@ def test_stashed_changes_if_tracked_file_was_changed_then_outside_with_statement
         assert f.read() == new_file_content
 
 
+@skip_for_windows_py_lt_3_9
 def test_stashed_changes_if_tracked_file_was_changed_then_return_its_path(
     tmp_local_git_repo_with_first_test_commit,
 ):
@@ -308,6 +312,7 @@ def test_stashed_changes_if_tracked_file_was_changed_then_return_its_path(
         assert len(untracked) == 0
 
 
+@skip_for_windows_py_lt_3_9
 def test_stashed_changes_if_untracked_file_was_changed_but_include_untracked_is_false_then_do_not_roll_back(
     tmp_local_git_repo_with_first_test_commit,
 ):
@@ -321,6 +326,7 @@ def test_stashed_changes_if_untracked_file_was_changed_but_include_untracked_is_
         assert untracked_file.is_file()
 
 
+@skip_for_windows_py_lt_3_9
 def test_stashed_changes_if_untracked_file_was_changed_then_inside_with_statement_is_rolled_back(
     tmp_local_git_repo_with_first_test_commit,
 ):
@@ -334,6 +340,7 @@ def test_stashed_changes_if_untracked_file_was_changed_then_inside_with_statemen
         assert not untracked_file.is_file()
 
 
+@skip_for_windows_py_lt_3_9
 def test_stashed_changes_if_untracked_file_was_changed_then_outside_with_statement_is_as_before(
     tmp_local_git_repo_with_first_test_commit,
 ):
@@ -350,6 +357,7 @@ def test_stashed_changes_if_untracked_file_was_changed_then_outside_with_stateme
         assert f.read() == new_file_content
 
 
+@skip_for_windows_py_lt_3_9
 def test_stashed_changes_if_untracked_file_was_changed_then_return_its_path(
     tmp_local_git_repo_with_first_test_commit,
 ):
