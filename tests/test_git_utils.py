@@ -288,15 +288,14 @@ def test_stashed_changes_if_tracked_file_was_changed_then_outside_with_statement
 def test_stashed_changes_if_tracked_file_was_changed_then_return_its_path(
     tmp_local_git_repo_with_first_test_commit,
 ):
-    tracked_file, _ = change_tracked_file(
-        repo_path=tmp_local_git_repo_with_first_test_commit[0]
-    )
+    repo_path = tmp_local_git_repo_with_first_test_commit[0]
+    tracked_file, _ = change_tracked_file(repo_path=repo_path)
 
-    with stashed_changes(repo_path=tmp_local_git_repo_with_first_test_commit[0]) as (
+    with stashed_changes(repo_path=repo_path) as (
         tracked,
         untracked,
     ):
-        assert tracked == [tracked_file.as_posix()]
+        assert tracked == [tracked_file.relative_to(repo_path).as_posix()]
         assert len(untracked) == 0
 
 
@@ -345,15 +344,15 @@ def test_stashed_changes_if_untracked_file_was_changed_then_outside_with_stateme
 def test_stashed_changes_if_untracked_file_was_changed_then_return_its_path(
     tmp_local_git_repo_with_first_test_commit,
 ):
-    untracked_file, _ = change_untracked_file(
-        repo_path=tmp_local_git_repo_with_first_test_commit[0]
-    )
+    repo_path = tmp_local_git_repo_with_first_test_commit[0]
+    untracked_file, _ = change_untracked_file(repo_path=repo_path)
 
-    with stashed_changes(
-        repo_path=tmp_local_git_repo_with_first_test_commit[0], include_untracked=True
-    ) as (tracked, untracked):
+    with stashed_changes(repo_path=repo_path, include_untracked=True) as (
+        tracked,
+        untracked,
+    ):
         assert len(tracked) == 0
-        assert untracked == [untracked_file.as_posix()]
+        assert untracked == [untracked_file.relative_to(repo_path).as_posix()]
 
 
 @auto_push_on_remote_repo

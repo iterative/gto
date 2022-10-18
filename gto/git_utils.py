@@ -2,7 +2,6 @@ import inspect
 import logging
 from contextlib import contextmanager
 from functools import wraps
-from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Callable, Dict, List, Tuple
 
@@ -140,9 +139,7 @@ def _get_repo_changed_tracked_and_untracked_files(
     repo_path: str,
 ) -> Tuple[List[str], List[str]]:
     repo = Repo(path=repo_path)
-    return [
-        (Path(repo_path) / item.a_path).as_posix() for item in repo.index.diff(None)
-    ], [(Path(repo_path) / f).as_posix() for f in repo.untracked_files]
+    return [item.a_path for item in repo.index.diff(None)], repo.untracked_files
 
 
 def _turn_args_into_kwargs(
