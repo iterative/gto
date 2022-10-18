@@ -1,7 +1,7 @@
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Tuple, Union
-from unittest.mock import MagicMock, patch
+from typing import Callable, Tuple, Union
+from unittest.mock import MagicMock, call, patch
 
 import pytest
 from git import Repo
@@ -11,6 +11,7 @@ from gto.exceptions import GTOException
 from gto.git_utils import (
     auto_push_on_remote_repo,
     clone_on_remote_repo,
+    commit_produced_changes_on_auto_commit,
     git_add_and_commit_all_changes,
     git_clone,
     git_push_tag,
@@ -355,6 +356,89 @@ def test_stashed_changes_if_untracked_file_was_changed_then_return_its_path(
         assert untracked == [untracked_file.relative_to(repo_path).as_posix()]
 
 
+def test_commit_produced_changes_on_auto_commit_if_no_auto_commit_argument_then_don_t_stash_or_commit(
+    mocked_f_decorated_with_commit_produced_changes_on_auto_commit,
+):
+    (
+        f,
+        f_spy,
+        mocked_stashed_changes,
+        mocked_git_add_and_commit_all_changes,
+        _,
+    ) = mocked_f_decorated_with_commit_produced_changes_on_auto_commit
+
+    result = f()
+
+    mocked_stashed_changes.assert_not_called()
+    mocked_git_add_and_commit_all_changes.assert_not_called()
+    f_spy.assert_called_once_with()
+    assert result == f_spy.return_value
+
+
+def test_commit_produced_changes_on_auto_commit_if_auto_commit_is_false_then_don_t_stash_or_commit(
+    mocked_f_decorated_with_commit_produced_changes_on_auto_commit,
+):
+    (
+        f,
+        f_spy,
+        mocked_stashed_changes,
+        mocked_git_add_and_commit_all_changes,
+        _,
+    ) = mocked_f_decorated_with_commit_produced_changes_on_auto_commit
+
+    result = f(auto_commit=False)
+
+    mocked_stashed_changes.assert_not_called()
+    mocked_git_add_and_commit_all_changes.assert_not_called()
+    f_spy.assert_called_once_with(auto_commit=False)
+    assert result == f_spy.return_value
+
+
+def test_commit_produced_changes_on_auto_commit_if_auto_commit_but_no_repo_then_exception_and_don_t_stash_or_commit(
+    mocked_f_decorated_with_commit_produced_changes_on_auto_commit,
+):
+    (
+        f,
+        f_spy,
+        mocked_stashed_changes,
+        mocked_git_add_and_commit_all_changes,
+        _,
+    ) = mocked_f_decorated_with_commit_produced_changes_on_auto_commit
+
+    with pytest.raises(ValueError):
+        f(auto_commit=True)
+
+    mocked_stashed_changes.assert_not_called()
+    mocked_git_add_and_commit_all_changes.assert_not_called()
+    f_spy.assert_not_called()
+
+
+def test_commit_produced_changes_on_auto_commit_if_auto_commit_is_true_then_stash_and_commit_in_repo(
+    mocked_f_decorated_with_commit_produced_changes_on_auto_commit,
+):
+    (
+        f,
+        f_spy,
+        _,
+        _,
+        mock_manager,
+    ) = mocked_f_decorated_with_commit_produced_changes_on_auto_commit
+    repo_path = "a/repo/path"
+
+    result = f(repo=repo_path, auto_commit=True)
+
+    expected_calls = [
+        call.stashed_changes(repo_path=repo_path, include_untracked=True),
+        call.stashed_changes().__enter__(),
+        call.spy(repo=repo_path, auto_commit=True),
+        call.git_add_and_commit_all_changes(repo_path=repo_path, message=""),
+        call.stashed_changes().__exit__(None, None, None),
+    ]
+
+    assert mock_manager.mock_calls == expected_calls
+    assert result == f_spy.return_value
+
+
 @auto_push_on_remote_repo
 def decorated_write_func(
     spam: int, repo: Union[Repo, str], auto_push: bool
@@ -397,6 +481,31 @@ def tmp_local_git_repo_with_first_test_commit(tmp_local_empty_git_repo) -> str:
     repo.index.add(items=[test_file.name, readme.name])
     repo.index.commit(message=FIRST_TEST_COMMIT_MESSAGE)
     yield tmp_local_empty_git_repo, new_file_path.as_posix()
+
+
+@pytest.fixture
+def mocked_f_decorated_with_commit_produced_changes_on_auto_commit() -> Tuple[
+    Callable, MagicMock, MagicMock, MagicMock, MagicMock
+]:
+    f_spy = MagicMock()
+    f_spy.return_value = MagicMock()
+
+    @commit_produced_changes_on_auto_commit
+    def f(*args, **kwargs):
+        return f_spy(*args, **kwargs)
+
+    with patch("gto.git_utils.stashed_changes") as mocked_stashed_changes:
+        with patch(
+            "gto.git_utils.git_add_and_commit_all_changes"
+        ) as mocked_git_add_and_commit_all_changes:
+            mock_manager = MagicMock()
+            mock_manager.attach_mock(mocked_stashed_changes, "stashed_changes")
+            mock_manager.attach_mock(f_spy, "spy")
+            mock_manager.attach_mock(
+                mocked_git_add_and_commit_all_changes, "git_add_and_commit_all_changes"
+            )
+
+            yield f, f_spy, mocked_stashed_changes, mocked_git_add_and_commit_all_changes, mock_manager
 
 
 def change_tracked_file(repo_path: str) -> Tuple[Path, str]:

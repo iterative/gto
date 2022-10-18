@@ -51,6 +51,29 @@ def auto_push_on_remote_repo(f: Callable):
     return wrapped_f
 
 
+def commit_produced_changes_on_auto_commit(f: Callable):
+    @wraps(f)
+    def wrapped_f(*args, **kwargs):
+        kwargs = _turn_args_into_kwargs(f, args, kwargs)
+
+        if kwargs.get("auto_commit", False):
+            if "repo" in kwargs:
+                with stashed_changes(repo_path=kwargs["repo"], include_untracked=True):
+                    result = f(**kwargs)
+                    git_add_and_commit_all_changes(repo_path=kwargs["repo"], message="")
+            else:
+                raise ValueError(
+                    "Function decorated with commit_produced_changes_on_auto_commit was called with `auto_commit=True` but `repo` was not provided."
+                    "Argument `repo` is necessary."
+                )
+        else:
+            result = f(**kwargs)
+
+        return result
+
+    return wrapped_f
+
+
 def is_url_of_remote_repo(repo: str) -> bool:
     if remote_git_repo_regex.fullmatch(repo) is not None:
         logging.debug("%s recognized as remote git repo", repo)
