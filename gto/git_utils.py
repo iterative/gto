@@ -69,6 +69,12 @@ def commit_produced_changes_on_auto_commit(
 
     """
 
+    def generate_commit_message(**kwargs) -> str:
+        kwargs_for_message_generator = {
+            k: kwargs[k] for k in inspect.getfullargspec(message_generator).args
+        }
+        return message_generator(**kwargs_for_message_generator)
+
     def wrap(f: Callable):
         @wraps(f)
         def wrapped_f(*args, **kwargs):
@@ -80,19 +86,9 @@ def commit_produced_changes_on_auto_commit(
                         repo_path=kwargs["repo"], include_untracked=True
                     ) as (stashed_tracked, stashed_untracked):
                         result = f(**kwargs)
-                        kwargs_for_message_generator = {
-                            k: kwargs[k]
-                            for k in inspect.getfullargspec(message_generator).args
-                        }
-                        (
-                            tracked,
-                            untracked,
-                        ) = _get_repo_changed_tracked_and_untracked_files(
-                            repo_path=kwargs["repo"]
-                        )
-                        if (
-                            len(set(stashed_tracked).intersection(tracked)) > 0
-                            or len(set(stashed_untracked).intersection(untracked)) > 0
+                        if are_files_in_repo_changed(
+                            repo_path=kwargs["repo"],
+                            files=stashed_tracked + stashed_untracked,
                         ):
                             _reset_repo_to_head(repo_path=kwargs["repo"])
                             raise GTOException(
@@ -102,11 +98,12 @@ def commit_produced_changes_on_auto_commit(
                             )
                         git_add_and_commit_all_changes(
                             repo_path=kwargs["repo"],
-                            message=message_generator(**kwargs_for_message_generator),
+                            message=generate_commit_message(**kwargs),
                         )
                 else:
                     raise ValueError(
-                        "Function decorated with commit_produced_changes_on_auto_commit was called with `auto_commit=True` but `repo` was not provided."
+                        "Function decorated with commit_produced_changes_on_auto_commit was called with "
+                        "`auto_commit=True` but `repo` was not provided."
                         "Argument `repo` is necessary."
                     )
             else:
@@ -117,6 +114,16 @@ def commit_produced_changes_on_auto_commit(
         return wrapped_f
 
     return wrap
+
+
+def are_files_in_repo_changed(repo_path: str, files: List[str]) -> bool:
+    tracked, untracked = _get_repo_changed_tracked_and_untracked_files(
+        repo_path=repo_path
+    )
+    return (
+        len(set(files).intersection(tracked)) > 0
+        or len(set(files).intersection(untracked)) > 0
+    )
 
 
 def is_url_of_remote_repo(repo: str) -> bool:
