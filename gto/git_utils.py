@@ -7,6 +7,7 @@ from typing import Callable, Dict, List, Tuple
 
 from git import Repo
 
+from gto.commit_message_generator import generate_empty_commit_message
 from gto.constants import remote_git_repo_regex
 from gto.exceptions import GTOException, WrongArgs
 
@@ -51,7 +52,9 @@ def auto_push_on_remote_repo(f: Callable):
     return wrapped_f
 
 
-def commit_produced_changes_on_auto_commit(message_generator: Callable[..., str]):
+def commit_produced_changes_on_auto_commit(
+    message_generator: Callable[..., str] = generate_empty_commit_message
+):
     """
     The function `message_generator` can use any argument that the decorated function has.
 
@@ -75,12 +78,28 @@ def commit_produced_changes_on_auto_commit(message_generator: Callable[..., str]
                 if "repo" in kwargs:
                     with stashed_changes(
                         repo_path=kwargs["repo"], include_untracked=True
-                    ):
+                    ) as (stashed_tracked, stashed_untracked):
                         result = f(**kwargs)
                         kwargs_for_message_generator = {
                             k: kwargs[k]
                             for k in inspect.getfullargspec(message_generator).args
                         }
+                        (
+                            tracked,
+                            untracked,
+                        ) = _get_repo_changed_tracked_and_untracked_files(
+                            repo_path=kwargs["repo"]
+                        )
+                        if (
+                            len(set(stashed_tracked).intersection(tracked)) > 0
+                            or len(set(stashed_untracked).intersection(untracked)) > 0
+                        ):
+                            _reset_repo_to_head(repo_path=kwargs["repo"])
+                            raise GTOException(
+                                msg="The command changed files that were not committed, automated committing is not possible. "
+                                "The files have been rolled back to their previous state.\n\n"
+                                "Suggested action: Commit the changes and re-run this command"
+                            )
                         git_add_and_commit_all_changes(
                             repo_path=kwargs["repo"],
                             message=message_generator(**kwargs_for_message_generator),
@@ -182,13 +201,19 @@ def stashed_changes(repo_path: str, include_untracked: bool = False):
     else:
         untracked = []
 
-    if len(tracked + untracked) > 0:
-        repo.git.stash(stash_arguments)
+    try:
+        if len(tracked + untracked) > 0:
+            repo.git.stash(stash_arguments)
+        yield tracked, untracked
+    finally:
+        if len(tracked + untracked) > 0:
+            repo.git.stash("pop")
 
-    yield tracked, untracked
 
-    if len(tracked + untracked) > 0:
-        repo.git.stash("pop")
+def _reset_repo_to_head(repo_path: str) -> None:
+    repo = Repo(path=repo_path)
+    repo.git.stash(["push", "--include-untracked"])
+    repo.git.stash(["drop"])
 
 
 def _get_repo_changed_tracked_and_untracked_files(

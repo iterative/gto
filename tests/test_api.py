@@ -613,6 +613,7 @@ def test_if_annotate_with_auto_commit_then_invoke_stash_and_commit(
     repo.index.commit(message="first commit")
 
     with patch("gto.git_utils.stashed_changes") as mocked_stashed_changes:
+        mocked_stashed_changes.return_value.__enter__.return_value = [], []
         with patch(
             "gto.git_utils.git_add_and_commit_all_changes"
         ) as mocked_git_add_and_commit_all_changes:
@@ -650,6 +651,7 @@ def test_if_remove_with_auto_commit_then_invoke_stash_and_commit(
     )
 
     with patch("gto.git_utils.stashed_changes") as mocked_stashed_changes:
+        mocked_stashed_changes.return_value.__enter__.return_value = [], []
         with patch(
             "gto.git_utils.git_add_and_commit_all_changes"
         ) as mocked_git_add_and_commit_all_changes:

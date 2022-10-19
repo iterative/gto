@@ -461,6 +461,50 @@ def test_commit_produced_changes_on_auto_commit_if_auto_commit_is_true_then_stas
     assert result == f_spy.return_value
 
 
+def test_commit_produced_changes_on_auto_commit_if_f_changes_tracked_file_already_dangling_then_raise_exception_and_roll_back(
+    tmp_local_git_repo_with_first_test_commit,
+):
+    repo, tracked_file = tmp_local_git_repo_with_first_test_commit
+
+    with open(tracked_file, "a", encoding="utf") as f:
+        f.write(f" - {SECOND_TEST_FILE_MODIFICATION}")
+
+    @commit_produced_changes_on_auto_commit()
+    def f_to_test(repo: str, auto_commit: bool):  # pylint: disable=unused-argument
+        with open(tracked_file, "a", encoding="utf") as f:
+            f.write(" - change made by f")
+
+    with pytest.raises(GTOException):
+        f_to_test(repo=repo, auto_commit=True)
+
+    with open(tracked_file, "r", encoding="utf") as f:
+        assert (
+            f.read()
+            == f"{FIRST_TEST_FILE_MODIFICATION} - {SECOND_TEST_FILE_MODIFICATION}"
+        )
+
+
+def test_commit_produced_changes_on_auto_commit_if_f_changes_untracked_file_already_dangling_then_raise_exception_and_roll_back(
+    tmp_local_git_repo_with_first_test_commit,
+):
+    repo, _ = tmp_local_git_repo_with_first_test_commit
+    untracked_file = (Path(repo) / TEST_COMMIT_UNTRACKED_FILE).as_posix()
+
+    with open(untracked_file, "w", encoding="utf") as f:
+        f.write(f"{FIRST_TEST_FILE_MODIFICATION}")
+
+    @commit_produced_changes_on_auto_commit()
+    def f_to_test(repo: str, auto_commit: bool):  # pylint: disable=unused-argument
+        with open(untracked_file, "a", encoding="utf") as f:
+            f.write(" - change made by f")
+
+    with pytest.raises(GTOException):
+        f_to_test(repo=repo, auto_commit=True)
+
+    with open(untracked_file, "r", encoding="utf") as f:
+        assert f.read() == f"{FIRST_TEST_FILE_MODIFICATION}"
+
+
 @auto_push_on_remote_repo
 def decorated_write_func(
     spam: int, repo: Union[Repo, str], auto_push: bool
@@ -522,17 +566,25 @@ def mocked_f_decorated_with_commit_produced_changes_on_auto_commit() -> Tuple[
         return f_spy(*args, **kwargs)
 
     with patch("gto.git_utils.stashed_changes") as mocked_stashed_changes:
+        mocked_stashed_changes.return_value.__enter__.return_value = [], []
         with patch(
-            "gto.git_utils.git_add_and_commit_all_changes"
-        ) as mocked_git_add_and_commit_all_changes:
-            mock_manager = MagicMock()
-            mock_manager.attach_mock(mocked_stashed_changes, "stashed_changes")
-            mock_manager.attach_mock(f_spy, "spy")
-            mock_manager.attach_mock(
-                mocked_git_add_and_commit_all_changes, "git_add_and_commit_all_changes"
-            )
+            "gto.git_utils._get_repo_changed_tracked_and_untracked_files"
+        ) as mocked_get_repo_changed_tracked_and_untracked_files:
+            mocked_get_repo_changed_tracked_and_untracked_files.return_value = [
+                TEST_COMMIT_FILE
+            ], []
+            with patch(
+                "gto.git_utils.git_add_and_commit_all_changes"
+            ) as mocked_git_add_and_commit_all_changes:
+                mock_manager = MagicMock()
+                mock_manager.attach_mock(mocked_stashed_changes, "stashed_changes")
+                mock_manager.attach_mock(f_spy, "spy")
+                mock_manager.attach_mock(
+                    mocked_git_add_and_commit_all_changes,
+                    "git_add_and_commit_all_changes",
+                )
 
-            yield f, f_spy, mocked_stashed_changes, mocked_git_add_and_commit_all_changes, mock_manager, generate_test_commit_message
+                yield f, f_spy, mocked_stashed_changes, mocked_git_add_and_commit_all_changes, mock_manager, generate_test_commit_message
 
 
 def change_tracked_file(repo_path: str) -> Tuple[Path, str]:
@@ -630,7 +682,7 @@ def assert_test_commit_file_content(
 
 TEST_COMMIT_FILE = "foo.txt"
 TEST_COMMIT_UNTRACKED_FILE = "untracked_foo.txt"
-FIRST_TEST_FILE_MODIFICATION = " First file modification"
-SECOND_TEST_FILE_MODIFICATION = " Second file modification"
+FIRST_TEST_FILE_MODIFICATION = "First file modification"
+SECOND_TEST_FILE_MODIFICATION = "Second file modification"
 FIRST_TEST_COMMIT_MESSAGE = "first test commit"
 SECOND_TEST_COMMIT_MESSAGE = "second test commit"

@@ -5,6 +5,10 @@ from typing import List, Optional, Union
 from funcy import distinct
 from git import Repo
 
+from gto.commit_message_generator import (
+    generate_annotate_commit_message,
+    generate_remove_commit_message,
+)
 from gto.constants import (
     ARTIFACT,
     ASSIGNMENTS_PER_VERSION,
@@ -63,16 +67,6 @@ def get_stages(repo: Union[str, Repo], allowed: bool = False, used: bool = False
     return GitRegistry.from_repo(repo).get_stages(allowed=allowed, used=used)
 
 
-def generate_annotate_commit_message(
-    name: str, type: Optional[str] = None, path: Optional[str] = None
-) -> str:
-    return (
-        f"Annotate artifact {name}"
-        f"{f' of type {type}' if type is not None else ''}"
-        f"{f' with path {path}' if path is not None else ''}"
-    )
-
-
 # TODO: make this work the same as CLI version
 @commit_produced_changes_on_auto_commit(
     message_generator=generate_annotate_commit_message
@@ -98,10 +92,6 @@ def annotate(
         description=description,
         update=True,
     )
-
-
-def generate_remove_commit_message(name: str) -> str:
-    return f"Remove annotation for artifact {name}"
 
 
 @commit_produced_changes_on_auto_commit(
