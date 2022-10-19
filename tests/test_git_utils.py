@@ -461,6 +461,7 @@ def test_commit_produced_changes_on_auto_commit_if_auto_commit_is_true_then_stas
     assert result == f_spy.return_value
 
 
+@skip_for_windows_py_lt_3_9
 def test_commit_produced_changes_on_auto_commit_if_f_changes_tracked_file_already_dangling_then_raise_exception_and_roll_back(
     tmp_local_git_repo_with_first_test_commit,
 ):
@@ -484,6 +485,7 @@ def test_commit_produced_changes_on_auto_commit_if_f_changes_tracked_file_alread
         )
 
 
+@skip_for_windows_py_lt_3_9
 def test_commit_produced_changes_on_auto_commit_if_f_changes_untracked_file_already_dangling_then_raise_exception_and_roll_back(
     tmp_local_git_repo_with_first_test_commit,
 ):
