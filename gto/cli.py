@@ -368,7 +368,7 @@ option_auto_push = Option(
 
 option_auto_commit = Option(
     False,
-    "--auto-push",
+    "--auto-commit",
     is_flag=True,
     help="Automatically commit changes due to this command (experimental)",
 )
