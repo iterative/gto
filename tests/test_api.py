@@ -629,7 +629,8 @@ def test_if_annotate_with_auto_commit_then_invoke_stash_and_commit(
         repo_path=repo.working_dir, include_untracked=True
     )
     mocked_git_add_and_commit_all_changes.assert_called_once_with(
-        repo_path=repo.working_dir, message=""
+        repo_path=repo.working_dir,
+        message=f"Annotate artifact {name} of type {type} with path {path}",
     )
 
 
@@ -658,5 +659,5 @@ def test_if_remove_with_auto_commit_then_invoke_stash_and_commit(
         repo_path=repo.working_dir, include_untracked=True
     )
     mocked_git_add_and_commit_all_changes.assert_called_once_with(
-        repo_path=repo.working_dir, message=""
+        repo_path=repo.working_dir, message=f"Remove annotation for artifact {name}"
     )

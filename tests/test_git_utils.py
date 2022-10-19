@@ -381,6 +381,7 @@ def test_commit_produced_changes_on_auto_commit_if_no_auto_commit_argument_then_
         mocked_stashed_changes,
         mocked_git_add_and_commit_all_changes,
         _,
+        _,
     ) = mocked_f_decorated_with_commit_produced_changes_on_auto_commit
 
     result = f()
@@ -399,6 +400,7 @@ def test_commit_produced_changes_on_auto_commit_if_auto_commit_is_false_then_don
         f_spy,
         mocked_stashed_changes,
         mocked_git_add_and_commit_all_changes,
+        _,
         _,
     ) = mocked_f_decorated_with_commit_produced_changes_on_auto_commit
 
@@ -419,6 +421,7 @@ def test_commit_produced_changes_on_auto_commit_if_auto_commit_but_no_repo_then_
         mocked_stashed_changes,
         mocked_git_add_and_commit_all_changes,
         _,
+        _,
     ) = mocked_f_decorated_with_commit_produced_changes_on_auto_commit
 
     with pytest.raises(ValueError):
@@ -438,6 +441,7 @@ def test_commit_produced_changes_on_auto_commit_if_auto_commit_is_true_then_stas
         _,
         _,
         mock_manager,
+        generate_test_commit_message,
     ) = mocked_f_decorated_with_commit_produced_changes_on_auto_commit
     repo_path = "a/repo/path"
 
@@ -447,7 +451,9 @@ def test_commit_produced_changes_on_auto_commit_if_auto_commit_is_true_then_stas
         call.stashed_changes(repo_path=repo_path, include_untracked=True),
         call.stashed_changes().__enter__(),
         call.spy(repo=repo_path, auto_commit=True),
-        call.git_add_and_commit_all_changes(repo_path=repo_path, message=""),
+        call.git_add_and_commit_all_changes(
+            repo_path=repo_path, message=generate_test_commit_message(auto_commit=True)
+        ),
         call.stashed_changes().__exit__(None, None, None),
     ]
 
@@ -501,12 +507,17 @@ def tmp_local_git_repo_with_first_test_commit(tmp_local_empty_git_repo) -> str:
 
 @pytest.fixture
 def mocked_f_decorated_with_commit_produced_changes_on_auto_commit() -> Tuple[
-    Callable, MagicMock, MagicMock, MagicMock, MagicMock
+    Callable, MagicMock, MagicMock, MagicMock, MagicMock, Callable
 ]:
     f_spy = MagicMock()
     f_spy.return_value = MagicMock()
 
-    @commit_produced_changes_on_auto_commit
+    def generate_test_commit_message(auto_commit: bool) -> str:
+        return f"commit message with argument {auto_commit}"
+
+    @commit_produced_changes_on_auto_commit(
+        message_generator=generate_test_commit_message
+    )
     def f(*args, **kwargs):
         return f_spy(*args, **kwargs)
 
@@ -521,7 +532,7 @@ def mocked_f_decorated_with_commit_produced_changes_on_auto_commit() -> Tuple[
                 mocked_git_add_and_commit_all_changes, "git_add_and_commit_all_changes"
             )
 
-            yield f, f_spy, mocked_stashed_changes, mocked_git_add_and_commit_all_changes, mock_manager
+            yield f, f_spy, mocked_stashed_changes, mocked_git_add_and_commit_all_changes, mock_manager, generate_test_commit_message
 
 
 def change_tracked_file(repo_path: str) -> Tuple[Path, str]:

@@ -51,27 +51,53 @@ def auto_push_on_remote_repo(f: Callable):
     return wrapped_f
 
 
-def commit_produced_changes_on_auto_commit(f: Callable):
-    @wraps(f)
-    def wrapped_f(*args, **kwargs):
-        kwargs = _turn_args_into_kwargs(f, args, kwargs)
+def commit_produced_changes_on_auto_commit(message_generator: Callable[..., str]):
+    """
+    The function `message_generator` can use any argument that the decorated function has.
 
-        if kwargs.get("auto_commit", False) is True:
-            if "repo" in kwargs:
-                with stashed_changes(repo_path=kwargs["repo"], include_untracked=True):
-                    result = f(**kwargs)
-                    git_add_and_commit_all_changes(repo_path=kwargs["repo"], message="")
+    Example: here we are using the argument b of the function f to generate the commit message
+
+        def create_message(b: str) -> str:
+            return "commit message with b={b}"
+
+        @commit_produced_changes_on_auto_commit(message_generator=create_message)
+        def f(a: str, b: str, c: str):
+            ...
+
+    """
+
+    def wrap(f: Callable):
+        @wraps(f)
+        def wrapped_f(*args, **kwargs):
+            kwargs = _turn_args_into_kwargs(f, args, kwargs)
+
+            if kwargs.get("auto_commit", False) is True:
+                if "repo" in kwargs:
+                    with stashed_changes(
+                        repo_path=kwargs["repo"], include_untracked=True
+                    ):
+                        result = f(**kwargs)
+                        kwargs_for_message_generator = {
+                            k: kwargs[k]
+                            for k in inspect.getfullargspec(message_generator).args
+                        }
+                        git_add_and_commit_all_changes(
+                            repo_path=kwargs["repo"],
+                            message=message_generator(**kwargs_for_message_generator),
+                        )
+                else:
+                    raise ValueError(
+                        "Function decorated with commit_produced_changes_on_auto_commit was called with `auto_commit=True` but `repo` was not provided."
+                        "Argument `repo` is necessary."
+                    )
             else:
-                raise ValueError(
-                    "Function decorated with commit_produced_changes_on_auto_commit was called with `auto_commit=True` but `repo` was not provided."
-                    "Argument `repo` is necessary."
-                )
-        else:
-            result = f(**kwargs)
+                result = f(**kwargs)
 
-        return result
+            return result
 
-    return wrapped_f
+        return wrapped_f
+
+    return wrap
 
 
 def is_url_of_remote_repo(repo: str) -> bool:
