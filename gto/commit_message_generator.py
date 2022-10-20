@@ -5,9 +5,9 @@ def generate_annotate_commit_message(
     name: str, type: Optional[str] = None, path: Optional[str] = None
 ) -> str:
     return (
-        f"Annotate artifact {name}"
-        f"{f' of type {type}' if type is not None else ''}"
-        f"{f' with path {path}' if path is not None else ''}"
+        f"Annotate artifact `{name}`"
+        f"{f' of type `{type}`' if type is not None else ''}"
+        f"{f' with path `{path}`' if path is not None else ''}"
     )
 
 
