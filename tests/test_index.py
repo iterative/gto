@@ -47,9 +47,7 @@ def test_git_index_add_virtual(git_index_repo):
 
 def test_git_index_remove_virtual(git_index_repo):
     index, repo = git_index_repo
-    index.add(
-        "aa", "aa", "aa", must_exist=False, labels=[], description="", update=True
-    )
+    index.add("aa", "aa", "aa", must_exist=False, labels=[], description="", update=True)
 
     new_index = init_index(repo.git_dir)
     assert isinstance(new_index, RepoIndexManager)

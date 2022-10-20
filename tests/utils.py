@@ -36,21 +36,13 @@ def check_obj(
     assert_equals(obj_values, values)
 
 
-def convert_objects_to_str_in_json_serializable_object(
-    o: Union[list, dict]
-) -> Union[list, dict]:
+def convert_objects_to_str_in_json_serializable_object(o: Union[list, dict]) -> Union[list, dict]:
     return json.loads(json.dumps(o, default=str))
 
 
 def is_os_windows_and_py_lt_3_9() -> bool:
-    return (
-        os.environ.get("GITHUB_MATRIX_OS") == "windows-latest"
-        and os.environ.get("GITHUB_MATRIX_PYTHON", "") < "3.9"
-    )
+    return os.environ.get("GITHUB_MATRIX_OS") == "windows-latest" and os.environ.get("GITHUB_MATRIX_PYTHON", "") < "3.9"
 
 
 def is_os_windows_and_py_lt_3_8() -> bool:
-    return (
-        os.environ.get("GITHUB_MATRIX_OS") == "windows-latest"
-        and os.environ.get("GITHUB_MATRIX_PYTHON", "") < "3.8"
-    )
+    return os.environ.get("GITHUB_MATRIX_OS") == "windows-latest" and os.environ.get("GITHUB_MATRIX_PYTHON", "") < "3.8"

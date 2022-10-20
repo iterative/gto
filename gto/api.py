@@ -51,9 +51,7 @@ def _is_gto_repo(repo: Union[str, Repo]):
 def _get_index(repo: Union[str, Repo], file=False):
     """Get index state"""
     if file:
-        return FileIndexManager.from_path(
-            path=repo if isinstance(repo, str) else repo.working_dir
-        )
+        return FileIndexManager.from_path(path=repo if isinstance(repo, str) else repo.working_dir)
     return RepoIndexManager.from_repo(repo)
 
 
@@ -68,9 +66,7 @@ def get_stages(repo: Union[str, Repo], allowed: bool = False, used: bool = False
 
 
 # TODO: make this work the same as CLI version
-@commit_produced_changes_on_auto_commit(
-    message_generator=generate_annotate_commit_message
-)
+@commit_produced_changes_on_auto_commit(message_generator=generate_annotate_commit_message)
 def annotate(
     repo: Union[str, Repo],
     name: str,
@@ -94,12 +90,8 @@ def annotate(
     )
 
 
-@commit_produced_changes_on_auto_commit(
-    message_generator=generate_remove_commit_message
-)
-def remove(
-    repo: Union[str, Repo], name: str, auto_commit: bool = False
-):  # pylint: disable=unused-argument
+@commit_produced_changes_on_auto_commit(message_generator=generate_remove_commit_message)
+def remove(repo: Union[str, Repo], name: str, auto_commit: bool = False):  # pylint: disable=unused-argument
     """Remove an artifact from the Index"""
     return init_index_manager(path=repo).remove(name)
 
@@ -444,24 +436,17 @@ def _show_versions(  # pylint: disable=too-many-locals
         sort=sort,
     )
     versions = []
-    for v in artifact.get_versions(
-        include_non_explicit=not registered_only, include_discovered=True
-    ):
+    for v in artifact.get_versions(include_non_explicit=not registered_only, include_discovered=True):
         v = v.dict_state()
         v["stages"] = [
-            vstage.dict_state()
-            for vstages in stages.values()
-            for vstage in vstages
-            if vstage.version == v["version"]
+            vstage.dict_state() for vstages in stages.values() for vstage in vstages if vstage.version == v["version"]
         ]
         versions.append(v)
 
     if match and match["greatest"]:
         versions = versions[:1]
     if match and match["stage"]:
-        versions = [
-            v for v in versions for a in v["stages"] if match["stage"] in a["stage"]
-        ]
+        versions = [v for v in versions for a in v["stages"] if match["stage"] in a["stage"]]
 
     if not table:
         return versions
@@ -469,37 +454,22 @@ def _show_versions(  # pylint: disable=too-many-locals
     first_keys = ["artifact", "version", "stage"]
     versions_ = []
     for v in versions:
-        v["artifact"] = (
-            v["artifact"]
-            if artifact.is_registered
-            else mark_artifact_unregistered(v["artifact"])
-        )
+        v["artifact"] = v["artifact"] if artifact.is_registered else mark_artifact_unregistered(v["artifact"])
         v["version"] = format_hexsha(v["version"])
-        v["stage"] = ", ".join(
-            distinct(  # TODO: remove? no longer necessary
-                s["stage"] for s in v["stages"]
-            )
-        )
+        v["stage"] = ", ".join(distinct(s["stage"] for s in v["stages"]))  # TODO: remove? no longer necessary
         v["commit_hexsha"] = format_hexsha(v["commit_hexsha"])
         if len(v["registrations"]) > 1:
-            raise NotImplementedInGTO(
-                "Multiple registrations are not supported currently. How you got in here?"
-            )
+            raise NotImplementedInGTO("Multiple registrations are not supported currently. How you got in here?")
         for key in list(v.keys()):
             if key not in first_keys + ["created_at", "ref"]:
                 del v[key]
-        v = OrderedDict(
-            [(key, v[key]) for key in first_keys]
-            + [(key, v[key]) for key in v if key not in first_keys]
-        )
+        v = OrderedDict([(key, v[key]) for key in first_keys] + [(key, v[key]) for key in v if key not in first_keys])
         versions_.append(v)
     return versions_, "keys"
 
 
 @clone_on_remote_repo
-def describe(
-    repo: Union[str, Repo], name: str, rev: str = None
-) -> List[EnrichmentInfo]:
+def describe(repo: Union[str, Repo], name: str, rev: str = None) -> List[EnrichmentInfo]:
     """Find enrichments for the artifact"""
     ref_type, parsed = parse_name_reference(name)
     if ref_type == NAME_REFERENCE.NAME:
@@ -570,7 +540,5 @@ def history(
         "ref",
     ]
     keys_order = [c for c in keys_order if any(c in event for event in events)]
-    events = [
-        OrderedDict((key, event.get(key)) for key in keys_order) for event in events
-    ]
+    events = [OrderedDict((key, event.get(key)) for key in keys_order) for event in events]
     return events, "keys"

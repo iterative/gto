@@ -12,53 +12,22 @@ from gto.tag import create_tag, find, name_tag, parse_name
 def test_name_tag(empty_git_repo):
     repo, write_func = empty_git_repo
     assert name_tag(Action.REGISTER, "myartifact", "v1", simple=True) == "myartifact@v1"
-    assert (
-        name_tag(Action.REGISTER, "myartifact", "v1", simple=False, repo=repo)
-        == "myartifact@v1#1"
-    )
-    assert (
-        name_tag(Action.DEREGISTER, "myartifact", "v1", simple=True) == "myartifact@v1!"
-    )
-    assert (
-        name_tag(Action.DEREGISTER, "myartifact", "v1", simple=False, repo=repo)
-        == "myartifact@v1!#1"
-    )
-    assert (
-        name_tag(Action.ASSIGN, "myartifact", stage="stage", simple=True)
-        == "myartifact#stage"
-    )
-    assert (
-        name_tag(Action.ASSIGN, "myartifact", repo=repo, stage="stage", simple=False)
-        == "myartifact#stage#1"
-    )
-    assert (
-        name_tag(Action.UNASSIGN, "myartifact", repo=repo, stage="stage", simple=False)
-        == "myartifact#stage!#1"
-    )
+    assert name_tag(Action.REGISTER, "myartifact", "v1", simple=False, repo=repo) == "myartifact@v1#1"
+    assert name_tag(Action.DEREGISTER, "myartifact", "v1", simple=True) == "myartifact@v1!"
+    assert name_tag(Action.DEREGISTER, "myartifact", "v1", simple=False, repo=repo) == "myartifact@v1!#1"
+    assert name_tag(Action.ASSIGN, "myartifact", stage="stage", simple=True) == "myartifact#stage"
+    assert name_tag(Action.ASSIGN, "myartifact", repo=repo, stage="stage", simple=False) == "myartifact#stage#1"
+    assert name_tag(Action.UNASSIGN, "myartifact", repo=repo, stage="stage", simple=False) == "myartifact#stage!#1"
 
 
 def test_parse_name():
-    assert parse_name("path@v1.2.3") == dict(
-        name="path", version="v1.2.3", action=Action.REGISTER
-    )
-    assert parse_name("path@v1.2.3#5") == dict(
-        name="path", version="v1.2.3", action=Action.REGISTER, counter=5
-    )
-    assert parse_name("path@v1.2.3!") == dict(
-        name="path", version="v1.2.3", action=Action.DEREGISTER
-    )
-    assert parse_name("path@v1.2.3!#2") == dict(
-        name="path", version="v1.2.3", action=Action.DEREGISTER, counter=2
-    )
-    assert parse_name("path#stage") == dict(
-        name="path", action=Action.ASSIGN, stage="stage"
-    )
-    assert parse_name("path#stage#1") == dict(
-        name="path", action=Action.ASSIGN, stage="stage", counter=1
-    )
-    assert parse_name("path#stage!#2") == dict(
-        name="path", action=Action.UNASSIGN, stage="stage", counter=2
-    )
+    assert parse_name("path@v1.2.3") == dict(name="path", version="v1.2.3", action=Action.REGISTER)
+    assert parse_name("path@v1.2.3#5") == dict(name="path", version="v1.2.3", action=Action.REGISTER, counter=5)
+    assert parse_name("path@v1.2.3!") == dict(name="path", version="v1.2.3", action=Action.DEREGISTER)
+    assert parse_name("path@v1.2.3!#2") == dict(name="path", version="v1.2.3", action=Action.DEREGISTER, counter=2)
+    assert parse_name("path#stage") == dict(name="path", action=Action.ASSIGN, stage="stage")
+    assert parse_name("path#stage#1") == dict(name="path", action=Action.ASSIGN, stage="stage", counter=1)
+    assert parse_name("path#stage!#2") == dict(name="path", action=Action.UNASSIGN, stage="stage", counter=2)
 
 
 @pytest.mark.parametrize(
@@ -118,9 +87,7 @@ def test_create_tag_bad_ref(repo_with_commit):
     with pytest.raises(RefNotFound):
         create_tag(repo, "name", ref="wrongref", message="msg")
     with pytest.raises(RefNotFound):
-        create_tag(
-            repo, "name", ref="679dd96f8f22bef6505b9646803bf3c2afe94692", message="msg"
-        )
+        create_tag(repo, "name", ref="679dd96f8f22bef6505b9646803bf3c2afe94692", message="msg")
 
 
 def test_create_tag_repeated_tagname(repo_with_commit):

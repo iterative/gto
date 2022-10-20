@@ -17,9 +17,7 @@ def clone_on_remote_repo(f: Callable):
     def wrapped_f(*args, **kwargs):
         kwargs = _turn_args_into_kwargs(f, args, kwargs)
 
-        if isinstance(kwargs["repo"], str) and is_url_of_remote_repo(
-            repo=kwargs["repo"]
-        ):
+        if isinstance(kwargs["repo"], str) and is_url_of_remote_repo(repo=kwargs["repo"]):
             try:
                 with cloned_git_repo(repo=kwargs["repo"]) as tmp_dir:
                     kwargs["repo"] = tmp_dir
@@ -41,9 +39,7 @@ def auto_push_on_remote_repo(f: Callable):
     def wrapped_f(*args, **kwargs):
         kwargs = _turn_args_into_kwargs(f, args, kwargs)
 
-        if isinstance(kwargs["repo"], str) and is_url_of_remote_repo(
-            repo=kwargs["repo"]
-        ):
+        if isinstance(kwargs["repo"], str) and is_url_of_remote_repo(repo=kwargs["repo"]):
             kwargs["auto_push"] = True
             return clone_on_remote_repo(f)(**kwargs)
 
@@ -52,9 +48,7 @@ def auto_push_on_remote_repo(f: Callable):
     return wrapped_f
 
 
-def commit_produced_changes_on_auto_commit(
-    message_generator: Callable[..., str] = generate_empty_commit_message
-):
+def commit_produced_changes_on_auto_commit(message_generator: Callable[..., str] = generate_empty_commit_message):
     """
     The function `message_generator` can use any argument that the decorated function has.
 
@@ -70,9 +64,7 @@ def commit_produced_changes_on_auto_commit(
     """
 
     def generate_commit_message(**kwargs) -> str:
-        kwargs_for_message_generator = {
-            k: kwargs[k] for k in inspect.getfullargspec(message_generator).args
-        }
+        kwargs_for_message_generator = {k: kwargs[k] for k in inspect.getfullargspec(message_generator).args}
         return message_generator(**kwargs_for_message_generator)
 
     def wrap(f: Callable):
@@ -82,9 +74,10 @@ def commit_produced_changes_on_auto_commit(
 
             if kwargs.get("auto_commit", False) is True:
                 if "repo" in kwargs:
-                    with stashed_changes(
-                        repo_path=kwargs["repo"], include_untracked=True
-                    ) as (stashed_tracked, stashed_untracked):
+                    with stashed_changes(repo_path=kwargs["repo"], include_untracked=True) as (
+                        stashed_tracked,
+                        stashed_untracked,
+                    ):
                         result = f(**kwargs)
                         if are_files_in_repo_changed(
                             repo_path=kwargs["repo"],
@@ -117,13 +110,8 @@ def commit_produced_changes_on_auto_commit(
 
 
 def are_files_in_repo_changed(repo_path: str, files: List[str]) -> bool:
-    tracked, untracked = _get_repo_changed_tracked_and_untracked_files(
-        repo_path=repo_path
-    )
-    return (
-        len(set(files).intersection(tracked)) > 0
-        or len(set(files).intersection(untracked)) > 0
-    )
+    tracked, untracked = _get_repo_changed_tracked_and_untracked_files(repo_path=repo_path)
+    return len(set(files).intersection(tracked)) > 0 or len(set(files).intersection(untracked)) > 0
 
 
 def is_url_of_remote_repo(repo: str) -> bool:
@@ -150,15 +138,11 @@ def git_clone(repo: str, dir: str) -> None:
     Repo.clone_from(url=repo, to_path=dir)
 
 
-def git_push_tag(
-    repo_path: str, tag_name: str, delete: bool = False, remote_name: str = "origin"
-) -> None:
+def git_push_tag(repo_path: str, tag_name: str, delete: bool = False, remote_name: str = "origin") -> None:
     repo = Repo(path=repo_path)
     remote = repo.remote(name=remote_name)
     if not hasattr(remote, "url"):
-        raise WrongArgs(
-            f"provided repo_path={repo_path} does not appear to have a remote to push to"
-        )
+        raise WrongArgs(f"provided repo_path={repo_path} does not appear to have a remote to push to")
     logging.debug(
         "push %s tag %s from directory %s to remote %s with url %s",
         "--delete" if delete else "",
@@ -180,9 +164,7 @@ def git_push_tag(
 
 def git_add_and_commit_all_changes(repo_path: str, message: str) -> None:
     repo = Repo(path=repo_path)
-    tracked, untracked = _get_repo_changed_tracked_and_untracked_files(
-        repo_path=repo_path
-    )
+    tracked, untracked = _get_repo_changed_tracked_and_untracked_files(repo_path=repo_path)
     if len(tracked) + len(untracked) > 0:
         logging.debug("Adding to the index the untracked files %s", untracked)
         logging.debug("Add and commit changes to files %s", tracked + untracked)
@@ -194,13 +176,9 @@ def git_add_and_commit_all_changes(repo_path: str, message: str) -> None:
 def stashed_changes(repo_path: str, include_untracked: bool = False):
     repo = Repo(path=repo_path)
     if len(repo.refs) == 0:
-        raise RuntimeError(
-            "Cannot stash because repository has no ref. Please create a first commit."
-        )
+        raise RuntimeError("Cannot stash because repository has no ref. Please create a first commit.")
 
-    tracked, untracked = _get_repo_changed_tracked_and_untracked_files(
-        repo_path=repo_path
-    )
+    tracked, untracked = _get_repo_changed_tracked_and_untracked_files(repo_path=repo_path)
 
     stash_arguments = ["push"]
     if include_untracked:
@@ -230,13 +208,7 @@ def _get_repo_changed_tracked_and_untracked_files(
     return [item.a_path for item in repo.index.diff(None)], repo.untracked_files
 
 
-def _turn_args_into_kwargs(
-    f: Callable, args: tuple, kwargs: Dict[str, object]
-) -> Dict[str, object]:
-    kwargs_complement = {
-        k: args[i]
-        for i, k in enumerate(inspect.getfullargspec(f).args)
-        if i < len(args)
-    }
+def _turn_args_into_kwargs(f: Callable, args: tuple, kwargs: Dict[str, object]) -> Dict[str, object]:
+    kwargs_complement = {k: args[i] for i, k in enumerate(inspect.getfullargspec(f).args) if i < len(args)}
     kwargs.update(kwargs_complement)
     return kwargs

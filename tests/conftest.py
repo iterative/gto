@@ -77,12 +77,8 @@ def showcase(
     repo.index.add(["models"])
     repo.index.commit("Create models")
 
-    gto.api.annotate(
-        path, "rf", type="model", path="models/random-forest.pkl", must_exist=True
-    )
-    gto.api.annotate(
-        path, "nn", type="model", path="models/neural-network.pkl", must_exist=True
-    )
+    gto.api.annotate(path, "rf", type="model", path="models/random-forest.pkl", must_exist=True)
+    gto.api.annotate(path, "nn", type="model", path="models/neural-network.pkl", must_exist=True)
     gto.api.annotate(path, "features", type="dataset", path="datasets/features.csv")
 
     repo.index.add(["artifacts.yaml"])

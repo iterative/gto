@@ -65,9 +65,7 @@ class GitRegistry(BaseModel):
             except (InvalidGitRepositoryError, NoSuchPathError) as e:
                 raise NoRepo(repo) from e
         if config is None:
-            config = read_registry_config(
-                os.path.join(repo.working_dir, CONFIG_FILE_NAME)
-            )
+            config = read_registry_config(os.path.join(repo.working_dir, CONFIG_FILE_NAME))
 
         return cls(
             repo=repo,
@@ -120,10 +118,7 @@ class GitRegistry(BaseModel):
         all_branches=False,
         all_commits=False,
     ):
-        return self.get_state(
-            all_branches=all_branches,
-            all_commits=all_commits,
-        ).find_artifact(
+        return self.get_state(all_branches=all_branches, all_commits=all_commits,).find_artifact(
             name, create_new=create_new  # type: ignore
         )
 
@@ -145,9 +140,7 @@ class GitRegistry(BaseModel):
     ) -> Registration:
         """Register artifact version"""
         assert_name_is_valid(name)
-        version_args = sum(
-            bool(i) for i in (version, bump_major, bump_minor, bump_patch)
-        )
+        version_args = sum(bool(i) for i in (version, bump_major, bump_minor, bump_patch))
         if version_args > 1:
             raise WrongArgs("Need to specify either version or single bump argument")
         ref = self.repo.commit(ref).hexsha
@@ -160,9 +153,7 @@ class GitRegistry(BaseModel):
             if not version:
                 version = found_version.version
             elif found_version.version != version:
-                raise WrongArgs(
-                    f"For this REF you can only register {found_version.version}"
-                )
+                raise WrongArgs(f"For this REF you can only register {found_version.version}")
         # if version name is provided, use it
         if version:
             SemVer(version)
@@ -182,9 +173,7 @@ class GitRegistry(BaseModel):
                     .version
                 )
             elif version_args:
-                raise WrongArgs(
-                    "Can't apply bump, because this is the first version being registered"
-                )
+                raise WrongArgs("Can't apply bump, because this is the first version being registered")
             else:
                 version = SemVer.get_minimal().version
         tag = self.version_manager.register(
@@ -198,9 +187,7 @@ class GitRegistry(BaseModel):
         )
         if stdout:
             echo(f"Created git tag '{tag}' that registers version")
-        self._push_tag_or_echo_reminder(
-            tag_name=tag, auto_push=auto_push, stdout=stdout
-        )
+        self._push_tag_or_echo_reminder(tag_name=tag, auto_push=auto_push, stdout=stdout)
         return self._return_event(tag)
 
     def deregister(  # pylint: disable=too-many-locals
@@ -223,17 +210,11 @@ class GitRegistry(BaseModel):
             ref = self.repo.commit(ref).hexsha
         found_artifact = self.find_artifact(name, create_new=True)
         if not force:
-            found_version = found_artifact.find_version(
-                name=version, commit_hexsha=ref, raise_if_not_found=True
-            )
+            found_version = found_artifact.find_version(name=version, commit_hexsha=ref, raise_if_not_found=True)
             if not found_version.is_registered:
-                raise WrongArgs(
-                    f"The version at ref '{found_version.commit_hexsha}' is not registered"
-                )
+                raise WrongArgs(f"The version at ref '{found_version.commit_hexsha}' is not registered")
             if not found_version.is_active:
-                raise WrongArgs(
-                    f"The version at ref '{found_version.commit_hexsha}' was deregistered already"
-                )
+                raise WrongArgs(f"The version at ref '{found_version.commit_hexsha}' was deregistered already")
 
         found_version = found_artifact.find_version(name=version, commit_hexsha=ref)
         version = version or getattr(found_version, "version", None)
@@ -242,13 +223,7 @@ class GitRegistry(BaseModel):
             raise WrongArgs("Can't deregister a version that have no git tags")
 
         if delete:
-            tags = distinct(
-                [
-                    e.tag
-                    for e in found_version.get_events(ascending=True)
-                    if hasattr(e, "tag")
-                ]
-            )
+            tags = distinct([e.tag for e in found_version.get_events(ascending=True) if hasattr(e, "tag")])
             return self._delete_tags(tags, stdout=stdout, auto_push=auto_push)
 
         tag = self.version_manager.deregister(
@@ -262,9 +237,7 @@ class GitRegistry(BaseModel):
         )
         if stdout:
             echo(f"Created git tag '{tag}' that deregisters version")
-        self._push_tag_or_echo_reminder(
-            tag_name=tag, auto_push=auto_push, stdout=stdout, delete=delete
-        )
+        self._push_tag_or_echo_reminder(tag_name=tag, auto_push=auto_push, stdout=stdout, delete=delete)
         return self._return_event(tag)
 
     def assign(  # pylint: disable=too-many-locals
@@ -288,16 +261,12 @@ class GitRegistry(BaseModel):
         if name_version:
             self._check_version(name_version)
         if name_version and skip_registration:
-            raise WrongArgs(
-                "You either need to supply version name or skip registration"
-            )
+            raise WrongArgs("You either need to supply version name or skip registration")
         if ref:
             ref = self.repo.commit(ref).hexsha
         found_artifact = self.find_artifact(name, create_new=True)
         if version:
-            found_version = found_artifact.find_version(
-                name=version, raise_if_not_found=False
-            )
+            found_version = found_artifact.find_version(name=version, raise_if_not_found=False)
             if not found_version:
                 raise WrongArgs(f"Version '{version}' is not registered")
             ref = self.find_commit(name, version)
@@ -340,20 +309,14 @@ class GitRegistry(BaseModel):
             ref=ref,
             message=message
             or f"Assigning stage {stage} to artifact {name} "
-            + (
-                f"version {found_version.version}" if found_version else f"commit {ref}"
-            ),
+            + (f"version {found_version.version}" if found_version else f"commit {ref}"),
             simple=simple,
             author=author,
             author_email=author_email,
         )
         if stdout:
-            echo(
-                f"Created git tag '{tag}' that assigns stage to version '{found_version.version}'"
-            )
-        self._push_tag_or_echo_reminder(
-            tag_name=tag, auto_push=auto_push, stdout=stdout
-        )
+            echo(f"Created git tag '{tag}' that assigns stage to version '{found_version.version}'")
+        self._push_tag_or_echo_reminder(tag_name=tag, auto_push=auto_push, stdout=stdout)
         return self._return_event(tag)
 
     def unassign(  # pylint: disable=too-many-locals
@@ -376,13 +339,9 @@ class GitRegistry(BaseModel):
         if ref:
             ref = self.repo.commit(ref).hexsha
         found_artifact = self.find_artifact(name)
-        found_version = found_artifact.find_version(
-            name=version, commit_hexsha=ref, raise_if_not_found=True
-        )
+        found_version = found_artifact.find_version(name=version, commit_hexsha=ref, raise_if_not_found=True)
         if not force and all(s != stage for s in getattr(found_version, "stages", [])):
-            raise WrongArgs(
-                f"Stage '{stage}' is not assigned to a version '{found_version.version}'"
-            )
+            raise WrongArgs(f"Stage '{stage}' is not assigned to a version '{found_version.version}'")
         if delete:
             tags = distinct(
                 [
@@ -401,19 +360,14 @@ class GitRegistry(BaseModel):
             name,
             stage,
             ref=found_version.commit_hexsha,
-            message=message
-            or f"Unassigning stage '{stage}' to artifact '{name}' version '{found_version.version}'",
+            message=message or f"Unassigning stage '{stage}' to artifact '{name}' version '{found_version.version}'",
             simple=simple,
             author=author,
             author_email=author_email,
         )
         if stdout:
-            echo(
-                f"Created git tag '{tag}' that unassigns stage from version '{found_version.version}'"
-            )
-        self._push_tag_or_echo_reminder(
-            tag_name=tag, auto_push=auto_push, stdout=stdout, delete=delete
-        )
+            echo(f"Created git tag '{tag}' that unassigns stage from version '{found_version.version}'")
+        self._push_tag_or_echo_reminder(tag_name=tag, auto_push=auto_push, stdout=stdout, delete=delete)
         return self._return_event(tag)
 
     def deprecate(
@@ -435,11 +389,7 @@ class GitRegistry(BaseModel):
                 raise WrongArgs("Artifact was deprecated already")
         if delete:
             tags = distinct(
-                [
-                    e.tag
-                    for e in self.find_artifact(name=name).get_events(ascending=True)
-                    if hasattr(e, "tag")
-                ]
+                [e.tag for e in self.find_artifact(name=name).get_events(ascending=True) if hasattr(e, "tag")]
             )
             return self._delete_tags(tags, stdout=stdout, auto_push=auto_push)
         if ref is None:
@@ -457,9 +407,7 @@ class GitRegistry(BaseModel):
         )
         if stdout:
             echo(f"Created git tag '{tag}' that deprecates artifact")
-        self._push_tag_or_echo_reminder(
-            tag_name=tag, auto_push=auto_push, stdout=stdout, delete=delete
-        )
+        self._push_tag_or_echo_reminder(tag_name=tag, auto_push=auto_push, stdout=stdout, delete=delete)
         return self._return_event(tag)
 
     def _check_args(self, name, version, ref, stage=None):
@@ -474,9 +422,7 @@ class GitRegistry(BaseModel):
     @staticmethod
     def _check_version(version):
         if not SemVer.is_valid(version):
-            raise WrongArgs(
-                f"Version '{version}' is not valid. Example of valid version: 'v1.0.0'"
-            )
+            raise WrongArgs(f"Version '{version}' is not valid. Example of valid version: 'v1.0.0'")
 
     def _return_event(self, tag) -> TBaseEvent:
         event = self.check_ref(tag)
@@ -560,9 +506,7 @@ class GitRegistry(BaseModel):
         return self.config.STAGES
 
     def _get_used_stages(self):
-        return sorted(
-            {stage for o in self.get_artifacts().values() for stage in o.unique_stages}
-        )
+        return sorted({stage for o in self.get_artifacts().values() for stage in o.unique_stages})
 
     def get_stages(self, allowed: bool = False, used: bool = False):
         """Return list of stages in the registry.
@@ -580,22 +524,16 @@ class GitRegistry(BaseModel):
         # if stages aren't set in config, return those in use
         return self._get_used_stages()
 
-    def _push_tag_or_echo_reminder(
-        self, tag_name: str, auto_push: bool, stdout: bool, delete: bool = False
-    ) -> None:
+    def _push_tag_or_echo_reminder(self, tag_name: str, auto_push: bool, stdout: bool, delete: bool = False) -> None:
         if auto_push:
             if stdout:
-                echo(
-                    f"Running `git push{' --delete ' if delete else ' '}origin {tag_name}`"
-                )
+                echo(f"Running `git push{' --delete ' if delete else ' '}origin {tag_name}`")
             git_push_tag(
                 repo_path=Path(self.repo.git_dir).parent.as_posix(),
                 tag_name=tag_name,
                 delete=delete,
             )
             if stdout:
-                echo(
-                    f"Successfully {'deleted' if delete else 'pushed'} git tag {tag_name} on remote."
-                )
+                echo(f"Successfully {'deleted' if delete else 'pushed'} git tag {tag_name} on remote.")
         elif stdout:
             self._echo_git_suggestion(tag_name)

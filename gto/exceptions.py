@@ -119,9 +119,7 @@ class NoStageForVersion(GTOException):
     _message = "The artifact '{artifact}' version '{version}' is not in stage '{stage}'"
 
     def __init__(self, artifact, version, stage) -> None:
-        self.message = self._message.format(
-            artifact=artifact, version=version, stage=stage
-        )
+        self.message = self._message.format(artifact=artifact, version=version, stage=stage)
         super().__init__(self.message)
 
 

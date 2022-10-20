@@ -431,6 +431,4 @@ def test_registry_state_tag_tag(showcase):
                     check_obj(a, e, exclude[key])
 
             for key in appeared["stages"]:
-                check_obj(
-                    appeared["stages"][key], expected["stages"][key], exclude["stages"]
-                )
+                check_obj(appeared["stages"][key], expected["stages"][key], exclude["stages"])

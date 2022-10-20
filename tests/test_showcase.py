@@ -148,12 +148,8 @@ def test_api(showcase):
         isinstance(p, (Assignment, Unassignment, Commit))
         for p in rf_ver1.get_events(direct=False) + rf_ver2.get_events(direct=False)
     )
-    rf_a4, rf_a1, rf_c1 = rf_ver1.get_events(
-        direct=False
-    )  # pylint: disable=unused-variable
-    rf_a3, rf_a2, rf_c2 = rf_ver2.get_events(
-        direct=False
-    )  # pylint: disable=unused-variable
+    rf_a4, rf_a1, rf_c1 = rf_ver1.get_events(direct=False)  # pylint: disable=unused-variable
+    rf_a3, rf_a2, rf_c2 = rf_ver2.get_events(direct=False)  # pylint: disable=unused-variable
 
     check_obj(
         rf_a1.dict_state(),

@@ -54,9 +54,7 @@ class SemVer(AbstractVersion):
         if not isinstance(version, str):
             raise InvalidVersion("Version should be of type str")
         if version[0] not in ("v"):
-            raise InvalidVersion(
-                f"{version}: not a valid semantic version tag. Must start with 'v'"
-            )
+            raise InvalidVersion(f"{version}: not a valid semantic version tag. Must start with 'v'")
         return semver.VersionInfo.parse(version[1:])
 
     def __eq__(self, other):
@@ -92,9 +90,7 @@ class SemVer(AbstractVersion):
         if bump_patch:
             return self.bump_patch()
         # TODO: stop using WrongArgs everywhere :)
-        raise WrongArgs(
-            "At least one of bump_major, bump_minor, bump_patch must be True"
-        )
+        raise WrongArgs("At least one of bump_major, bump_minor, bump_patch must be True")
 
     @classmethod
     def get_minimal(cls):

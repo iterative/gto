@@ -32,9 +32,7 @@ def make_ready_to_serialize(
     if isinstance(data, list):
         return [make_ready_to_serialize(i) for i in data]
     if isinstance(data, dict):
-        return {
-            flatten(key): make_ready_to_serialize(value) for key, value in data.items()
-        }
+        return {flatten(key): make_ready_to_serialize(value) for key, value in data.items()}
     if isinstance(data, tuple):
         return (make_ready_to_serialize(i) for i in data)
     if isinstance(data, set):
@@ -81,9 +79,7 @@ def format_echo(result, format, format_table=None, if_empty="", missing_value="-
         raise NotImplementedError(f"Format {format} is not implemented")
 
 
-def resolve_ref(
-    repo: Union[git.Repo, str], ref: Optional[str] = None, raise_if_not_found=True
-):
+def resolve_ref(repo: Union[git.Repo, str], ref: Optional[str] = None, raise_if_not_found=True):
     # this becomes pretty slow if called many times
     # may need optimization if we will
     if isinstance(repo, str):

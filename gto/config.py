@@ -96,9 +96,7 @@ class NoFileConfig(BaseSettings):
 def _set_location_init_source(init_source: InitSettingsSource):
     def inner(settings: "RegistryConfig"):
         if "CONFIG_FILE_NAME" in init_source.init_kwargs:
-            settings.__dict__["CONFIG_FILE_NAME"] = init_source.init_kwargs[
-                "CONFIG_FILE_NAME"
-            ]
+            settings.__dict__["CONFIG_FILE_NAME"] = init_source.init_kwargs["CONFIG_FILE_NAME"]
         return {}
 
     return inner

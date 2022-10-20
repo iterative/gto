@@ -61,9 +61,7 @@ def app_cmd():
 @pytest.fixture
 def app_cli_cmd(app_cmd):
     if version.parse(typer.__version__) < version.parse("0.6.0"):
-        return (
-            get_command_from_info(c) for c in app_cmd  # pylint: disable=missing-kwoa
-        )
+        return (get_command_from_info(c) for c in app_cmd)  # pylint: disable=missing-kwoa
     return (
         get_command_from_info(  # pylint: disable=unexpected-keyword-arg
             c,
@@ -82,11 +80,7 @@ def test_commands_help(app_cli_cmd):
 def test_commands_args_help(app_cli_cmd):
     no_help = []
     for cmd in app_cli_cmd:
-        no_help.extend(
-            f"{cmd.name}:{arg.name}"
-            for arg in cmd.params
-            if arg.help is None or arg.help == ""
-        )
+        no_help.extend(f"{cmd.name}:{arg.name}" for arg in cmd.params if arg.help is None or arg.help == "")
 
     assert not no_help, f"{no_help} cli command args do not have help!"
 
@@ -152,9 +146,7 @@ def test_commands(showcase):
         "rf@v1.2.3\n",
     )
     _check_successful_cmd("describe", ["-r", path, "rf"], EXPECTED_DESCRIBE_OUTPUT)
-    _check_successful_cmd(
-        "describe", ["-r", path, "rf", "--path"], "models/random-forest.pkl\n"
-    )
+    _check_successful_cmd("describe", ["-r", path, "rf", "--path"], "models/random-forest.pkl\n")
     # None because of random order - fix this
     _check_successful_cmd("stages", ["-r", path], None)
     # None because of output randomness and complexity
@@ -266,9 +258,7 @@ def test_annotate(empty_git_repo: Tuple[git.Repo, Callable]):
         ],
         "",
     )
-    artifact = (
-        _get_index(repo.working_dir, file=True).get_index().state[name]
-    )  # pylint: disable=protected-access
+    artifact = _get_index(repo.working_dir, file=True).get_index().state[name]  # pylint: disable=protected-access
     check_obj(
         artifact,
         dict(
@@ -283,9 +273,7 @@ def test_annotate(empty_git_repo: Tuple[git.Repo, Callable]):
     repo.index.add(["artifacts.yaml"])
     repo.index.commit("Add new artifact")
 
-    _check_successful_cmd(
-        "describe", ["-r", repo.working_dir, name], EXPECTED_DESCRIBE_OUTPUT_2
-    )
+    _check_successful_cmd("describe", ["-r", repo.working_dir, name], EXPECTED_DESCRIBE_OUTPUT_2)
     _check_successful_cmd("remove", ["-r", repo.working_dir, name], "")
     write_file(name, "new-artifact update")
     repo.index.add(["artifacts.yaml"])

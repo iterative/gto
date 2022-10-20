@@ -67,12 +67,7 @@ def name_tag(
     counter = 0
     for t in repo.tags:
         parsed = parse_name(t.name, raise_on_fail=False)  # type: ignore
-        if (
-            parsed
-            and parsed[NAME] == artifact
-            and COUNTER in parsed
-            and parsed[COUNTER] > counter
-        ):
+        if parsed and parsed[NAME] == artifact and COUNTER in parsed and parsed[COUNTER] > counter:
             counter = parsed[COUNTER]
     return f"{tag}{COUNT_DELIMITER}{counter+1}"
 
@@ -88,14 +83,10 @@ def parse_name(name: str, raise_on_fail: bool = True):
             parsed[ACTION] = Action.DEPRECATE
         if match[VERSION]:
             parsed[VERSION] = match[VERSION]
-            parsed[ACTION] = (
-                Action.DEREGISTER if match["cancel"] == "!" else Action.REGISTER
-            )
+            parsed[ACTION] = Action.DEREGISTER if match["cancel"] == "!" else Action.REGISTER
         if match[STAGE]:
             parsed[STAGE] = match[STAGE]
-            parsed[ACTION] = (
-                Action.UNASSIGN if match["cancel"] == "!" else Action.ASSIGN
-            )
+            parsed[ACTION] = Action.UNASSIGN if match["cancel"] == "!" else Action.ASSIGN
         if match[COUNTER]:
             parsed[COUNTER] = int(match[COUNTER])
         return parsed
@@ -223,9 +214,7 @@ def index_tag(artifact: Artifact, tag: git.TagReference) -> Artifact:
             tag=tag.name,
         )
     elif mtag.action in (Action.ASSIGN, Action.UNASSIGN):
-        version = artifact.find_version(
-            commit_hexsha=tag.commit.hexsha, create_new=True
-        ).version  # type: ignore
+        version = artifact.find_version(commit_hexsha=tag.commit.hexsha, create_new=True).version  # type: ignore
         if mtag.action == Action.ASSIGN:
             event = Assignment(
                 artifact=mtag.name,
@@ -271,9 +260,7 @@ class TagManager(BaseManager):  # pylint: disable=abstract-method
         for tag in find(repo=self.repo, action=self.actions):
             state.update_artifact(
                 index_tag(
-                    state.find_artifact(
-                        parse_name(tag.tag.tag)["name"], create_new=True
-                    ),
+                    state.find_artifact(parse_name(tag.tag.tag)["name"], create_new=True),
                     tag,
                 )
             )
@@ -284,9 +271,7 @@ class TagArtifactManager(TagManager):
     actions: FrozenSet[Action] = frozenset((Action.CREATE, Action.DEPRECATE))
 
     def create(self):  # pylint: disable=no-self-use
-        raise NotImplementedInGTO(
-            "If you want to create artifact, register a version or assign a stage for it"
-        )
+        raise NotImplementedInGTO("If you want to create artifact, register a version or assign a stage for it")
 
     def deprecate(
         self,
@@ -327,9 +312,7 @@ class TagVersionManager(TagManager):
         author: Optional[str] = None,
         author_email: Optional[str] = None,
     ):
-        tag = name_tag(
-            Action.REGISTER, name, version=version, repo=self.repo, simple=simple
-        )
+        tag = name_tag(Action.REGISTER, name, version=version, repo=self.repo, simple=simple)
         create_tag(
             self.repo,
             tag,
@@ -350,9 +333,7 @@ class TagVersionManager(TagManager):
         author: Optional[str] = None,
         author_email: Optional[str] = None,
     ):
-        tag = name_tag(
-            Action.DEREGISTER, name, version=version, repo=self.repo, simple=simple
-        )
+        tag = name_tag(Action.DEREGISTER, name, version=version, repo=self.repo, simple=simple)
         create_tag(
             self.repo,
             tag,
@@ -398,9 +379,7 @@ class TagStageManager(TagManager):
         author: Optional[str] = None,
         author_email: Optional[str] = None,
     ) -> str:
-        tag = name_tag(
-            Action.UNASSIGN, name, stage=stage, repo=self.repo, simple=simple
-        )
+        tag = name_tag(Action.UNASSIGN, name, stage=stage, repo=self.repo, simple=simple)
         create_tag(
             self.repo,
             tag,

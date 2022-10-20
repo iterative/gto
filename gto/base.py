@@ -97,9 +97,7 @@ class Deregistration(BaseEvent):
     version: str
 
     def __str__(self):
-        return (
-            f'Version "{self.version}" of artifact "{self.artifact}" was deregistered'
-        )
+        return f'Version "{self.version}" of artifact "{self.artifact}" was deregistered'
 
 
 class Assignment(BaseEvent):
@@ -131,9 +129,7 @@ class BaseObject(BaseModel):
     def add_event(self, event: BaseEvent):
         raise NotImplementedError()
 
-    def get_events(
-        self, direct=True, indirect=True, ascending: bool = False
-    ) -> Sequence[BaseEvent]:
+    def get_events(self, direct=True, indirect=True, ascending: bool = False) -> Sequence[BaseEvent]:
         raise NotImplementedError()
 
     @property
@@ -146,9 +142,7 @@ class BaseObject(BaseModel):
 
     @property
     def authoring_event(self):
-        addition_events = [
-            e for e in self.get_events(direct=True, indirect=False) if e.addition
-        ]
+        addition_events = [e for e in self.get_events(direct=True, indirect=False) if e.addition]
         if addition_events:
             return addition_events[0]
         events = self.get_events(direct=False, indirect=True)
@@ -262,12 +256,7 @@ class Version(BaseObject):
     def get_events(self, direct=True, indirect=True, ascending=False):
         return sorted(
             (self.registrations + self.deregistrations if direct else [])
-            + (
-                self.enrichments
-                + [e for s in self.stages.values() for e in s.get_events()]
-                if indirect
-                else []
-            ),
+            + (self.enrichments + [e for s in self.stages.values() for e in s.get_events()] if indirect else []),
             key=lambda e: e.created_at,
         )[:: 1 if ascending else -1]
 
@@ -300,9 +289,7 @@ class Version(BaseObject):
     @property
     def get_enrichments_info(self):
         if len(self.enrichments) > 1:
-            raise NotImplementedInGTO(
-                "Multiple enrichments for a single version are not supported"
-            )
+            raise NotImplementedInGTO("Multiple enrichments for a single version are not supported")
         return self.enrichments[0].enrichments
 
     @property
@@ -390,9 +377,7 @@ class Artifact(BaseObject):
         elif isinstance(event, Deprecation):
             self.deprecations.append(event)
             self.deprecations.sort(key=lambda e: e.created_at)
-        elif isinstance(
-            event, (Registration, Deregistration, Assignment, Unassignment, Commit)
-        ):
+        elif isinstance(event, (Registration, Deregistration, Assignment, Unassignment, Commit)):
             self.find_version(
                 event.version, commit_hexsha=event.commit_hexsha, create_new=True
             ).add_event(  # type: ignore
@@ -402,9 +387,7 @@ class Artifact(BaseObject):
             raise NotImplementedInGTO(f"Unknown event {event} of class {type(event)}")
         return event
 
-    def get_events(
-        self, direct=True, indirect=True, ascending=False
-    ) -> Sequence[BaseEvent]:
+    def get_events(self, direct=True, indirect=True, ascending=False) -> Sequence[BaseEvent]:
         return sorted(
             (self.creations + self.deprecations if direct else [])  # type: ignore
             + ([e for v in self.versions for e in v.get_events()] if indirect else []),
@@ -427,9 +410,7 @@ class Artifact(BaseObject):
     @property
     def is_registered(self):
         """Tells if this is an a registered artifact - i.e. there Git tags for it"""
-        return not all(
-            isinstance(e, Commit) for e in self.get_events(direct=True, indirect=True)
-        )
+        return not all(isinstance(e, Commit) for e in self.get_events(direct=True, indirect=True))
 
     @property
     def unique_stages(self):
@@ -459,12 +440,8 @@ class Artifact(BaseObject):
         ]
         return sort_versions(versions, sort=sort, ascending=ascending)
 
-    def get_latest_version(
-        self, registered_only=False, sort=VersionSort.SemVer
-    ) -> Optional[Version]:
-        versions = self.get_versions(
-            include_non_explicit=not registered_only, sort=sort
-        )
+    def get_latest_version(self, registered_only=False, sort=VersionSort.SemVer) -> Optional[Version]:
+        versions = self.get_versions(include_non_explicit=not registered_only, sort=sort)
         if versions:
             return versions[0]
         return None
@@ -480,9 +457,7 @@ class Artifact(BaseObject):
             raise WrongArgs("'assignments_per_version' must be >= -1")
         if versions_per_stage < -1:
             raise WrongArgs("'versions_per_stage' must be >=-1")
-        versions = self.get_versions(
-            include_non_explicit=not registered_only, sort=sort
-        )
+        versions = self.get_versions(include_non_explicit=not registered_only, sort=sort)
         stages: Dict[str, List[VStage]] = {}
         assignments = [
             a
@@ -546,9 +521,7 @@ class Artifact(BaseObject):
             )
         return versions[0] if versions else None
 
-    def find_version_at_commit(
-        self, commit_hexsha: str, latest_datetime: datetime = None
-    ):
+    def find_version_at_commit(self, commit_hexsha: str, latest_datetime: datetime = None):
         return [
             v
             for v in self.find_version(  # type: ignore
@@ -588,11 +561,7 @@ class BaseRegistryState(BaseModel):
         return sorted({p for o in self.artifacts.values() for p in o.unique_stages})
 
     def find_commit(self, name, version):
-        return (
-            self.find_artifact(name)
-            .find_version(name=version, raise_if_not_found=True)
-            .commit_hexsha
-        )
+        return self.find_artifact(name).find_version(name=version, raise_if_not_found=True).commit_hexsha
 
     def which(
         self,
@@ -624,7 +593,5 @@ class BaseManager(BaseModel):
     class Config:
         arbitrary_types_allowed = True
 
-    def update_state(
-        self, state: BaseRegistryState
-    ) -> BaseRegistryState:  # pylint: disable=no-self-use
+    def update_state(self, state: BaseRegistryState) -> BaseRegistryState:  # pylint: disable=no-self-use
         raise NotImplementedError

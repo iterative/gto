@@ -3,16 +3,12 @@ import pytest
 from gto.versions import SemVer
 
 
-@pytest.mark.parametrize(
-    "version", ["v0.1.2", "v3.4.5-pre.2+build.4", "v3.4.5-pre.2-build.4"]
-)
+@pytest.mark.parametrize("version", ["v0.1.2", "v3.4.5-pre.2+build.4", "v3.4.5-pre.2-build.4"])
 def test_semver_is_valid(version):
     assert SemVer.is_valid(version)
 
 
-@pytest.mark.parametrize(
-    "version", [1, "1", "v1", "v1.2", "0.1.2", "3.4.5-pre.2+build.4"]
-)
+@pytest.mark.parametrize("version", [1, "1", "v1", "v1.2", "0.1.2", "3.4.5-pre.2+build.4"])
 def test_semver_is_not_valid(version):
     assert not SemVer.is_valid(version)
 

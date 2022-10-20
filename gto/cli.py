@@ -64,9 +64,7 @@ class GtoCliMixin(Command):
 
         Calls :meth:`format_help` internally.
         """
-        formatter = GtoFormatter(
-            width=ctx.terminal_width, max_width=ctx.max_content_width
-        )
+        formatter = GtoFormatter(width=ctx.terminal_width, max_width=ctx.max_content_width)
         self.format_help(ctx, formatter)
         return formatter.getvalue().rstrip("\n")
 
@@ -176,11 +174,7 @@ class GtoGroup(GtoCliMixin, TyperGroup):
             return cmd
         for name in self.list_commands(ctx):
             cmd = self.get_command(ctx, name)
-            if (
-                isinstance(cmd, (GtoCommand, GtoGroup))
-                and cmd.aliases
-                and cmd_name in cmd.aliases
-            ):
+            if isinstance(cmd, (GtoCommand, GtoGroup)) and cmd.aliases and cmd_name in cmd.aliases:
                 return cmd
         return None
 
@@ -201,9 +195,7 @@ arg_version = Argument(..., help="Artifact version")
 arg_stage = Argument(..., help="Stage to assign")
 option_version = Option(None, "--version", help="Version to register")
 option_stage = Option(None, "--stage", help="Stage to assign")
-option_to_version = Option(
-    None, "--to-version", help="Version to use for stage assignment"
-)
+option_to_version = Option(None, "--to-version", help="Version to use for stage assignment")
 option_delete = Option(
     False,
     "-d",
@@ -228,12 +220,8 @@ option_all_branches = Option(
     is_flag=True,
     help="Read heads from all branches",
 )
-option_all_commits = Option(
-    False, "-A", "--all-commits", is_flag=True, help="Read all commits"
-)
-option_message = Option(
-    None, "--message", "-m", help="Message to annotate git tag with"
-)
+option_all_commits = Option(False, "-A", "--all-commits", is_flag=True, help="Read all commits")
+option_message = Option(None, "--message", "-m", help="Message to annotate git tag with")
 option_force = Option(
     False,
     "--force",
@@ -321,23 +309,13 @@ option_ascending = Option(
     show_default=True,
 )
 option_show_name = Option(False, "--name", is_flag=True, help="Show artifact name")
-option_show_version = Option(
-    False, "--version", is_flag=True, help="Output artifact version"
-)
+option_show_version = Option(False, "--version", is_flag=True, help="Output artifact version")
 option_show_event = Option(False, "--event", is_flag=True, help="Show event")
 option_show_stage = Option(False, "--stage", is_flag=True, help="Show artifact stage")
-option_show_type = Option(
-    False, "--type", is_flag=True, help="Show type", show_default=True
-)
-option_show_path = Option(
-    False, "--path", is_flag=True, help="Show path", show_default=True
-)
-option_show_ref = Option(
-    False, "--ref", is_flag=True, help="Show ref", show_default=True
-)
-option_show_description = Option(
-    False, "--description", is_flag=True, help="Show description", show_default=True
-)
+option_show_type = Option(False, "--type", is_flag=True, help="Show type", show_default=True)
+option_show_path = Option(False, "--path", is_flag=True, help="Show path", show_default=True)
+option_show_ref = Option(False, "--ref", is_flag=True, help="Show ref", show_default=True)
+option_show_description = Option(False, "--description", is_flag=True, help="Show description", show_default=True)
 option_json = Option(
     False,
     "--json",
@@ -444,12 +422,7 @@ def gto_command(*args, section="other", aliases=None, parent=app, **kwargs):
                 if ctx.obj["traceback"]:
                     raise
                 with stderr_echo():
-                    echo(
-                        (
-                            EMOJI_FAIL
-                            + color(f"Unexpected error: {str(e)}", col=typer.colors.RED)
-                        )
-                    )
+                    echo((EMOJI_FAIL + color(f"Unexpected error: {str(e)}", col=typer.colors.RED)))
                     echo(
                         "Please report it here running with '--traceback' flag: <https://github.com/iterative/gto/issues>"
                     )
@@ -521,21 +494,13 @@ def register(
     repo: str = option_repo,
     name: str = arg_name,
     ref: str = Argument("HEAD", help="Git reference to use for registration"),
-    version: Optional[str] = Option(
-        None, "--version", "--ver", help="Version name in SemVer format"
-    ),
+    version: Optional[str] = Option(None, "--version", "--ver", help="Version name in SemVer format"),
     message: Optional[str] = option_message,
     simple: str = option_simple,
     force: bool = option_force,
-    bump_major: bool = Option(
-        False, "--bump-major", is_flag=True, help="Bump major version"
-    ),
-    bump_minor: bool = Option(
-        False, "--bump-minor", is_flag=True, help="Bump minor version"
-    ),
-    bump_patch: bool = Option(
-        False, "--bump-patch", is_flag=True, help="Bump patch version"
-    ),
+    bump_major: bool = Option(False, "--bump-major", is_flag=True, help="Bump major version"),
+    bump_minor: bool = Option(False, "--bump-minor", is_flag=True, help="Bump minor version"),
+    bump_patch: bool = Option(False, "--bump-patch", is_flag=True, help="Bump patch version"),
     auto_push: bool = option_auto_push,
 ):
     """Create an artifact version to signify an important, published or released iteration
@@ -728,9 +693,7 @@ def check_ref(
         $ gto check-ref rf#prod --name
         $ gto check-ref rf#prod --version
     """
-    assert (
-        sum(bool(i) for i in (json, event, name, version, stage)) <= 1
-    ), "Only one output formatting flags is allowed"
+    assert sum(bool(i) for i in (json, event, name, version, stage)) <= 1, "Only one output formatting flags is allowed"
     result = gto.api.check_ref(repo, ref)
     if len(result) > 1:
         NotImplementedInGTO("Checking refs that created 1+ events is not supported")
@@ -784,9 +747,7 @@ def show(  # pylint: disable=too-many-locals
         $ gto show nn#prod
     """
     show_options = [show_name, show_version, show_stage, show_ref]
-    assert (
-        sum(bool(i) for i in [json, plain] + show_options) <= 1
-    ), "Only one output format allowed"
+    assert sum(bool(i) for i in [json, plain] + show_options) <= 1, "Only one output format allowed"
     if json:
         output = gto.api.show(
             repo,
@@ -821,9 +782,7 @@ def show(  # pylint: disable=too-many-locals
         if arg:
             if arg not in output[0][0]:
                 raise WrongArgs(f"Cannot apply --{arg}")
-            format_echo(
-                [v[arg] if isinstance(v, dict) else v for v in output[0]], "lines"
-            )
+            format_echo([v[arg] if isinstance(v, dict) else v for v in output[0]], "lines")
         else:
             format_echo(
                 output,
@@ -920,9 +879,7 @@ def print_state(repo: str = option_repo):
     Examples:
         $ gto print-state
     """
-    state = make_ready_to_serialize(
-        gto.api._get_state(repo).dict()  # pylint: disable=protected-access
-    )
+    state = make_ready_to_serialize(gto.api._get_state(repo).dict())  # pylint: disable=protected-access
     format_echo(state, "json")
 
 
@@ -933,9 +890,7 @@ def print_index(repo: str = option_repo):
     Examples:
         $ gto print-index
     """
-    index = gto.api._get_index(  # pylint: disable=protected-access
-        repo
-    ).artifact_centric_representation()
+    index = gto.api._get_index(repo).artifact_centric_representation()  # pylint: disable=protected-access
     format_echo(index, "json")
 
 
@@ -954,9 +909,7 @@ def describe(
         $ gto describe nn --rev HEAD
         $ gto describe nn@v0.0.1
     """
-    assert (
-        sum(bool(i) for i in (type, path, description)) <= 1
-    ), "Can output one key only"
+    assert sum(bool(i) for i in (type, path, description)) <= 1, "Can output one key only"
     infos = gto.api.describe(repo=repo, name=name, rev=rev)
     if not infos:
         return

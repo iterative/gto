@@ -38,9 +38,7 @@ class EnrichmentReader(BaseModel, ABC):
     source: str
 
     @abstractmethod
-    def describe(
-        self, repo: str, obj: str, rev: Optional[str]
-    ) -> Optional[EnrichmentInfo]:
+    def describe(self, repo: str, obj: str, rev: Optional[str]) -> Optional[EnrichmentInfo]:
         raise NotImplementedError
 
 
@@ -108,8 +106,4 @@ def find_enrichments() -> Dict[str, EnrichmentReader]:
 @lru_cache()
 def find_enrichment_types() -> Dict[str, Type[EnrichmentReader]]:
     enrichments = _find_enrichments()
-    return {
-        k: e
-        for k, e in enrichments.items()
-        if isinstance(e, type) and issubclass(e, EnrichmentReader)
-    }
+    return {k: e for k, e in enrichments.items() if isinstance(e, type) and issubclass(e, EnrichmentReader)}

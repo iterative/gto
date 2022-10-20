@@ -1,9 +1,7 @@
 from typing import Optional
 
 
-def generate_annotate_commit_message(
-    name: str, type: Optional[str] = None, path: Optional[str] = None
-) -> str:
+def generate_annotate_commit_message(name: str, type: Optional[str] = None, path: Optional[str] = None) -> str:
     return (
         f"Annotate artifact `{name}`"
         f"{f' of type `{type}`' if type is not None else ''}"

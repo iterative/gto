@@ -49,9 +49,7 @@ def test_api_info_commands_empty_repo(empty_git_repo: Tuple[git.Repo, Callable])
 def test_add_remove(empty_git_repo: Tuple[git.Repo, Callable]):
     repo, write_file = empty_git_repo
     name, type, path, must_exist = "new-artifact", "new-type", "new/path", False
-    gto.api.annotate(
-        repo.working_dir, name, type=type, path=path, must_exist=must_exist
-    )
+    gto.api.annotate(repo.working_dir, name, type=type, path=path, must_exist=must_exist)
     with pytest.raises(PathIsUsed):
         gto.api.annotate(repo.working_dir, "other-name", path=path)
     index = gto.api._get_index(repo.working_dir).get_index()
@@ -77,22 +75,16 @@ def repo_with_artifact(init_showcase_semver):
     repo: git.Repo
     repo, write_file = init_showcase_semver
     name, type, path, must_exist = "new-artifact", "new-type", "new/path", False
-    gto.api.annotate(
-        repo.working_dir, name, type=type, path=path, must_exist=must_exist
-    )
+    gto.api.annotate(repo.working_dir, name, type=type, path=path, must_exist=must_exist)
     repo.index.add(["artifacts.yaml"])
     repo.index.commit("Added index")
-    gto.api.annotate(
-        repo.working_dir, name, type=type, path="path", must_exist=must_exist
-    )
+    gto.api.annotate(repo.working_dir, name, type=type, path="path", must_exist=must_exist)
     repo.index.add(["artifacts.yaml"])
     repo.index.commit("Added index")
     return repo, name
 
 
-def test_api_info_commands_repo_with_artifact(
-    repo_with_artifact: Tuple[git.Repo, Callable]
-):
+def test_api_info_commands_repo_with_artifact(repo_with_artifact: Tuple[git.Repo, Callable]):
     repo, write_file = repo_with_artifact
     gto.api.show(repo.working_dir)
     gto.api.show(repo.working_dir, "new-artifact")
@@ -112,9 +104,7 @@ def test_register_deregister(repo_with_artifact):
         "anything",
         must_exist=False,
     )
-    repo.index.commit(
-        "Irrelevant action to create a git commit to register another version"
-    )
+    repo.index.commit("Irrelevant action to create a git commit to register another version")
     message = "Some message"
     author = "GTO"
     author_email = "gto@iterative.ai"
@@ -338,9 +328,7 @@ def test_if_check_ref_on_remote_git_repo_then_return_expected_reference(
 @freeze_time("1996-06-09 00:00:00", tz_offset=0)
 @skip_for_windows_py_lt_3_9
 def test_if_history_on_remote_git_repo_then_return_expected_history():
-    result = gto.api.history(
-        repo=tests.resources.SAMPLE_REMOTE_REPO_URL, artifact="churn"
-    )
+    result = gto.api.history(repo=tests.resources.SAMPLE_REMOTE_REPO_URL, artifact="churn")
     assert (
         convert_objects_to_str_in_json_serializable_object(result)
         == tests.resources.get_sample_remote_repo_expected_history_churn()
@@ -366,9 +354,7 @@ def test_if_describe_on_remote_git_repo_then_return_expected_info():
 def test_if_register_with_auto_push_then_invoke_git_push_tag(repo_with_artifact):
     repo, _ = repo_with_artifact
     with patch("gto.registry.git_push_tag") as mocked_git_push_tags:
-        gto.api.register(
-            repo=repo.working_dir, name="model", ref="HEAD", auto_push=True
-        )
+        gto.api.register(repo=repo.working_dir, name="model", ref="HEAD", auto_push=True)
     mocked_git_push_tags.assert_called_once_with(
         repo_path=Path(repo.working_dir).as_posix(),
         tag_name="model@v0.0.1",
@@ -381,9 +367,7 @@ def test_if_assign_with_auto_push_then_invoke_git_push_tag_2_times_for_registrat
 ):
     repo, _ = repo_with_artifact
     with patch("gto.registry.git_push_tag") as mocked_git_push_tags:
-        gto.api.assign(
-            repo.working_dir, name="model", stage="dev", ref="HEAD", auto_push=True
-        )
+        gto.api.assign(repo.working_dir, name="model", stage="dev", ref="HEAD", auto_push=True)
     expected_calls = [
         call(
             repo_path=Path(repo.working_dir).as_posix(),
@@ -401,9 +385,7 @@ def test_if_assign_with_auto_push_then_invoke_git_push_tag_2_times_for_registrat
 
 def test_if_unassign_with_auto_push_then_invoke_git_push_tag(repo_with_artifact):
     repo, _ = repo_with_artifact
-    gto.api.assign(
-        repo.working_dir, name="model", stage="dev", ref="HEAD", auto_push=False
-    )
+    gto.api.assign(repo.working_dir, name="model", stage="dev", ref="HEAD", auto_push=False)
     with patch("gto.registry.git_push_tag") as mocked_git_push_tags:
         gto.api.unassign(
             repo.working_dir,
@@ -423,9 +405,7 @@ def test_if_unassign_with_delete_and_auto_push_then_invoke_git_push_tag(
     repo_with_artifact,
 ):
     repo, _ = repo_with_artifact
-    gto.api.assign(
-        repo.working_dir, name="model", stage="dev", ref="HEAD", auto_push=False
-    )
+    gto.api.assign(repo.working_dir, name="model", stage="dev", ref="HEAD", auto_push=False)
     with patch("gto.registry.git_push_tag") as mocked_git_push_tags:
         gto.api.unassign(
             repo.working_dir,
@@ -444,9 +424,7 @@ def test_if_deregister_with_auto_push_then_invoke_git_push_tag(repo_with_artifac
     repo, _ = repo_with_artifact
     gto.api.register(repo.working_dir, name="model", ref="HEAD", auto_push=False)
     with patch("gto.registry.git_push_tag") as mocked_git_push_tags:
-        gto.api.deregister(
-            repo.working_dir, name="model", version="v0.0.1", auto_push=True
-        )
+        gto.api.deregister(repo.working_dir, name="model", version="v0.0.1", auto_push=True)
     mocked_git_push_tags.assert_called_once_with(
         repo_path=Path(repo.working_dir).as_posix(),
         tag_name="model@v0.0.1!",
@@ -618,9 +596,7 @@ def test_if_annotate_with_auto_commit_then_invoke_stash_and_commit(
 
     with patch("gto.git_utils.stashed_changes") as mocked_stashed_changes:
         mocked_stashed_changes.return_value.__enter__.return_value = [], []
-        with patch(
-            "gto.git_utils.git_add_and_commit_all_changes"
-        ) as mocked_git_add_and_commit_all_changes:
+        with patch("gto.git_utils.git_add_and_commit_all_changes") as mocked_git_add_and_commit_all_changes:
             gto.api.annotate(
                 repo.working_dir,
                 name,
@@ -630,9 +606,7 @@ def test_if_annotate_with_auto_commit_then_invoke_stash_and_commit(
                 auto_commit=True,
             )
 
-    mocked_stashed_changes.assert_called_once_with(
-        repo_path=repo.working_dir, include_untracked=True
-    )
+    mocked_stashed_changes.assert_called_once_with(repo_path=repo.working_dir, include_untracked=True)
     mocked_git_add_and_commit_all_changes.assert_called_once_with(
         repo_path=repo.working_dir,
         message=generate_annotate_commit_message(name=name, type=type, path=path),
@@ -656,14 +630,10 @@ def test_if_remove_with_auto_commit_then_invoke_stash_and_commit(
 
     with patch("gto.git_utils.stashed_changes") as mocked_stashed_changes:
         mocked_stashed_changes.return_value.__enter__.return_value = [], []
-        with patch(
-            "gto.git_utils.git_add_and_commit_all_changes"
-        ) as mocked_git_add_and_commit_all_changes:
+        with patch("gto.git_utils.git_add_and_commit_all_changes") as mocked_git_add_and_commit_all_changes:
             gto.api.remove(repo=repo.working_dir, name=name, auto_commit=True)
 
-    mocked_stashed_changes.assert_called_once_with(
-        repo_path=repo.working_dir, include_untracked=True
-    )
+    mocked_stashed_changes.assert_called_once_with(repo_path=repo.working_dir, include_untracked=True)
     mocked_git_add_and_commit_all_changes.assert_called_once_with(
         repo_path=repo.working_dir, message=generate_remove_commit_message(name=name)
     )

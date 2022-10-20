@@ -52,9 +52,7 @@ def not_frozen(func):
     return inner
 
 
-def find_repeated_path(
-    path: Union[str, Path], paths: List[Union[str, Path]]
-) -> Optional[Path]:
+def find_repeated_path(path: Union[str, Path], paths: List[Union[str, Path]]) -> Optional[Path]:
     """Return the path from "paths" that conflicts with "path":
     is equal to it or is a subpath (in both directions).
     """
@@ -126,18 +124,10 @@ class Index(BaseModel):
                 yaml.dump(state, file)
 
     @not_frozen
-    def add(
-        self, name, type, path, must_exist, labels, description, update
-    ) -> Artifact:
+    def add(self, name, type, path, must_exist, labels, description, update) -> Artifact:
         if name in self and not update:
             raise ArtifactExists(name)
-        if (
-            path
-            and find_repeated_path(
-                path, [a.path for n, a in self.state.items() if n != name]
-            )
-            is not None
-        ):
+        if path and find_repeated_path(path, [a.path for n, a in self.state.items() if n != name]) is not None:
             raise PathIsUsed(type=type, name=name, path=path)
         if update and name in self.state:
             self.state[name].type = type or self.state[name].type
@@ -190,9 +180,7 @@ class BaseIndexManager(BaseModel, ABC):
         if must_exist:
             if not path:
                 raise WrongArgs("`path` is required when `must_exist` is set to True")
-            if not check_if_path_exists(
-                path, self.repo if hasattr(self, "repo") else None
-            ):
+            if not check_if_path_exists(path, self.repo if hasattr(self, "repo") else None):
                 raise NoFile(path)
         index = self.get_index()
         index.add(
@@ -254,9 +242,7 @@ class RepoIndexManager(FileIndexManager):
             except git.InvalidGitRepositoryError as e:
                 raise NoRepo(repo) from e
         if config is None:
-            config = read_registry_config(
-                os.path.join(repo.working_dir, CONFIG_FILE_NAME)
-            )
+            config = read_registry_config(os.path.join(repo.working_dir, CONFIG_FILE_NAME))
         return cls(repo=repo, config=config)
 
     def index_path(self):
@@ -281,11 +267,7 @@ class RepoIndexManager(FileIndexManager):
         raise ValueError(f"No Index exists at {ref}")
 
     def get_history(self) -> Dict[str, Index]:
-        commits = {
-            commit
-            for branch in self.repo.heads
-            for commit in traverse_commit(branch.commit)
-        }
+        commits = {commit for branch in self.repo.heads for commit in traverse_commit(branch.commit)}
         return {
             commit.hexsha: self.get_commit_index(commit)  # type: ignore
             for commit in commits
@@ -315,9 +297,7 @@ class EnrichmentManager(BaseManager):
         if isinstance(repo, str):
             repo = git.Repo(repo, search_parent_directories=True)
         if config is None:
-            config = read_registry_config(
-                os.path.join(repo.working_dir, CONFIG_FILE_NAME)
-            )
+            config = read_registry_config(os.path.join(repo.working_dir, CONFIG_FILE_NAME))
         return cls(repo=repo, config=config)
 
     def describe(self, name: str, rev: str = None) -> List[EnrichmentInfo]:
@@ -338,11 +318,7 @@ class EnrichmentManager(BaseManager):
         if not self.repo.refs:
             return {}
         if all_commits:
-            return {
-                commit
-                for branch in self.repo.heads
-                for commit in traverse_commit(branch.commit)
-            }
+            return {commit for branch in self.repo.heads for commit in traverse_commit(branch.commit)}
         if all_branches:
             return {branch.commit for branch in self.repo.heads}
         return {self.repo.commit()}
@@ -377,15 +353,11 @@ class EnrichmentManager(BaseManager):
                     )
                 )
                 state.update_artifact(artifact)
-        for commit in self.get_commits(
-            all_branches=all_branches, all_commits=all_commits
-        ):
+        for commit in self.get_commits(all_branches=all_branches, all_commits=all_commits):
             for art_name in GTOEnrichment().discover(self.repo, commit):
                 enrichments = self.describe(art_name, rev=commit)
                 artifact = state.find_artifact(art_name, create_new=True)
-                version = artifact.find_version(
-                    commit_hexsha=commit.hexsha, create_new=True
-                )
+                version = artifact.find_version(commit_hexsha=commit.hexsha, create_new=True)
                 version.add_event(
                     EnrichmentEvent(
                         artifact=artifact.artifact,
@@ -433,10 +405,7 @@ class GTOEnrichment(EnrichmentReader):
     ) -> Dict[str, GTOInfo]:
         index = RepoIndexManager.from_repo(repo).get_commit_index(rev)
         if index:
-            return {
-                name: GTOInfo(artifact=artifact)
-                for name, artifact in index.state.items()
-            }
+            return {name: GTOInfo(artifact=artifact) for name, artifact in index.state.items()}
         return {}
 
     def describe(  # pylint: disable=no-self-use

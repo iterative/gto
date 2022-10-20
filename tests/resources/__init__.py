@@ -2,9 +2,7 @@ import json
 from pathlib import Path
 
 SAMPLE_HTTP_REMOTE_REPO = "https://github.com/iterative/example-gto.git"
-SAMPLE_HTTP_REMOTE_REPO_WITHOUT_DOT_GIT_SUFFIX = (
-    "https://github.com/iterative/example-gto"
-)
+SAMPLE_HTTP_REMOTE_REPO_WITHOUT_DOT_GIT_SUFFIX = "https://github.com/iterative/example-gto"
 SAMPLE_REMOTE_REPO_URL = r"https://github.com/iterative/example-gto-frozen.git"
 
 
