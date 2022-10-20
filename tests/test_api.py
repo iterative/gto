@@ -14,6 +14,10 @@ from freezegun import freeze_time
 import gto
 import tests.resources
 from gto.api import show
+from gto.commit_message_generator import (
+    generate_annotate_commit_message,
+    generate_remove_commit_message,
+)
 from gto.exceptions import PathIsUsed, WrongArgs
 from gto.tag import find
 from gto.versions import SemVer
@@ -631,7 +635,7 @@ def test_if_annotate_with_auto_commit_then_invoke_stash_and_commit(
     )
     mocked_git_add_and_commit_all_changes.assert_called_once_with(
         repo_path=repo.working_dir,
-        message=f"Annotate artifact {name} of type {type} with path {path}",
+        message=generate_annotate_commit_message(name=name, type=type, path=path),
     )
 
 
@@ -661,5 +665,5 @@ def test_if_remove_with_auto_commit_then_invoke_stash_and_commit(
         repo_path=repo.working_dir, include_untracked=True
     )
     mocked_git_add_and_commit_all_changes.assert_called_once_with(
-        repo_path=repo.working_dir, message=f"Remove annotation for artifact {name}"
+        repo_path=repo.working_dir, message=generate_remove_commit_message(name=name)
     )
