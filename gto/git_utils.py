@@ -92,9 +92,9 @@ def commit_produced_changes_on_auto_commit(
                         ):
                             _reset_repo_to_head(repo_path=kwargs["repo"])
                             raise GTOException(
-                                msg="The command changed files that were not committed, automated committing is not possible. "
-                                "The files have been rolled back to their previous state.\n\n"
-                                "Suggested action: Commit the changes and re-run this command"
+                                msg="The command would have changed files that were not committed, "
+                                "automated committing is not possible.\n"
+                                "Suggested action: Commit the changes and re-run this command."
                             )
                         git_add_and_commit_all_changes(
                             repo_path=kwargs["repo"],
