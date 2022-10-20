@@ -5,6 +5,10 @@ from typing import List, Optional, Union
 from funcy import distinct
 from git import Repo
 
+from gto.commit_message_generator import (
+    generate_annotate_commit_message,
+    generate_remove_commit_message,
+)
 from gto.constants import (
     ARTIFACT,
     ASSIGNMENTS_PER_VERSION,
@@ -19,7 +23,11 @@ from gto.constants import (
 )
 from gto.exceptions import NoRepo, NotImplementedInGTO, WrongArgs
 from gto.ext import EnrichmentInfo
-from gto.git_utils import auto_push_on_remote_repo, clone_on_remote_repo
+from gto.git_utils import (
+    auto_push_on_remote_repo,
+    clone_on_remote_repo,
+    commit_produced_changes_on_auto_commit,
+)
 from gto.index import (
     EnrichmentManager,
     FileIndexManager,
@@ -60,6 +68,9 @@ def get_stages(repo: Union[str, Repo], allowed: bool = False, used: bool = False
 
 
 # TODO: make this work the same as CLI version
+@commit_produced_changes_on_auto_commit(
+    message_generator=generate_annotate_commit_message
+)
 def annotate(
     repo: Union[str, Repo],
     name: str,
@@ -68,6 +79,7 @@ def annotate(
     must_exist: bool = False,
     labels: List[str] = None,
     description: str = "",
+    auto_commit: bool = False,  # pylint: disable=unused-argument
     # update: bool = False,
 ):
     """Add an artifact to the Index"""
@@ -82,7 +94,12 @@ def annotate(
     )
 
 
-def remove(repo: Union[str, Repo], name: str):
+@commit_produced_changes_on_auto_commit(
+    message_generator=generate_remove_commit_message
+)
+def remove(
+    repo: Union[str, Repo], name: str, auto_commit: bool = False
+):  # pylint: disable=unused-argument
     """Remove an artifact from the Index"""
     return init_index_manager(path=repo).remove(name)
 

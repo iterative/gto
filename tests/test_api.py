@@ -14,6 +14,10 @@ from freezegun import freeze_time
 import gto
 import tests.resources
 from gto.api import show
+from gto.commit_message_generator import (
+    generate_annotate_commit_message,
+    generate_remove_commit_message,
+)
 from gto.exceptions import PathIsUsed, WrongArgs
 from gto.tag import find
 from gto.versions import SemVer
@@ -603,3 +607,63 @@ def test_if_unassign_with_remote_repo_then_invoke_git_push_tag():
                 delete=False,
             )
             tmp_dir.cleanup()
+
+
+def test_if_annotate_with_auto_commit_then_invoke_stash_and_commit(
+    init_showcase_semver,
+):
+    repo, write_file = init_showcase_semver
+    name, type, path, must_exist = "new-artifact", "new-type", "new/path", False
+    repo.index.commit(message="first commit")
+
+    with patch("gto.git_utils.stashed_changes") as mocked_stashed_changes:
+        mocked_stashed_changes.return_value.__enter__.return_value = [], []
+        with patch(
+            "gto.git_utils.git_add_and_commit_all_changes"
+        ) as mocked_git_add_and_commit_all_changes:
+            gto.api.annotate(
+                repo.working_dir,
+                name,
+                type=type,
+                path=path,
+                must_exist=must_exist,
+                auto_commit=True,
+            )
+
+    mocked_stashed_changes.assert_called_once_with(
+        repo_path=repo.working_dir, include_untracked=True
+    )
+    mocked_git_add_and_commit_all_changes.assert_called_once_with(
+        repo_path=repo.working_dir,
+        message=generate_annotate_commit_message(name=name, type=type, path=path),
+    )
+
+
+def test_if_remove_with_auto_commit_then_invoke_stash_and_commit(
+    init_showcase_semver,
+):
+    repo, write_file = init_showcase_semver
+    name, type, path, must_exist = "new-artifact", "new-type", "new/path", False
+    repo.index.commit(message="first commit")
+    gto.api.annotate(
+        repo.working_dir,
+        name,
+        type=type,
+        path=path,
+        must_exist=must_exist,
+        auto_commit=True,
+    )
+
+    with patch("gto.git_utils.stashed_changes") as mocked_stashed_changes:
+        mocked_stashed_changes.return_value.__enter__.return_value = [], []
+        with patch(
+            "gto.git_utils.git_add_and_commit_all_changes"
+        ) as mocked_git_add_and_commit_all_changes:
+            gto.api.remove(repo=repo.working_dir, name=name, auto_commit=True)
+
+    mocked_stashed_changes.assert_called_once_with(
+        repo_path=repo.working_dir, include_untracked=True
+    )
+    mocked_git_add_and_commit_all_changes.assert_called_once_with(
+        repo_path=repo.working_dir, message=generate_remove_commit_message(name=name)
+    )

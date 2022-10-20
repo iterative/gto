@@ -3,10 +3,11 @@ import logging
 from contextlib import contextmanager
 from functools import wraps
 from tempfile import TemporaryDirectory
-from typing import Callable, Dict
+from typing import Callable, Dict, List, Tuple
 
 from git import Repo
 
+from gto.commit_message_generator import generate_empty_commit_message
 from gto.constants import remote_git_repo_regex
 from gto.exceptions import GTOException, WrongArgs
 
@@ -49,6 +50,80 @@ def auto_push_on_remote_repo(f: Callable):
         return f(**kwargs)
 
     return wrapped_f
+
+
+def commit_produced_changes_on_auto_commit(
+    message_generator: Callable[..., str] = generate_empty_commit_message
+):
+    """
+    The function `message_generator` can use any argument that the decorated function has.
+
+    Example: here we are using the argument b of the function f to generate the commit message
+
+        def create_message(b: str) -> str:
+            return "commit message with b={b}"
+
+        @commit_produced_changes_on_auto_commit(message_generator=create_message)
+        def f(a: str, b: str, c: str):
+            ...
+
+    """
+
+    def generate_commit_message(**kwargs) -> str:
+        kwargs_for_message_generator = {
+            k: kwargs[k] for k in inspect.getfullargspec(message_generator).args
+        }
+        return message_generator(**kwargs_for_message_generator)
+
+    def wrap(f: Callable):
+        @wraps(f)
+        def wrapped_f(*args, **kwargs):
+            kwargs = _turn_args_into_kwargs(f, args, kwargs)
+
+            if kwargs.get("auto_commit", False) is True:
+                if "repo" in kwargs:
+                    with stashed_changes(
+                        repo_path=kwargs["repo"], include_untracked=True
+                    ) as (stashed_tracked, stashed_untracked):
+                        result = f(**kwargs)
+                        if are_files_in_repo_changed(
+                            repo_path=kwargs["repo"],
+                            files=stashed_tracked + stashed_untracked,
+                        ):
+                            _reset_repo_to_head(repo_path=kwargs["repo"])
+                            raise GTOException(
+                                msg="The command would have changed files that were not committed, "
+                                "automated committing is not possible.\n"
+                                "Suggested action: Commit the changes and re-run this command."
+                            )
+                        git_add_and_commit_all_changes(
+                            repo_path=kwargs["repo"],
+                            message=generate_commit_message(**kwargs),
+                        )
+                else:
+                    raise ValueError(
+                        "Function decorated with commit_produced_changes_on_auto_commit was called with "
+                        "`auto_commit=True` but `repo` was not provided."
+                        "Argument `repo` is necessary."
+                    )
+            else:
+                result = f(**kwargs)
+
+            return result
+
+        return wrapped_f
+
+    return wrap
+
+
+def are_files_in_repo_changed(repo_path: str, files: List[str]) -> bool:
+    tracked, untracked = _get_repo_changed_tracked_and_untracked_files(
+        repo_path=repo_path
+    )
+    return (
+        len(set(files).intersection(tracked)) > 0
+        or len(set(files).intersection(untracked)) > 0
+    )
 
 
 def is_url_of_remote_repo(repo: str) -> bool:
@@ -101,6 +176,58 @@ def git_push_tag(
             msg=f"The command `git push {remote_name} {' '.join(remote_push_args)}` failed. "
             f"Make sure your local repository is in sync with the remote."
         )
+
+
+def git_add_and_commit_all_changes(repo_path: str, message: str) -> None:
+    repo = Repo(path=repo_path)
+    tracked, untracked = _get_repo_changed_tracked_and_untracked_files(
+        repo_path=repo_path
+    )
+    if len(tracked) + len(untracked) > 0:
+        logging.debug("Adding to the index the untracked files %s", untracked)
+        logging.debug("Add and commit changes to files %s", tracked + untracked)
+        repo.index.add(items=tracked + untracked)
+        repo.index.commit(message=message)
+
+
+@contextmanager
+def stashed_changes(repo_path: str, include_untracked: bool = False):
+    repo = Repo(path=repo_path)
+    if len(repo.refs) == 0:
+        raise RuntimeError(
+            "Cannot stash because repository has no ref. Please create a first commit."
+        )
+
+    tracked, untracked = _get_repo_changed_tracked_and_untracked_files(
+        repo_path=repo_path
+    )
+
+    stash_arguments = ["push"]
+    if include_untracked:
+        stash_arguments += ["--include-untracked"]
+    else:
+        untracked = []
+
+    try:
+        if len(tracked + untracked) > 0:
+            repo.git.stash(stash_arguments)
+        yield tracked, untracked
+    finally:
+        if len(tracked + untracked) > 0:
+            repo.git.stash("pop")
+
+
+def _reset_repo_to_head(repo_path: str) -> None:
+    repo = Repo(path=repo_path)
+    repo.git.stash(["push", "--include-untracked"])
+    repo.git.stash(["drop"])
+
+
+def _get_repo_changed_tracked_and_untracked_files(
+    repo_path: str,
+) -> Tuple[List[str], List[str]]:
+    repo = Repo(path=repo_path)
+    return [item.a_path for item in repo.index.diff(None)], repo.untracked_files
 
 
 def _turn_args_into_kwargs(

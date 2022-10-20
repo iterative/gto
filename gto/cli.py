@@ -366,6 +366,13 @@ option_auto_push = Option(
     help="Push created tag automatically (experimental)",
 )
 
+option_auto_commit = Option(
+    False,
+    "--auto-commit",
+    is_flag=True,
+    help="Automatically commit changes due to this command (experimental)",
+)
+
 
 @app.callback("gto", invoke_without_command=True, no_args_is_help=True)
 def gto_callback(
@@ -472,6 +479,7 @@ def annotate(
     ),
     label: List[str] = Option(None, "--label", help="Labels to add to artifact"),
     description: str = Option("", "-d", "--description", help="Artifact description"),
+    auto_commit: bool = option_auto_commit,
     # update: bool = Option(
     #     False, "-u", "--update", is_flag=True, help="Update artifact if it exists"
     # ),
@@ -489,18 +497,23 @@ def annotate(
         must_exist=must_exist,
         labels=label,
         description=description,
+        auto_commit=auto_commit,
         # update=update,
     )
 
 
 @gto_command(section=CommandGroups.enriching)
-def remove(repo: str = option_repo, name: str = arg_name):
+def remove(
+    repo: str = option_repo,
+    name: str = arg_name,
+    auto_commit: bool = option_auto_commit,
+):
     """Remove the enrichment for given artifact
 
     Examples:
          $ gto remove nn
     """
-    gto.api.remove(repo, name)
+    gto.api.remove(repo, name, auto_commit)
 
 
 @gto_command(section=CommandGroups.modifying)
