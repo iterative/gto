@@ -14,6 +14,7 @@ from gto.git_utils import (
     commit_produced_changes_on_auto_commit,
     git_add_and_commit_all_changes,
     git_clone,
+    git_push,
     git_push_tag,
     is_url_of_remote_repo,
     stashed_changes,
@@ -507,6 +508,16 @@ def test_commit_produced_changes_on_auto_commit_if_f_changes_untracked_file_alre
         assert f.read() == f"{FIRST_TEST_FILE_MODIFICATION}"
 
 
+def test_git_push_if_called_then_corresponding_gitpython_functions_are_called(
+    tmp_local_empty_git_repo,
+):
+    with patch("gto.git_utils.git.Repo") as MockedRepo:
+        git_push(repo_path=tmp_local_empty_git_repo)
+
+    MockedRepo.assert_called_once_with(path=tmp_local_empty_git_repo)
+    MockedRepo.return_value.git.push.assert_called_once_with()
+
+
 @auto_push_on_remote_repo
 def decorated_write_func(
     spam: int, repo: Union[Repo, str], auto_push: bool
@@ -622,7 +633,7 @@ def with_mocked_repo_with_remote() -> tuple:
     path = "git_repo_path"
     remote_name = "git_remote_name"
 
-    with patch("gto.git_utils.Repo") as MockedRepo:
+    with patch("gto.git_utils.git.Repo") as MockedRepo:
         MockedRepo.return_value = mocked_repo
         mocked_repo.remote.return_value = mocked_remote
         yield path, remote_name, MockedRepo, mocked_repo, mocked_remote

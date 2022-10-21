@@ -5,7 +5,7 @@ from functools import wraps
 from tempfile import TemporaryDirectory
 from typing import Callable, Dict, List, Tuple
 
-from git import Repo
+import git
 
 from gto.commit_message_generator import generate_empty_commit_message
 from gto.constants import remote_git_repo_regex
@@ -147,13 +147,13 @@ def cloned_git_repo(repo: str):
 
 def git_clone(repo: str, dir: str) -> None:
     logging.debug("clone %s in directory %s", repo, dir)
-    Repo.clone_from(url=repo, to_path=dir)
+    git.Repo.clone_from(url=repo, to_path=dir)
 
 
 def git_push_tag(
     repo_path: str, tag_name: str, delete: bool = False, remote_name: str = "origin"
 ) -> None:
-    repo = Repo(path=repo_path)
+    repo = git.Repo(path=repo_path)
     remote = repo.remote(name=remote_name)
     if not hasattr(remote, "url"):
         raise WrongArgs(
@@ -178,8 +178,12 @@ def git_push_tag(
         )
 
 
+def git_push(repo_path: str) -> None:
+    git.Repo(path=repo_path).git.push()
+
+
 def git_add_and_commit_all_changes(repo_path: str, message: str) -> None:
-    repo = Repo(path=repo_path)
+    repo = git.Repo(path=repo_path)
     tracked, untracked = _get_repo_changed_tracked_and_untracked_files(
         repo_path=repo_path
     )
@@ -192,7 +196,7 @@ def git_add_and_commit_all_changes(repo_path: str, message: str) -> None:
 
 @contextmanager
 def stashed_changes(repo_path: str, include_untracked: bool = False):
-    repo = Repo(path=repo_path)
+    repo = git.Repo(path=repo_path)
     if len(repo.refs) == 0:
         raise RuntimeError(
             "Cannot stash because repository has no ref. Please create a first commit."
@@ -218,7 +222,7 @@ def stashed_changes(repo_path: str, include_untracked: bool = False):
 
 
 def _reset_repo_to_head(repo_path: str) -> None:
-    repo = Repo(path=repo_path)
+    repo = git.Repo(path=repo_path)
     repo.git.stash(["push", "--include-untracked"])
     repo.git.stash(["drop"])
 
@@ -226,7 +230,7 @@ def _reset_repo_to_head(repo_path: str) -> None:
 def _get_repo_changed_tracked_and_untracked_files(
     repo_path: str,
 ) -> Tuple[List[str], List[str]]:
-    repo = Repo(path=repo_path)
+    repo = git.Repo(path=repo_path)
     return [item.a_path for item in repo.index.diff(None)], repo.untracked_files
 
 
