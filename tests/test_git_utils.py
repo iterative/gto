@@ -199,6 +199,7 @@ def test_git_add_and_commit_all_changes_if_files_not_changed_then_no_new_commit(
     )
 
 
+@skip_for_windows_py_lt_3_9
 def test_git_add_and_commit_all_changes_if_tracked_file_is_changed_then_new_commit(
     tmp_local_git_repo_with_first_test_commit,
 ):

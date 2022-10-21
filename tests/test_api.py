@@ -732,6 +732,7 @@ def test_if_remove_with_auto_push_then_invoke_commit_and_push(
     mocked_git_push.assert_called_once_with(repo_path=repo.working_dir)
 
 
+@skip_for_windows_py_lt_3_9
 def test_if_annotate_with_remote_repo_then_clone_and_push():
     with patch("gto.git_utils.git_push") as mocked_git_push:
         with patch("gto.git_utils.git_clone") as mocked_git_clone:
@@ -753,6 +754,7 @@ def test_if_annotate_with_remote_repo_then_clone_and_push():
     )
 
 
+@skip_for_windows_py_lt_3_9
 def test_if_remove_with_remote_repo_then_clone_and_push():
     with patch("gto.git_utils.git_push") as mocked_git_push:
         with patch("gto.git_utils.git_clone") as mocked_git_clone:
