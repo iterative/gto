@@ -483,6 +483,7 @@ def test_commit_produced_changes_on_auto_commit_if_f_changes_untracked_file_alre
         assert f.read() == f"{FIRST_TEST_FILE_MODIFICATION}"
 
 
+@skip_for_windows_py_lt_3_9
 def test_git_push_if_called_then_corresponding_gitpython_functions_are_called(
     tmp_local_empty_git_repo,
 ):
