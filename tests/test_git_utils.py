@@ -16,6 +16,7 @@ from gto.git_utils import (
     git_push,
     git_push_tag,
     is_url_of_remote_repo,
+    push_on_auto_push,
     set_auto_push_on_remote_repo,
     stashed_changes,
 )
@@ -489,6 +490,48 @@ def test_git_push_if_called_then_corresponding_gitpython_functions_are_called(
 
     MockedRepo.assert_called_once_with(path=tmp_local_empty_git_repo)
     MockedRepo.return_value.git.push.assert_called_once_with()
+
+
+def test_push_on_auto_push_if_auto_push_false_then_git_push_is_not_called():
+    f_spy = MagicMock()
+
+    @push_on_auto_push
+    def f(*args, **kwargs):
+        return f_spy(*args, **kwargs)
+
+    with patch("gto.git_utils.git_push") as mocked_git_push:
+        mock_manager = MagicMock()
+        mock_manager.attach_mock(f_spy, "spy")
+        mock_manager.attach_mock(mocked_git_push, "git_push")
+        f(auto_push=False)
+
+    expected_calls = [
+        call.spy(auto_push=False),
+    ]
+    assert mock_manager.mock_calls == expected_calls
+
+
+def test_push_on_auto_push_if_auto_push_true_then_git_push_is_called_after_f():
+    repo_path = "my/repo"
+    f_spy = MagicMock()
+
+    @push_on_auto_push
+    def f(*args, **kwargs):
+        return f_spy(*args, **kwargs)
+
+    with patch("gto.git_utils.git_push") as mocked_git_push:
+        mock_manager = MagicMock()
+        mock_manager.attach_mock(f_spy, "spy")
+        mock_manager.attach_mock(mocked_git_push, "git_push")
+        f(repo=repo_path, auto_push=True)
+
+    expected_calls = [
+        call.spy(repo=repo_path, auto_push=True),
+        call.git_push(
+            repo_path=repo_path,
+        ),
+    ]
+    assert mock_manager.mock_calls == expected_calls
 
 
 @set_auto_push_on_remote_repo

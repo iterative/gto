@@ -115,6 +115,18 @@ def commit_produced_changes_on_auto_commit(
     return wrap
 
 
+def push_on_auto_push(f: Callable):
+    @wraps(f)
+    def wrapped_f(*args, **kwargs):
+        kwargs = _turn_args_into_kwargs(f, args, kwargs)
+        result = f(**kwargs)
+        if kwargs.get("auto_push", False) is True:
+            git_push(repo_path=kwargs["repo"])
+        return result
+
+    return wrapped_f
+
+
 def are_files_in_repo_changed(repo_path: str, files: List[str]) -> bool:
     tracked, untracked = _get_repo_changed_tracked_and_untracked_files(
         repo_path=repo_path
