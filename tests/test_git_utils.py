@@ -492,46 +492,55 @@ def test_git_push_if_called_then_corresponding_gitpython_functions_are_called(
     MockedRepo.return_value.git.push.assert_called_once_with()
 
 
-def test_push_on_auto_push_if_auto_push_false_then_git_push_is_not_called():
-    f_spy = MagicMock()
+def test_push_on_auto_push_if_auto_push_and_repo_not_provided_then_raise_exception(
+    mocked_f_decorated_with_push_on_auto_push,
+):
+    f, _, _, _ = mocked_f_decorated_with_push_on_auto_push
 
-    @push_on_auto_push
-    def f(*args, **kwargs):
-        return f_spy(*args, **kwargs)
+    with pytest.raises(ValueError):
+        f(auto_push=True)
 
-    with patch("gto.git_utils.git_push") as mocked_git_push:
-        mock_manager = MagicMock()
-        mock_manager.attach_mock(f_spy, "spy")
-        mock_manager.attach_mock(mocked_git_push, "git_push")
-        f(auto_push=False)
+
+def test_push_on_auto_push_if_auto_push_then_set_auto_commit_to_true(
+    mocked_f_decorated_with_push_on_auto_push,
+):
+    f, f_spy, repo_path, _ = mocked_f_decorated_with_push_on_auto_push
+
+    result = f(repo=repo_path, auto_commit=False, auto_push=True)
+
+    f_spy.assert_called_once_with(repo=repo_path, auto_commit=True, auto_push=True)
+    assert result == f_spy.return_value
+
+
+def test_push_on_auto_push_if_auto_push_false_then_git_push_is_not_called(
+    mocked_f_decorated_with_push_on_auto_push,
+):
+    f, f_spy, _, mock_manager = mocked_f_decorated_with_push_on_auto_push
+
+    result = f(auto_push=False)
 
     expected_calls = [
         call.spy(auto_push=False),
     ]
     assert mock_manager.mock_calls == expected_calls
+    assert result == f_spy.return_value
 
 
-def test_push_on_auto_push_if_auto_push_true_then_git_push_is_called_after_f():
-    repo_path = "my/repo"
-    f_spy = MagicMock()
+def test_push_on_auto_push_if_auto_push_true_then_git_push_is_called_after_f(
+    mocked_f_decorated_with_push_on_auto_push,
+):
+    f, f_spy, repo_path, mock_manager = mocked_f_decorated_with_push_on_auto_push
 
-    @push_on_auto_push
-    def f(*args, **kwargs):
-        return f_spy(*args, **kwargs)
-
-    with patch("gto.git_utils.git_push") as mocked_git_push:
-        mock_manager = MagicMock()
-        mock_manager.attach_mock(f_spy, "spy")
-        mock_manager.attach_mock(mocked_git_push, "git_push")
-        f(repo=repo_path, auto_push=True)
+    result = f(repo=repo_path, auto_push=True)
 
     expected_calls = [
-        call.spy(repo=repo_path, auto_push=True),
+        call.spy(repo=repo_path, auto_commit=True, auto_push=True),
         call.git_push(
             repo_path=repo_path,
         ),
     ]
     assert mock_manager.mock_calls == expected_calls
+    assert result == f_spy.return_value
 
 
 @set_auto_push_on_remote_repo
@@ -614,6 +623,25 @@ def mocked_f_decorated_with_commit_produced_changes_on_auto_commit() -> Tuple[
                 )
 
                 yield f, f_spy, mocked_stashed_changes, mocked_git_add_and_commit_all_changes, mock_manager, generate_test_commit_message
+
+
+@pytest.fixture
+def mocked_f_decorated_with_push_on_auto_push() -> Tuple[
+    Callable, MagicMock, str, MagicMock
+]:
+    repo_path = "my/repo"
+    f_spy = MagicMock()
+
+    @push_on_auto_push
+    def f(*args, **kwargs):
+        return f_spy(*args, **kwargs)
+
+    with patch("gto.git_utils.git_push") as mocked_git_push:
+        mock_manager = MagicMock()
+        mock_manager.attach_mock(f_spy, "spy")
+        mock_manager.attach_mock(mocked_git_push, "git_push")
+
+        yield f, f_spy, repo_path, mock_manager
 
 
 def change_tracked_file(repo_path: str) -> Tuple[Path, str]:

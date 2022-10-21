@@ -119,9 +119,19 @@ def push_on_auto_push(f: Callable):
     @wraps(f)
     def wrapped_f(*args, **kwargs):
         kwargs = _turn_args_into_kwargs(f, args, kwargs)
-        result = f(**kwargs)
         if kwargs.get("auto_push", False) is True:
-            git_push(repo_path=kwargs["repo"])
+            kwargs["auto_commit"] = True
+            result = f(**kwargs)
+            if "repo" in kwargs:
+                git_push(repo_path=kwargs["repo"])
+            else:
+                raise ValueError(
+                    "Function decorated with push_on_auto_push was called with "
+                    "`auto_push=True` but `repo` was not provided."
+                    "Argument `repo` is necessary."
+                )
+        else:
+            result = f(**kwargs)
         return result
 
     return wrapped_f
