@@ -19,6 +19,7 @@ from gto.commit_message_generator import (
     generate_remove_commit_message,
 )
 from gto.exceptions import PathIsUsed, WrongArgs
+from gto.git_utils import git_clone
 from gto.tag import find
 from gto.versions import SemVer
 from tests.skip_presets import skip_for_windows_py_lt_3_9
@@ -729,3 +730,45 @@ def test_if_remove_with_auto_push_then_invoke_commit_and_push(
         repo_path=repo.working_dir, message=generate_remove_commit_message(name=name)
     )
     mocked_git_push.assert_called_once_with(repo_path=repo.working_dir)
+
+
+def test_if_annotate_with_remote_repo_then_clone_and_push():
+    with patch("gto.git_utils.git_push") as mocked_git_push:
+        with patch("gto.git_utils.git_clone") as mocked_git_clone:
+            mocked_git_clone.side_effect = git_clone
+            with patch("gto.git_utils.TemporaryDirectory") as MockedTemporaryDirectory:
+                MockedTemporaryDirectory.return_value = (
+                    TemporaryDirectory()  # pylint: disable=consider-using-with
+                )
+                gto.api.annotate(
+                    repo=tests.resources.SAMPLE_REMOTE_REPO_URL, name="test-model"
+                )
+
+    mocked_git_push.assert_called_once_with(
+        repo_path=MockedTemporaryDirectory.return_value.name
+    )
+    mocked_git_clone.assert_called_once_with(
+        repo=tests.resources.SAMPLE_REMOTE_REPO_URL,
+        dir=MockedTemporaryDirectory.return_value.name,
+    )
+
+
+def test_if_remove_with_remote_repo_then_clone_and_push():
+    with patch("gto.git_utils.git_push") as mocked_git_push:
+        with patch("gto.git_utils.git_clone") as mocked_git_clone:
+            mocked_git_clone.side_effect = git_clone
+            with patch("gto.git_utils.TemporaryDirectory") as MockedTemporaryDirectory:
+                MockedTemporaryDirectory.return_value = (
+                    TemporaryDirectory()  # pylint: disable=consider-using-with
+                )
+                gto.api.remove(
+                    repo=tests.resources.SAMPLE_REMOTE_REPO_URL, name="segment"
+                )
+
+    mocked_git_push.assert_called_once_with(
+        repo_path=MockedTemporaryDirectory.return_value.name
+    )
+    mocked_git_clone.assert_called_once_with(
+        repo=tests.resources.SAMPLE_REMOTE_REPO_URL,
+        dir=MockedTemporaryDirectory.return_value.name,
+    )

@@ -70,7 +70,8 @@ def commit_produced_changes_on_auto_commit(
 
     def generate_commit_message(**kwargs) -> str:
         kwargs_for_message_generator = {
-            k: kwargs[k] for k in inspect.getfullargspec(message_generator).args
+            k: kwargs.get(k, None)
+            for k in inspect.getfullargspec(message_generator).args
         }
         return message_generator(**kwargs_for_message_generator)
 
