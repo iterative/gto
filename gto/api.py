@@ -26,6 +26,7 @@ from gto.ext import EnrichmentInfo
 from gto.git_utils import (
     clone_on_remote_repo,
     commit_produced_changes_on_auto_commit,
+    push_on_auto_push,
     set_auto_push_on_remote_repo,
 )
 from gto.index import (
@@ -68,6 +69,7 @@ def get_stages(repo: Union[str, Repo], allowed: bool = False, used: bool = False
 
 
 # TODO: make this work the same as CLI version
+@push_on_auto_push
 @commit_produced_changes_on_auto_commit(
     message_generator=generate_annotate_commit_message
 )
@@ -80,6 +82,7 @@ def annotate(
     labels: List[str] = None,
     description: str = "",
     auto_commit: bool = False,  # pylint: disable=unused-argument
+    auto_push: bool = False,  # pylint: disable=unused-argument
     # update: bool = False,
 ):
     """Add an artifact to the Index"""
@@ -94,11 +97,15 @@ def annotate(
     )
 
 
+@push_on_auto_push
 @commit_produced_changes_on_auto_commit(
     message_generator=generate_remove_commit_message
 )
 def remove(
-    repo: Union[str, Repo], name: str, auto_commit: bool = False
+    repo: Union[str, Repo],
+    name: str,
+    auto_commit: bool = False,
+    auto_push: bool = False,
 ):  # pylint: disable=unused-argument
     """Remove an artifact from the Index"""
     return init_index_manager(path=repo).remove(name)
