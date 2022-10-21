@@ -36,7 +36,7 @@ def clone_on_remote_repo(f: Callable):
     return wrapped_f
 
 
-def auto_push_on_remote_repo(f: Callable):
+def set_auto_push_on_remote_repo(f: Callable):
     @wraps(f)
     def wrapped_f(*args, **kwargs):
         kwargs = _turn_args_into_kwargs(f, args, kwargs)
@@ -45,7 +45,6 @@ def auto_push_on_remote_repo(f: Callable):
             repo=kwargs["repo"]
         ):
             kwargs["auto_push"] = True
-            return clone_on_remote_repo(f)(**kwargs)
 
         return f(**kwargs)
 
@@ -239,7 +238,7 @@ def _turn_args_into_kwargs(
 ) -> Dict[str, object]:
     kwargs_complement = {
         k: args[i]
-        for i, k in enumerate(inspect.getfullargspec(f).args)
+        for i, k in enumerate(inspect.signature(f).parameters.keys())
         if i < len(args)
     }
     kwargs.update(kwargs_complement)

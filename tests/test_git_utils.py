@@ -9,7 +9,6 @@ from git import Repo
 import tests.resources
 from gto.exceptions import GTOException
 from gto.git_utils import (
-    auto_push_on_remote_repo,
     clone_on_remote_repo,
     commit_produced_changes_on_auto_commit,
     git_add_and_commit_all_changes,
@@ -17,6 +16,7 @@ from gto.git_utils import (
     git_push,
     git_push_tag,
     is_url_of_remote_repo,
+    set_auto_push_on_remote_repo,
     stashed_changes,
 )
 from tests.skip_presets import (
@@ -164,7 +164,7 @@ def test_git_push_tag_if_error_then_exit_with_code_1(
     )
 
 
-def test_auto_push_on_remote_repo_if_not_remote_then_auto_push_is_not_changed(
+def test_set_auto_push_on_remote_repo_if_not_remote_then_auto_push_is_not_changed(
     tmp_local_empty_git_repo,
 ):
     assert decorated_write_func(spam=37, repo=tmp_local_empty_git_repo, auto_push=True)[
@@ -176,40 +176,13 @@ def test_auto_push_on_remote_repo_if_not_remote_then_auto_push_is_not_changed(
 
 
 @skip_for_windows_py_lt_3_9
-def test_auto_push_on_remote_repo_if_remote_then_auto_push_is_set_to_true():
+def test_set_auto_push_on_remote_repo_if_remote_then_auto_push_is_set_to_true():
     assert decorated_write_func(
         spam=37, repo=tests.resources.SAMPLE_HTTP_REMOTE_REPO, auto_push=True
     )[0]
     assert decorated_write_func(
         spam=37, repo=tests.resources.SAMPLE_HTTP_REMOTE_REPO, auto_push=False
     )[0]
-
-
-def test_auto_push_on_remote_repo_if_not_remote_then_repo_is_not_cloned(
-    tmp_local_empty_git_repo,
-):
-    assert (
-        decorated_write_func(spam=37, repo=tmp_local_empty_git_repo, auto_push=True)[1]
-        == tmp_local_empty_git_repo
-    )
-    assert (
-        decorated_write_func(spam=37, repo=tmp_local_empty_git_repo, auto_push=False)[1]
-        == tmp_local_empty_git_repo
-    )
-
-
-@skip_for_windows_py_lt_3_9
-def test_auto_push_on_remote_repo_if_remote_then_repo_is_cloned(
-    tmp_local_empty_git_repo,
-):
-    with patch("gto.git_utils.git_clone") as mocked_git_clone:
-        mocked_git_clone.side_effect = git_clone
-        local_repo = decorated_write_func(
-            repo=tests.resources.SAMPLE_HTTP_REMOTE_REPO, spam=0, auto_push=False
-        )[1]
-        mocked_git_clone.assert_called_once_with(
-            repo=tests.resources.SAMPLE_HTTP_REMOTE_REPO, dir=local_repo
-        )
 
 
 @skip_for_windows_py_lt_3_9
@@ -518,7 +491,7 @@ def test_git_push_if_called_then_corresponding_gitpython_functions_are_called(
     MockedRepo.return_value.git.push.assert_called_once_with()
 
 
-@auto_push_on_remote_repo
+@set_auto_push_on_remote_repo
 def decorated_write_func(
     spam: int, repo: Union[Repo, str], auto_push: bool
 ):  # pylint: disable=unused-argument

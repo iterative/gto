@@ -24,9 +24,9 @@ from gto.constants import (
 from gto.exceptions import NoRepo, NotImplementedInGTO, WrongArgs
 from gto.ext import EnrichmentInfo
 from gto.git_utils import (
-    auto_push_on_remote_repo,
     clone_on_remote_repo,
     commit_produced_changes_on_auto_commit,
+    set_auto_push_on_remote_repo,
 )
 from gto.index import (
     EnrichmentManager,
@@ -104,7 +104,8 @@ def remove(
     return init_index_manager(path=repo).remove(name)
 
 
-@auto_push_on_remote_repo
+@set_auto_push_on_remote_repo
+@clone_on_remote_repo
 def register(
     repo: Union[str, Repo],
     name: str,
@@ -139,7 +140,8 @@ def register(
     )
 
 
-@auto_push_on_remote_repo
+@set_auto_push_on_remote_repo
+@clone_on_remote_repo
 def assign(
     repo: Union[str, Repo],
     name: str,
@@ -174,7 +176,8 @@ def assign(
     )
 
 
-@auto_push_on_remote_repo
+@set_auto_push_on_remote_repo
+@clone_on_remote_repo
 def unassign(
     repo: Union[str, Repo],
     name: str,
@@ -206,7 +209,8 @@ def unassign(
     )
 
 
-@auto_push_on_remote_repo
+@set_auto_push_on_remote_repo
+@clone_on_remote_repo
 def deregister(
     repo: Union[str, Repo],
     name: str,
@@ -236,7 +240,8 @@ def deregister(
     )
 
 
-@auto_push_on_remote_repo
+@set_auto_push_on_remote_repo
+@clone_on_remote_repo
 def deprecate(
     repo: Union[str, Repo],
     name: str,
