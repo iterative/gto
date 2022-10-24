@@ -124,7 +124,14 @@ def push_on_auto_push(f: Callable):
             kwargs["auto_commit"] = True
             result = f(**kwargs)
             if "repo" in kwargs:
-                git_push(repo_path=kwargs["repo"])
+                try:
+                    git_push(repo_path=kwargs["repo"])
+                except Exception as e:
+                    raise GTOException(  # pylint: disable=raise-missing-from
+                        "It was not possible to run `git push`. "
+                        "The detailed error message was:\n"
+                        f"{str(e)}"
+                    )
             else:
                 raise ValueError(
                     "Function decorated with push_on_auto_push was called with "

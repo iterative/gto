@@ -497,7 +497,7 @@ def test_git_push_if_called_then_corresponding_gitpython_functions_are_called(
 def test_push_on_auto_push_if_auto_push_and_repo_not_provided_then_raise_exception(
     mocked_f_decorated_with_push_on_auto_push,
 ):
-    f, _, _, _ = mocked_f_decorated_with_push_on_auto_push
+    f, _, _, _, _ = mocked_f_decorated_with_push_on_auto_push
 
     with pytest.raises(ValueError):
         f(auto_push=True)
@@ -506,7 +506,7 @@ def test_push_on_auto_push_if_auto_push_and_repo_not_provided_then_raise_excepti
 def test_push_on_auto_push_if_auto_push_then_set_auto_commit_to_true(
     mocked_f_decorated_with_push_on_auto_push,
 ):
-    f, f_spy, repo_path, _ = mocked_f_decorated_with_push_on_auto_push
+    f, f_spy, repo_path, _, _ = mocked_f_decorated_with_push_on_auto_push
 
     result = f(repo=repo_path, auto_commit=False, auto_push=True)
 
@@ -517,7 +517,7 @@ def test_push_on_auto_push_if_auto_push_then_set_auto_commit_to_true(
 def test_push_on_auto_push_if_auto_push_false_then_git_push_is_not_called(
     mocked_f_decorated_with_push_on_auto_push,
 ):
-    f, f_spy, _, mock_manager = mocked_f_decorated_with_push_on_auto_push
+    f, f_spy, _, _, mock_manager = mocked_f_decorated_with_push_on_auto_push
 
     result = f(auto_push=False)
 
@@ -531,7 +531,7 @@ def test_push_on_auto_push_if_auto_push_false_then_git_push_is_not_called(
 def test_push_on_auto_push_if_auto_push_true_then_git_push_is_called_after_f(
     mocked_f_decorated_with_push_on_auto_push,
 ):
-    f, f_spy, repo_path, mock_manager = mocked_f_decorated_with_push_on_auto_push
+    f, f_spy, repo_path, _, mock_manager = mocked_f_decorated_with_push_on_auto_push
 
     result = f(repo=repo_path, auto_push=True)
 
@@ -543,6 +543,26 @@ def test_push_on_auto_push_if_auto_push_true_then_git_push_is_called_after_f(
     ]
     assert mock_manager.mock_calls == expected_calls
     assert result == f_spy.return_value
+
+
+def test_push_on_auto_push_if_git_pull_fails_then_raise_gto_exception(
+    mocked_f_decorated_with_push_on_auto_push,
+):
+    (
+        f,
+        _,
+        repo_path,
+        mocked_git_push,
+        _,
+    ) = mocked_f_decorated_with_push_on_auto_push
+    git_push_error_message = "This was the mistake..."
+    mocked_git_push.side_effect = Exception(git_push_error_message)
+
+    with pytest.raises(GTOException) as e:
+        f(repo=repo_path, auto_push=True)
+
+    assert "It was not possible to run `git push`" in e.value.msg
+    assert git_push_error_message in e.value.msg
 
 
 @set_auto_push_on_remote_repo
@@ -629,7 +649,7 @@ def mocked_f_decorated_with_commit_produced_changes_on_auto_commit() -> Tuple[
 
 @pytest.fixture
 def mocked_f_decorated_with_push_on_auto_push() -> Tuple[
-    Callable, MagicMock, str, MagicMock
+    Callable, MagicMock, str, MagicMock, MagicMock
 ]:
     repo_path = "my/repo"
     f_spy = MagicMock()
@@ -643,7 +663,7 @@ def mocked_f_decorated_with_push_on_auto_push() -> Tuple[
         mock_manager.attach_mock(f_spy, "spy")
         mock_manager.attach_mock(mocked_git_push, "git_push")
 
-        yield f, f_spy, repo_path, mock_manager
+        yield f, f_spy, repo_path, mocked_git_push, mock_manager
 
 
 def change_tracked_file(repo_path: str) -> Tuple[Path, str]:
