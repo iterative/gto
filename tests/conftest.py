@@ -1,4 +1,5 @@
 import os
+import sys
 from time import sleep
 from typing import Callable, Tuple
 
@@ -23,6 +24,11 @@ class Runner:
 @pytest.fixture
 def runner() -> Runner:
     return Runner()
+
+
+@pytest.fixture(autouse=True)
+def set_recursion_limit() -> None:
+    sys.setrecursionlimit(2000)
 
 
 @pytest.fixture

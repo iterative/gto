@@ -19,6 +19,7 @@ from gto.commit_message_generator import (
     generate_remove_commit_message,
 )
 from gto.exceptions import PathIsUsed, WrongArgs
+from gto.git_utils import git_clone
 from gto.tag import find
 from gto.versions import SemVer
 from tests.skip_presets import skip_for_windows_py_lt_3_9
@@ -666,4 +667,110 @@ def test_if_remove_with_auto_commit_then_invoke_stash_and_commit(
     )
     mocked_git_add_and_commit_all_changes.assert_called_once_with(
         repo_path=repo.working_dir, message=generate_remove_commit_message(name=name)
+    )
+
+
+def test_if_annotate_with_auto_push_then_invoke_commit_and_push(init_showcase_semver):
+    repo, write_file = init_showcase_semver
+    name, type, path, must_exist = "new-artifact", "new-type", "new/path", False
+    repo.index.commit(message="first commit")
+
+    with patch("gto.git_utils.stashed_changes") as mocked_stashed_changes:
+        mocked_stashed_changes.return_value.__enter__.return_value = [], []
+        with patch(
+            "gto.git_utils.git_add_and_commit_all_changes"
+        ) as mocked_git_add_and_commit_all_changes:
+            with patch("gto.git_utils.git_push") as mocked_git_push:
+                gto.api.annotate(
+                    repo.working_dir,
+                    name,
+                    type=type,
+                    path=path,
+                    must_exist=must_exist,
+                    auto_push=True,
+                )
+
+    mocked_stashed_changes.assert_called_once_with(
+        repo_path=repo.working_dir, include_untracked=True
+    )
+    mocked_git_add_and_commit_all_changes.assert_called_once_with(
+        repo_path=repo.working_dir,
+        message=generate_annotate_commit_message(name=name, type=type, path=path),
+    )
+    mocked_git_push.assert_called_once_with(repo_path=repo.working_dir)
+
+
+def test_if_remove_with_auto_push_then_invoke_commit_and_push(
+    init_showcase_semver,
+):
+    repo, write_file = init_showcase_semver
+    name, type, path, must_exist = "new-artifact", "new-type", "new/path", False
+    repo.index.commit(message="first commit")
+    gto.api.annotate(
+        repo.working_dir,
+        name,
+        type=type,
+        path=path,
+        must_exist=must_exist,
+        auto_commit=True,
+    )
+
+    with patch("gto.git_utils.stashed_changes") as mocked_stashed_changes:
+        mocked_stashed_changes.return_value.__enter__.return_value = [], []
+        with patch(
+            "gto.git_utils.git_add_and_commit_all_changes"
+        ) as mocked_git_add_and_commit_all_changes:
+            with patch("gto.git_utils.git_push") as mocked_git_push:
+                gto.api.remove(repo=repo.working_dir, name=name, auto_push=True)
+
+    mocked_stashed_changes.assert_called_once_with(
+        repo_path=repo.working_dir, include_untracked=True
+    )
+    mocked_git_add_and_commit_all_changes.assert_called_once_with(
+        repo_path=repo.working_dir, message=generate_remove_commit_message(name=name)
+    )
+    mocked_git_push.assert_called_once_with(repo_path=repo.working_dir)
+
+
+@skip_for_windows_py_lt_3_9
+def test_if_annotate_with_remote_repo_then_clone_and_push():
+    with patch("gto.git_utils.git_push") as mocked_git_push:
+        with patch("gto.git_utils.git_clone") as mocked_git_clone:
+            mocked_git_clone.side_effect = git_clone
+            with patch("gto.git_utils.TemporaryDirectory") as MockedTemporaryDirectory:
+                MockedTemporaryDirectory.return_value = (
+                    TemporaryDirectory()  # pylint: disable=consider-using-with
+                )
+                gto.api.annotate(
+                    repo=tests.resources.SAMPLE_REMOTE_REPO_URL, name="test-model"
+                )
+
+    mocked_git_push.assert_called_once_with(
+        repo_path=MockedTemporaryDirectory.return_value.name
+    )
+    mocked_git_clone.assert_called_once_with(
+        repo=tests.resources.SAMPLE_REMOTE_REPO_URL,
+        dir=MockedTemporaryDirectory.return_value.name,
+    )
+
+
+@skip_for_windows_py_lt_3_9
+def test_if_remove_with_remote_repo_then_clone_and_push():
+    with patch("gto.git_utils.git_push") as mocked_git_push:
+        with patch("gto.git_utils.git_clone") as mocked_git_clone:
+            mocked_git_clone.side_effect = git_clone
+            with patch("gto.git_utils.TemporaryDirectory") as MockedTemporaryDirectory:
+                MockedTemporaryDirectory.return_value = (
+                    TemporaryDirectory()  # pylint: disable=consider-using-with
+                )
+                gto.api.remove(
+                    repo=tests.resources.SAMPLE_REMOTE_REPO_URL, name="segment"
+                )
+
+    mocked_git_push.assert_called_once_with(
+        repo_path=MockedTemporaryDirectory.return_value.name
+    )
+    mocked_git_clone.assert_called_once_with(
+        repo=tests.resources.SAMPLE_REMOTE_REPO_URL,
+        dir=MockedTemporaryDirectory.return_value.name,
     )
