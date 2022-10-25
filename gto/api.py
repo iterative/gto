@@ -25,9 +25,9 @@ from gto.exceptions import NoRepo, NotImplementedInGTO, WrongArgs
 from gto.ext import EnrichmentInfo
 from gto.git_utils import (
     clone_on_remote_repo,
-    commit_produced_changes_on_auto_commit,
-    push_on_auto_push,
-    set_auto_push_on_remote_repo,
+    commit_produced_changes_on_commit,
+    push_on_push,
+    set_push_on_remote_repo,
 )
 from gto.index import (
     EnrichmentManager,
@@ -69,12 +69,10 @@ def get_stages(repo: Union[str, Repo], allowed: bool = False, used: bool = False
 
 
 # TODO: make this work the same as CLI version
-@set_auto_push_on_remote_repo
+@set_push_on_remote_repo
 @clone_on_remote_repo
-@push_on_auto_push
-@commit_produced_changes_on_auto_commit(
-    message_generator=generate_annotate_commit_message
-)
+@push_on_push
+@commit_produced_changes_on_commit(message_generator=generate_annotate_commit_message)
 def annotate(
     repo: Union[str, Repo],
     name: str,
@@ -99,12 +97,10 @@ def annotate(
     )
 
 
-@set_auto_push_on_remote_repo
+@set_push_on_remote_repo
 @clone_on_remote_repo
-@push_on_auto_push
-@commit_produced_changes_on_auto_commit(
-    message_generator=generate_remove_commit_message
-)
+@push_on_push
+@commit_produced_changes_on_commit(message_generator=generate_remove_commit_message)
 def remove(
     repo: Union[str, Repo],
     name: str,
@@ -115,7 +111,7 @@ def remove(
     return init_index_manager(path=repo).remove(name)
 
 
-@set_auto_push_on_remote_repo
+@set_push_on_remote_repo
 @clone_on_remote_repo
 def register(
     repo: Union[str, Repo],
@@ -151,7 +147,7 @@ def register(
     )
 
 
-@set_auto_push_on_remote_repo
+@set_push_on_remote_repo
 @clone_on_remote_repo
 def assign(
     repo: Union[str, Repo],
@@ -187,7 +183,7 @@ def assign(
     )
 
 
-@set_auto_push_on_remote_repo
+@set_push_on_remote_repo
 @clone_on_remote_repo
 def unassign(
     repo: Union[str, Repo],
@@ -220,7 +216,7 @@ def unassign(
     )
 
 
-@set_auto_push_on_remote_repo
+@set_push_on_remote_repo
 @clone_on_remote_repo
 def deregister(
     repo: Union[str, Repo],
@@ -251,7 +247,7 @@ def deregister(
     )
 
 
-@set_auto_push_on_remote_repo
+@set_push_on_remote_repo
 @clone_on_remote_repo
 def deprecate(
     repo: Union[str, Repo],

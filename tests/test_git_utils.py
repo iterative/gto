@@ -10,14 +10,14 @@ import tests.resources
 from gto.exceptions import GTOException
 from gto.git_utils import (
     clone_on_remote_repo,
-    commit_produced_changes_on_auto_commit,
+    commit_produced_changes_on_commit,
     git_add_and_commit_all_changes,
     git_clone,
     git_push,
     git_push_tag,
     is_url_of_remote_repo,
-    push_on_auto_push,
-    set_auto_push_on_remote_repo,
+    push_on_push,
+    set_push_on_remote_repo,
     stashed_changes,
 )
 from tests.skip_presets import (
@@ -444,7 +444,7 @@ def test_commit_produced_changes_on_auto_commit_if_f_changes_tracked_file_alread
     with open(tracked_file, "a", encoding="utf") as f:
         f.write(f" - {SECOND_TEST_FILE_MODIFICATION}")
 
-    @commit_produced_changes_on_auto_commit()
+    @commit_produced_changes_on_commit()
     def f_to_test(repo: str, commit: bool):  # pylint: disable=unused-argument
         with open(tracked_file, "a", encoding="utf") as f:
             f.write(" - change made by f")
@@ -469,7 +469,7 @@ def test_commit_produced_changes_on_auto_commit_if_f_changes_untracked_file_alre
     with open(untracked_file, "w", encoding="utf") as f:
         f.write(f"{FIRST_TEST_FILE_MODIFICATION}")
 
-    @commit_produced_changes_on_auto_commit()
+    @commit_produced_changes_on_commit()
     def f_to_test(repo: str, commit: bool):  # pylint: disable=unused-argument
         with open(untracked_file, "a", encoding="utf") as f:
             f.write(" - change made by f")
@@ -563,7 +563,7 @@ def test_push_on_auto_push_if_git_pull_fails_then_raise_gto_exception(
     assert git_push_error_message in e.value.msg
 
 
-@set_auto_push_on_remote_repo
+@set_push_on_remote_repo
 def decorated_write_func(
     spam: int, repo: Union[Repo, str], push: bool
 ):  # pylint: disable=unused-argument
@@ -617,9 +617,7 @@ def mocked_f_decorated_with_commit_produced_changes_on_auto_commit() -> Tuple[
     def generate_test_commit_message(commit: bool) -> str:
         return f"commit message with argument {commit}"
 
-    @commit_produced_changes_on_auto_commit(
-        message_generator=generate_test_commit_message
-    )
+    @commit_produced_changes_on_commit(message_generator=generate_test_commit_message)
     def f(*args, **kwargs):
         return f_spy(*args, **kwargs)
 
@@ -652,7 +650,7 @@ def mocked_f_decorated_with_push_on_auto_push() -> Tuple[
     repo_path = "my/repo"
     f_spy = MagicMock()
 
-    @push_on_auto_push
+    @push_on_push
     def f(*args, **kwargs):
         return f_spy(*args, **kwargs)
 
