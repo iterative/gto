@@ -367,9 +367,7 @@ def test_if_describe_on_remote_git_repo_then_return_expected_info():
 def test_if_register_with_auto_push_then_invoke_git_push_tag(repo_with_artifact):
     repo, _ = repo_with_artifact
     with patch("gto.registry.git_push_tag") as mocked_git_push_tags:
-        gto.api.register(
-            repo=repo.working_dir, name="model", ref="HEAD", auto_push=True
-        )
+        gto.api.register(repo=repo.working_dir, name="model", ref="HEAD", push=True)
     mocked_git_push_tags.assert_called_once_with(
         repo_path=Path(repo.working_dir).as_posix(),
         tag_name="model@v0.0.1",
@@ -383,7 +381,7 @@ def test_if_assign_with_auto_push_then_invoke_git_push_tag_2_times_for_registrat
     repo, _ = repo_with_artifact
     with patch("gto.registry.git_push_tag") as mocked_git_push_tags:
         gto.api.assign(
-            repo.working_dir, name="model", stage="dev", ref="HEAD", auto_push=True
+            repo.working_dir, name="model", stage="dev", ref="HEAD", push=True
         )
     expected_calls = [
         call(
@@ -402,16 +400,14 @@ def test_if_assign_with_auto_push_then_invoke_git_push_tag_2_times_for_registrat
 
 def test_if_unassign_with_auto_push_then_invoke_git_push_tag(repo_with_artifact):
     repo, _ = repo_with_artifact
-    gto.api.assign(
-        repo.working_dir, name="model", stage="dev", ref="HEAD", auto_push=False
-    )
+    gto.api.assign(repo.working_dir, name="model", stage="dev", ref="HEAD", push=False)
     with patch("gto.registry.git_push_tag") as mocked_git_push_tags:
         gto.api.unassign(
             repo.working_dir,
             name="model",
             stage="dev",
             version="v0.0.1",
-            auto_push=True,
+            push=True,
         )
     mocked_git_push_tags.assert_called_once_with(
         repo_path=Path(repo.working_dir).as_posix(),
@@ -424,9 +420,7 @@ def test_if_unassign_with_delete_and_auto_push_then_invoke_git_push_tag(
     repo_with_artifact,
 ):
     repo, _ = repo_with_artifact
-    gto.api.assign(
-        repo.working_dir, name="model", stage="dev", ref="HEAD", auto_push=False
-    )
+    gto.api.assign(repo.working_dir, name="model", stage="dev", ref="HEAD", push=False)
     with patch("gto.registry.git_push_tag") as mocked_git_push_tags:
         gto.api.unassign(
             repo.working_dir,
@@ -434,7 +428,7 @@ def test_if_unassign_with_delete_and_auto_push_then_invoke_git_push_tag(
             stage="dev",
             version="v0.0.1",
             delete=True,
-            auto_push=True,
+            push=True,
         )
     mocked_git_push_tags.assert_called_once_with(
         repo_path=Path(repo.working_dir).as_posix(), tag_name="model#dev#1", delete=True
@@ -443,11 +437,9 @@ def test_if_unassign_with_delete_and_auto_push_then_invoke_git_push_tag(
 
 def test_if_deregister_with_auto_push_then_invoke_git_push_tag(repo_with_artifact):
     repo, _ = repo_with_artifact
-    gto.api.register(repo.working_dir, name="model", ref="HEAD", auto_push=False)
+    gto.api.register(repo.working_dir, name="model", ref="HEAD", push=False)
     with patch("gto.registry.git_push_tag") as mocked_git_push_tags:
-        gto.api.deregister(
-            repo.working_dir, name="model", version="v0.0.1", auto_push=True
-        )
+        gto.api.deregister(repo.working_dir, name="model", version="v0.0.1", push=True)
     mocked_git_push_tags.assert_called_once_with(
         repo_path=Path(repo.working_dir).as_posix(),
         tag_name="model@v0.0.1!",
@@ -459,13 +451,13 @@ def test_if_deregister_with_delete_and_auto_push_then_invoke_git_push_tag(
     repo_with_artifact,
 ):
     repo, _ = repo_with_artifact
-    gto.api.register(repo.working_dir, name="model", ref="HEAD", auto_push=False)
+    gto.api.register(repo.working_dir, name="model", ref="HEAD", push=False)
     with patch("gto.registry.git_push_tag") as mocked_git_push_tags:
         gto.api.deregister(
             repo.working_dir,
             name="model",
             version="v0.0.1",
-            auto_push=True,
+            push=True,
             delete=True,
         )
     mocked_git_push_tags.assert_called_once_with(
@@ -477,9 +469,9 @@ def test_if_deregister_with_delete_and_auto_push_then_invoke_git_push_tag(
 
 def test_if_deprecate_with_auto_push_then_invoke_git_push_tag(repo_with_artifact):
     repo, _ = repo_with_artifact
-    gto.api.register(repo.working_dir, name="model", ref="HEAD", auto_push=False)
+    gto.api.register(repo.working_dir, name="model", ref="HEAD", push=False)
     with patch("gto.registry.git_push_tag") as mocked_git_push_tags:
-        gto.api.deprecate(repo.working_dir, name="model", auto_push=True)
+        gto.api.deprecate(repo.working_dir, name="model", push=True)
     mocked_git_push_tags.assert_called_once_with(
         repo_path=Path(repo.working_dir).as_posix(),
         tag_name="model@deprecated",
@@ -491,9 +483,9 @@ def test_if_deprecate_with_delete_and_auto_push_then_invoke_git_push_tag(
     repo_with_artifact,
 ):
     repo, _ = repo_with_artifact
-    gto.api.register(repo.working_dir, name="model", ref="HEAD", auto_push=False)
+    gto.api.register(repo.working_dir, name="model", ref="HEAD", push=False)
     with patch("gto.registry.git_push_tag") as mocked_git_push_tags:
-        gto.api.deprecate(repo.working_dir, name="model", auto_push=True, delete=True)
+        gto.api.deprecate(repo.working_dir, name="model", push=True, delete=True)
     mocked_git_push_tags.assert_called_once_with(
         repo_path=Path(repo.working_dir).as_posix(),
         tag_name="model@v0.0.1",
@@ -628,7 +620,7 @@ def test_if_annotate_with_auto_commit_then_invoke_stash_and_commit(
                 type=type,
                 path=path,
                 must_exist=must_exist,
-                auto_commit=True,
+                commit=True,
             )
 
     mocked_stashed_changes.assert_called_once_with(
@@ -652,7 +644,7 @@ def test_if_remove_with_auto_commit_then_invoke_stash_and_commit(
         type=type,
         path=path,
         must_exist=must_exist,
-        auto_commit=True,
+        commit=True,
     )
 
     with patch("gto.git_utils.stashed_changes") as mocked_stashed_changes:
@@ -660,7 +652,7 @@ def test_if_remove_with_auto_commit_then_invoke_stash_and_commit(
         with patch(
             "gto.git_utils.git_add_and_commit_all_changes"
         ) as mocked_git_add_and_commit_all_changes:
-            gto.api.remove(repo=repo.working_dir, name=name, auto_commit=True)
+            gto.api.remove(repo=repo.working_dir, name=name, commit=True)
 
     mocked_stashed_changes.assert_called_once_with(
         repo_path=repo.working_dir, include_untracked=True
@@ -687,7 +679,7 @@ def test_if_annotate_with_auto_push_then_invoke_commit_and_push(init_showcase_se
                     type=type,
                     path=path,
                     must_exist=must_exist,
-                    auto_push=True,
+                    push=True,
                 )
 
     mocked_stashed_changes.assert_called_once_with(
@@ -712,7 +704,7 @@ def test_if_remove_with_auto_push_then_invoke_commit_and_push(
         type=type,
         path=path,
         must_exist=must_exist,
-        auto_commit=True,
+        commit=True,
     )
 
     with patch("gto.git_utils.stashed_changes") as mocked_stashed_changes:
@@ -721,7 +713,7 @@ def test_if_remove_with_auto_push_then_invoke_commit_and_push(
             "gto.git_utils.git_add_and_commit_all_changes"
         ) as mocked_git_add_and_commit_all_changes:
             with patch("gto.git_utils.git_push") as mocked_git_push:
-                gto.api.remove(repo=repo.working_dir, name=name, auto_push=True)
+                gto.api.remove(repo=repo.working_dir, name=name, push=True)
 
     mocked_stashed_changes.assert_called_once_with(
         repo_path=repo.working_dir, include_untracked=True

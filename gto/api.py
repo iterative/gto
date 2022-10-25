@@ -25,9 +25,9 @@ from gto.exceptions import NoRepo, NotImplementedInGTO, WrongArgs
 from gto.ext import EnrichmentInfo
 from gto.git_utils import (
     clone_on_remote_repo,
-    commit_produced_changes_on_auto_commit,
-    push_on_auto_push,
-    set_auto_push_on_remote_repo,
+    commit_produced_changes_on_commit,
+    push_on_push,
+    set_push_on_remote_repo,
 )
 from gto.index import (
     EnrichmentManager,
@@ -69,12 +69,10 @@ def get_stages(repo: Union[str, Repo], allowed: bool = False, used: bool = False
 
 
 # TODO: make this work the same as CLI version
-@set_auto_push_on_remote_repo
+@set_push_on_remote_repo
 @clone_on_remote_repo
-@push_on_auto_push
-@commit_produced_changes_on_auto_commit(
-    message_generator=generate_annotate_commit_message
-)
+@push_on_push
+@commit_produced_changes_on_commit(message_generator=generate_annotate_commit_message)
 def annotate(
     repo: Union[str, Repo],
     name: str,
@@ -83,8 +81,8 @@ def annotate(
     must_exist: bool = False,
     labels: List[str] = None,
     description: str = "",
-    auto_commit: bool = False,  # pylint: disable=unused-argument
-    auto_push: bool = False,  # pylint: disable=unused-argument
+    commit: bool = False,  # pylint: disable=unused-argument
+    push: bool = False,  # pylint: disable=unused-argument
     # update: bool = False,
 ):
     """Add an artifact to the Index"""
@@ -99,23 +97,21 @@ def annotate(
     )
 
 
-@set_auto_push_on_remote_repo
+@set_push_on_remote_repo
 @clone_on_remote_repo
-@push_on_auto_push
-@commit_produced_changes_on_auto_commit(
-    message_generator=generate_remove_commit_message
-)
+@push_on_push
+@commit_produced_changes_on_commit(message_generator=generate_remove_commit_message)
 def remove(
     repo: Union[str, Repo],
     name: str,
-    auto_commit: bool = False,
-    auto_push: bool = False,
+    commit: bool = False,
+    push: bool = False,
 ):  # pylint: disable=unused-argument
     """Remove an artifact from the Index"""
     return init_index_manager(path=repo).remove(name)
 
 
-@set_auto_push_on_remote_repo
+@set_push_on_remote_repo
 @clone_on_remote_repo
 def register(
     repo: Union[str, Repo],
@@ -128,7 +124,7 @@ def register(
     bump_major: bool = False,
     bump_minor: bool = False,
     bump_patch: bool = False,
-    auto_push: bool = False,
+    push: bool = False,
     stdout: bool = False,
     author: Optional[str] = None,
     author_email: Optional[str] = None,
@@ -144,14 +140,14 @@ def register(
         bump_major=bump_major,
         bump_minor=bump_minor,
         bump_patch=bump_patch,
-        auto_push=auto_push,
+        push=push,
         stdout=stdout,
         author=author,
         author_email=author_email,
     )
 
 
-@set_auto_push_on_remote_repo
+@set_push_on_remote_repo
 @clone_on_remote_repo
 def assign(
     repo: Union[str, Repo],
@@ -163,7 +159,7 @@ def assign(
     message: Optional[str] = None,
     simple: bool = False,
     force: bool = False,
-    auto_push: bool = False,
+    push: bool = False,
     skip_registration: bool = False,
     stdout: bool = False,
     author: Optional[str] = None,
@@ -179,7 +175,7 @@ def assign(
         message=message,
         simple=simple,
         force=force,
-        auto_push=auto_push,
+        push=push,
         skip_registration=skip_registration,
         stdout=stdout,
         author=author,
@@ -187,7 +183,7 @@ def assign(
     )
 
 
-@set_auto_push_on_remote_repo
+@set_push_on_remote_repo
 @clone_on_remote_repo
 def unassign(
     repo: Union[str, Repo],
@@ -200,7 +196,7 @@ def unassign(
     simple: Optional[bool] = None,
     force: bool = False,
     delete: bool = False,
-    auto_push: bool = False,
+    push: bool = False,
     author: Optional[str] = None,
     author_email: Optional[str] = None,
 ):
@@ -214,13 +210,13 @@ def unassign(
         simple=simple if simple is not None else False,
         force=force,
         delete=delete,
-        auto_push=auto_push,
+        push=push,
         author=author,
         author_email=author_email,
     )
 
 
-@set_auto_push_on_remote_repo
+@set_push_on_remote_repo
 @clone_on_remote_repo
 def deregister(
     repo: Union[str, Repo],
@@ -232,7 +228,7 @@ def deregister(
     simple: Optional[bool] = None,
     force: bool = False,
     delete: bool = False,
-    auto_push: bool = False,
+    push: bool = False,
     author: Optional[str] = None,
     author_email: Optional[str] = None,
 ):
@@ -245,13 +241,13 @@ def deregister(
         simple=simple if simple is not None else True,
         force=force,
         delete=delete,
-        auto_push=auto_push,
+        push=push,
         author=author,
         author_email=author_email,
     )
 
 
-@set_auto_push_on_remote_repo
+@set_push_on_remote_repo
 @clone_on_remote_repo
 def deprecate(
     repo: Union[str, Repo],
@@ -261,7 +257,7 @@ def deprecate(
     simple: Optional[bool] = None,
     force: bool = False,
     delete: bool = False,
-    auto_push: bool = False,
+    push: bool = False,
     author: Optional[str] = None,
     author_email: Optional[str] = None,
 ):
@@ -272,7 +268,7 @@ def deprecate(
         simple=simple if simple is not None else True,
         force=force,
         delete=delete,
-        auto_push=auto_push,
+        push=push,
         author=author,
         author_email=author_email,
     )

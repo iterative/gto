@@ -10,14 +10,14 @@ import tests.resources
 from gto.exceptions import GTOException
 from gto.git_utils import (
     clone_on_remote_repo,
-    commit_produced_changes_on_auto_commit,
+    commit_produced_changes_on_commit,
     git_add_and_commit_all_changes,
     git_clone,
     git_push,
     git_push_tag,
     is_url_of_remote_repo,
-    push_on_auto_push,
-    set_auto_push_on_remote_repo,
+    push_on_push,
+    set_push_on_remote_repo,
     stashed_changes,
 )
 from tests.skip_presets import (
@@ -168,21 +168,19 @@ def test_git_push_tag_if_error_then_exit_with_code_1(
 def test_set_auto_push_on_remote_repo_if_not_remote_then_auto_push_is_not_changed(
     tmp_local_empty_git_repo,
 ):
-    assert decorated_write_func(spam=37, repo=tmp_local_empty_git_repo, auto_push=True)[
+    assert decorated_write_func(spam=37, repo=tmp_local_empty_git_repo, push=True)[0]
+    assert not decorated_write_func(spam=37, repo=tmp_local_empty_git_repo, push=False)[
         0
     ]
-    assert not decorated_write_func(
-        spam=37, repo=tmp_local_empty_git_repo, auto_push=False
-    )[0]
 
 
 @skip_for_windows_py_lt_3_9
 def test_set_auto_push_on_remote_repo_if_remote_then_auto_push_is_set_to_true():
     assert decorated_write_func(
-        spam=37, repo=tests.resources.SAMPLE_HTTP_REMOTE_REPO, auto_push=True
+        spam=37, repo=tests.resources.SAMPLE_HTTP_REMOTE_REPO, push=True
     )[0]
     assert decorated_write_func(
-        spam=37, repo=tests.resources.SAMPLE_HTTP_REMOTE_REPO, auto_push=False
+        spam=37, repo=tests.resources.SAMPLE_HTTP_REMOTE_REPO, push=False
     )[0]
 
 
@@ -380,11 +378,11 @@ def test_commit_produced_changes_on_auto_commit_if_auto_commit_is_false_then_don
         _,
     ) = mocked_f_decorated_with_commit_produced_changes_on_auto_commit
 
-    result = f(auto_commit=False)
+    result = f(commit=False)
 
     mocked_stashed_changes.assert_not_called()
     mocked_git_add_and_commit_all_changes.assert_not_called()
-    f_spy.assert_called_once_with(auto_commit=False)
+    f_spy.assert_called_once_with(commit=False)
     assert result == f_spy.return_value
 
 
@@ -401,7 +399,7 @@ def test_commit_produced_changes_on_auto_commit_if_auto_commit_but_no_repo_then_
     ) = mocked_f_decorated_with_commit_produced_changes_on_auto_commit
 
     with pytest.raises(ValueError):
-        f(auto_commit=True)
+        f(commit=True)
 
     mocked_stashed_changes.assert_not_called()
     mocked_git_add_and_commit_all_changes.assert_not_called()
@@ -421,14 +419,14 @@ def test_commit_produced_changes_on_auto_commit_if_auto_commit_is_true_then_stas
     ) = mocked_f_decorated_with_commit_produced_changes_on_auto_commit
     repo_path = "a/repo/path"
 
-    result = f(repo=repo_path, auto_commit=True)
+    result = f(repo=repo_path, commit=True)
 
     expected_calls = [
         call.stashed_changes(repo_path=repo_path, include_untracked=True),
         call.stashed_changes().__enter__(),
-        call.spy(repo=repo_path, auto_commit=True),
+        call.spy(repo=repo_path, commit=True),
         call.git_add_and_commit_all_changes(
-            repo_path=repo_path, message=generate_test_commit_message(auto_commit=True)
+            repo_path=repo_path, message=generate_test_commit_message(commit=True)
         ),
         call.stashed_changes().__exit__(None, None, None),
     ]
@@ -446,13 +444,13 @@ def test_commit_produced_changes_on_auto_commit_if_f_changes_tracked_file_alread
     with open(tracked_file, "a", encoding="utf") as f:
         f.write(f" - {SECOND_TEST_FILE_MODIFICATION}")
 
-    @commit_produced_changes_on_auto_commit()
-    def f_to_test(repo: str, auto_commit: bool):  # pylint: disable=unused-argument
+    @commit_produced_changes_on_commit()
+    def f_to_test(repo: str, commit: bool):  # pylint: disable=unused-argument
         with open(tracked_file, "a", encoding="utf") as f:
             f.write(" - change made by f")
 
     with pytest.raises(GTOException):
-        f_to_test(repo=repo, auto_commit=True)
+        f_to_test(repo=repo, commit=True)
 
     with open(tracked_file, "r", encoding="utf") as f:
         assert (
@@ -471,13 +469,13 @@ def test_commit_produced_changes_on_auto_commit_if_f_changes_untracked_file_alre
     with open(untracked_file, "w", encoding="utf") as f:
         f.write(f"{FIRST_TEST_FILE_MODIFICATION}")
 
-    @commit_produced_changes_on_auto_commit()
-    def f_to_test(repo: str, auto_commit: bool):  # pylint: disable=unused-argument
+    @commit_produced_changes_on_commit()
+    def f_to_test(repo: str, commit: bool):  # pylint: disable=unused-argument
         with open(untracked_file, "a", encoding="utf") as f:
             f.write(" - change made by f")
 
     with pytest.raises(GTOException):
-        f_to_test(repo=repo, auto_commit=True)
+        f_to_test(repo=repo, commit=True)
 
     with open(untracked_file, "r", encoding="utf") as f:
         assert f.read() == f"{FIRST_TEST_FILE_MODIFICATION}"
@@ -500,7 +498,7 @@ def test_push_on_auto_push_if_auto_push_and_repo_not_provided_then_raise_excepti
     f, _, _, _, _ = mocked_f_decorated_with_push_on_auto_push
 
     with pytest.raises(ValueError):
-        f(auto_push=True)
+        f(push=True)
 
 
 def test_push_on_auto_push_if_auto_push_then_set_auto_commit_to_true(
@@ -508,9 +506,9 @@ def test_push_on_auto_push_if_auto_push_then_set_auto_commit_to_true(
 ):
     f, f_spy, repo_path, _, _ = mocked_f_decorated_with_push_on_auto_push
 
-    result = f(repo=repo_path, auto_commit=False, auto_push=True)
+    result = f(repo=repo_path, commit=False, push=True)
 
-    f_spy.assert_called_once_with(repo=repo_path, auto_commit=True, auto_push=True)
+    f_spy.assert_called_once_with(repo=repo_path, commit=True, push=True)
     assert result == f_spy.return_value
 
 
@@ -519,10 +517,10 @@ def test_push_on_auto_push_if_auto_push_false_then_git_push_is_not_called(
 ):
     f, f_spy, _, _, mock_manager = mocked_f_decorated_with_push_on_auto_push
 
-    result = f(auto_push=False)
+    result = f(push=False)
 
     expected_calls = [
-        call.spy(auto_push=False),
+        call.spy(push=False),
     ]
     assert mock_manager.mock_calls == expected_calls
     assert result == f_spy.return_value
@@ -533,10 +531,10 @@ def test_push_on_auto_push_if_auto_push_true_then_git_push_is_called_after_f(
 ):
     f, f_spy, repo_path, _, mock_manager = mocked_f_decorated_with_push_on_auto_push
 
-    result = f(repo=repo_path, auto_push=True)
+    result = f(repo=repo_path, push=True)
 
     expected_calls = [
-        call.spy(repo=repo_path, auto_commit=True, auto_push=True),
+        call.spy(repo=repo_path, commit=True, push=True),
         call.git_push(
             repo_path=repo_path,
         ),
@@ -559,17 +557,17 @@ def test_push_on_auto_push_if_git_pull_fails_then_raise_gto_exception(
     mocked_git_push.side_effect = Exception(git_push_error_message)
 
     with pytest.raises(GTOException) as e:
-        f(repo=repo_path, auto_push=True)
+        f(repo=repo_path, push=True)
 
     assert "It was not possible to run `git push`" in e.value.msg
     assert git_push_error_message in e.value.msg
 
 
-@set_auto_push_on_remote_repo
+@set_push_on_remote_repo
 def decorated_write_func(
-    spam: int, repo: Union[Repo, str], auto_push: bool
+    spam: int, repo: Union[Repo, str], push: bool
 ):  # pylint: disable=unused-argument
-    return auto_push, repo
+    return push, repo
 
 
 @clone_on_remote_repo
@@ -616,12 +614,10 @@ def mocked_f_decorated_with_commit_produced_changes_on_auto_commit() -> Tuple[
     f_spy = MagicMock()
     f_spy.return_value = MagicMock()
 
-    def generate_test_commit_message(auto_commit: bool) -> str:
-        return f"commit message with argument {auto_commit}"
+    def generate_test_commit_message(commit: bool) -> str:
+        return f"commit message with argument {commit}"
 
-    @commit_produced_changes_on_auto_commit(
-        message_generator=generate_test_commit_message
-    )
+    @commit_produced_changes_on_commit(message_generator=generate_test_commit_message)
     def f(*args, **kwargs):
         return f_spy(*args, **kwargs)
 
@@ -654,7 +650,7 @@ def mocked_f_decorated_with_push_on_auto_push() -> Tuple[
     repo_path = "my/repo"
     f_spy = MagicMock()
 
-    @push_on_auto_push
+    @push_on_push
     def f(*args, **kwargs):
         return f_spy(*args, **kwargs)
 

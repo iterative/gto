@@ -359,25 +359,25 @@ option_table = Option(
     help="Print output in table format",
     show_default=True,
 )
-option_auto_push_tag = Option(
+option_push_tag = Option(
     False,
-    "--auto-push",
+    "--push",
     is_flag=True,
     help="Push created tag automatically (experimental)",
 )
 
-option_auto_commit = Option(
+option_commit = Option(
     False,
-    "--auto-commit",
+    "--commit",
     is_flag=True,
     help="Automatically commit changes due to this command (experimental)",
 )
 
-option_auto_push_commit = Option(
+option_push_commit = Option(
     False,
-    "--auto-push",
+    "--push",
     is_flag=True,
-    help="Push created commit automatically (experimental) - will set auto-commit=True",
+    help="Push created commit automatically (experimental) - will set commit=True",
 )
 
 
@@ -486,8 +486,8 @@ def annotate(
     ),
     label: List[str] = Option(None, "--label", help="Labels to add to artifact"),
     description: str = Option("", "-d", "--description", help="Artifact description"),
-    auto_commit: bool = option_auto_commit,
-    auto_push: bool = option_auto_push_commit,
+    commit: bool = option_commit,
+    push: bool = option_push_commit,
     # update: bool = Option(
     #     False, "-u", "--update", is_flag=True, help="Update artifact if it exists"
     # ),
@@ -505,8 +505,8 @@ def annotate(
         must_exist=must_exist,
         labels=label,
         description=description,
-        auto_commit=auto_commit,
-        auto_push=auto_push,
+        commit=commit,
+        push=push,
         # update=update,
     )
 
@@ -515,15 +515,15 @@ def annotate(
 def remove(
     repo: str = option_repo,
     name: str = arg_name,
-    auto_commit: bool = option_auto_commit,
-    auto_push: bool = option_auto_push_commit,
+    commit: bool = option_commit,
+    push: bool = option_push_commit,
 ):
     """Remove the enrichment for given artifact
 
     Examples:
          $ gto remove nn
     """
-    gto.api.remove(repo, name, auto_commit, auto_push)
+    gto.api.remove(repo, name, commit, push)
 
 
 @gto_command(section=CommandGroups.modifying)
@@ -546,7 +546,7 @@ def register(
     bump_patch: bool = Option(
         False, "--bump-patch", is_flag=True, help="Bump patch version"
     ),
-    auto_push: bool = option_auto_push_tag,
+    push: bool = option_push_tag,
 ):
     """Create an artifact version to signify an important, published or released iteration
 
@@ -574,7 +574,7 @@ def register(
         bump_major=bump_major,
         bump_minor=bump_minor,
         bump_patch=bump_patch,
-        auto_push=auto_push,
+        push=push,
         stdout=True,
     )
 
@@ -593,7 +593,7 @@ def assign(
     message: Optional[str] = option_message,
     simple: str = option_simple,
     force: bool = option_force,
-    auto_push: bool = option_auto_push_tag,
+    push: bool = option_push_tag,
     skip_registration: bool = Option(
         False,
         "--sr",
@@ -636,7 +636,7 @@ def assign(
         message=message,
         simple=simple,  # type: ignore
         force=force,
-        auto_push=auto_push,
+        push=push,
         skip_registration=skip_registration,
         stdout=True,
     )
@@ -652,7 +652,7 @@ def deprecate(
     simple: str = option_simple,
     force: bool = option_force,
     delete: bool = option_delete,
-    auto_push: bool = option_auto_push_tag,
+    push: bool = option_push_tag,
 ):
     """Deprecate artifact, deregister a version, or unassign a stage
 
@@ -676,7 +676,7 @@ def deprecate(
             simple=simple,  # type: ignore
             force=force,
             delete=delete,
-            auto_push=auto_push,
+            push=push,
             stdout=True,
         )
     elif version:
@@ -688,7 +688,7 @@ def deprecate(
             simple=simple,  # type: ignore
             force=force,
             delete=delete,
-            auto_push=auto_push,
+            push=push,
             stdout=True,
         )
     else:
@@ -699,7 +699,7 @@ def deprecate(
             simple=simple,  # type: ignore
             force=force,
             delete=delete,
-            auto_push=auto_push,
+            push=push,
             stdout=True,
         )
 
