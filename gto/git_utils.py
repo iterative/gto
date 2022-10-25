@@ -44,7 +44,7 @@ def set_auto_push_on_remote_repo(f: Callable):
         if isinstance(kwargs["repo"], str) and is_url_of_remote_repo(
             repo=kwargs["repo"]
         ):
-            kwargs["auto_push"] = True
+            kwargs["push"] = True
 
         return f(**kwargs)
 
@@ -80,7 +80,7 @@ def commit_produced_changes_on_auto_commit(
         def wrapped_f(*args, **kwargs):
             kwargs = _turn_args_into_kwargs(f, args, kwargs)
 
-            if kwargs.get("auto_commit", False) is True:
+            if kwargs.get("commit", False) is True:
                 if "repo" in kwargs:
                     with stashed_changes(
                         repo_path=kwargs["repo"], include_untracked=True
@@ -103,7 +103,7 @@ def commit_produced_changes_on_auto_commit(
                 else:
                     raise ValueError(
                         "Function decorated with commit_produced_changes_on_auto_commit was called with "
-                        "`auto_commit=True` but `repo` was not provided."
+                        "`commit=True` but `repo` was not provided."
                         "Argument `repo` is necessary."
                     )
             else:
@@ -120,8 +120,8 @@ def push_on_auto_push(f: Callable):
     @wraps(f)
     def wrapped_f(*args, **kwargs):
         kwargs = _turn_args_into_kwargs(f, args, kwargs)
-        if kwargs.get("auto_push", False) is True:
-            kwargs["auto_commit"] = True
+        if kwargs.get("push", False) is True:
+            kwargs["commit"] = True
             result = f(**kwargs)
             if "repo" in kwargs:
                 try:
@@ -135,7 +135,7 @@ def push_on_auto_push(f: Callable):
             else:
                 raise ValueError(
                     "Function decorated with push_on_auto_push was called with "
-                    "`auto_push=True` but `repo` was not provided."
+                    "`push=True` but `repo` was not provided."
                     "Argument `repo` is necessary."
                 )
         else:

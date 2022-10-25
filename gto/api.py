@@ -83,8 +83,8 @@ def annotate(
     must_exist: bool = False,
     labels: List[str] = None,
     description: str = "",
-    auto_commit: bool = False,  # pylint: disable=unused-argument
-    auto_push: bool = False,  # pylint: disable=unused-argument
+    commit: bool = False,  # pylint: disable=unused-argument
+    push: bool = False,  # pylint: disable=unused-argument
     # update: bool = False,
 ):
     """Add an artifact to the Index"""
@@ -108,8 +108,8 @@ def annotate(
 def remove(
     repo: Union[str, Repo],
     name: str,
-    auto_commit: bool = False,
-    auto_push: bool = False,
+    commit: bool = False,
+    push: bool = False,
 ):  # pylint: disable=unused-argument
     """Remove an artifact from the Index"""
     return init_index_manager(path=repo).remove(name)
@@ -128,7 +128,7 @@ def register(
     bump_major: bool = False,
     bump_minor: bool = False,
     bump_patch: bool = False,
-    auto_push: bool = False,
+    push: bool = False,
     stdout: bool = False,
     author: Optional[str] = None,
     author_email: Optional[str] = None,
@@ -144,7 +144,7 @@ def register(
         bump_major=bump_major,
         bump_minor=bump_minor,
         bump_patch=bump_patch,
-        auto_push=auto_push,
+        push=push,
         stdout=stdout,
         author=author,
         author_email=author_email,
@@ -163,7 +163,7 @@ def assign(
     message: Optional[str] = None,
     simple: bool = False,
     force: bool = False,
-    auto_push: bool = False,
+    push: bool = False,
     skip_registration: bool = False,
     stdout: bool = False,
     author: Optional[str] = None,
@@ -179,7 +179,7 @@ def assign(
         message=message,
         simple=simple,
         force=force,
-        auto_push=auto_push,
+        push=push,
         skip_registration=skip_registration,
         stdout=stdout,
         author=author,
@@ -200,7 +200,7 @@ def unassign(
     simple: Optional[bool] = None,
     force: bool = False,
     delete: bool = False,
-    auto_push: bool = False,
+    push: bool = False,
     author: Optional[str] = None,
     author_email: Optional[str] = None,
 ):
@@ -214,7 +214,7 @@ def unassign(
         simple=simple if simple is not None else False,
         force=force,
         delete=delete,
-        auto_push=auto_push,
+        push=push,
         author=author,
         author_email=author_email,
     )
@@ -232,7 +232,7 @@ def deregister(
     simple: Optional[bool] = None,
     force: bool = False,
     delete: bool = False,
-    auto_push: bool = False,
+    push: bool = False,
     author: Optional[str] = None,
     author_email: Optional[str] = None,
 ):
@@ -245,7 +245,7 @@ def deregister(
         simple=simple if simple is not None else True,
         force=force,
         delete=delete,
-        auto_push=auto_push,
+        push=push,
         author=author,
         author_email=author_email,
     )
@@ -261,7 +261,7 @@ def deprecate(
     simple: Optional[bool] = None,
     force: bool = False,
     delete: bool = False,
-    auto_push: bool = False,
+    push: bool = False,
     author: Optional[str] = None,
     author_email: Optional[str] = None,
 ):
@@ -272,7 +272,7 @@ def deprecate(
         simple=simple if simple is not None else True,
         force=force,
         delete=delete,
-        auto_push=auto_push,
+        push=push,
         author=author,
         author_email=author_email,
     )
