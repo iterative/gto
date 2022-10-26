@@ -3,7 +3,7 @@ import logging
 from contextlib import contextmanager
 from functools import wraps
 from tempfile import TemporaryDirectory
-from typing import Callable, Dict, List, Sequence, Tuple
+from typing import Callable, Dict, List, Tuple
 
 import git
 
@@ -12,17 +12,16 @@ from gto.constants import remote_git_repo_regex
 from gto.exceptions import GTOException, WrongArgs
 
 
-def clone(repo_arg: str, controller: Callable, controller_args: Sequence[str]):
+def clone(repo_arg: str, controller: Callable, controller_args: List[str]):
     def wrap(f: Callable):
         @wraps(f)
         def wrapped_f(*args, **kwargs):
             kwargs = _turn_args_into_kwargs(f, args, kwargs)
-
-            if repo_arg not in kwargs:
-                raise ValueError(
-                    f"Function decorated with `@clone(repo={repo_arg})` was called, "
-                    f"but the function does not appear to have the `{repo_arg}` argument."
-                )
+            _check_required_args_are_provided(
+                required_args=[repo_arg] + controller_args,
+                provided_kwargs=kwargs,
+                decorator_name="clone",
+            )
 
             if controller(**{a: kwargs[a] for a in controller_args}):
                 try:
@@ -277,3 +276,14 @@ def _turn_args_into_kwargs(
     }
     kwargs.update(kwargs_complement)
     return kwargs
+
+
+def _check_required_args_are_provided(
+    required_args: List[str], provided_kwargs: dict, decorator_name: str
+):
+    missing_args = set(required_args) - set(provided_kwargs)
+    if len(missing_args) > 0:
+        raise ValueError(
+            f"Function decorated with `@{decorator_name}(...)` was called, "
+            f"but the function does not appear to have the required `{missing_args}` arguments."
+        )
