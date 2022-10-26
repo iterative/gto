@@ -1,19 +1,18 @@
 # pylint: disable=unused-variable, protected-access
 """TODO: add more tests for API"""
+import inspect
 import os
 from contextlib import contextmanager
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Callable, Optional, Tuple
+from typing import Callable, Tuple
 from unittest.mock import call, patch
 
 import git
 import pytest
-from freezegun import freeze_time
 
 import gto
 import tests.resources
-from gto.api import show
 from gto.commit_message_generator import (
     generate_annotate_commit_message,
     generate_remove_commit_message,
@@ -23,10 +22,7 @@ from gto.git_utils import git_clone
 from gto.tag import find
 from gto.versions import SemVer
 from tests.skip_presets import skip_for_windows_py_lt_3_9
-from tests.utils import (
-    check_obj,
-    convert_objects_to_str_in_json_serializable_object,
-)
+from tests.utils import check_obj
 
 
 def test_empty_index(empty_git_repo: Tuple[git.Repo, Callable]):
@@ -306,62 +302,28 @@ def test_is_gto_repo_because_of_artifacts_yaml(empty_git_repo):
     assert gto.api._is_gto_repo(repo)
 
 
-@skip_for_windows_py_lt_3_9
-def test_if_show_on_remote_git_repo_then_return_expected_registry():
-    result = show(repo=tests.resources.SAMPLE_REMOTE_REPO_URL)
-    assert result == tests.resources.get_sample_remote_repo_expected_registry()
-
-
-@skip_for_windows_py_lt_3_9
 @pytest.mark.parametrize(
-    "ref,expected_stage,expected_version,expected_artifact",
+    "cmd_name",
     (
-        ("churn#prod#2", "prod", "v3.0.0", "churn"),
-        ("segment@v0.4.1", None, "v0.4.1", "segment"),
+        "show",
+        "check_ref",
+        "get_stages",
+        "annotate",
+        "remove",
+        "register",
+        "assign",
+        "unassign",
+        "deregister",
+        "deprecate",
+        "describe",
+        "history",
     ),
 )
-def test_if_check_ref_on_remote_git_repo_then_return_expected_reference(
-    ref: str,
-    expected_stage: Optional[str],
-    expected_version: str,
-    expected_artifact: str,
-):
-    result = gto.api.check_ref(repo=tests.resources.SAMPLE_REMOTE_REPO_URL, ref=ref)
-    assert len(result) == 1
-    if expected_stage is not None:
-        assert result[0].stage == expected_stage
-    else:
-        assert hasattr(result[0], "stage") is False
-    assert result[0].version == expected_version
-    assert result[0].artifact == expected_artifact
-
-
-@freeze_time("1996-06-09 00:00:00", tz_offset=0)
-@skip_for_windows_py_lt_3_9
-def test_if_history_on_remote_git_repo_then_return_expected_history():
-    result = gto.api.history(
-        repo=tests.resources.SAMPLE_REMOTE_REPO_URL, artifact="churn"
-    )
-    assert (
-        convert_objects_to_str_in_json_serializable_object(result)
-        == tests.resources.get_sample_remote_repo_expected_history_churn()
-    )
-
-
-@skip_for_windows_py_lt_3_9
-def test_if_stages_on_remote_git_repo_then_return_expected_stages():
-    result = gto.api.get_stages(repo=tests.resources.SAMPLE_REMOTE_REPO_URL)
-    assert result == ["dev", "prod", "staging"]
-
-
-@skip_for_windows_py_lt_3_9
-def test_if_describe_on_remote_git_repo_then_return_expected_info():
-    result = gto.api.describe(repo=tests.resources.SAMPLE_REMOTE_REPO_URL, name="churn")
-    assert result[0].get_object().dict(exclude_defaults=True) == {
-        "type": "model",
-        "path": "models/churn.pkl",
-        "virtual": False,
-    }
+def test_api_cmds_are_decorated_with_clone_and_has_repo_as_arg(cmd_name: str):
+    repo_arg = "repo"
+    cmd = getattr(gto.api, cmd_name)
+    assert f'@clone(repo_arg="{repo_arg}"' in inspect.getsource(cmd)
+    assert repo_arg in inspect.signature(cmd).parameters.keys()
 
 
 def test_if_register_with_auto_push_then_invoke_git_push_tag(repo_with_artifact):

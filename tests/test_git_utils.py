@@ -9,7 +9,7 @@ from git import Repo
 import tests.resources
 from gto.exceptions import GTOException
 from gto.git_utils import (
-    clone_on_remote_repo,
+    clone,
     commit_produced_changes_on_commit,
     git_add_and_commit_all_changes,
     git_clone,
@@ -20,50 +20,93 @@ from gto.git_utils import (
     set_push_on_remote_repo,
     stashed_changes,
 )
+from tests.resources import SAMPLE_HTTP_REMOTE_REPO
 from tests.skip_presets import (
     only_for_windows_py_lt_3_8,
     skip_for_windows_py_lt_3_9,
 )
 
 
-def test_clone_on_remote_repo_if_repo_is_a_meaningless_string_then_leave_it_unchanged():
-    assert_f_called_with_repo_return_repo_itself(repo="meaningless_string")
+@pytest.mark.usefixtures("tmp_local_empty_git_repo")
+class TestClone:
+    MockedClone = Tuple[Callable, MagicMock]
 
+    @staticmethod
+    def test_if_repo_arg_is_not_in_function_signature_then_raise_exception(
+        mocked_clone: MockedClone,
+    ):
+        f, _ = mocked_clone
+        with pytest.raises(ValueError):
+            f()
 
-def test_clone_on_remote_repo_if_repo_is_a_local_git_repo_then_leave_it_unchanged(
-    tmp_local_empty_git_repo,
-):
-    assert_f_called_with_repo_return_repo_itself(repo=tmp_local_empty_git_repo)
+    @staticmethod
+    def test_if_repo_is_a_meaningless_string_then_leave_it_unchanged(
+        mocked_clone: MockedClone,
+    ):
+        f, f_spy = mocked_clone
 
+        repo = "meaningless string"
+        f(repo=repo)
+        f_spy.assert_called_once_with(repo=repo)
 
-def test_clone_on_remote_repo_if_repo_gitpython_object_then_leave_it_unchanged(
-    tmp_local_empty_git_repo,
-):
-    assert_f_called_with_repo_return_repo_itself(
-        repo=Repo(path=tmp_local_empty_git_repo)
-    )
+    @staticmethod
+    def test_if_repo_is_a_local_repo_then_leave_it_unchanged(
+        mocked_clone: MockedClone, tmp_local_empty_git_repo: str
+    ):
+        f, f_spy = mocked_clone
 
+        repo = tmp_local_empty_git_repo
+        f(repo=repo)
+        f_spy.assert_called_once_with(repo=repo)
 
-@skip_for_windows_py_lt_3_9
-def test_clone_on_remote_repo_if_repo_is_remote_url_then_clone_and_set_repo_to_its_local_path():
-    with patch("gto.git_utils.git_clone") as mocked_git_clone:
-        mocked_git_clone.side_effect = git_clone
-        local_repo = decorated_read_func(
-            repo=tests.resources.SAMPLE_HTTP_REMOTE_REPO, spam=0, jam=3
-        )
-        mocked_git_clone.assert_called_once_with(
-            repo=tests.resources.SAMPLE_HTTP_REMOTE_REPO, dir=local_repo
-        )
+    @staticmethod
+    def test_if_repo_is_gitpython_repo_then_leave_it_unchanged(
+        mocked_clone: MockedClone, tmp_local_empty_git_repo: str
+    ):
+        f, f_spy = mocked_clone
 
+        repo = Repo(tmp_local_empty_git_repo)
+        f(repo=repo)
+        f_spy.assert_called_once_with(repo=repo)
 
-@only_for_windows_py_lt_3_8
-def test_if_repo_is_remote_url_and_windows_os_error_then_hint_win_with_py_lt_3_9_may_be_the_cause():
-    with pytest.raises(OSError) as e:
-        decorated_read_func(repo=tests.resources.SAMPLE_HTTP_REMOTE_REPO, spam=0, jam=3)
-    assert e.type in (NotADirectoryError, PermissionError)
-    assert "windows" in str(e)
-    assert "python" in str(e)
-    assert "< 3.9" in str(e)
+    @staticmethod
+    @skip_for_windows_py_lt_3_9
+    def test_if_repo_is_remote_then_clone_in_tmp_dir(mocked_clone: MockedClone):
+        f, f_spy = mocked_clone
+
+        with patch("gto.git_utils.TemporaryDirectory") as MockedTemporaryDirectory:
+            with TemporaryDirectory() as tmp_dir:
+                MockedTemporaryDirectory.return_value.name = tmp_dir
+                f(repo=SAMPLE_HTTP_REMOTE_REPO)
+                f_spy.assert_called_once_with(repo=tmp_dir)
+                assert_dir_is_repo_with_remote_origin(
+                    dir=tmp_dir, remote=SAMPLE_HTTP_REMOTE_REPO
+                )
+
+    @staticmethod
+    @only_for_windows_py_lt_3_8
+    def test_if_windows_os_error_then_raise_exception_with_hint(
+        mocked_clone: MockedClone,
+    ):
+        f, _ = mocked_clone
+
+        with pytest.raises(OSError) as e:
+            f(repo=SAMPLE_HTTP_REMOTE_REPO)
+        assert e.type in (NotADirectoryError, PermissionError)
+        assert "windows" in str(e)
+        assert "python" in str(e)
+        assert "< 3.9" in str(e)
+
+    @staticmethod
+    @pytest.fixture
+    def mocked_clone() -> MockedClone:
+        f_spy = MagicMock()
+
+        @clone(repo_arg="repo")
+        def f(*args, **kwargs):
+            return f_spy(*args, **kwargs)
+
+        yield f, f_spy
 
 
 @pytest.mark.parametrize(
@@ -570,20 +613,6 @@ def decorated_write_func(
     return push, repo
 
 
-@clone_on_remote_repo
-def decorated_read_func(
-    spam: int, repo: Union[Repo, str], jam: int
-):  # pylint: disable=unused-argument
-    return repo
-
-
-def assert_f_called_with_repo_return_repo_itself(repo: Union[str, Repo]) -> None:
-    assert decorated_read_func(0, repo, 3) is repo
-    assert decorated_read_func(0, repo, jam=3) is repo
-    assert decorated_read_func(0, jam=3, repo=repo) is repo
-    assert decorated_read_func(spam=0, jam=3, repo=repo) is repo
-
-
 @pytest.fixture
 def tmp_local_empty_git_repo() -> str:
     tmp_repo_dir = TemporaryDirectory()  # pylint: disable=consider-using-with
@@ -753,6 +782,11 @@ def assert_test_commit_file_content(
         Repo.clone_from(url=repo_path, to_path=td)
         with open(Path(td) / file_name, "r", encoding="utf") as f:
             assert f.read() == expected_content
+
+
+def assert_dir_is_repo_with_remote_origin(dir: str, remote: str) -> None:
+    with open(Path(dir) / ".git/config", "r", encoding="utf") as f:
+        assert f'[remote "origin"]\n\turl = {remote}' in f.read()
 
 
 TEST_COMMIT_FILE = "foo.txt"

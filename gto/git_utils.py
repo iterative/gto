@@ -12,28 +12,36 @@ from gto.constants import remote_git_repo_regex
 from gto.exceptions import GTOException, WrongArgs
 
 
-def clone_on_remote_repo(f: Callable):
-    @wraps(f)
-    def wrapped_f(*args, **kwargs):
-        kwargs = _turn_args_into_kwargs(f, args, kwargs)
+def clone(repo_arg: str):
+    def wrap(f: Callable):
+        @wraps(f)
+        def wrapped_f(*args, **kwargs):
+            kwargs = _turn_args_into_kwargs(f, args, kwargs)
 
-        if isinstance(kwargs["repo"], str) and is_url_of_remote_repo(
-            repo=kwargs["repo"]
-        ):
-            try:
-                with cloned_git_repo(repo=kwargs["repo"]) as tmp_dir:
-                    kwargs["repo"] = tmp_dir
-                    return f(**kwargs)
-            except (NotADirectoryError, PermissionError) as e:
-                raise e.__class__(
-                    "Are you using windows with python < 3.9? "
-                    "This may be the reason of this error: https://bugs.python.org/issue42796. "
-                    "Consider upgrading python."
-                ) from e
+            if repo_arg not in kwargs:
+                raise ValueError(
+                    f"Function decorated with `@clone(repo={repo_arg})` was called, "
+                    f"but the function does not appear to have the `{repo_arg}` argument."
+                )
 
-        return f(**kwargs)
+            if isinstance(kwargs[repo_arg], str) and is_url_of_remote_repo(
+                repo=kwargs[repo_arg]
+            ):
+                try:
+                    with cloned_git_repo(repo=kwargs[repo_arg]) as tmp_dir:
+                        kwargs[repo_arg] = tmp_dir
+                        return f(**kwargs)
+                except (NotADirectoryError, PermissionError) as e:
+                    raise e.__class__(
+                        "Are you using windows with python < 3.9? "
+                        "This may be the reason of this error: https://bugs.python.org/issue42796. "
+                        "Consider upgrading python."
+                    ) from e
+            return f(**kwargs)
 
-    return wrapped_f
+        return wrapped_f
+
+    return wrap
 
 
 def set_push_on_remote_repo(f: Callable):
