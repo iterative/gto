@@ -26,6 +26,7 @@ from gto.ext import EnrichmentInfo
 from gto.git_utils import (
     clone,
     commit_produced_changes_on_commit,
+    is_url_of_remote_repo,
     push_on_push,
     set_push_on_remote_repo,
 )
@@ -63,14 +64,14 @@ def _get_state(repo: Union[str, Repo]):
     return GitRegistry.from_repo(repo).get_state()
 
 
-@clone(repo_arg="repo")
+@clone(repo_arg="repo", controller=is_url_of_remote_repo, controller_args=["repo"])
 def get_stages(repo: Union[str, Repo], allowed: bool = False, used: bool = False):
     return GitRegistry.from_repo(repo).get_stages(allowed=allowed, used=used)
 
 
 # TODO: make this work the same as CLI version
 @set_push_on_remote_repo
-@clone(repo_arg="repo")
+@clone(repo_arg="repo", controller=is_url_of_remote_repo, controller_args=["repo"])
 @push_on_push
 @commit_produced_changes_on_commit(message_generator=generate_annotate_commit_message)
 def annotate(
@@ -98,7 +99,7 @@ def annotate(
 
 
 @set_push_on_remote_repo
-@clone(repo_arg="repo")
+@clone(repo_arg="repo", controller=is_url_of_remote_repo, controller_args=["repo"])
 @push_on_push
 @commit_produced_changes_on_commit(message_generator=generate_remove_commit_message)
 def remove(
@@ -112,7 +113,7 @@ def remove(
 
 
 @set_push_on_remote_repo
-@clone(repo_arg="repo")
+@clone(repo_arg="repo", controller=is_url_of_remote_repo, controller_args=["repo"])
 def register(
     repo: Union[str, Repo],
     name: str,
@@ -148,7 +149,7 @@ def register(
 
 
 @set_push_on_remote_repo
-@clone(repo_arg="repo")
+@clone(repo_arg="repo", controller=is_url_of_remote_repo, controller_args=["repo"])
 def assign(
     repo: Union[str, Repo],
     name: str,
@@ -184,7 +185,7 @@ def assign(
 
 
 @set_push_on_remote_repo
-@clone(repo_arg="repo")
+@clone(repo_arg="repo", controller=is_url_of_remote_repo, controller_args=["repo"])
 def unassign(
     repo: Union[str, Repo],
     name: str,
@@ -217,7 +218,7 @@ def unassign(
 
 
 @set_push_on_remote_repo
-@clone(repo_arg="repo")
+@clone(repo_arg="repo", controller=is_url_of_remote_repo, controller_args=["repo"])
 def deregister(
     repo: Union[str, Repo],
     name: str,
@@ -248,7 +249,7 @@ def deregister(
 
 
 @set_push_on_remote_repo
-@clone(repo_arg="repo")
+@clone(repo_arg="repo", controller=is_url_of_remote_repo, controller_args=["repo"])
 def deprecate(
     repo: Union[str, Repo],
     name: str,
@@ -307,14 +308,14 @@ def find_versions_in_stage(
     )
 
 
-@clone(repo_arg="repo")
+@clone(repo_arg="repo", controller=is_url_of_remote_repo, controller_args=["repo"])
 def check_ref(repo: Union[str, Repo], ref: str):
     """Find out what have been registered/assigned in the provided ref"""
     reg = GitRegistry.from_repo(repo)
     return reg.check_ref(ref)
 
 
-@clone(repo_arg="repo")
+@clone(repo_arg="repo", controller=is_url_of_remote_repo, controller_args=["repo"])
 def show(
     repo: Union[str, Repo],
     name: Optional[str] = None,
@@ -508,7 +509,7 @@ def _show_versions(  # pylint: disable=too-many-locals
     return versions_, "keys"
 
 
-@clone(repo_arg="repo")
+@clone(repo_arg="repo", controller=is_url_of_remote_repo, controller_args=["repo"])
 def describe(
     repo: Union[str, Repo], name: str, rev: str = None
 ) -> List[EnrichmentInfo]:
@@ -523,7 +524,7 @@ def describe(
     raise NotImplementedError
 
 
-@clone(repo_arg="repo")
+@clone(repo_arg="repo", controller=is_url_of_remote_repo, controller_args=["repo"])
 def history(
     repo: Union[str, Repo],
     artifact: str = None,

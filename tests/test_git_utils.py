@@ -102,34 +102,49 @@ class TestClone:
     def mocked_clone() -> MockedClone:
         f_spy = MagicMock()
 
-        @clone(repo_arg="repo")
+        @clone(
+            repo_arg="repo", controller=is_url_of_remote_repo, controller_args=["repo"]
+        )
         def f(*args, **kwargs):
             return f_spy(*args, **kwargs)
 
         yield f, f_spy
 
 
-@pytest.mark.parametrize(
-    "repo",
-    (
-        "/local/path",
-        "/local/path",
-        ".",
-    ),
-)
-def test_is_url_of_remote_repo_if_local_url_then_true(repo: str):
-    assert is_url_of_remote_repo(repo=repo) is False
+class TestIsUrlOfRemoteRepo:
+    @staticmethod
+    @pytest.mark.parametrize(
+        "repo",
+        (
+            3.14,
+            42,
+        ),
+    )
+    def test_if_no_string_then_false(repo: object):
+        assert is_url_of_remote_repo(repo=repo) is False
 
+    @staticmethod
+    @pytest.mark.parametrize(
+        "repo",
+        (
+            "/local/path",
+            "/local/path",
+            ".",
+        ),
+    )
+    def test_if_local_url_then_true(repo: str):
+        assert is_url_of_remote_repo(repo=repo) is False
 
-@pytest.mark.parametrize(
-    "repo",
-    (
-        tests.resources.SAMPLE_HTTP_REMOTE_REPO,
-        tests.resources.SAMPLE_HTTP_REMOTE_REPO_WITHOUT_DOT_GIT_SUFFIX,
-    ),
-)
-def test_is_url_of_remote_repo_if_remote_url_then_true(repo: str):
-    assert is_url_of_remote_repo(repo=repo) is True
+    @staticmethod
+    @pytest.mark.parametrize(
+        "repo",
+        (
+            tests.resources.SAMPLE_HTTP_REMOTE_REPO,
+            tests.resources.SAMPLE_HTTP_REMOTE_REPO_WITHOUT_DOT_GIT_SUFFIX,
+        ),
+    )
+    def test_if_remote_url_then_true(repo: str):
+        assert is_url_of_remote_repo(repo=repo) is True
 
 
 @skip_for_windows_py_lt_3_9

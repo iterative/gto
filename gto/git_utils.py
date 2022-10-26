@@ -3,7 +3,7 @@ import logging
 from contextlib import contextmanager
 from functools import wraps
 from tempfile import TemporaryDirectory
-from typing import Callable, Dict, List, Tuple
+from typing import Callable, Dict, List, Sequence, Tuple
 
 import git
 
@@ -12,7 +12,7 @@ from gto.constants import remote_git_repo_regex
 from gto.exceptions import GTOException, WrongArgs
 
 
-def clone(repo_arg: str):
+def clone(repo_arg: str, controller: Callable, controller_args: Sequence[str]):
     def wrap(f: Callable):
         @wraps(f)
         def wrapped_f(*args, **kwargs):
@@ -24,9 +24,7 @@ def clone(repo_arg: str):
                     f"but the function does not appear to have the `{repo_arg}` argument."
                 )
 
-            if isinstance(kwargs[repo_arg], str) and is_url_of_remote_repo(
-                repo=kwargs[repo_arg]
-            ):
+            if controller(**{a: kwargs[a] for a in controller_args}):
                 try:
                     with cloned_git_repo(repo=kwargs[repo_arg]) as tmp_dir:
                         kwargs[repo_arg] = tmp_dir
@@ -49,9 +47,7 @@ def set_push_on_remote_repo(f: Callable):
     def wrapped_f(*args, **kwargs):
         kwargs = _turn_args_into_kwargs(f, args, kwargs)
 
-        if isinstance(kwargs["repo"], str) and is_url_of_remote_repo(
-            repo=kwargs["repo"]
-        ):
+        if is_url_of_remote_repo(repo=kwargs["repo"]):
             kwargs["push"] = True
 
         return f(**kwargs)
@@ -163,8 +159,8 @@ def are_files_in_repo_changed(repo_path: str, files: List[str]) -> bool:
     )
 
 
-def is_url_of_remote_repo(repo: str) -> bool:
-    if remote_git_repo_regex.fullmatch(repo) is not None:
+def is_url_of_remote_repo(repo: object) -> bool:
+    if isinstance(repo, str) and remote_git_repo_regex.fullmatch(repo) is not None:
         logging.debug("%s recognized as remote git repo", repo)
         return True
 
