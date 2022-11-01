@@ -218,7 +218,7 @@ option_repo = Option(
     ".",
     "-r",
     "--repo",
-    help="Repository to use (experimental support for remote repos)",
+    help="Local or remote repository",
     show_default=True,
 )
 option_all_branches = Option(
