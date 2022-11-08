@@ -124,25 +124,6 @@ awesome-model:
 By default GTO saves artifact as `virtual`. Use the `--must_exist` flag to tell
 GTO the artifact file is committed to Git.
 
-<details summary="Virtual vs. Physical artifacts">
-
-- Physical files/directories are committed to the repo. When you create a new
-  version or assign a stage to it, Git guarantees that it's immutable -- you can
-  return a year later and get the same artifact by providing a version.
-
-- Virtual artifacts could be an external path (e.g. `s3://mybucket/myfile`) or a
-  local path to a metafile representing an externally stored artifact file (as
-  [with DVC](https://dvc.org/doc/start/data-management)). In this case, GTO
-  can't pin versions to a physical state of the artifact and guarantee it's
-  immutability later, e.g. if `s3://mybucket/myfile` changes the registry won't
-  know it, nor have a way to recover the original file.
-
-> In future versions, we will support additional enrichments: useful information
-> that other tools like [DVC](https://dvc.org/) and [MLEM](https://mlem.ai/) can
-> provide about the artifacts. This will allow treating DVC repo outputs as
-> usual artifacts instead of `virtual` ones.
-
-</details>
 
 ### Unassigning a stage
 
@@ -421,26 +402,6 @@ $ gto describe churn
 ```
 
 > The output is in JSON format for ease of parsing programatically.
-
-## Configuration
-
-To configure GTO, use file `.gto` in the root of your repo or use environment
-variables (note the `GTO_` prefix):
-
-```ini
-# .gto config file
-types: [model, dataset]  # list of allowed Types
-stages: [dev, stage, prod]  # list of allowed Stages
-```
-
-When allowed Stages or Types are specified, GTO will check commands you run and
-error out if you provided a value that doesn't exist in the config. Note, that
-GTO applies the config from the workspace, so if want to apply the config from
-`main` branch, you need to check it out first with `git checkout main`.
-
-```console
-$ GTO_EMOJIS=false gto show
-```
 
 ## Contributing
 
