@@ -492,11 +492,7 @@ def annotate(
     #     False, "-u", "--update", is_flag=True, help="Update artifact if it exists"
     # ),
 ):
-    """Update artifact metadata annotations
-
-    Examples:
-       $ gto annotate nn --type model --path models/neural_network.h5
-    """
+    """Update artifact metadata annotations."""
     gto.api.annotate(
         repo,
         name,
@@ -518,11 +514,7 @@ def remove(
     commit: bool = option_commit,
     push: bool = option_push_commit,
 ):
-    """Remove the enrichment for given artifact
-
-    Examples:
-         $ gto remove nn
-    """
+    """Remove the enrichment for given artifact."""
     gto.api.remove(repo, name, commit, push)
 
 
@@ -548,20 +540,8 @@ def register(
     ),
     push: bool = option_push_tag,
 ):
-    """Create an artifact version to signify an important, published or released iteration
-
-    Examples:
-        Register new version at HEAD:
-        $ gto register nn
-
-        Register new version at a specific ref:
-        $ gto register nn abc1234
-
-        Assign version name explicitly:
-        $ gto register nn --version v1.0.0
-
-        Choose a part to bump version by:
-        $ gto register nn --bump-minor
+    """Create an artifact version to signify an important, published
+    or released iteration.
     """
     gto.api.register(
         repo=repo,
@@ -602,21 +582,7 @@ def assign(
         help="Don't register a version at specified commit",
     ),
 ):
-    """Assign stage to specific artifact version
-
-    Examples:
-        Assign "nn" to "prod" at specific ref:
-        $ gto assign nn abcd123 --stage prod
-
-        Assign specific version:
-        $ gto assign nn --version v1.0.0 --stage prod
-
-        Assign at specific ref and name version explicitly:
-        $ gto assign nn abcd123 --version v1.0.0 --stage prod
-
-        Assign without increment:
-        $ gto assign nn HEAD --stage prod --simple
-    """
+    """Assign stage to specific artifact version."""
     if ref is not None:
         name_version = version
         version = None
@@ -654,18 +620,7 @@ def deprecate(
     delete: bool = option_delete,
     push: bool = option_push_tag,
 ):
-    """Deprecate artifact, deregister a version, or unassign a stage
-
-    Examples:
-        Deprecate an artifact:
-        $ gto deprecate nn
-
-        Deprecate a version:
-        $ gto deprecate nn v0.0.1
-
-        Unassign a stage:
-        $ gto deprecate nn v0.0.1 prod
-    """
+    """Deprecate artifact, deregister a version, or unassign a stage."""
     if stage:
         gto.api.unassign(
             repo=repo,
@@ -709,12 +664,8 @@ def parse_tag(
     name: str = arg_name,
     key: Optional[str] = Option(None, "--key", help="Which key to return"),
 ):
-    """Given git tag name created by this tool, parse it and return it's parts
-
-    Examples:
-        $ gto parse-tag rf@v1.0.0
-        $ gto parse-tag rf#prod
-    """
+    """Given git tag name created by this tool, parse it and return it's
+    parts."""
     parsed = gto.api.parse_tag(name)
     if key:
         parsed = parsed[key]
@@ -731,13 +682,7 @@ def check_ref(
     event: bool = option_show_event,
     stage: bool = option_show_stage,
 ):
-    """Find out the artifact version registered/assigned with ref
-
-    Examples:
-        $ gto check-ref rf@v1.0.0
-        $ gto check-ref rf#prod --name
-        $ gto check-ref rf#prod --version
-    """
+    """Find out the artifact version registered/assigned with ref."""
     assert (
         sum(bool(i) for i in (json, event, name, version, stage)) <= 1
     ), "Only one output formatting flags is allowed"
@@ -780,19 +725,7 @@ def show(  # pylint: disable=too-many-locals
     versions_per_stage: int = option_versions_per_stage,
     sort: str = option_sort,
 ):
-    """Show the registry state, highest version, or what's assigned in stage
-
-    Examples:
-        Show the registry:
-        $ gto show
-
-        Show versions of specific artifact in registry:
-        $ gto show nn
-
-        Show greatest version or what's in stage:
-        $ gto show nn@greatest
-        $ gto show nn#prod
-    """
+    """Show the registry state, highest version, or what's assigned in stage."""
     show_options = [show_name, show_version, show_stage, show_ref]
     assert (
         sum(bool(i) for i in [json, plain] + show_options) <= 1
@@ -853,14 +786,7 @@ def history(
     plain: bool = option_plain,
     ascending: bool = option_ascending,
 ):
-    """Show a journal of registry operations
-
-    Examples:
-        $ gto history nn
-
-        Use --all-branches and --all-commits to read more than just HEAD:
-        $ gto history nn --all-commits
-    """
+    """Show a journal of registry operations."""
     assert sum(bool(i) for i in (json, plain)) <= 1, "Only one output format allowed"
     if json:
         format_echo(
@@ -910,12 +836,7 @@ def stages(
     ),
     json: bool = option_json,
 ):
-    """Print list of stages used in the registry
-
-    Examples:
-        $ gto stages
-        $ gto stages --allowed
-    """
+    """Print list of stages used in the registry."""
     result = gto.api.get_stages(repo, allowed=allowed, used=used)
     if json:
         format_echo(result, "json")
@@ -925,11 +846,7 @@ def stages(
 
 @gto_command(hidden=True)
 def print_state(repo: str = option_repo):
-    """Technical cmd: Print current registry state
-
-    Examples:
-        $ gto print-state
-    """
+    """Technical cmd: Print current registry state."""
     state = make_ready_to_serialize(
         gto.api._get_state(repo).dict()  # pylint: disable=protected-access
     )
@@ -938,11 +855,7 @@ def print_state(repo: str = option_repo):
 
 @gto_command(hidden=True)
 def print_index(repo: str = option_repo):
-    """Technical cmd: Print repo index
-
-    Examples:
-        $ gto print-index
-    """
+    """Technical cmd: Print repo index."""
     index = gto.api._get_index(  # pylint: disable=protected-access
         repo
     ).artifact_centric_representation()
@@ -958,12 +871,7 @@ def describe(
     path: Optional[bool] = option_show_path,
     description: Optional[bool] = option_show_description,
 ):
-    """Display enrichments for an artifact
-
-    Examples:
-        $ gto describe nn --rev HEAD
-        $ gto describe nn@v0.0.1
-    """
+    """Display enrichments for an artifact."""
     assert (
         sum(bool(i) for i in (type, path, description)) <= 1
     ), "Can output one key only"
