@@ -9,7 +9,6 @@ from git import Repo
 import tests.resources
 from gto.exceptions import GTOException
 from gto.git_utils import (
-    clone,
     commit_produced_changes_on_commit,
     git_add_and_commit_all_changes,
     git_clone,
@@ -17,6 +16,7 @@ from gto.git_utils import (
     git_push_tag,
     is_url_of_remote_repo,
     push_on_push,
+    remote_to_local,
     set_push_on_remote_repo,
     stashed_changes,
 )
@@ -28,7 +28,7 @@ from tests.skip_presets import (
 
 
 @pytest.mark.usefixtures("tmp_local_empty_git_repo")
-class TestClone:
+class TestRemoteToLocal:
     MockedClone = Tuple[Callable, MagicMock]
 
     @staticmethod
@@ -102,9 +102,7 @@ class TestClone:
     def mocked_clone() -> MockedClone:
         f_spy = MagicMock()
 
-        @clone(
-            repo_arg="repo", controller=is_url_of_remote_repo, controller_args=["repo"]
-        )
+        @remote_to_local(repo_arg="repo")
         def f(*args, **kwargs):
             return f_spy(*args, **kwargs)
 

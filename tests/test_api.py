@@ -322,10 +322,7 @@ def test_is_gto_repo_because_of_artifacts_yaml(empty_git_repo):
 def test_api_cmds_are_decorated_with_clone_and_has_repo_as_arg(cmd_name: str):
     repo_arg = "repo"
     cmd = getattr(gto.api, cmd_name)
-    assert (
-        f'@clone(repo_arg="{repo_arg}", controller=is_url_of_remote_repo, controller_args=["{repo_arg}"])'
-        in inspect.getsource(cmd)
-    )
+    assert f'@remote_to_local(repo_arg="{repo_arg}")' in inspect.getsource(cmd)
     assert repo_arg in inspect.signature(cmd).parameters.keys()
 
 

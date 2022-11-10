@@ -12,18 +12,18 @@ from gto.constants import remote_git_repo_regex
 from gto.exceptions import GTOException, WrongArgs
 
 
-def clone(repo_arg: str, controller: Callable, controller_args: List[str]):
+def remote_to_local(repo_arg: str):
     def wrap(f: Callable):
         @wraps(f)
         def wrapped_f(*args, **kwargs):
             kwargs = _turn_args_into_kwargs(f, args, kwargs)
             _check_required_args_are_provided(
-                required_args=[repo_arg] + controller_args,
+                required_args=[repo_arg],
                 provided_kwargs=kwargs,
-                decorator_name="clone",
+                decorator_name="remote_to_local",
             )
 
-            if controller(**{a: kwargs[a] for a in controller_args}):
+            if is_url_of_remote_repo(repo=kwargs[repo_arg]):
                 try:
                     with cloned_git_repo(repo=kwargs[repo_arg]) as tmp_dir:
                         kwargs[repo_arg] = tmp_dir
@@ -178,7 +178,7 @@ def cloned_git_repo(repo: str):
 
 
 def git_clone(repo: str, dir: str) -> None:
-    logging.debug("clone %s in directory %s", repo, dir)
+    logging.debug("remote_to_local %s in directory %s", repo, dir)
     git.Repo.clone_from(url=repo, to_path=dir)
 
 
