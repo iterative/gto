@@ -232,13 +232,13 @@ option_all_commits = Option(
     False, "-A", "--all-commits", is_flag=True, help="Read all commits"
 )
 option_message = Option(
-    None, "--message", "-m", help="Message to annotate git tag with"
+    None, "--message", "-m", help="Message to annotate the Git tag with"
 )
 option_force = Option(
     False,
     "--force",
     is_flag=True,
-    help="Create a git tag even if it already exists and is in effect",
+    help="Create the Git tag even if it already exists and is in effect",
 )
 
 
@@ -258,7 +258,8 @@ def callback_simple(  # pylint: disable=inconsistent-return-statements
 option_simple = Option(
     "auto",
     "--simple",
-    help="[auto, true, false] Use simple notation, e.g. rf#prod instead of rf#prod-5",
+    help="Use simple notation, e.g. `rf#prod` instead of `rf#prod-5`"
+    " [supported values: auto, true, false]",
     callback=callback_simple,
 )
 
