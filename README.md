@@ -25,12 +25,12 @@ $ pip install gto
 ```
 
 This will install the `gto`
-[command-line interface](https://mlem.ai/doc/gto/command-reference) (CLI) and make the Python API available for use in code.
+[command-line interface](https://mlem.ai/doc/gto/command-reference) (CLI) and
+make the Python API available for use in code.
 
 ## Getting started
 
-To Get Started, please head to 
-[GTO docs](https://mlem.ai/doc/gto/get-started).
+To Get Started, please head to [GTO docs](https://mlem.ai/doc/gto/get-started).
 
 ## Contributing
 
