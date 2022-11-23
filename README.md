@@ -31,17 +31,9 @@ There's no need to set up any services or databases :)
 
 ## Getting started
 
-> Note: We will cover CLI usage, but every command has a corresponding Python
-> API counterpart in the [`gto.api`](/iterative/gto/blob/main/gto/api.py)
-> module.
-
-In this document we'll use this example repo:
-https://github.com/iterative/example-gto. Let's clone it first:
-
-```console
-$ git clone https://github.com/iterative/example-gto.git
-$ cd example-gto
-```
+Check out
+[Get Started in GTO documentation](https://mlem.ai/doc/gto/get-started) for more
+details.
 
 ## Contributing
 

@@ -91,11 +91,6 @@ def test_commands_args_help(app_cli_cmd):
     assert not no_help, f"{no_help} cli command args do not have help!"
 
 
-def test_commands_examples(app_cli_cmd):
-    no_examples = [cmd.name for cmd in app_cli_cmd if cmd.examples is None]
-    assert not no_examples, f"{no_examples} cli command do not have examples!"
-
-
 def test_show(empty_git_repo: Tuple[git.Repo, Callable]):
     repo, write_file = empty_git_repo
     _check_successful_cmd(
