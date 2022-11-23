@@ -18,22 +18,19 @@ GTO works by creating annotated Git tags in a standard format.
 
 ## Installation
 
-> GTO requires Python 3. It works on any OS.
+GTO requires Python 3. It works on any OS.
 
 ```console
-$ python -m pip install gto
+$ pip install gto
 ```
 
-[This package](https://pypi.org/project/gto/) will install the `gto`
-command-line interface (CLI) and make the Python API available for use in code.
-
-There's no need to set up any services or databases :)
+This will install the `gto`
+[command-line interface](https://mlem.ai/doc/gto/command-reference) (CLI) and make the Python API available for use in code.
 
 ## Getting started
 
-Check out
-[Get Started in GTO documentation](https://mlem.ai/doc/gto/get-started) for more
-details.
+To Get Started, please head to 
+[GTO docs](https://mlem.ai/doc/gto/get-started).
 
 ## Contributing
 
@@ -47,29 +44,31 @@ going to be added soon.
 
 Thanks to all our contributors!
 
-### Setup GTO development environment
+<details>
 
-#### 1. Clone this repository
+How to setup GTO development environment
+
+1. Clone this repository
 
 ```console
 $ git clone git@github.com:iterative/gto.git
 $ cd gto
 ```
 
-#### 2. Create virtual environment named `venv`
+2. Create virtual environment named `venv`
 
 ```console
-$ python3 -m venv venv
-$ source venv/bin/activate
+$ python3 -m venv .venv
+$ source .venv/bin/activate
 ```
 
 Install python libraries
 
 ```console
-$ pip install --upgrade pip setuptools wheel ".[tests]"
+$ pip install --upgrade pip ".[tests]"
 ```
 
-#### 3. Run
+3. Run
 
 ```console
 $ pytest --basetemp=pytest-basetemp
@@ -89,6 +88,8 @@ The code that generates this folder could be found
 [in this fixture](https://github.com/iterative/gto/blob/main/tests/conftest.py#L58).
 
 To continue experimenting, call `gto --help`
+
+</details>
 
 ## Copyright
 
