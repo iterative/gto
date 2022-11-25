@@ -524,7 +524,6 @@ def describe(
     raise NotImplementedError
 
 
-@clone_on_remote_repo
 def history(
     repo: Union[str, Repo],
     artifact: str = None,
@@ -536,11 +535,11 @@ def history(
     truncate_hexsha: bool = False,
 ):
 
-    reg = GitRegistry.from_repo(repo)
-    artifacts = reg.get_artifacts(
-        all_branches=all_branches,
-        all_commits=all_commits,
-    )
+    with GitRegistryWithRemoteSupport.from_repo(repo=repo) as reg:
+        artifacts = reg.get_artifacts(
+            all_branches=all_branches,
+            all_commits=all_commits,
+        )
 
     def format_hexsha(hexsha):
         return hexsha[:7] if truncate_hexsha else hexsha
