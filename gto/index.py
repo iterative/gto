@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import IO, Dict, FrozenSet, Generator, List, Optional, Union
 
 import git
+from git import Repo
 from pydantic import BaseModel, parse_obj_as, validator
 
 from gto.base import BaseManager, BaseRegistryState
@@ -28,6 +29,7 @@ from gto.exceptions import (
     WrongArgs,
 )
 from gto.ext import EnrichmentInfo, EnrichmentReader
+from gto.git_utils import FromRemoteRepoMixin
 from gto.utils import resolve_ref
 
 
@@ -307,11 +309,11 @@ class RepoIndexManager(FileIndexManager):
             raise ArtifactNotFound(name)
 
 
-class EnrichmentManager(BaseManager):
+class EnrichmentManager(BaseManager, FromRemoteRepoMixin):
     actions: FrozenSet[Action] = frozenset()
 
     @classmethod
-    def from_repo(cls, repo, config: RegistryConfig = None):
+    def _from_repo(cls, repo: Union[str, Repo], config: RegistryConfig = None):
         if isinstance(repo, str):
             repo = git.Repo(repo, search_parent_directories=True)
         if config is None:

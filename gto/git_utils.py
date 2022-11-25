@@ -1,15 +1,41 @@
 import inspect
 import logging
+from abc import abstractmethod
 from contextlib import contextmanager
 from functools import wraps
 from tempfile import TemporaryDirectory
-from typing import Callable, Dict, List, Tuple
+from typing import Callable, Dict, List, Tuple, Union
 
 import git
+from git import Repo
 
 from gto.commit_message_generator import generate_empty_commit_message
+from gto.config import RegistryConfig
 from gto.constants import remote_git_repo_regex
 from gto.exceptions import GTOException, WrongArgs
+
+
+class FromRemoteRepoMixin:
+    @classmethod
+    @abstractmethod
+    def _from_repo(cls, repo: Union[str, Repo], config: RegistryConfig = None):
+        pass
+
+    @classmethod
+    @contextmanager
+    def from_repo(cls, repo: Union[str, Repo], config: RegistryConfig = None):
+        if isinstance(repo, str) and is_url_of_remote_repo(repo=repo):
+            try:
+                with cloned_git_repo(repo=repo) as tmp_dir:
+                    yield cls._from_repo(repo=tmp_dir, config=config)
+            except (NotADirectoryError, PermissionError) as e:
+                raise e.__class__(
+                    "Are you using windows with python < 3.9? "
+                    "This may be the reason of this error: https://bugs.python.org/issue42796. "
+                    "Consider upgrading python."
+                ) from e
+        else:
+            yield cls._from_repo(repo=repo, config=config)
 
 
 def clone_on_remote_repo(f: Callable):
