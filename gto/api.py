@@ -27,7 +27,7 @@ from gto.git_utils import (
     clone_on_remote_repo,
     commit_produced_changes_on_commit,
     push_on_push,
-    set_push_on_remote_repo,
+    set_push_on_remote_repo, is_url_of_remote_repo, cloned_git_repo,
 )
 from gto.index import (
     EnrichmentManager,
@@ -72,7 +72,6 @@ def get_stages(repo: Union[str, Repo], allowed: bool = False, used: bool = False
 
 # TODO: make this work the same as CLI version
 @set_push_on_remote_repo
-@clone_on_remote_repo
 @push_on_push
 @commit_produced_changes_on_commit(message_generator=generate_annotate_commit_message)
 def annotate(
@@ -88,7 +87,26 @@ def annotate(
     # update: bool = False,
 ):
     """Add an artifact to the Index"""
-    return init_index_manager(path=repo).add(
+    if isinstance(path, str) and is_url_of_remote_repo(repo=path):
+        try:
+            with cloned_git_repo(repo=path) as tmp_dir:
+                return init_index_manager(path=repo).add(
+        name,
+        type=type,
+        path=tmp_dir,
+        must_exist=must_exist,
+        labels=labels,
+        description=description,
+        update=True,
+    )
+        except (NotADirectoryError, PermissionError) as e:
+            raise e.__class__(
+                "Are you using windows with python < 3.9? "
+                "This may be the reason of this error: https://bugs.python.org/issue42796. "
+                "Consider upgrading python."
+            ) from e
+    else:
+        return init_index_manager(path=repo).add(
         name,
         type=type,
         path=path,
