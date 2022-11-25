@@ -35,7 +35,7 @@ from gto.index import (
     RepoIndexManager,
     init_index_manager,
 )
-from gto.registry import GitRegistry
+from gto.registry import GitRegistry, GitRegistryWithRemoteSupport
 from gto.tag import NAME_REFERENCE
 from gto.tag import parse_name as parse_tag_name
 from gto.tag import parse_name_reference
@@ -314,7 +314,6 @@ def check_ref(repo: Union[str, Repo], ref: str):
     return reg.check_ref(ref)
 
 
-@clone_on_remote_repo
 def show(
     repo: Union[str, Repo],
     name: Optional[str] = None,
@@ -371,35 +370,38 @@ def _show_registry(
     def format_hexsha(hexsha):
         return hexsha[:7] if truncate_hexsha else hexsha
 
-    reg = GitRegistry.from_repo(repo)
-    stages = list(reg.get_stages())
-    models_state = {
-        o.artifact: {
-            "version": format_hexsha(o.get_latest_version(registered_only=True).version)
-            if o.get_latest_version(registered_only=True)
-            else None,
-            "stage": {
-                name: ", ".join(
-                    [
-                        format_hexsha(s.version)
-                        for s in o.get_vstages(
-                            registered_only=registered_only,
-                            assignments_per_version=assignments_per_version,
-                            versions_per_stage=versions_per_stage,
-                            sort=sort,
-                        ).get(name, [])
-                    ]
+    with GitRegistryWithRemoteSupport.from_repo(repo=repo) as reg:
+        stages = list(reg.get_stages())
+        models_state = {
+            o.artifact: {
+                "version": format_hexsha(
+                    o.get_latest_version(registered_only=True).version
                 )
-                or None
-                for name in stages
-            },
-            "registered": o.is_registered,
+                if o.get_latest_version(registered_only=True)
+                else None,
+                "stage": {
+                    name: ", ".join(
+                        [
+                            format_hexsha(s.version)
+                            for s in o.get_vstages(
+                                registered_only=registered_only,
+                                assignments_per_version=assignments_per_version,
+                                versions_per_stage=versions_per_stage,
+                                sort=sort,
+                            ).get(name, [])
+                        ]
+                    )
+                    or None
+                    for name in stages
+                },
+                "registered": o.is_registered,
+            }
+            for o in reg.get_artifacts(
+                all_branches=all_branches,
+                all_commits=all_commits,
+            ).values()
         }
-        for o in reg.get_artifacts(
-            all_branches=all_branches,
-            all_commits=all_commits,
-        ).values()
-    }
+
     if not table:
         return models_state
 
@@ -440,15 +442,15 @@ def _show_versions(  # pylint: disable=too-many-locals
     if match:
         name = match["artifact"]
 
-    reg = GitRegistry.from_repo(repo)
-    if raw:
-        return reg.find_artifact(name).versions
+    with GitRegistryWithRemoteSupport.from_repo(repo=repo) as reg:
+        if raw:
+            return reg.find_artifact(name).versions
 
-    artifact = reg.find_artifact(
-        name,
-        all_branches=all_branches,
-        all_commits=all_commits,
-    )
+        artifact = reg.find_artifact(
+            name,
+            all_branches=all_branches,
+            all_commits=all_commits,
+        )
     stages = artifact.get_vstages(
         registered_only=registered_only,
         assignments_per_version=assignments_per_version,
