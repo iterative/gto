@@ -307,11 +307,10 @@ def find_versions_in_stage(
     )
 
 
-@clone_on_remote_repo
 def check_ref(repo: Union[str, Repo], ref: str):
     """Find out what have been registered/assigned in the provided ref"""
-    reg = GitRegistry.from_repo(repo)
-    return reg.check_ref(ref)
+    with GitRegistryWithRemoteSupport.from_repo(repo=repo) as reg:
+        return reg.check_ref(ref)
 
 
 def show(
