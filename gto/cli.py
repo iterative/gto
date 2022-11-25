@@ -170,6 +170,12 @@ class GtoGroup(GtoCliMixin, TyperGroup):
                     with formatter.section(gettext(section)):
                         formatter.write_dl(sections[section])
 
+    # The typer overrides this with some trick dependent on environment,
+    # use click method for taking affect of Self.format_commands
+    def format_help(self, ctx: click.Context, formatter: click.HelpFormatter) -> None:
+        # pylint: disable=bad-super-call
+        super(TyperGroup, self).format_help(ctx, formatter)
+
     def get_command(self, ctx: Context, cmd_name: str) -> Optional[Command]:
         cmd = super().get_command(ctx, cmd_name)
         if cmd is not None:
