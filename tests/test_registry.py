@@ -358,8 +358,8 @@ def iter_over(sequence):
 
 def test_registry_state_tag_tag(showcase):
     path, repo, write_file, first_commit, second_commit = showcase
-    reg = GitRegistry.from_repo(repo)
-    appeared_state = reg.get_state().dict()
+    with GitRegistry.from_repo(repo) as reg:
+        appeared_state = reg.get_state().dict()
 
     # TODO: update state
     exclude = {

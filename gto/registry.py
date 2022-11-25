@@ -1,5 +1,6 @@
 import logging
 import os
+from abc import abstractmethod
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Optional, TypeVar, Union
@@ -47,7 +48,30 @@ from gto.versions import SemVer
 TBaseEvent = TypeVar("TBaseEvent", bound=BaseEvent)
 
 
-class GitRegistry(BaseModel):
+class FromRemoteRepoMixin:
+    @classmethod
+    @abstractmethod
+    def _from_repo(cls, repo=Union[str, Repo], config: RegistryConfig = None):
+        pass
+
+    @classmethod
+    @contextmanager
+    def from_repo(cls, repo=Union[str, Repo], config: RegistryConfig = None):
+        if isinstance(repo, str) and is_url_of_remote_repo(repo=repo):
+            try:
+                with cloned_git_repo(repo=repo) as tmp_dir:
+                    yield cls._from_repo(repo=tmp_dir, config=config)
+            except (NotADirectoryError, PermissionError) as e:
+                raise e.__class__(
+                    "Are you using windows with python < 3.9? "
+                    "This may be the reason of this error: https://bugs.python.org/issue42796. "
+                    "Consider upgrading python."
+                ) from e
+        else:
+            yield cls._from_repo(repo=repo, config=config)
+
+
+class GitRegistry(BaseModel, FromRemoteRepoMixin):
     repo: git.Repo
     artifact_manager: TagArtifactManager
     version_manager: TagVersionManager
@@ -59,7 +83,7 @@ class GitRegistry(BaseModel):
         arbitrary_types_allowed = True
 
     @classmethod
-    def from_repo(cls, repo=Union[str, Repo], config: RegistryConfig = None):
+    def _from_repo(cls, repo=Union[str, Repo], config: RegistryConfig = None):
         if isinstance(repo, str):
             try:
                 repo = git.Repo(repo, search_parent_directories=True)
@@ -596,21 +620,3 @@ class GitRegistry(BaseModel):
                 )
         elif stdout:
             self._echo_git_suggestion(tag_name)
-
-
-class GitRegistryWithRemoteSupport(GitRegistry):
-    @classmethod
-    @contextmanager
-    def from_repo(cls, repo=Union[str, Repo], config: RegistryConfig = None):
-        if isinstance(repo, str) and is_url_of_remote_repo(repo=repo):
-            try:
-                with cloned_git_repo(repo=repo) as tmp_dir:
-                    yield super().from_repo(repo=tmp_dir, config=config)
-            except (NotADirectoryError, PermissionError) as e:
-                raise e.__class__(
-                    "Are you using windows with python < 3.9? "
-                    "This may be the reason of this error: https://bugs.python.org/issue42796. "
-                    "Consider upgrading python."
-                ) from e
-        else:
-            yield super().from_repo(repo=repo, config=config)

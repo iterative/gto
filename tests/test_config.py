@@ -47,8 +47,8 @@ def test_config_load_index(init_repo):
 
 
 def test_config_load_registry(init_repo):
-    registry = GitRegistry.from_repo(init_repo)
-    assert registry.config.TYPES == ["model", "dataset"]
+    with GitRegistry.from_repo(repo=init_repo) as reg:
+        assert reg.config.TYPES == ["model", "dataset"]
 
 
 def test_adding_allowed_type(init_repo):

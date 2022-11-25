@@ -35,7 +35,7 @@ from gto.index import (
     RepoIndexManager,
     init_index_manager,
 )
-from gto.registry import GitRegistry, GitRegistryWithRemoteSupport
+from gto.registry import GitRegistry
 from gto.tag import NAME_REFERENCE
 from gto.tag import parse_name as parse_tag_name
 from gto.tag import parse_name_reference
@@ -44,7 +44,8 @@ from gto.tag import parse_name_reference
 def _is_gto_repo(repo: Union[str, Repo]):
     """Check if repo is a gto repo"""
     try:
-        return GitRegistry.from_repo(repo).is_gto_repo()
+        with GitRegistry.from_repo(repo) as reg:
+            return reg.is_gto_repo()
     except NoRepo:
         return False
 
@@ -60,11 +61,12 @@ def _get_index(repo: Union[str, Repo], file=False):
 
 def _get_state(repo: Union[str, Repo]):
     """Show current registry state"""
-    return GitRegistry.from_repo(repo).get_state()
+    with GitRegistry.from_repo(repo) as reg:
+        return reg.get_state()
 
 
 def get_stages(repo: Union[str, Repo], allowed: bool = False, used: bool = False):
-    with GitRegistryWithRemoteSupport.from_repo(repo=repo) as reg:
+    with GitRegistry.from_repo(repo=repo) as reg:
         return reg.get_stages(allowed=allowed, used=used)
 
 
@@ -130,21 +132,22 @@ def register(
     author_email: Optional[str] = None,
 ):
     """Register new artifact version"""
-    return GitRegistry.from_repo(repo).register(
-        name=name,
-        ref=ref,
-        version=version,
-        message=message,
-        simple=simple if simple is not None else True,
-        force=force,
-        bump_major=bump_major,
-        bump_minor=bump_minor,
-        bump_patch=bump_patch,
-        push=push,
-        stdout=stdout,
-        author=author,
-        author_email=author_email,
-    )
+    with GitRegistry.from_repo(repo) as reg:
+        return reg.register(
+            name=name,
+            ref=ref,
+            version=version,
+            message=message,
+            simple=simple if simple is not None else True,
+            force=force,
+            bump_major=bump_major,
+            bump_minor=bump_minor,
+            bump_patch=bump_patch,
+            push=push,
+            stdout=stdout,
+            author=author,
+            author_email=author_email,
+        )
 
 
 @set_push_on_remote_repo
@@ -166,21 +169,22 @@ def assign(
     author_email: Optional[str] = None,
 ):
     """Assign stage to specific artifact version"""
-    return GitRegistry.from_repo(repo).assign(
-        name=name,
-        stage=stage,
-        version=version,
-        ref=ref,
-        name_version=name_version,
-        message=message,
-        simple=simple,
-        force=force,
-        push=push,
-        skip_registration=skip_registration,
-        stdout=stdout,
-        author=author,
-        author_email=author_email,
-    )
+    with GitRegistry.from_repo(repo) as reg:
+        return reg.assign(
+            name=name,
+            stage=stage,
+            version=version,
+            ref=ref,
+            name_version=name_version,
+            message=message,
+            simple=simple,
+            force=force,
+            push=push,
+            skip_registration=skip_registration,
+            stdout=stdout,
+            author=author,
+            author_email=author_email,
+        )
 
 
 @set_push_on_remote_repo
@@ -200,20 +204,21 @@ def unassign(
     author: Optional[str] = None,
     author_email: Optional[str] = None,
 ):
-    return GitRegistry.from_repo(repo).unassign(
-        name=name,
-        stage=stage,
-        ref=ref,
-        version=version,
-        message=message,
-        stdout=stdout,
-        simple=simple if simple is not None else False,
-        force=force,
-        delete=delete,
-        push=push,
-        author=author,
-        author_email=author_email,
-    )
+    with GitRegistry.from_repo(repo) as reg:
+        return reg.unassign(
+            name=name,
+            stage=stage,
+            ref=ref,
+            version=version,
+            message=message,
+            stdout=stdout,
+            simple=simple if simple is not None else False,
+            force=force,
+            delete=delete,
+            push=push,
+            author=author,
+            author_email=author_email,
+        )
 
 
 @set_push_on_remote_repo
@@ -232,19 +237,20 @@ def deregister(
     author: Optional[str] = None,
     author_email: Optional[str] = None,
 ):
-    return GitRegistry.from_repo(repo).deregister(
-        name=name,
-        ref=ref,
-        version=version,
-        message=message,
-        stdout=stdout,
-        simple=simple if simple is not None else True,
-        force=force,
-        delete=delete,
-        push=push,
-        author=author,
-        author_email=author_email,
-    )
+    with GitRegistry.from_repo(repo) as reg:
+        return reg.deregister(
+            name=name,
+            ref=ref,
+            version=version,
+            message=message,
+            stdout=stdout,
+            simple=simple if simple is not None else True,
+            force=force,
+            delete=delete,
+            push=push,
+            author=author,
+            author_email=author_email,
+        )
 
 
 @set_push_on_remote_repo
@@ -261,17 +267,18 @@ def deprecate(
     author: Optional[str] = None,
     author_email: Optional[str] = None,
 ):
-    return GitRegistry.from_repo(repo).deprecate(
-        name=name,
-        message=message,
-        stdout=stdout,
-        simple=simple if simple is not None else True,
-        force=force,
-        delete=delete,
-        push=push,
-        author=author,
-        author_email=author_email,
-    )
+    with GitRegistry.from_repo(repo) as reg:
+        return reg.deprecate(
+            name=name,
+            message=message,
+            stdout=stdout,
+            simple=simple if simple is not None else True,
+            force=force,
+            delete=delete,
+            push=push,
+            author=author,
+            author_email=author_email,
+        )
 
 
 def parse_tag(name: str):
@@ -285,7 +292,8 @@ def find_latest_version(
     registered: bool = True,
 ):
     """Return latest version for artifact"""
-    return GitRegistry.from_repo(repo).latest(name, all=all, registered=registered)
+    with GitRegistry.from_repo(repo) as reg:
+        return reg.latest(name, all=all, registered=registered)
 
 
 def find_versions_in_stage(
@@ -297,19 +305,20 @@ def find_versions_in_stage(
     registered_only: bool = False,
 ):
     """Return version of artifact with specific stage active"""
-    return GitRegistry.from_repo(repo).which(
-        name,
-        stage,
-        raise_if_not_found=False,
-        assignments_per_version=assignments_per_version,
-        versions_per_stage=versions_per_stage,
-        registered_only=registered_only,
-    )
+    with GitRegistry.from_repo(repo) as reg:
+        return reg.which(
+            name,
+            stage,
+            raise_if_not_found=False,
+            assignments_per_version=assignments_per_version,
+            versions_per_stage=versions_per_stage,
+            registered_only=registered_only,
+        )
 
 
 def check_ref(repo: Union[str, Repo], ref: str):
     """Find out what have been registered/assigned in the provided ref"""
-    with GitRegistryWithRemoteSupport.from_repo(repo=repo) as reg:
+    with GitRegistry.from_repo(repo=repo) as reg:
         return reg.check_ref(ref)
 
 
@@ -369,7 +378,7 @@ def _show_registry(
     def format_hexsha(hexsha):
         return hexsha[:7] if truncate_hexsha else hexsha
 
-    with GitRegistryWithRemoteSupport.from_repo(repo=repo) as reg:
+    with GitRegistry.from_repo(repo=repo) as reg:
         stages = list(reg.get_stages())
         models_state = {
             o.artifact: {
@@ -441,7 +450,7 @@ def _show_versions(  # pylint: disable=too-many-locals
     if match:
         name = match["artifact"]
 
-    with GitRegistryWithRemoteSupport.from_repo(repo=repo) as reg:
+    with GitRegistry.from_repo(repo=repo) as reg:
         if raw:
             return reg.find_artifact(name).versions
 
@@ -535,7 +544,7 @@ def history(
     truncate_hexsha: bool = False,
 ):
 
-    with GitRegistryWithRemoteSupport.from_repo(repo=repo) as reg:
+    with GitRegistry.from_repo(repo=repo) as reg:
         artifacts = reg.get_artifacts(
             all_branches=all_branches,
             all_commits=all_commits,
