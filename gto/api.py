@@ -27,7 +27,7 @@ from gto.git_utils import (
     clone_on_remote_repo,
     commit_produced_changes_on_commit,
     push_on_push,
-    set_push_on_remote_repo, is_url_of_remote_repo, cloned_git_repo,
+    set_push_on_remote_repo,
 )
 from gto.index import (
     EnrichmentManager,
@@ -76,16 +76,16 @@ def get_stages(repo: Union[str, Repo], allowed: bool = False, used: bool = False
 @push_on_push
 @commit_produced_changes_on_commit(message_generator=generate_annotate_commit_message)
 def annotate(
-        repo: Union[str, Repo],
-        name: str,
-        type: Optional[str] = None,
-        path: Optional[str] = None,
-        must_exist: bool = False,
-        labels: List[str] = None,
-        description: str = "",
-        commit: bool = False,  # pylint: disable=unused-argument
-        push: bool = False,  # pylint: disable=unused-argument
-        # update: bool = False,
+    repo: Union[str, Repo],
+    name: str,
+    type: Optional[str] = None,
+    path: Optional[str] = None,
+    must_exist: bool = False,
+    labels: List[str] = None,
+    description: str = "",
+    commit: bool = False,  # pylint: disable=unused-argument
+    push: bool = False,  # pylint: disable=unused-argument
+    # update: bool = False,
 ):
     """Add an artifact to the Index"""
     return init_index_manager(path=repo).add(
@@ -104,10 +104,10 @@ def annotate(
 @push_on_push
 @commit_produced_changes_on_commit(message_generator=generate_remove_commit_message)
 def remove(
-        repo: Union[str, Repo],
-        name: str,
-        commit: bool = False,
-        push: bool = False,
+    repo: Union[str, Repo],
+    name: str,
+    commit: bool = False,
+    push: bool = False,
 ):  # pylint: disable=unused-argument
     """Remove an artifact from the Index"""
     return init_index_manager(path=repo).remove(name)
@@ -116,20 +116,20 @@ def remove(
 @set_push_on_remote_repo
 @clone_on_remote_repo
 def register(
-        repo: Union[str, Repo],
-        name: str,
-        ref: str,
-        version: str = None,
-        message: str = None,
-        simple: bool = None,
-        force: bool = False,
-        bump_major: bool = False,
-        bump_minor: bool = False,
-        bump_patch: bool = False,
-        push: bool = False,
-        stdout: bool = False,
-        author: Optional[str] = None,
-        author_email: Optional[str] = None,
+    repo: Union[str, Repo],
+    name: str,
+    ref: str,
+    version: str = None,
+    message: str = None,
+    simple: bool = None,
+    force: bool = False,
+    bump_major: bool = False,
+    bump_minor: bool = False,
+    bump_patch: bool = False,
+    push: bool = False,
+    stdout: bool = False,
+    author: Optional[str] = None,
+    author_email: Optional[str] = None,
 ):
     """Register new artifact version"""
     with GitRegistry.from_repo(repo) as reg:
@@ -153,20 +153,20 @@ def register(
 @set_push_on_remote_repo
 @clone_on_remote_repo
 def assign(
-        repo: Union[str, Repo],
-        name: str,
-        stage: str,
-        version: Optional[str] = None,
-        ref: Optional[str] = None,
-        name_version: Optional[str] = None,
-        message: Optional[str] = None,
-        simple: bool = False,
-        force: bool = False,
-        push: bool = False,
-        skip_registration: bool = False,
-        stdout: bool = False,
-        author: Optional[str] = None,
-        author_email: Optional[str] = None,
+    repo: Union[str, Repo],
+    name: str,
+    stage: str,
+    version: Optional[str] = None,
+    ref: Optional[str] = None,
+    name_version: Optional[str] = None,
+    message: Optional[str] = None,
+    simple: bool = False,
+    force: bool = False,
+    push: bool = False,
+    skip_registration: bool = False,
+    stdout: bool = False,
+    author: Optional[str] = None,
+    author_email: Optional[str] = None,
 ):
     """Assign stage to specific artifact version"""
     with GitRegistry.from_repo(repo) as reg:
@@ -190,19 +190,19 @@ def assign(
 @set_push_on_remote_repo
 @clone_on_remote_repo
 def unassign(
-        repo: Union[str, Repo],
-        name: str,
-        ref: str = None,
-        version: str = None,
-        stage: str = None,
-        message: str = None,
-        stdout: bool = False,
-        simple: Optional[bool] = None,
-        force: bool = False,
-        delete: bool = False,
-        push: bool = False,
-        author: Optional[str] = None,
-        author_email: Optional[str] = None,
+    repo: Union[str, Repo],
+    name: str,
+    ref: str = None,
+    version: str = None,
+    stage: str = None,
+    message: str = None,
+    stdout: bool = False,
+    simple: Optional[bool] = None,
+    force: bool = False,
+    delete: bool = False,
+    push: bool = False,
+    author: Optional[str] = None,
+    author_email: Optional[str] = None,
 ):
     with GitRegistry.from_repo(repo) as reg:
         return reg.unassign(
@@ -224,18 +224,18 @@ def unassign(
 @set_push_on_remote_repo
 @clone_on_remote_repo
 def deregister(
-        repo: Union[str, Repo],
-        name: str,
-        ref: str = None,
-        version: str = None,
-        message: str = None,
-        stdout: bool = False,
-        simple: Optional[bool] = None,
-        force: bool = False,
-        delete: bool = False,
-        push: bool = False,
-        author: Optional[str] = None,
-        author_email: Optional[str] = None,
+    repo: Union[str, Repo],
+    name: str,
+    ref: str = None,
+    version: str = None,
+    message: str = None,
+    stdout: bool = False,
+    simple: Optional[bool] = None,
+    force: bool = False,
+    delete: bool = False,
+    push: bool = False,
+    author: Optional[str] = None,
+    author_email: Optional[str] = None,
 ):
     with GitRegistry.from_repo(repo) as reg:
         return reg.deregister(
@@ -256,16 +256,16 @@ def deregister(
 @set_push_on_remote_repo
 @clone_on_remote_repo
 def deprecate(
-        repo: Union[str, Repo],
-        name: str,
-        message: str = None,
-        stdout: bool = False,
-        simple: Optional[bool] = None,
-        force: bool = False,
-        delete: bool = False,
-        push: bool = False,
-        author: Optional[str] = None,
-        author_email: Optional[str] = None,
+    repo: Union[str, Repo],
+    name: str,
+    message: str = None,
+    stdout: bool = False,
+    simple: Optional[bool] = None,
+    force: bool = False,
+    delete: bool = False,
+    push: bool = False,
+    author: Optional[str] = None,
+    author_email: Optional[str] = None,
 ):
     with GitRegistry.from_repo(repo) as reg:
         return reg.deprecate(
@@ -286,10 +286,10 @@ def parse_tag(name: str):
 
 
 def find_latest_version(
-        repo: Union[str, Repo],
-        name: str,
-        all: bool = False,
-        registered: bool = True,
+    repo: Union[str, Repo],
+    name: str,
+    all: bool = False,
+    registered: bool = True,
 ):
     """Return latest version for artifact"""
     with GitRegistry.from_repo(repo) as reg:
@@ -297,12 +297,12 @@ def find_latest_version(
 
 
 def find_versions_in_stage(
-        repo: Union[str, Repo],
-        name: str,
-        stage: str,
-        assignments_per_version=ASSIGNMENTS_PER_VERSION,
-        versions_per_stage=VERSIONS_PER_STAGE,
-        registered_only: bool = False,
+    repo: Union[str, Repo],
+    name: str,
+    stage: str,
+    assignments_per_version=ASSIGNMENTS_PER_VERSION,
+    versions_per_stage=VERSIONS_PER_STAGE,
+    registered_only: bool = False,
 ):
     """Return version of artifact with specific stage active"""
     with GitRegistry.from_repo(repo) as reg:
@@ -323,16 +323,16 @@ def check_ref(repo: Union[str, Repo], ref: str):
 
 
 def show(
-        repo: Union[str, Repo],
-        name: Optional[str] = None,
-        all_branches=False,
-        all_commits=False,
-        truncate_hexsha=False,
-        registered_only=False,
-        assignments_per_version=ASSIGNMENTS_PER_VERSION,
-        versions_per_stage=VERSIONS_PER_STAGE,
-        sort=VersionSort.Timestamp,
-        table: bool = False,
+    repo: Union[str, Repo],
+    name: Optional[str] = None,
+    all_branches=False,
+    all_commits=False,
+    truncate_hexsha=False,
+    registered_only=False,
+    assignments_per_version=ASSIGNMENTS_PER_VERSION,
+    versions_per_stage=VERSIONS_PER_STAGE,
+    sort=VersionSort.Timestamp,
+    table: bool = False,
 ):
     return (
         _show_versions(
@@ -363,15 +363,15 @@ def show(
 
 
 def _show_registry(
-        repo: Union[str, Repo],
-        all_branches=False,
-        all_commits=False,
-        registered_only=False,
-        assignments_per_version: int = None,
-        versions_per_stage: int = None,
-        sort: VersionSort = None,
-        table: bool = False,
-        truncate_hexsha: bool = False,
+    repo: Union[str, Repo],
+    all_branches=False,
+    all_commits=False,
+    registered_only=False,
+    assignments_per_version: int = None,
+    versions_per_stage: int = None,
+    sort: VersionSort = None,
+    table: bool = False,
+    truncate_hexsha: bool = False,
 ):
     """Show current registry state"""
 
@@ -392,14 +392,14 @@ def _show_registry(
                         [
                             format_hexsha(s.version)
                             for s in o.get_vstages(
-                            registered_only=registered_only,
-                            assignments_per_version=assignments_per_version,
-                            versions_per_stage=versions_per_stage,
-                            sort=sort,
-                        ).get(name, [])
+                                registered_only=registered_only,
+                                assignments_per_version=assignments_per_version,
+                                versions_per_stage=versions_per_stage,
+                                sort=sort,
+                            ).get(name, [])
                         ]
                     )
-                          or None
+                    or None
                     for name in stages
                 },
                 "registered": o.is_registered,
@@ -414,32 +414,32 @@ def _show_registry(
         return models_state
 
     return [
-               OrderedDict(
-                   zip(
-                       ["name", "latest"] + [f"#{e}" for e in stages],
-                       [
-                           name if d["registered"] else mark_artifact_unregistered(name),
-                           d["version"],
-                       ]
-                       + [d["stage"][name] for name in stages],
-                   ),
-               )
-               for name, d in models_state.items()
-           ], "keys"
+        OrderedDict(
+            zip(
+                ["name", "latest"] + [f"#{e}" for e in stages],
+                [
+                    name if d["registered"] else mark_artifact_unregistered(name),
+                    d["version"],
+                ]
+                + [d["stage"][name] for name in stages],
+            ),
+        )
+        for name, d in models_state.items()
+    ], "keys"
 
 
 def _show_versions(  # pylint: disable=too-many-locals
-        repo: Union[str, Repo],
-        name: str,
-        raw: bool = False,
-        all_branches=False,
-        all_commits=False,
-        registered_only=False,
-        assignments_per_version: int = None,
-        versions_per_stage: int = None,
-        sort: VersionSort = None,
-        table: bool = False,
-        truncate_hexsha: bool = False,
+    repo: Union[str, Repo],
+    name: str,
+    raw: bool = False,
+    all_branches=False,
+    all_commits=False,
+    registered_only=False,
+    assignments_per_version: int = None,
+    versions_per_stage: int = None,
+    sort: VersionSort = None,
+    table: bool = False,
+    truncate_hexsha: bool = False,
 ):
     """List versions of artifact"""
 
@@ -467,7 +467,7 @@ def _show_versions(  # pylint: disable=too-many-locals
     )
     versions = []
     for v in artifact.get_versions(
-            include_non_explicit=not registered_only, include_discovered=True
+        include_non_explicit=not registered_only, include_discovered=True
     ):
         v = v.dict_state()
         v["stages"] = [
@@ -519,7 +519,7 @@ def _show_versions(  # pylint: disable=too-many-locals
 
 
 def describe(
-        repo: Union[str, Repo], name: str, rev: str = None
+    repo: Union[str, Repo], name: str, rev: str = None
 ) -> List[EnrichmentInfo]:
     """Find enrichments for the artifact"""
     ref_type, parsed = parse_name_reference(name)
@@ -535,14 +535,14 @@ def describe(
 
 
 def history(
-        repo: Union[str, Repo],
-        artifact: str = None,
-        # action: str = None,
-        all_branches=False,
-        all_commits=False,
-        ascending: bool = False,
-        table: bool = False,
-        truncate_hexsha: bool = False,
+    repo: Union[str, Repo],
+    artifact: str = None,
+    # action: str = None,
+    all_branches=False,
+    all_commits=False,
+    ascending: bool = False,
+    table: bool = False,
+    truncate_hexsha: bool = False,
 ):
     with GitRegistry.from_repo(repo=repo) as reg:
         artifacts = reg.get_artifacts(
