@@ -114,7 +114,6 @@ def remove(
 
 
 @set_push_on_remote_repo
-@clone_on_remote_repo
 def register(
     repo: Union[str, Repo],
     name: str,
@@ -151,7 +150,6 @@ def register(
 
 
 @set_push_on_remote_repo
-@clone_on_remote_repo
 def assign(
     repo: Union[str, Repo],
     name: str,
@@ -188,7 +186,6 @@ def assign(
 
 
 @set_push_on_remote_repo
-@clone_on_remote_repo
 def unassign(
     repo: Union[str, Repo],
     name: str,
@@ -222,7 +219,6 @@ def unassign(
 
 
 @set_push_on_remote_repo
-@clone_on_remote_repo
 def deregister(
     repo: Union[str, Repo],
     name: str,
@@ -254,7 +250,6 @@ def deregister(
 
 
 @set_push_on_remote_repo
-@clone_on_remote_repo
 def deprecate(
     repo: Union[str, Repo],
     name: str,
