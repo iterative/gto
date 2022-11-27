@@ -1,6 +1,6 @@
 import inspect
 import logging
-from abc import abstractmethod
+from abc import abstractmethod, ABC
 from contextlib import contextmanager
 from functools import wraps
 from tempfile import TemporaryDirectory
@@ -36,6 +36,38 @@ class FromRemoteRepoMixin:
                 ) from e
         else:
             yield cls._from_repo(repo=repo, config=config)
+
+
+class CommitChangesDueToAddMixin:
+
+    @abstractmethod
+    def _add(self, name, type, path, must_exist, labels, description, update):
+        pass
+
+    def add(self, name, type, path, must_exist, labels, description, update, commit, commit_message):
+        if commit:
+            with stashed_changes(
+                    repo_path=self._repo, include_untracked=True
+            ) as (stashed_tracked, stashed_untracked):
+                result = self._add(name, type, path, must_exist, labels, description, update)
+                if are_files_in_repo_changed(
+                        repo_path=self._repo,
+                        files=stashed_tracked + stashed_untracked,
+                ):
+                    _reset_repo_to_head(repo_path=self._repo)
+                    raise GTOException(
+                        msg="The command would have changed files that were not committed, "
+                            "automated committing is not possible.\n"
+                            "Suggested action: Commit the changes and re-run this command."
+                    )
+                git_add_and_commit_all_changes(
+                    repo_path=self._repo,
+                    message=commit_message,
+                )
+        else:
+            return self._add(name, type, path, must_exist, labels, description, update)
+
+        return result
 
 
 def clone_on_remote_repo(f: Callable):

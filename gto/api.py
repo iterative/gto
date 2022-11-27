@@ -74,7 +74,6 @@ def get_stages(repo: Union[str, Repo], allowed: bool = False, used: bool = False
 @set_push_on_remote_repo
 @clone_on_remote_repo
 @push_on_push
-@commit_produced_changes_on_commit(message_generator=generate_annotate_commit_message)
 def annotate(
     repo: Union[str, Repo],
     name: str,
@@ -96,6 +95,8 @@ def annotate(
         labels=labels,
         description=description,
         update=True,
+        commit=commit,
+        commit_message=generate_annotate_commit_message(name=name, type=type, path=path),
     )
 
 

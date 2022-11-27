@@ -4,7 +4,7 @@ from collections import defaultdict
 from datetime import datetime
 from functools import wraps
 from pathlib import Path
-from typing import IO, Dict, FrozenSet, Generator, List, Optional, Union
+from typing import IO, Dict, FrozenSet, Generator, List, Optional, Union, Any
 
 import git
 from git import Repo
@@ -29,7 +29,7 @@ from gto.exceptions import (
     WrongArgs,
 )
 from gto.ext import EnrichmentInfo, EnrichmentReader
-from gto.git_utils import FromRemoteRepoMixin
+from gto.git_utils import FromRemoteRepoMixin, CommitChangesDueToAddMixin
 from gto.utils import resolve_ref
 
 
@@ -184,7 +184,7 @@ class BaseIndexManager(BaseModel, ABC):
     def get_history(self) -> Dict[str, Index]:
         raise NotImplementedError
 
-    def add(self, name, type, path, must_exist, labels, description, update):
+    def _add(self, name, type, path, must_exist, labels, description, update):
         for arg in [name] + list(labels or []):
             assert_name_is_valid(arg)
         if type:
@@ -245,8 +245,16 @@ ArtifactCommits = Dict[str, Artifact]
 ArtifactsCommits = Dict[str, ArtifactCommits]
 
 
-class RepoIndexManager(FileIndexManager):
+class RepoIndexManager(FileIndexManager, CommitChangesDueToAddMixin):
     repo: git.Repo
+
+    def __init__(self, repo, config):
+        super().__init__(repo=repo, config=config)
+        # @aguschin
+        # run test test_api.test_if_annotate_with_auto_commit_then_invoke_stash_and_commit
+        # It will fail at the next line with error 'ValueError: "RepoIndexManager" object has no field "_repo"'
+        # Why is that?
+        self._repo = repo
 
     @classmethod
     def from_repo(cls, repo: Union[str, git.Repo], config: RegistryConfig = None):
@@ -259,7 +267,9 @@ class RepoIndexManager(FileIndexManager):
             config = read_registry_config(
                 os.path.join(repo.working_dir, CONFIG_FILE_NAME)
             )
-        return cls(repo=repo, config=config)
+        self = cls(repo=repo, config=config)
+        # self._set_repo(repo=repo)
+        return self
 
     def index_path(self):
         # TODO: config should be loaded from repo too
