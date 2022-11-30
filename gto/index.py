@@ -4,7 +4,7 @@ from collections import defaultdict
 from datetime import datetime
 from functools import wraps
 from pathlib import Path
-from typing import IO, Dict, FrozenSet, Generator, List, Optional, Union, Any
+from typing import IO, Dict, FrozenSet, Generator, List, Optional, Union
 
 import git
 from git import Repo
@@ -29,7 +29,7 @@ from gto.exceptions import (
     WrongArgs,
 )
 from gto.ext import EnrichmentInfo, EnrichmentReader
-from gto.git_utils import FromRemoteRepoMixin, CommitChangesDueToAddMixin
+from gto.git_utils import CommitChangesDueToAddMixin, FromRemoteRepoMixin
 from gto.utils import resolve_ref
 
 
@@ -250,11 +250,6 @@ class RepoIndexManager(FileIndexManager, CommitChangesDueToAddMixin):
 
     def __init__(self, repo, config):
         super().__init__(repo=repo, config=config)
-        # @aguschin
-        # run test test_api.test_if_annotate_with_auto_commit_then_invoke_stash_and_commit
-        # It will fail at the next line with error 'ValueError: "RepoIndexManager" object has no field "_repo"'
-        # Why is that?
-        self._repo = repo
 
     @classmethod
     def from_repo(cls, repo: Union[str, git.Repo], config: RegistryConfig = None):

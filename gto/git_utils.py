@@ -1,6 +1,6 @@
 import inspect
 import logging
-from abc import abstractmethod, ABC
+from abc import abstractmethod
 from contextlib import contextmanager
 from functools import wraps
 from tempfile import TemporaryDirectory
@@ -39,29 +39,42 @@ class FromRemoteRepoMixin:
 
 
 class CommitChangesDueToAddMixin:
-
     @abstractmethod
     def _add(self, name, type, path, must_exist, labels, description, update):
         pass
 
-    def add(self, name, type, path, must_exist, labels, description, update, commit, commit_message):
+    def add(
+        self,
+        name,
+        type,
+        path,
+        must_exist,
+        labels,
+        description,
+        update,
+        commit,
+        commit_message,
+    ):
         if commit:
-            with stashed_changes(
-                    repo_path=self._repo, include_untracked=True
-            ) as (stashed_tracked, stashed_untracked):
-                result = self._add(name, type, path, must_exist, labels, description, update)
+            with stashed_changes(repo_path=self.repo, include_untracked=True) as (
+                stashed_tracked,
+                stashed_untracked,
+            ):
+                result = self._add(
+                    name, type, path, must_exist, labels, description, update
+                )
                 if are_files_in_repo_changed(
-                        repo_path=self._repo,
-                        files=stashed_tracked + stashed_untracked,
+                    repo_path=self.repo,
+                    files=stashed_tracked + stashed_untracked,
                 ):
-                    _reset_repo_to_head(repo_path=self._repo)
+                    _reset_repo_to_head(repo_path=self.repo)
                     raise GTOException(
                         msg="The command would have changed files that were not committed, "
-                            "automated committing is not possible.\n"
-                            "Suggested action: Commit the changes and re-run this command."
+                        "automated committing is not possible.\n"
+                        "Suggested action: Commit the changes and re-run this command."
                     )
                 git_add_and_commit_all_changes(
-                    repo_path=self._repo,
+                    repo_path=self.repo,
                     message=commit_message,
                 )
         else:
@@ -270,7 +283,7 @@ def git_push(repo_path: str) -> None:
 
 
 def git_add_and_commit_all_changes(repo_path: str, message: str) -> None:
-    repo = git.Repo(path=repo_path)
+    repo = read_repo(repo_path)
     tracked, untracked = _get_repo_changed_tracked_and_untracked_files(
         repo_path=repo_path
     )
@@ -281,9 +294,13 @@ def git_add_and_commit_all_changes(repo_path: str, message: str) -> None:
         repo.index.commit(message=message)
 
 
+def read_repo(repo: Union[str, git.Repo]) -> git.Repo:
+    return git.Repo(path=repo) if isinstance(repo, str) else repo
+
+
 @contextmanager
 def stashed_changes(repo_path: str, include_untracked: bool = False):
-    repo = git.Repo(path=repo_path)
+    repo = read_repo(repo_path)
     if len(repo.refs) == 0:
         raise RuntimeError(
             "Cannot stash because repository has no ref. Please create a first commit."
@@ -317,7 +334,7 @@ def _reset_repo_to_head(repo_path: str) -> None:
 def _get_repo_changed_tracked_and_untracked_files(
     repo_path: str,
 ) -> Tuple[List[str], List[str]]:
-    repo = git.Repo(path=repo_path)
+    repo = read_repo(repo_path)
     return [item.a_path for item in repo.index.diff(None)], repo.untracked_files
 
 

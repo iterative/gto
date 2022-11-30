@@ -624,10 +624,10 @@ def test_if_annotate_with_auto_commit_then_invoke_stash_and_commit(
             )
 
     mocked_stashed_changes.assert_called_once_with(
-        repo_path=repo.working_dir, include_untracked=True
+        repo_path=repo, include_untracked=True
     )
     mocked_git_add_and_commit_all_changes.assert_called_once_with(
-        repo_path=repo.working_dir,
+        repo_path=repo,
         message=generate_annotate_commit_message(name=name, type=type, path=path),
     )
 
@@ -683,10 +683,10 @@ def test_if_annotate_with_auto_push_then_invoke_commit_and_push(init_showcase_se
                 )
 
     mocked_stashed_changes.assert_called_once_with(
-        repo_path=repo.working_dir, include_untracked=True
+        repo_path=repo, include_untracked=True
     )
     mocked_git_add_and_commit_all_changes.assert_called_once_with(
-        repo_path=repo.working_dir,
+        repo_path=repo,
         message=generate_annotate_commit_message(name=name, type=type, path=path),
     )
     mocked_git_push.assert_called_once_with(repo_path=repo.working_dir)
