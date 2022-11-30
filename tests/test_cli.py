@@ -8,7 +8,6 @@ import typer
 from packaging import version
 from typer.main import get_command_from_info
 
-from gto.api import _get_index
 from gto.cli import app
 from gto.exceptions import GTOException
 from tests.conftest import Runner
@@ -261,9 +260,8 @@ def test_annotate(empty_git_repo: Tuple[git.Repo, Callable]):
         ],
         "",
     )
-    artifact = (
-        _get_index(repo.working_dir, file=True).get_index().state[name]
-    )  # pylint: disable=protected-access
+    with RepoIndexManager.from_repo(repo.working_dir) as index:
+        artifact = index.get_index().state[name]  # pylint: disable=protected-access
     check_obj(
         artifact,
         dict(

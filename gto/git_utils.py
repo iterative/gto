@@ -52,8 +52,8 @@ class CommitChangesDueToAddMixin:
         labels,
         description,
         update,
-        commit,
-        commit_message,
+        commit=False,
+        commit_message="Commit GTO changes",
     ):
         if commit:
             with stashed_changes(repo_path=self.repo, include_untracked=True) as (

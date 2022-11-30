@@ -1,6 +1,7 @@
 import os
 from abc import ABC, abstractmethod
 from collections import defaultdict
+from contextlib import contextmanager
 from datetime import datetime
 from functools import wraps
 from pathlib import Path
@@ -218,10 +219,11 @@ class FileIndexManager(BaseIndexManager):
     path: str = ""
 
     @classmethod
+    @contextmanager
     def from_path(cls, path: str, config: RegistryConfig = None):
         if config is None:
             config = read_registry_config(os.path.join(path, CONFIG_FILE_NAME))
-        return cls(path=path, config=config)
+        yield cls(path=path, config=config)
 
     def index_path(self):
         return str(Path(self.path) / self.config.INDEX)
@@ -252,19 +254,18 @@ class RepoIndexManager(FileIndexManager, CommitChangesDueToAddMixin):
         super().__init__(repo=repo, config=config)
 
     @classmethod
+    @contextmanager
     def from_repo(cls, repo: Union[str, git.Repo], config: RegistryConfig = None):
         if isinstance(repo, str):
             try:
                 repo = git.Repo(repo, search_parent_directories=True)
             except git.InvalidGitRepositoryError as e:
-                raise NoRepo(repo) from e
+                yield FileIndexManager.from_path(repo, config=config)
         if config is None:
             config = read_registry_config(
                 os.path.join(repo.working_dir, CONFIG_FILE_NAME)
             )
-        self = cls(repo=repo, config=config)
-        # self._set_repo(repo=repo)
-        return self
+        yield cls(repo=repo, config=config)
 
     def index_path(self):
         # TODO: config should be loaded from repo too
@@ -411,13 +412,6 @@ class EnrichmentManager(BaseManager, FromRemoteRepoMixin):
         return state
 
 
-def init_index_manager(path):
-    try:
-        return RepoIndexManager.from_repo(path)
-    except NoRepo:
-        return FileIndexManager.from_path(path)
-
-
 class GTOInfo(EnrichmentInfo):
     source = "gto"
     artifact: Artifact
@@ -438,7 +432,8 @@ class GTOEnrichment(EnrichmentReader):
     def discover(  # pylint: disable=no-self-use
         self, repo, rev: Optional[Union[git.Reference, str]]
     ) -> Dict[str, GTOInfo]:
-        index = RepoIndexManager.from_repo(repo).get_commit_index(rev)
+        with RepoIndexManager.from_repo(repo) as index:
+            index = index.get_commit_index(rev)
         if index:
             return {
                 name: GTOInfo(artifact=artifact)
@@ -449,7 +444,8 @@ class GTOEnrichment(EnrichmentReader):
     def describe(  # pylint: disable=no-self-use
         self, repo, obj: str, rev: Optional[Union[git.Reference, str]]
     ) -> Optional[GTOInfo]:
-        index = RepoIndexManager.from_repo(repo).get_commit_index(rev)
+        with RepoIndexManager.from_repo(repo) as index:
+            index = index.get_commit_index(rev)
         if index and obj in index.state:
             return GTOInfo(artifact=index.state[obj])
         return None

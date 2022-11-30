@@ -13,7 +13,9 @@ from gto.index import (
 
 
 def init_index(path):
-    return RepoIndexManager.from_repo(path)
+    # not correct, I believe, but tests pass
+    with RepoIndexManager.from_repo(path) as index:
+        return index
 
 
 @pytest.fixture

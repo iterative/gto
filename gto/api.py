@@ -29,12 +29,7 @@ from gto.git_utils import (
     push_on_push,
     set_push_on_remote_repo,
 )
-from gto.index import (
-    EnrichmentManager,
-    FileIndexManager,
-    RepoIndexManager,
-    init_index_manager,
-)
+from gto.index import EnrichmentManager, FileIndexManager, RepoIndexManager
 from gto.registry import GitRegistry
 from gto.tag import NAME_REFERENCE
 from gto.tag import parse_name as parse_tag_name
@@ -53,10 +48,10 @@ def _is_gto_repo(repo: Union[str, Repo]):
 def _get_index(repo: Union[str, Repo], file=False):
     """Get index state"""
     if file:
-        return FileIndexManager.from_path(
+        yield FileIndexManager.from_path(
             path=repo if isinstance(repo, str) else repo.working_dir
         )
-    return RepoIndexManager.from_repo(repo)
+    yield RepoIndexManager.from_repo(repo)
 
 
 def _get_state(repo: Union[str, Repo]):
@@ -72,8 +67,6 @@ def get_stages(repo: Union[str, Repo], allowed: bool = False, used: bool = False
 
 # TODO: make this work the same as CLI version
 @set_push_on_remote_repo
-@clone_on_remote_repo
-@push_on_push
 def annotate(
     repo: Union[str, Repo],
     name: str,
@@ -87,23 +80,27 @@ def annotate(
     # update: bool = False,
 ):
     """Add an artifact to the Index"""
-    return init_index_manager(path=repo).add(
-        name,
-        type=type,
-        path=path,
-        must_exist=must_exist,
-        labels=labels,
-        description=description,
-        update=True,
-        commit=commit,
-        commit_message=generate_annotate_commit_message(name=name, type=type, path=path),
-    )
+    with RepoIndexManager.from_repo(repo) as index:
+        return index.add(
+            name,
+            type=type,
+            path=path,
+            must_exist=must_exist,
+            labels=labels,
+            description=description,
+            update=True,
+            **{
+                "commit": commit,
+                "commit_message": generate_annotate_commit_message(
+                    name=name, type=type, path=path
+                ),
+            }
+            if commit
+            else {},
+        )
 
 
 @set_push_on_remote_repo
-@clone_on_remote_repo
-@push_on_push
-@commit_produced_changes_on_commit(message_generator=generate_remove_commit_message)
 def remove(
     repo: Union[str, Repo],
     name: str,
@@ -111,7 +108,8 @@ def remove(
     push: bool = False,
 ):  # pylint: disable=unused-argument
     """Remove an artifact from the Index"""
-    return init_index_manager(path=repo).remove(name)
+    with RepoIndexManager.from_repo(repo) as index:
+        return index.remove(name)
 
 
 @set_push_on_remote_repo

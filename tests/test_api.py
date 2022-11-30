@@ -20,6 +20,7 @@ from gto.commit_message_generator import (
 )
 from gto.exceptions import PathIsUsed, WrongArgs
 from gto.git_utils import git_clone
+from gto.index import RepoIndexManager
 from gto.tag import find
 from gto.versions import SemVer
 from tests.skip_presets import skip_for_windows_py_lt_3_9
@@ -31,8 +32,8 @@ from tests.utils import (
 
 def test_empty_index(empty_git_repo: Tuple[git.Repo, Callable]):
     repo, write_file = empty_git_repo
-    index = gto.api._get_index(repo.working_dir)
-    assert len(index.artifact_centric_representation()) == 0
+    with RepoIndexManager.from_repo(repo.working_dir) as index:
+        assert len(index.artifact_centric_representation()) == 0
 
 
 def test_empty_state(empty_git_repo: Tuple[git.Repo, Callable]):
@@ -55,7 +56,8 @@ def test_add_remove(empty_git_repo: Tuple[git.Repo, Callable]):
     )
     with pytest.raises(PathIsUsed):
         gto.api.annotate(repo.working_dir, "other-name", path=path)
-    index = gto.api._get_index(repo.working_dir).get_index()
+    with RepoIndexManager.from_repo(repo.working_dir) as index:
+        index = index.get_index()
     assert name in index
     check_obj(
         index.state[name],
@@ -69,7 +71,8 @@ def test_add_remove(empty_git_repo: Tuple[git.Repo, Callable]):
         [],
     )
     gto.api.remove(repo.working_dir, name)
-    index = gto.api._get_index(repo.working_dir).get_index()
+    with RepoIndexManager.from_repo(repo.working_dir) as index:
+        index = index.get_index()
     assert name not in index
 
 
