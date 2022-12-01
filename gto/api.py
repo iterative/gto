@@ -62,6 +62,8 @@ def annotate(
     # update: bool = False,
 ):
     """Add an artifact to the Index"""
+    if push:
+        commit = True
     with RepoIndexManager.from_repo(repo) as index:
         return index.add(
             name,
@@ -71,12 +73,7 @@ def annotate(
             labels=labels,
             description=description,
             update=True,
-            **{
-                "commit": commit,
-                # "commit_message": commit_message,  # TODO: add this as an arg
-            }
-            if commit
-            else {},
+            commit=commit,
         )
 
 
@@ -88,8 +85,10 @@ def remove(
     push: bool = False,
 ):  # pylint: disable=unused-argument
     """Remove an artifact from the Index"""
+    if push:
+        commit = True
     with RepoIndexManager.from_repo(repo) as index:
-        return index.remove(name)
+        return index.remove(name, commit)
 
 
 @set_push_on_remote_repo

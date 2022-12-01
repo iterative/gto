@@ -657,10 +657,10 @@ def test_if_remove_with_auto_commit_then_invoke_stash_and_commit(
             gto.api.remove(repo=repo.working_dir, name=name, commit=True)
 
     mocked_stashed_changes.assert_called_once_with(
-        repo=repo.working_dir, include_untracked=True
+        repo=git.Repo(repo.working_dir), include_untracked=True
     )
     mocked_git_add_and_commit_all_changes.assert_called_once_with(
-        repo=repo.working_dir, message=generate_remove_commit_message(name=name)
+        repo=git.Repo(repo.working_dir), message=generate_remove_commit_message(name=name)
     )
 
 
@@ -716,10 +716,10 @@ def test_if_remove_with_auto_push_then_invoke_commit_and_push(
                 gto.api.remove(repo=repo.working_dir, name=name, push=True)
 
     mocked_stashed_changes.assert_called_once_with(
-        repo=repo.working_dir, include_untracked=True
+        repo=git.Repo(repo.working_dir), include_untracked=True
     )
     mocked_git_add_and_commit_all_changes.assert_called_once_with(
-        repo=repo.working_dir, message=generate_remove_commit_message(name=name)
+        repo=git.Repo(repo.working_dir), message=generate_remove_commit_message(name=name)
     )
     mocked_git_push.assert_called_once_with(repo=repo.working_dir)
 
