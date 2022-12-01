@@ -585,7 +585,7 @@ class GitRegistry(BaseModel, FromRemoteRepoMixin):
                     f"Running `git push{' --delete ' if delete else ' '}origin {tag_name}`"
                 )
             git_push_tag(
-                repo_path=Path(self.repo.git_dir).parent.as_posix(),
+                repo=Path(self.repo.git_dir).parent.as_posix(),
                 tag_name=tag_name,
                 delete=delete,
             )

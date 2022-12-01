@@ -9,7 +9,11 @@ from typing import Callable, Dict, List, Tuple, Union
 import git
 from git import Repo
 
-from gto.commit_message_generator import generate_empty_commit_message
+from gto.commit_message_generator import (
+    generate_annotate_commit_message,
+    generate_empty_commit_message,
+    generate_remove_commit_message,
+)
 from gto.config import RegistryConfig
 from gto.constants import remote_git_repo_regex
 from gto.exceptions import GTOException, WrongArgs
@@ -24,7 +28,7 @@ class FromRemoteRepoMixin:
     @classmethod
     @contextmanager
     def from_repo(cls, repo: Union[str, Repo], config: RegistryConfig = None):
-        if isinstance(repo, str) and is_url_of_remote_repo(repo=repo):
+        if isinstance(repo, str) and is_url_of_remote_repo(repo_path=repo):
             try:
                 with cloned_git_repo(repo=repo) as tmp_dir:
                     yield cls._from_repo(repo=tmp_dir, config=config)
@@ -38,7 +42,7 @@ class FromRemoteRepoMixin:
             yield cls._from_repo(repo=repo, config=config)
 
 
-class CommitChangesDueToAddMixin:
+class CommitChangesDueToAddMixin(FromRemoteRepoMixin):
     @abstractmethod
     def _add(self, name, type, path, must_exist, labels, description, update):
         pass
@@ -53,34 +57,62 @@ class CommitChangesDueToAddMixin:
         description,
         update,
         commit=False,
-        commit_message="Commit GTO changes",
+        commit_message=None,
     ):
+        return self._change_and_commit(
+            self._add,
+            commit=commit,
+            commit_message=commit_message
+            or generate_annotate_commit_message(name=name, type=type, path=path),
+            name=name,
+            type=type,
+            path=path,
+            must_exist=must_exist,
+            labels=labels,
+            description=description,
+            update=update,
+        )
+
+    @abstractmethod
+    def _remove(self, name):
+        pass
+
+    def remove(
+        self,
+        name,
+        commit=False,
+        commit_message=None,
+    ):
+        return self._change_and_commit(
+            self._remove,
+            commit=commit,
+            commit_message=commit_message or generate_remove_commit_message(name=name),
+            name=name,
+        )
+
+    def _change_and_commit(self, func, commit=False, commit_message=None, **kwargs):
         if commit:
-            with stashed_changes(repo_path=self.repo, include_untracked=True) as (
+            with stashed_changes(repo=self.repo, include_untracked=True) as (
                 stashed_tracked,
                 stashed_untracked,
             ):
-                result = self._add(
-                    name, type, path, must_exist, labels, description, update
-                )
+                result = func(**kwargs)
                 if are_files_in_repo_changed(
-                    repo_path=self.repo,
+                    repo=self.repo,
                     files=stashed_tracked + stashed_untracked,
                 ):
-                    _reset_repo_to_head(repo_path=self.repo)
+                    _reset_repo_to_head(repo=self.repo)
                     raise GTOException(
                         msg="The command would have changed files that were not committed, "
                         "automated committing is not possible.\n"
                         "Suggested action: Commit the changes and re-run this command."
                     )
                 git_add_and_commit_all_changes(
-                    repo_path=self.repo,
+                    repo=self.repo,
                     message=commit_message,
                 )
-        else:
-            return self._add(name, type, path, must_exist, labels, description, update)
-
-        return result
+            return result
+        return func(**kwargs)
 
 
 def clone_on_remote_repo(f: Callable):
@@ -89,7 +121,7 @@ def clone_on_remote_repo(f: Callable):
         kwargs = _turn_args_into_kwargs(f, args, kwargs)
 
         if isinstance(kwargs["repo"], str) and is_url_of_remote_repo(
-            repo=kwargs["repo"]
+            repo_path=kwargs["repo"]
         ):
             try:
                 with cloned_git_repo(repo=kwargs["repo"]) as tmp_dir:
@@ -113,7 +145,7 @@ def set_push_on_remote_repo(f: Callable):
         kwargs = _turn_args_into_kwargs(f, args, kwargs)
 
         if isinstance(kwargs["repo"], str) and is_url_of_remote_repo(
-            repo=kwargs["repo"]
+            repo_path=kwargs["repo"]
         ):
             kwargs["push"] = True
 
@@ -154,21 +186,21 @@ def commit_produced_changes_on_commit(
             if kwargs.get("commit", False) is True:
                 if "repo" in kwargs:
                     with stashed_changes(
-                        repo_path=kwargs["repo"], include_untracked=True
+                        repo=kwargs["repo"], include_untracked=True
                     ) as (stashed_tracked, stashed_untracked):
                         result = f(**kwargs)
                         if are_files_in_repo_changed(
-                            repo_path=kwargs["repo"],
+                            repo=kwargs["repo"],
                             files=stashed_tracked + stashed_untracked,
                         ):
-                            _reset_repo_to_head(repo_path=kwargs["repo"])
+                            _reset_repo_to_head(repo=kwargs["repo"])
                             raise GTOException(
                                 msg="The command would have changed files that were not committed, "
                                 "automated committing is not possible.\n"
                                 "Suggested action: Commit the changes and re-run this command."
                             )
                         git_add_and_commit_all_changes(
-                            repo_path=kwargs["repo"],
+                            repo=kwargs["repo"],
                             message=generate_commit_message(**kwargs),
                         )
                 else:
@@ -196,7 +228,7 @@ def push_on_push(f: Callable):
             result = f(**kwargs)
             if "repo" in kwargs:
                 try:
-                    git_push(repo_path=kwargs["repo"])
+                    git_push(repo=kwargs["repo"])
                 except Exception as e:
                     raise GTOException(  # pylint: disable=raise-missing-from
                         "It was not possible to run `git push`. "
@@ -216,22 +248,20 @@ def push_on_push(f: Callable):
     return wrapped_f
 
 
-def are_files_in_repo_changed(repo_path: str, files: List[str]) -> bool:
-    tracked, untracked = _get_repo_changed_tracked_and_untracked_files(
-        repo_path=repo_path
-    )
+def are_files_in_repo_changed(repo: Union[str, git.Repo], files: List[str]) -> bool:
+    tracked, untracked = _get_repo_changed_tracked_and_untracked_files(repo=repo)
     return (
         len(set(files).intersection(tracked)) > 0
         or len(set(files).intersection(untracked)) > 0
     )
 
 
-def is_url_of_remote_repo(repo: str) -> bool:
-    if remote_git_repo_regex.fullmatch(repo) is not None:
-        logging.debug("%s recognized as remote git repo", repo)
+def is_url_of_remote_repo(repo_path: str) -> bool:
+    if remote_git_repo_regex.fullmatch(repo_path) is not None:
+        logging.debug("%s recognized as remote git repo", repo_path)
         return True
 
-    logging.debug("%s NOT recognized as remote git repo", repo)
+    logging.debug("%s NOT recognized as remote git repo", repo_path)
     return False
 
 
@@ -251,19 +281,22 @@ def git_clone(repo: str, dir: str) -> None:
 
 
 def git_push_tag(
-    repo_path: str, tag_name: str, delete: bool = False, remote_name: str = "origin"
+    repo: Union[str, git.Repo],
+    tag_name: str,
+    delete: bool = False,
+    remote_name: str = "origin",
 ) -> None:
-    repo = git.Repo(path=repo_path)
+    repo = read_repo(repo)
     remote = repo.remote(name=remote_name)
     if not hasattr(remote, "url"):
         raise WrongArgs(
-            f"provided repo_path={repo_path} does not appear to have a remote to push to"
+            f"provided repo={repo} does not appear to have a remote to push to"
         )
     logging.debug(
         "push %s tag %s from directory %s to remote %s with url %s",
         "--delete" if delete else "",
         tag_name,
-        repo_path,
+        repo.working_dir,
         remote_name,
         remote.url,
     )
@@ -278,15 +311,13 @@ def git_push_tag(
         )
 
 
-def git_push(repo_path: str) -> None:
-    git.Repo(path=repo_path).git.push()
+def git_push(repo: Union[str, git.Repo]) -> None:
+    read_repo(repo).git.push()
 
 
-def git_add_and_commit_all_changes(repo_path: str, message: str) -> None:
-    repo = read_repo(repo_path)
-    tracked, untracked = _get_repo_changed_tracked_and_untracked_files(
-        repo_path=repo_path
-    )
+def git_add_and_commit_all_changes(repo: Union[str, git.Repo], message: str) -> None:
+    repo = read_repo(repo)
+    tracked, untracked = _get_repo_changed_tracked_and_untracked_files(repo=repo)
     if len(tracked) + len(untracked) > 0:
         logging.debug("Adding to the index the untracked files %s", untracked)
         logging.debug("Add and commit changes to files %s", tracked + untracked)
@@ -299,16 +330,14 @@ def read_repo(repo: Union[str, git.Repo]) -> git.Repo:
 
 
 @contextmanager
-def stashed_changes(repo_path: str, include_untracked: bool = False):
-    repo = read_repo(repo_path)
+def stashed_changes(repo: Union[str, git.Repo], include_untracked: bool = False):
+    repo = read_repo(repo)
     if len(repo.refs) == 0:
         raise RuntimeError(
             "Cannot stash because repository has no ref. Please create a first commit."
         )
 
-    tracked, untracked = _get_repo_changed_tracked_and_untracked_files(
-        repo_path=repo_path
-    )
+    tracked, untracked = _get_repo_changed_tracked_and_untracked_files(repo=repo)
 
     stash_arguments = ["push"]
     if include_untracked:
@@ -325,16 +354,16 @@ def stashed_changes(repo_path: str, include_untracked: bool = False):
             repo.git.stash("pop")
 
 
-def _reset_repo_to_head(repo_path: str) -> None:
-    repo = git.Repo(path=repo_path)
+def _reset_repo_to_head(repo: Union[str, git.Repo]) -> None:
+    repo = read_repo(repo)
     repo.git.stash(["push", "--include-untracked"])
     repo.git.stash(["drop"])
 
 
 def _get_repo_changed_tracked_and_untracked_files(
-    repo_path: str,
+    repo: Union[str, git.Repo],
 ) -> Tuple[List[str], List[str]]:
-    repo = read_repo(repo_path)
+    repo = read_repo(repo)
     return [item.a_path for item in repo.index.diff(None)], repo.untracked_files
 
 

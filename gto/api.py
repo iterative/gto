@@ -5,10 +5,6 @@ from typing import List, Optional, Union
 from funcy import distinct
 from git import Repo
 
-from gto.commit_message_generator import (
-    generate_annotate_commit_message,
-    generate_remove_commit_message,
-)
 from gto.constants import (
     ARTIFACT,
     ASSIGNMENTS_PER_VERSION,
@@ -23,13 +19,8 @@ from gto.constants import (
 )
 from gto.exceptions import NoRepo, NotImplementedInGTO, WrongArgs
 from gto.ext import EnrichmentInfo
-from gto.git_utils import (
-    clone_on_remote_repo,
-    commit_produced_changes_on_commit,
-    push_on_push,
-    set_push_on_remote_repo,
-)
-from gto.index import EnrichmentManager, FileIndexManager, RepoIndexManager
+from gto.git_utils import set_push_on_remote_repo
+from gto.index import EnrichmentManager, RepoIndexManager
 from gto.registry import GitRegistry
 from gto.tag import NAME_REFERENCE
 from gto.tag import parse_name as parse_tag_name
@@ -43,15 +34,6 @@ def _is_gto_repo(repo: Union[str, Repo]):
             return reg.is_gto_repo()
     except NoRepo:
         return False
-
-
-def _get_index(repo: Union[str, Repo], file=False):
-    """Get index state"""
-    if file:
-        yield FileIndexManager.from_path(
-            path=repo if isinstance(repo, str) else repo.working_dir
-        )
-    yield RepoIndexManager.from_repo(repo)
 
 
 def _get_state(repo: Union[str, Repo]):
@@ -91,9 +73,7 @@ def annotate(
             update=True,
             **{
                 "commit": commit,
-                "commit_message": generate_annotate_commit_message(
-                    name=name, type=type, path=path
-                ),
+                # "commit_message": commit_message,  # TODO: add this as an arg
             }
             if commit
             else {},

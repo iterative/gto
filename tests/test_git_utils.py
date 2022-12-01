@@ -67,39 +67,39 @@ def test_if_repo_is_remote_url_and_windows_os_error_then_hint_win_with_py_lt_3_9
 
 
 @pytest.mark.parametrize(
-    "repo",
+    "repo_path",
     (
         "/local/path",
         "/local/path",
         ".",
     ),
 )
-def test_is_url_of_remote_repo_if_local_url_then_true(repo: str):
-    assert is_url_of_remote_repo(repo=repo) is False
+def test_is_url_of_remote_repo_if_local_url_then_true(repo_path: str):
+    assert is_url_of_remote_repo(repo_path=repo_path) is False
 
 
 @pytest.mark.parametrize(
-    "repo",
+    "repo_path",
     (
         tests.resources.SAMPLE_HTTP_REMOTE_REPO,
         tests.resources.SAMPLE_HTTP_REMOTE_REPO_WITHOUT_DOT_GIT_SUFFIX,
     ),
 )
-def test_is_url_of_remote_repo_if_remote_url_then_true(repo: str):
-    assert is_url_of_remote_repo(repo=repo) is True
+def test_is_url_of_remote_repo_if_remote_url_then_true(repo_path: str):
+    assert is_url_of_remote_repo(repo_path=repo_path) is True
 
 
 @skip_for_windows_py_lt_3_9
 @pytest.mark.parametrize(
-    "repo",
+    "repo_path",
     (
         tests.resources.SAMPLE_HTTP_REMOTE_REPO,
         tests.resources.SAMPLE_HTTP_REMOTE_REPO_WITHOUT_DOT_GIT_SUFFIX,
     ),
 )
-def test_git_clone_if_valid_remote_then_clone(repo: str):
+def test_git_clone_if_valid_remote_then_clone(repo_path: str):
     with TemporaryDirectory() as tmp_repo_dir:
-        git_clone(repo=repo, dir=tmp_repo_dir)
+        git_clone(repo=repo_path, dir=tmp_repo_dir)
         assert_dir_contain_git_repo(dir=tmp_repo_dir)
 
 
@@ -115,7 +115,7 @@ def test_git_push_tag_if_called_then_gitpython_corresponding_methods_are_correct
     ) = with_mocked_repo_with_remote
     tag_name = "test_tag"
 
-    git_push_tag(repo_path=path, tag_name=tag_name, remote_name=remote_name)
+    git_push_tag(repo=path, tag_name=tag_name, remote_name=remote_name)
 
     MockedRepo.assert_called_once_with(path=path)
     mocked_repo.remote.assert_called_once_with(name=remote_name)
@@ -134,9 +134,7 @@ def test_git_push_tag_if_called_with_delete_then_gitpython_corresponding_methods
     ) = with_mocked_repo_with_remote
     tag_name = "test_tag"
 
-    git_push_tag(
-        repo_path=path, tag_name=tag_name, delete=True, remote_name=remote_name
-    )
+    git_push_tag(repo=path, tag_name=tag_name, delete=True, remote_name=remote_name)
 
     MockedRepo.assert_called_once_with(path=path)
     mocked_repo.remote.assert_called_once_with(name=remote_name)
@@ -157,7 +155,7 @@ def test_git_push_tag_if_error_then_exit_with_code_1(
     tag_name = "test_tag"
 
     with pytest.raises(GTOException) as error:
-        git_push_tag(repo_path=path, tag_name=tag_name, remote_name=remote_name)
+        git_push_tag(repo=path, tag_name=tag_name, remote_name=remote_name)
 
     assert f"git push {remote_name} {tag_name}" in error.value.msg
     assert (
@@ -189,7 +187,7 @@ def test_git_add_and_commit_all_changes_if_files_not_changed_then_no_new_commit(
     tmp_local_git_repo_with_first_test_commit,
 ):
     git_add_and_commit_all_changes(
-        repo_path=tmp_local_git_repo_with_first_test_commit[0],
+        repo=tmp_local_git_repo_with_first_test_commit[0],
         message=SECOND_TEST_COMMIT_MESSAGE,
     )
     assert_repo_as_expected_after_first_test_commit(
@@ -205,7 +203,7 @@ def test_git_add_and_commit_all_changes_if_tracked_file_is_changed_then_new_comm
         f.write(SECOND_TEST_FILE_MODIFICATION)
 
     git_add_and_commit_all_changes(
-        repo_path=tmp_local_git_repo_with_first_test_commit[0],
+        repo=tmp_local_git_repo_with_first_test_commit[0],
         message=SECOND_TEST_COMMIT_MESSAGE,
     )
 
@@ -225,7 +223,7 @@ def test_git_commit_specific_files_if_untracked_file_is_changed_then_new_commit(
         f.write(SECOND_TEST_FILE_MODIFICATION)
 
     git_add_and_commit_all_changes(
-        repo_path=tmp_local_git_repo_with_first_test_commit[0],
+        repo=tmp_local_git_repo_with_first_test_commit[0],
         message=SECOND_TEST_COMMIT_MESSAGE,
     )
 
@@ -239,7 +237,7 @@ def test_stashed_changes_if_repo_has_no_ref_then_raise_exception(
     tmp_local_empty_git_repo,
 ):
     with pytest.raises(RuntimeError):
-        with stashed_changes(repo_path=tmp_local_empty_git_repo):
+        with stashed_changes(repo=tmp_local_empty_git_repo):
             pass
 
 
@@ -251,7 +249,7 @@ def test_stashed_changes_if_tracked_file_was_changed_then_inside_with_statement_
         repo_path=tmp_local_git_repo_with_first_test_commit[0]
     )
 
-    with stashed_changes(repo_path=tmp_local_git_repo_with_first_test_commit[0]):
+    with stashed_changes(repo=tmp_local_git_repo_with_first_test_commit[0]):
         with open(tracked_file, "r", encoding="utf") as f:
             assert f.read() == FIRST_TEST_FILE_MODIFICATION
 
@@ -264,7 +262,7 @@ def test_stashed_changes_if_tracked_file_was_changed_then_outside_with_statement
         repo_path=tmp_local_git_repo_with_first_test_commit[0]
     )
 
-    with stashed_changes(repo_path=tmp_local_git_repo_with_first_test_commit[0]):
+    with stashed_changes(repo=tmp_local_git_repo_with_first_test_commit[0]):
         pass
 
     with open(tracked_file, "r", encoding="utf") as f:
@@ -278,7 +276,7 @@ def test_stashed_changes_if_tracked_file_was_changed_then_return_its_path(
     repo_path = tmp_local_git_repo_with_first_test_commit[0]
     tracked_file, _ = change_tracked_file(repo_path=repo_path)
 
-    with stashed_changes(repo_path=repo_path) as (
+    with stashed_changes(repo=repo_path) as (
         tracked,
         untracked,
     ):
@@ -295,7 +293,7 @@ def test_stashed_changes_if_untracked_file_was_changed_but_include_untracked_is_
     )
 
     with stashed_changes(
-        repo_path=tmp_local_git_repo_with_first_test_commit[0], include_untracked=False
+        repo=tmp_local_git_repo_with_first_test_commit[0], include_untracked=False
     ):
         assert untracked_file.is_file()
 
@@ -309,7 +307,7 @@ def test_stashed_changes_if_untracked_file_was_changed_then_inside_with_statemen
     )
 
     with stashed_changes(
-        repo_path=tmp_local_git_repo_with_first_test_commit[0], include_untracked=True
+        repo=tmp_local_git_repo_with_first_test_commit[0], include_untracked=True
     ):
         assert not untracked_file.is_file()
 
@@ -323,7 +321,7 @@ def test_stashed_changes_if_untracked_file_was_changed_then_outside_with_stateme
     )
 
     with stashed_changes(
-        repo_path=tmp_local_git_repo_with_first_test_commit[0], include_untracked=True
+        repo=tmp_local_git_repo_with_first_test_commit[0], include_untracked=True
     ):
         pass
 
@@ -338,7 +336,7 @@ def test_stashed_changes_if_untracked_file_was_changed_then_return_its_path(
     repo_path = tmp_local_git_repo_with_first_test_commit[0]
     untracked_file, _ = change_untracked_file(repo_path=repo_path)
 
-    with stashed_changes(repo_path=repo_path, include_untracked=True) as (
+    with stashed_changes(repo=repo_path, include_untracked=True) as (
         tracked,
         untracked,
     ):
@@ -422,11 +420,11 @@ def test_commit_produced_changes_on_auto_commit_if_auto_commit_is_true_then_stas
     result = f(repo=repo_path, commit=True)
 
     expected_calls = [
-        call.stashed_changes(repo_path=repo_path, include_untracked=True),
+        call.stashed_changes(repo=repo_path, include_untracked=True),
         call.stashed_changes().__enter__(),
         call.spy(repo=repo_path, commit=True),
         call.git_add_and_commit_all_changes(
-            repo_path=repo_path, message=generate_test_commit_message(commit=True)
+            repo=repo_path, message=generate_test_commit_message(commit=True)
         ),
         call.stashed_changes().__exit__(None, None, None),
     ]
@@ -486,7 +484,7 @@ def test_git_push_if_called_then_corresponding_gitpython_functions_are_called(
     tmp_local_empty_git_repo,
 ):
     with patch("gto.git_utils.git.Repo") as MockedRepo:
-        git_push(repo_path=tmp_local_empty_git_repo)
+        git_push(repo=tmp_local_empty_git_repo)
 
     MockedRepo.assert_called_once_with(path=tmp_local_empty_git_repo)
     MockedRepo.return_value.git.push.assert_called_once_with()
@@ -536,7 +534,7 @@ def test_push_on_auto_push_if_auto_push_true_then_git_push_is_called_after_f(
     expected_calls = [
         call.spy(repo=repo_path, commit=True, push=True),
         call.git_push(
-            repo_path=repo_path,
+            repo=repo_path,
         ),
     ]
     assert mock_manager.mock_calls == expected_calls

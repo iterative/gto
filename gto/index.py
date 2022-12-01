@@ -25,7 +25,6 @@ from gto.exceptions import (
     ArtifactExists,
     ArtifactNotFound,
     NoFile,
-    NoRepo,
     PathIsUsed,
     WrongArgs,
 )
@@ -209,7 +208,7 @@ class BaseIndexManager(BaseModel, ABC):
         )
         self.update()
 
-    def remove(self, name):
+    def _remove(self, name):
         index = self.get_index()
         index.remove(name)
         self.update()
@@ -223,7 +222,7 @@ class FileIndexManager(BaseIndexManager):
     def from_path(cls, path: str, config: RegistryConfig = None):
         if config is None:
             config = read_registry_config(os.path.join(path, CONFIG_FILE_NAME))
-        yield cls(path=path, config=config)
+        return cls(path=path, config=config)
 
     def index_path(self):
         return str(Path(self.path) / self.config.INDEX)
@@ -242,6 +241,9 @@ class FileIndexManager(BaseIndexManager):
     def get_history(self) -> Dict[str, Index]:
         raise NotImplementedError("Not a git repo: history is not available")
 
+    def get_commit_index(self, commit: str) -> Index:
+        raise NotImplementedError("Not a git repo: using revision is not available")
+
 
 ArtifactCommits = Dict[str, Artifact]
 ArtifactsCommits = Dict[str, ArtifactCommits]
@@ -254,18 +256,17 @@ class RepoIndexManager(FileIndexManager, CommitChangesDueToAddMixin):
         super().__init__(repo=repo, config=config)
 
     @classmethod
-    @contextmanager
-    def from_repo(cls, repo: Union[str, git.Repo], config: RegistryConfig = None):
+    def _from_repo(cls, repo: Union[str, git.Repo], config: RegistryConfig = None):
         if isinstance(repo, str):
             try:
                 repo = git.Repo(repo, search_parent_directories=True)
-            except git.InvalidGitRepositoryError as e:
-                yield FileIndexManager.from_path(repo, config=config)
+            except git.InvalidGitRepositoryError:
+                return FileIndexManager.from_path(repo, config=config)
         if config is None:
             config = read_registry_config(
                 os.path.join(repo.working_dir, CONFIG_FILE_NAME)
             )
-        yield cls(repo=repo, config=config)
+        return cls(repo=repo, config=config)
 
     def index_path(self):
         # TODO: config should be loaded from repo too

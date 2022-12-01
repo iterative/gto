@@ -372,7 +372,7 @@ def test_if_register_with_auto_push_then_invoke_git_push_tag(repo_with_artifact)
     with patch("gto.registry.git_push_tag") as mocked_git_push_tags:
         gto.api.register(repo=repo.working_dir, name="model", ref="HEAD", push=True)
     mocked_git_push_tags.assert_called_once_with(
-        repo_path=Path(repo.working_dir).as_posix(),
+        repo=Path(repo.working_dir).as_posix(),
         tag_name="model@v0.0.1",
         delete=False,
     )
@@ -388,12 +388,12 @@ def test_if_assign_with_auto_push_then_invoke_git_push_tag_2_times_for_registrat
         )
     expected_calls = [
         call(
-            repo_path=Path(repo.working_dir).as_posix(),
+            repo=Path(repo.working_dir).as_posix(),
             tag_name="model@v0.0.1",
             delete=False,
         ),
         call(
-            repo_path=Path(repo.working_dir).as_posix(),
+            repo=Path(repo.working_dir).as_posix(),
             tag_name="model#dev#1",
             delete=False,
         ),
@@ -413,7 +413,7 @@ def test_if_unassign_with_auto_push_then_invoke_git_push_tag(repo_with_artifact)
             push=True,
         )
     mocked_git_push_tags.assert_called_once_with(
-        repo_path=Path(repo.working_dir).as_posix(),
+        repo=Path(repo.working_dir).as_posix(),
         tag_name="model#dev!#2",
         delete=False,
     )
@@ -434,7 +434,7 @@ def test_if_unassign_with_delete_and_auto_push_then_invoke_git_push_tag(
             push=True,
         )
     mocked_git_push_tags.assert_called_once_with(
-        repo_path=Path(repo.working_dir).as_posix(), tag_name="model#dev#1", delete=True
+        repo=Path(repo.working_dir).as_posix(), tag_name="model#dev#1", delete=True
     )
 
 
@@ -444,7 +444,7 @@ def test_if_deregister_with_auto_push_then_invoke_git_push_tag(repo_with_artifac
     with patch("gto.registry.git_push_tag") as mocked_git_push_tags:
         gto.api.deregister(repo.working_dir, name="model", version="v0.0.1", push=True)
     mocked_git_push_tags.assert_called_once_with(
-        repo_path=Path(repo.working_dir).as_posix(),
+        repo=Path(repo.working_dir).as_posix(),
         tag_name="model@v0.0.1!",
         delete=False,
     )
@@ -464,7 +464,7 @@ def test_if_deregister_with_delete_and_auto_push_then_invoke_git_push_tag(
             delete=True,
         )
     mocked_git_push_tags.assert_called_once_with(
-        repo_path=Path(repo.working_dir).as_posix(),
+        repo=Path(repo.working_dir).as_posix(),
         tag_name="model@v0.0.1",
         delete=True,
     )
@@ -476,7 +476,7 @@ def test_if_deprecate_with_auto_push_then_invoke_git_push_tag(repo_with_artifact
     with patch("gto.registry.git_push_tag") as mocked_git_push_tags:
         gto.api.deprecate(repo.working_dir, name="model", push=True)
     mocked_git_push_tags.assert_called_once_with(
-        repo_path=Path(repo.working_dir).as_posix(),
+        repo=Path(repo.working_dir).as_posix(),
         tag_name="model@deprecated",
         delete=False,
     )
@@ -490,7 +490,7 @@ def test_if_deprecate_with_delete_and_auto_push_then_invoke_git_push_tag(
     with patch("gto.registry.git_push_tag") as mocked_git_push_tags:
         gto.api.deprecate(repo.working_dir, name="model", push=True, delete=True)
     mocked_git_push_tags.assert_called_once_with(
-        repo_path=Path(repo.working_dir).as_posix(),
+        repo=Path(repo.working_dir).as_posix(),
         tag_name="model@v0.0.1",
         delete=True,
     )
@@ -509,7 +509,7 @@ def test_if_register_with_remote_repo_then_invoke_git_push_tag():
                 ref="HEAD",
             )
             mocked_git_push_tag.assert_called_once_with(
-                repo_path=Path(tmp_dir.name).as_posix(),
+                repo=Path(tmp_dir.name).as_posix(),
                 tag_name="model@v0.0.1",
                 delete=False,
             )
@@ -531,12 +531,12 @@ def test_if_assign_with_remote_repo_then_invoke_git_push_tag():
             )
             expected_calls = [
                 call(
-                    repo_path=Path(tmp_dir.name).as_posix(),
+                    repo=Path(tmp_dir.name).as_posix(),
                     tag_name="model@v0.0.1",
                     delete=False,
                 ),
                 call(
-                    repo_path=Path(tmp_dir.name).as_posix(),
+                    repo=Path(tmp_dir.name).as_posix(),
                     tag_name="model#dev#1",
                     delete=False,
                 ),
@@ -557,7 +557,7 @@ def test_if_deprecate_with_remote_repo_then_invoke_git_push_tag():
                 name="churn",
             )
             mocked_git_push_tag.assert_called_once_with(
-                repo_path=Path(tmp_dir.name).as_posix(),
+                repo=Path(tmp_dir.name).as_posix(),
                 tag_name="churn@deprecated",
                 delete=False,
             )
@@ -577,7 +577,7 @@ def test_if_deregister_with_remote_repo_then_invoke_git_push_tag():
                 version="v3.0.0",
             )
             mocked_git_push_tag.assert_called_once_with(
-                repo_path=Path(tmp_dir.name).as_posix(),
+                repo=Path(tmp_dir.name).as_posix(),
                 tag_name="churn@v3.0.0!",
                 delete=False,
             )
@@ -598,7 +598,7 @@ def test_if_unassign_with_remote_repo_then_invoke_git_push_tag():
                 version="v3.1.0",
             )
             mocked_git_push_tag.assert_called_once_with(
-                repo_path=Path(tmp_dir.name).as_posix(),
+                repo=Path(tmp_dir.name).as_posix(),
                 tag_name="churn#staging!#3",
                 delete=False,
             )
@@ -626,11 +626,9 @@ def test_if_annotate_with_auto_commit_then_invoke_stash_and_commit(
                 commit=True,
             )
 
-    mocked_stashed_changes.assert_called_once_with(
-        repo_path=repo, include_untracked=True
-    )
+    mocked_stashed_changes.assert_called_once_with(repo=repo, include_untracked=True)
     mocked_git_add_and_commit_all_changes.assert_called_once_with(
-        repo_path=repo,
+        repo=repo,
         message=generate_annotate_commit_message(name=name, type=type, path=path),
     )
 
@@ -658,10 +656,10 @@ def test_if_remove_with_auto_commit_then_invoke_stash_and_commit(
             gto.api.remove(repo=repo.working_dir, name=name, commit=True)
 
     mocked_stashed_changes.assert_called_once_with(
-        repo_path=repo.working_dir, include_untracked=True
+        repo=repo.working_dir, include_untracked=True
     )
     mocked_git_add_and_commit_all_changes.assert_called_once_with(
-        repo_path=repo.working_dir, message=generate_remove_commit_message(name=name)
+        repo=repo.working_dir, message=generate_remove_commit_message(name=name)
     )
 
 
@@ -685,14 +683,12 @@ def test_if_annotate_with_auto_push_then_invoke_commit_and_push(init_showcase_se
                     push=True,
                 )
 
-    mocked_stashed_changes.assert_called_once_with(
-        repo_path=repo, include_untracked=True
-    )
+    mocked_stashed_changes.assert_called_once_with(repo=repo, include_untracked=True)
     mocked_git_add_and_commit_all_changes.assert_called_once_with(
-        repo_path=repo,
+        repo=repo,
         message=generate_annotate_commit_message(name=name, type=type, path=path),
     )
-    mocked_git_push.assert_called_once_with(repo_path=repo.working_dir)
+    mocked_git_push.assert_called_once_with(repo=repo.working_dir)
 
 
 def test_if_remove_with_auto_push_then_invoke_commit_and_push(
@@ -719,12 +715,12 @@ def test_if_remove_with_auto_push_then_invoke_commit_and_push(
                 gto.api.remove(repo=repo.working_dir, name=name, push=True)
 
     mocked_stashed_changes.assert_called_once_with(
-        repo_path=repo.working_dir, include_untracked=True
+        repo=repo.working_dir, include_untracked=True
     )
     mocked_git_add_and_commit_all_changes.assert_called_once_with(
-        repo_path=repo.working_dir, message=generate_remove_commit_message(name=name)
+        repo=repo.working_dir, message=generate_remove_commit_message(name=name)
     )
-    mocked_git_push.assert_called_once_with(repo_path=repo.working_dir)
+    mocked_git_push.assert_called_once_with(repo=repo.working_dir)
 
 
 @skip_for_windows_py_lt_3_9
@@ -741,7 +737,7 @@ def test_if_annotate_with_remote_repo_then_clone_and_push():
                 )
 
     mocked_git_push.assert_called_once_with(
-        repo_path=MockedTemporaryDirectory.return_value.name
+        repo=MockedTemporaryDirectory.return_value.name
     )
     mocked_git_clone.assert_called_once_with(
         repo=tests.resources.SAMPLE_REMOTE_REPO_URL,
@@ -763,7 +759,7 @@ def test_if_remove_with_remote_repo_then_clone_and_push():
                 )
 
     mocked_git_push.assert_called_once_with(
-        repo_path=MockedTemporaryDirectory.return_value.name
+        repo=MockedTemporaryDirectory.return_value.name
     )
     mocked_git_clone.assert_called_once_with(
         repo=tests.resources.SAMPLE_REMOTE_REPO_URL,

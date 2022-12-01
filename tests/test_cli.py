@@ -10,6 +10,7 @@ from typer.main import get_command_from_info
 
 from gto.cli import app
 from gto.exceptions import GTOException
+from gto.index import RepoIndexManager
 from tests.conftest import Runner
 
 from .utils import check_obj
