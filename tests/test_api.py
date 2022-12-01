@@ -33,6 +33,7 @@ from tests.utils import (
 def test_empty_index(empty_git_repo: Tuple[git.Repo, Callable]):
     repo, write_file = empty_git_repo
     with RepoIndexManager.from_repo(repo.working_dir) as index:
+        assert isinstance(index, RepoIndexManager)
         assert len(index.artifact_centric_representation()) == 0
 
 

@@ -13,6 +13,10 @@ from pydantic import BaseModel, parse_obj_as, validator
 
 from gto.base import BaseManager, BaseRegistryState
 from gto.base import Commit as EnrichmentEvent
+from gto.commit_message_generator import (
+    generate_annotate_commit_message,
+    generate_remove_commit_message,
+)
 from gto.config import (
     CONFIG_FILE_NAME,
     RegistryConfig,
@@ -25,11 +29,12 @@ from gto.exceptions import (
     ArtifactExists,
     ArtifactNotFound,
     NoFile,
+    NoRepo,
     PathIsUsed,
     WrongArgs,
 )
 from gto.ext import EnrichmentInfo, EnrichmentReader
-from gto.git_utils import CommitChangesDueToAddMixin, FromRemoteRepoMixin
+from gto.git_utils import GitRepoMixin
 from gto.utils import resolve_ref
 
 
@@ -184,7 +189,7 @@ class BaseIndexManager(BaseModel, ABC):
     def get_history(self) -> Dict[str, Index]:
         raise NotImplementedError
 
-    def _add(self, name, type, path, must_exist, labels, description, update):
+    def add(self, name, type, path, must_exist, labels, description, update):
         for arg in [name] + list(labels or []):
             assert_name_is_valid(arg)
         if type:
@@ -208,7 +213,7 @@ class BaseIndexManager(BaseModel, ABC):
         )
         self.update()
 
-    def _remove(self, name):
+    def remove(self, name):
         index = self.get_index()
         index.remove(name)
         self.update()
@@ -241,15 +246,18 @@ class FileIndexManager(BaseIndexManager):
     def get_history(self) -> Dict[str, Index]:
         raise NotImplementedError("Not a git repo: history is not available")
 
-    def get_commit_index(self, commit: str) -> Index:
+    def get_commit_index(self, **kwargs) -> Index:
         raise NotImplementedError("Not a git repo: using revision is not available")
+
+    def artifact_centric_representation(self):
+        raise NotImplementedError("Not a git repo")
 
 
 ArtifactCommits = Dict[str, Artifact]
 ArtifactsCommits = Dict[str, ArtifactCommits]
 
 
-class RepoIndexManager(FileIndexManager, CommitChangesDueToAddMixin):
+class RepoIndexManager(FileIndexManager, GitRepoMixin):
     repo: git.Repo
 
     def __init__(self, repo, config):
@@ -260,13 +268,52 @@ class RepoIndexManager(FileIndexManager, CommitChangesDueToAddMixin):
         if isinstance(repo, str):
             try:
                 repo = git.Repo(repo, search_parent_directories=True)
-            except git.InvalidGitRepositoryError:
-                return FileIndexManager.from_path(repo, config=config)
+            except git.InvalidGitRepositoryError as e:
+                raise NoRepo("No git repo found") from e
         if config is None:
             config = read_registry_config(
                 os.path.join(repo.working_dir, CONFIG_FILE_NAME)
             )
         return cls(repo=repo, config=config)
+
+    def add(
+        self,
+        name,
+        type,
+        path,
+        must_exist,
+        labels,
+        description,
+        update,
+        commit=False,
+        commit_message=None,
+    ):
+        return self._change_and_commit(
+            super().add,
+            commit=commit,
+            commit_message=commit_message
+            or generate_annotate_commit_message(name=name, type=type, path=path),
+            name=name,
+            type=type,
+            path=path,
+            must_exist=must_exist,
+            labels=labels,
+            description=description,
+            update=update,
+        )
+
+    def remove(
+        self,
+        name,
+        commit=False,
+        commit_message=None,
+    ):
+        return self._change_and_commit(
+            super().remove,
+            commit=commit,
+            commit_message=commit_message or generate_remove_commit_message(name=name),
+            name=name,
+        )
 
     def index_path(self):
         # TODO: config should be loaded from repo too
@@ -275,7 +322,7 @@ class RepoIndexManager(FileIndexManager, CommitChangesDueToAddMixin):
     class Config:
         arbitrary_types_allowed = True
 
-    def get_commit_index(
+    def get_commit_index(  # type: ignore # pylint: disable=arguments-differ
         self, ref: Union[str, git.Reference, None], allow_to_not_exist: bool = True
     ) -> Optional[Index]:
         if not ref or isinstance(ref, str):
@@ -316,7 +363,7 @@ class RepoIndexManager(FileIndexManager, CommitChangesDueToAddMixin):
             raise ArtifactNotFound(name)
 
 
-class EnrichmentManager(BaseManager, FromRemoteRepoMixin):
+class EnrichmentManager(BaseManager, GitRepoMixin):
     actions: FrozenSet[Action] = frozenset()
 
     @classmethod

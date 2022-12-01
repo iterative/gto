@@ -31,7 +31,7 @@ from gto.exceptions import (
     VersionExistsForCommit,
     WrongArgs,
 )
-from gto.git_utils import FromRemoteRepoMixin, git_push_tag
+from gto.git_utils import GitRepoMixin, git_push_tag
 from gto.index import EnrichmentManager
 from gto.tag import (
     TagArtifactManager,
@@ -46,7 +46,7 @@ from gto.versions import SemVer
 TBaseEvent = TypeVar("TBaseEvent", bound=BaseEvent)
 
 
-class GitRegistry(BaseModel, FromRemoteRepoMixin):
+class GitRegistry(BaseModel, GitRepoMixin):
     repo: git.Repo
     artifact_manager: TagArtifactManager
     version_manager: TagVersionManager

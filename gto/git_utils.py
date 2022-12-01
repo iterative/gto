@@ -1,6 +1,5 @@
 import inspect
 import logging
-from abc import abstractmethod
 from contextlib import contextmanager
 from functools import wraps
 from tempfile import TemporaryDirectory
@@ -9,21 +8,16 @@ from typing import Callable, Dict, List, Tuple, Union
 import git
 from git import Repo
 
-from gto.commit_message_generator import (
-    generate_annotate_commit_message,
-    generate_empty_commit_message,
-    generate_remove_commit_message,
-)
+from gto.commit_message_generator import generate_empty_commit_message
 from gto.config import RegistryConfig
 from gto.constants import remote_git_repo_regex
 from gto.exceptions import GTOException, WrongArgs
 
 
-class FromRemoteRepoMixin:
+class GitRepoMixin:
     @classmethod
-    @abstractmethod
     def _from_repo(cls, repo: Union[str, Repo], config: RegistryConfig = None):
-        pass
+        raise NotImplementedError()
 
     @classmethod
     @contextmanager
@@ -40,55 +34,6 @@ class FromRemoteRepoMixin:
                 ) from e
         else:
             yield cls._from_repo(repo=repo, config=config)
-
-
-class CommitChangesDueToAddMixin(FromRemoteRepoMixin):
-    @abstractmethod
-    def _add(self, name, type, path, must_exist, labels, description, update):
-        pass
-
-    def add(
-        self,
-        name,
-        type,
-        path,
-        must_exist,
-        labels,
-        description,
-        update,
-        commit=False,
-        commit_message=None,
-    ):
-        return self._change_and_commit(
-            self._add,
-            commit=commit,
-            commit_message=commit_message
-            or generate_annotate_commit_message(name=name, type=type, path=path),
-            name=name,
-            type=type,
-            path=path,
-            must_exist=must_exist,
-            labels=labels,
-            description=description,
-            update=update,
-        )
-
-    @abstractmethod
-    def _remove(self, name):
-        pass
-
-    def remove(
-        self,
-        name,
-        commit=False,
-        commit_message=None,
-    ):
-        return self._change_and_commit(
-            self._remove,
-            commit=commit,
-            commit_message=commit_message or generate_remove_commit_message(name=name),
-            name=name,
-        )
 
     def _change_and_commit(self, func, commit=False, commit_message=None, **kwargs):
         if commit:
