@@ -287,12 +287,14 @@ class RepoIndexManager(FileIndexManager, GitRepoMixin):
         update,
         commit=False,
         commit_message=None,
+        push=False,
     ):
-        return self._change_and_commit(
+        return self._call_commit_push(
             super().add,
             commit=commit,
             commit_message=commit_message
             or generate_annotate_commit_message(name=name, type=type, path=path),
+            push=push,
             name=name,
             type=type,
             path=path,
@@ -307,11 +309,13 @@ class RepoIndexManager(FileIndexManager, GitRepoMixin):
         name,
         commit=False,
         commit_message=None,
+        push=False,
     ):
-        return self._change_and_commit(
+        return self._call_commit_push(
             super().remove,
             commit=commit,
             commit_message=commit_message or generate_remove_commit_message(name=name),
+            push=push,
             name=name,
         )
 

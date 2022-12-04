@@ -35,29 +35,33 @@ class GitRepoMixin:
         else:
             yield cls._from_repo(repo=repo, config=config)
 
-    def _change_and_commit(self, func, commit=False, commit_message=None, **kwargs):
-        if commit:
-            with stashed_changes(repo=self.repo, include_untracked=True) as (
-                stashed_tracked,
-                stashed_untracked,
+    def _call_commit_push(
+        self, func, commit=False, commit_message=None, push=False, **kwargs
+    ):
+        if not (commit or push):
+            return func(**kwargs)
+        with stashed_changes(repo=self.repo, include_untracked=True) as (
+            stashed_tracked,
+            stashed_untracked,
+        ):
+            result = func(**kwargs)
+            if are_files_in_repo_changed(
+                repo=self.repo,
+                files=stashed_tracked + stashed_untracked,
             ):
-                result = func(**kwargs)
-                if are_files_in_repo_changed(
-                    repo=self.repo,
-                    files=stashed_tracked + stashed_untracked,
-                ):
-                    _reset_repo_to_head(repo=self.repo)
-                    raise GTOException(
-                        msg="The command would have changed files that were not committed, "
-                        "automated committing is not possible.\n"
-                        "Suggested action: Commit the changes and re-run this command."
-                    )
-                git_add_and_commit_all_changes(
-                    repo=self.repo,
-                    message=commit_message,
+                _reset_repo_to_head(repo=self.repo)
+                raise GTOException(
+                    msg="The command would have changed files that were not committed, "
+                    "automated committing is not possible.\n"
+                    "Suggested action: Commit the changes and re-run this command."
                 )
-            return result
-        return func(**kwargs)
+            git_add_and_commit_all_changes(
+                repo=self.repo,
+                message=commit_message,
+            )
+            if push:
+                git_push(repo=self.repo)
+        return result
 
 
 def clone_on_remote_repo(f: Callable):
