@@ -8,7 +8,6 @@ from typing import Callable, Dict, List, Tuple, Union
 import git
 from git import Repo
 
-from gto.commit_message_generator import generate_empty_commit_message
 from gto.config import RegistryConfig
 from gto.constants import remote_git_repo_regex
 from gto.exceptions import GTOException, WrongArgs
@@ -75,35 +74,6 @@ def set_push_on_remote_repo(f: Callable):
             kwargs["push"] = True
 
         return f(**kwargs)
-
-    return wrapped_f
-
-
-def push_on_push(f: Callable):
-    @wraps(f)
-    def wrapped_f(*args, **kwargs):
-        kwargs = _turn_args_into_kwargs(f, args, kwargs)
-        if kwargs.get("push", False) is True:
-            kwargs["commit"] = True
-            result = f(**kwargs)
-            if "repo" in kwargs:
-                try:
-                    git_push(repo=kwargs["repo"])
-                except Exception as e:
-                    raise GTOException(  # pylint: disable=raise-missing-from
-                        "It was not possible to run `git push`. "
-                        "The detailed error message was:\n"
-                        f"{str(e)}"
-                    )
-            else:
-                raise ValueError(
-                    "Function decorated with push_on_push was called with "
-                    "`push=True` but `repo` was not provided."
-                    "Argument `repo` is necessary."
-                )
-        else:
-            result = f(**kwargs)
-        return result
 
     return wrapped_f
 

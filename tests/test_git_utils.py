@@ -1,7 +1,7 @@
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Callable, Tuple, Union
-from unittest.mock import MagicMock, call, patch
+from typing import Tuple, Union
+from unittest.mock import MagicMock, patch
 
 import pytest
 from git import Repo
@@ -14,13 +14,10 @@ from gto.git_utils import (
     git_push,
     git_push_tag,
     is_url_of_remote_repo,
-    push_on_push,
     set_push_on_remote_repo,
     stashed_changes,
 )
-from tests.skip_presets import (
-    skip_for_windows_py_lt_3_9,
-)
+from tests.skip_presets import skip_for_windows_py_lt_3_9
 
 
 @pytest.mark.parametrize(
@@ -312,77 +309,6 @@ def test_git_push_if_called_then_corresponding_gitpython_functions_are_called(
     MockedRepo.return_value.git.push.assert_called_once_with()
 
 
-def test_push_on_auto_push_if_auto_push_and_repo_not_provided_then_raise_exception(
-    mocked_f_decorated_with_push_on_auto_push,
-):
-    f, _, _, _, _ = mocked_f_decorated_with_push_on_auto_push
-
-    with pytest.raises(ValueError):
-        f(push=True)
-
-
-def test_push_on_auto_push_if_auto_push_then_set_auto_commit_to_true(
-    mocked_f_decorated_with_push_on_auto_push,
-):
-    f, f_spy, repo_path, _, _ = mocked_f_decorated_with_push_on_auto_push
-
-    result = f(repo=repo_path, commit=False, push=True)
-
-    f_spy.assert_called_once_with(repo=repo_path, commit=True, push=True)
-    assert result == f_spy.return_value
-
-
-def test_push_on_auto_push_if_auto_push_false_then_git_push_is_not_called(
-    mocked_f_decorated_with_push_on_auto_push,
-):
-    f, f_spy, _, _, mock_manager = mocked_f_decorated_with_push_on_auto_push
-
-    result = f(push=False)
-
-    expected_calls = [
-        call.spy(push=False),
-    ]
-    assert mock_manager.mock_calls == expected_calls
-    assert result == f_spy.return_value
-
-
-def test_push_on_auto_push_if_auto_push_true_then_git_push_is_called_after_f(
-    mocked_f_decorated_with_push_on_auto_push,
-):
-    f, f_spy, repo_path, _, mock_manager = mocked_f_decorated_with_push_on_auto_push
-
-    result = f(repo=repo_path, push=True)
-
-    expected_calls = [
-        call.spy(repo=repo_path, commit=True, push=True),
-        call.git_push(
-            repo=repo_path,
-        ),
-    ]
-    assert mock_manager.mock_calls == expected_calls
-    assert result == f_spy.return_value
-
-
-def test_push_on_auto_push_if_git_pull_fails_then_raise_gto_exception(
-    mocked_f_decorated_with_push_on_auto_push,
-):
-    (
-        f,
-        _,
-        repo_path,
-        mocked_git_push,
-        _,
-    ) = mocked_f_decorated_with_push_on_auto_push
-    git_push_error_message = "This was the mistake..."
-    mocked_git_push.side_effect = Exception(git_push_error_message)
-
-    with pytest.raises(GTOException) as e:
-        f(repo=repo_path, push=True)
-
-    assert "It was not possible to run `git push`" in e.value.msg
-    assert git_push_error_message in e.value.msg
-
-
 @set_push_on_remote_repo
 def decorated_write_func(
     spam: int, repo: Union[Repo, str], push: bool
@@ -411,25 +337,6 @@ def tmp_local_git_repo_with_first_test_commit(tmp_local_empty_git_repo) -> str:
     repo.index.add(items=[test_file.name, readme.name])
     repo.index.commit(message=FIRST_TEST_COMMIT_MESSAGE)
     yield tmp_local_empty_git_repo, new_file_path.as_posix()
-
-
-@pytest.fixture
-def mocked_f_decorated_with_push_on_auto_push() -> Tuple[
-    Callable, MagicMock, str, MagicMock, MagicMock
-]:
-    repo_path = "my/repo"
-    f_spy = MagicMock()
-
-    @push_on_push
-    def f(*args, **kwargs):
-        return f_spy(*args, **kwargs)
-
-    with patch("gto.git_utils.git_push") as mocked_git_push:
-        mock_manager = MagicMock()
-        mock_manager.attach_mock(f_spy, "spy")
-        mock_manager.attach_mock(mocked_git_push, "git_push")
-
-        yield f, f_spy, repo_path, mocked_git_push, mock_manager
 
 
 def change_tracked_file(repo_path: str) -> Tuple[Path, str]:
