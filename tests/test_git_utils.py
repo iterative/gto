@@ -9,7 +9,6 @@ from git import Repo
 import tests.resources
 from gto.exceptions import GTOException
 from gto.git_utils import (
-    commit_produced_changes_on_commit,
     git_add_and_commit_all_changes,
     git_clone,
     git_push,
@@ -20,7 +19,6 @@ from gto.git_utils import (
     stashed_changes,
 )
 from tests.skip_presets import (
-    only_for_windows_py_lt_3_8,
     skip_for_windows_py_lt_3_9,
 )
 
@@ -303,141 +301,6 @@ def test_stashed_changes_if_untracked_file_was_changed_then_return_its_path(
         assert untracked == [untracked_file.relative_to(repo_path).as_posix()]
 
 
-def test_commit_produced_changes_on_auto_commit_if_no_auto_commit_argument_then_don_t_stash_or_commit(
-    mocked_f_decorated_with_commit_produced_changes_on_auto_commit,
-):
-    (
-        f,
-        f_spy,
-        mocked_stashed_changes,
-        mocked_git_add_and_commit_all_changes,
-        _,
-        _,
-    ) = mocked_f_decorated_with_commit_produced_changes_on_auto_commit
-
-    result = f()
-
-    mocked_stashed_changes.assert_not_called()
-    mocked_git_add_and_commit_all_changes.assert_not_called()
-    f_spy.assert_called_once_with()
-    assert result == f_spy.return_value
-
-
-def test_commit_produced_changes_on_auto_commit_if_auto_commit_is_false_then_don_t_stash_or_commit(
-    mocked_f_decorated_with_commit_produced_changes_on_auto_commit,
-):
-    (
-        f,
-        f_spy,
-        mocked_stashed_changes,
-        mocked_git_add_and_commit_all_changes,
-        _,
-        _,
-    ) = mocked_f_decorated_with_commit_produced_changes_on_auto_commit
-
-    result = f(commit=False)
-
-    mocked_stashed_changes.assert_not_called()
-    mocked_git_add_and_commit_all_changes.assert_not_called()
-    f_spy.assert_called_once_with(commit=False)
-    assert result == f_spy.return_value
-
-
-def test_commit_produced_changes_on_auto_commit_if_auto_commit_but_no_repo_then_exception_and_don_t_stash_or_commit(
-    mocked_f_decorated_with_commit_produced_changes_on_auto_commit,
-):
-    (
-        f,
-        f_spy,
-        mocked_stashed_changes,
-        mocked_git_add_and_commit_all_changes,
-        _,
-        _,
-    ) = mocked_f_decorated_with_commit_produced_changes_on_auto_commit
-
-    with pytest.raises(ValueError):
-        f(commit=True)
-
-    mocked_stashed_changes.assert_not_called()
-    mocked_git_add_and_commit_all_changes.assert_not_called()
-    f_spy.assert_not_called()
-
-
-def test_commit_produced_changes_on_auto_commit_if_auto_commit_is_true_then_stash_and_commit_in_repo(
-    mocked_f_decorated_with_commit_produced_changes_on_auto_commit,
-):
-    (
-        f,
-        f_spy,
-        _,
-        _,
-        mock_manager,
-        generate_test_commit_message,
-    ) = mocked_f_decorated_with_commit_produced_changes_on_auto_commit
-    repo_path = "a/repo/path"
-
-    result = f(repo=repo_path, commit=True)
-
-    expected_calls = [
-        call.stashed_changes(repo=repo_path, include_untracked=True),
-        call.stashed_changes().__enter__(),
-        call.spy(repo=repo_path, commit=True),
-        call.git_add_and_commit_all_changes(
-            repo=repo_path, message=generate_test_commit_message(commit=True)
-        ),
-        call.stashed_changes().__exit__(None, None, None),
-    ]
-
-    assert mock_manager.mock_calls == expected_calls
-    assert result == f_spy.return_value
-
-
-@skip_for_windows_py_lt_3_9
-def test_commit_produced_changes_on_auto_commit_if_f_changes_tracked_file_already_dangling_then_raise_exception_and_roll_back(
-    tmp_local_git_repo_with_first_test_commit,
-):
-    repo, tracked_file = tmp_local_git_repo_with_first_test_commit
-
-    with open(tracked_file, "a", encoding="utf") as f:
-        f.write(f" - {SECOND_TEST_FILE_MODIFICATION}")
-
-    @commit_produced_changes_on_commit()
-    def f_to_test(repo: str, commit: bool):  # pylint: disable=unused-argument
-        with open(tracked_file, "a", encoding="utf") as f:
-            f.write(" - change made by f")
-
-    with pytest.raises(GTOException):
-        f_to_test(repo=repo, commit=True)
-
-    with open(tracked_file, "r", encoding="utf") as f:
-        assert (
-            f.read()
-            == f"{FIRST_TEST_FILE_MODIFICATION} - {SECOND_TEST_FILE_MODIFICATION}"
-        )
-
-
-@skip_for_windows_py_lt_3_9
-def test_commit_produced_changes_on_auto_commit_if_f_changes_untracked_file_already_dangling_then_raise_exception_and_roll_back(
-    tmp_local_git_repo_with_first_test_commit,
-):
-    repo, _ = tmp_local_git_repo_with_first_test_commit
-    untracked_file = (Path(repo) / TEST_COMMIT_UNTRACKED_FILE).as_posix()
-
-    with open(untracked_file, "w", encoding="utf") as f:
-        f.write(f"{FIRST_TEST_FILE_MODIFICATION}")
-
-    @commit_produced_changes_on_commit()
-    def f_to_test(repo: str, commit: bool):  # pylint: disable=unused-argument
-        with open(untracked_file, "a", encoding="utf") as f:
-            f.write(" - change made by f")
-
-    with pytest.raises(GTOException):
-        f_to_test(repo=repo, commit=True)
-
-    with open(untracked_file, "r", encoding="utf") as f:
-        assert f.read() == f"{FIRST_TEST_FILE_MODIFICATION}"
-
-
 @skip_for_windows_py_lt_3_9
 def test_git_push_if_called_then_corresponding_gitpython_functions_are_called(
     tmp_local_empty_git_repo,
@@ -548,42 +411,6 @@ def tmp_local_git_repo_with_first_test_commit(tmp_local_empty_git_repo) -> str:
     repo.index.add(items=[test_file.name, readme.name])
     repo.index.commit(message=FIRST_TEST_COMMIT_MESSAGE)
     yield tmp_local_empty_git_repo, new_file_path.as_posix()
-
-
-@pytest.fixture
-def mocked_f_decorated_with_commit_produced_changes_on_auto_commit() -> Tuple[
-    Callable, MagicMock, MagicMock, MagicMock, MagicMock, Callable
-]:
-    f_spy = MagicMock()
-    f_spy.return_value = MagicMock()
-
-    def generate_test_commit_message(commit: bool) -> str:
-        return f"commit message with argument {commit}"
-
-    @commit_produced_changes_on_commit(message_generator=generate_test_commit_message)
-    def f(*args, **kwargs):
-        return f_spy(*args, **kwargs)
-
-    with patch("gto.git_utils.stashed_changes") as mocked_stashed_changes:
-        mocked_stashed_changes.return_value.__enter__.return_value = [], []
-        with patch(
-            "gto.git_utils._get_repo_changed_tracked_and_untracked_files"
-        ) as mocked_get_repo_changed_tracked_and_untracked_files:
-            mocked_get_repo_changed_tracked_and_untracked_files.return_value = [
-                TEST_COMMIT_FILE
-            ], []
-            with patch(
-                "gto.git_utils.git_add_and_commit_all_changes"
-            ) as mocked_git_add_and_commit_all_changes:
-                mock_manager = MagicMock()
-                mock_manager.attach_mock(mocked_stashed_changes, "stashed_changes")
-                mock_manager.attach_mock(f_spy, "spy")
-                mock_manager.attach_mock(
-                    mocked_git_add_and_commit_all_changes,
-                    "git_add_and_commit_all_changes",
-                )
-
-                yield f, f_spy, mocked_stashed_changes, mocked_git_add_and_commit_all_changes, mock_manager, generate_test_commit_message
 
 
 @pytest.fixture
