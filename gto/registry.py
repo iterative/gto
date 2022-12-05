@@ -31,7 +31,7 @@ from gto.exceptions import (
     VersionExistsForCommit,
     WrongArgs,
 )
-from gto.git_utils import FromRemoteRepoMixin, git_push_tag
+from gto.git_utils import GitRepoMixin, git_push_tag
 from gto.index import EnrichmentManager
 from gto.tag import (
     TagArtifactManager,
@@ -46,7 +46,7 @@ from gto.versions import SemVer
 TBaseEvent = TypeVar("TBaseEvent", bound=BaseEvent)
 
 
-class GitRegistry(BaseModel, FromRemoteRepoMixin):
+class GitRegistry(BaseModel, GitRepoMixin):
     repo: git.Repo
     artifact_manager: TagArtifactManager
     version_manager: TagVersionManager
@@ -585,7 +585,7 @@ class GitRegistry(BaseModel, FromRemoteRepoMixin):
                     f"Running `git push{' --delete ' if delete else ' '}origin {tag_name}`"
                 )
             git_push_tag(
-                repo_path=Path(self.repo.git_dir).parent.as_posix(),
+                repo=Path(self.repo.git_dir).parent.as_posix(),
                 tag_name=tag_name,
                 delete=delete,
             )

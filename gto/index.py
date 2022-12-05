@@ -1,10 +1,11 @@
 import os
 from abc import ABC, abstractmethod
 from collections import defaultdict
+from contextlib import contextmanager
 from datetime import datetime
 from functools import wraps
 from pathlib import Path
-from typing import IO, Dict, FrozenSet, Generator, List, Optional, Union, Any
+from typing import IO, Dict, FrozenSet, Generator, List, Optional, Union
 
 import git
 from git import Repo
@@ -12,6 +13,10 @@ from pydantic import BaseModel, parse_obj_as, validator
 
 from gto.base import BaseManager, BaseRegistryState
 from gto.base import Commit as EnrichmentEvent
+from gto.commit_message_generator import (
+    generate_annotate_commit_message,
+    generate_remove_commit_message,
+)
 from gto.config import (
     CONFIG_FILE_NAME,
     RegistryConfig,
@@ -29,7 +34,7 @@ from gto.exceptions import (
     WrongArgs,
 )
 from gto.ext import EnrichmentInfo, EnrichmentReader
-from gto.git_utils import FromRemoteRepoMixin, CommitChangesDueToAddMixin
+from gto.git_utils import GitRepoMixin
 from gto.utils import resolve_ref
 
 
@@ -184,7 +189,7 @@ class BaseIndexManager(BaseModel, ABC):
     def get_history(self) -> Dict[str, Index]:
         raise NotImplementedError
 
-    def _add(self, name, type, path, must_exist, labels, description, update):
+    def add(self, name, type, path, must_exist, labels, description, update):
         for arg in [name] + list(labels or []):
             assert_name_is_valid(arg)
         if type:
@@ -218,6 +223,7 @@ class FileIndexManager(BaseIndexManager):
     path: str = ""
 
     @classmethod
+    @contextmanager
     def from_path(cls, path: str, config: RegistryConfig = None):
         if config is None:
             config = read_registry_config(os.path.join(path, CONFIG_FILE_NAME))
@@ -240,36 +246,78 @@ class FileIndexManager(BaseIndexManager):
     def get_history(self) -> Dict[str, Index]:
         raise NotImplementedError("Not a git repo: history is not available")
 
+    def get_commit_index(self, **kwargs) -> Index:
+        raise NotImplementedError("Not a git repo: using revision is not available")
+
+    def artifact_centric_representation(self):
+        raise NotImplementedError("Not a git repo")
+
 
 ArtifactCommits = Dict[str, Artifact]
 ArtifactsCommits = Dict[str, ArtifactCommits]
 
 
-class RepoIndexManager(FileIndexManager, CommitChangesDueToAddMixin):
+class RepoIndexManager(FileIndexManager, GitRepoMixin):
     repo: git.Repo
 
     def __init__(self, repo, config):
         super().__init__(repo=repo, config=config)
-        # @aguschin
-        # run test test_api.test_if_annotate_with_auto_commit_then_invoke_stash_and_commit
-        # It will fail at the next line with error 'ValueError: "RepoIndexManager" object has no field "_repo"'
-        # Why is that?
-        self._repo = repo
 
     @classmethod
-    def from_repo(cls, repo: Union[str, git.Repo], config: RegistryConfig = None):
+    def _from_repo(cls, repo: Union[str, git.Repo], config: RegistryConfig = None):
         if isinstance(repo, str):
             try:
                 repo = git.Repo(repo, search_parent_directories=True)
             except git.InvalidGitRepositoryError as e:
-                raise NoRepo(repo) from e
+                raise NoRepo("No git repo found") from e
         if config is None:
             config = read_registry_config(
                 os.path.join(repo.working_dir, CONFIG_FILE_NAME)
             )
-        self = cls(repo=repo, config=config)
-        # self._set_repo(repo=repo)
-        return self
+        return cls(repo=repo, config=config)
+
+    def add(
+        self,
+        name,
+        type,
+        path,
+        must_exist,
+        labels,
+        description,
+        update,
+        commit=False,
+        commit_message=None,
+        push=False,
+    ):
+        return self._call_commit_push(
+            super().add,
+            commit=commit,
+            commit_message=commit_message
+            or generate_annotate_commit_message(name=name, type=type, path=path),
+            push=push,
+            name=name,
+            type=type,
+            path=path,
+            must_exist=must_exist,
+            labels=labels,
+            description=description,
+            update=update,
+        )
+
+    def remove(
+        self,
+        name,
+        commit=False,
+        commit_message=None,
+        push=False,
+    ):
+        return self._call_commit_push(
+            super().remove,
+            commit=commit,
+            commit_message=commit_message or generate_remove_commit_message(name=name),
+            push=push,
+            name=name,
+        )
 
     def index_path(self):
         # TODO: config should be loaded from repo too
@@ -278,7 +326,7 @@ class RepoIndexManager(FileIndexManager, CommitChangesDueToAddMixin):
     class Config:
         arbitrary_types_allowed = True
 
-    def get_commit_index(
+    def get_commit_index(  # type: ignore # pylint: disable=arguments-differ
         self, ref: Union[str, git.Reference, None], allow_to_not_exist: bool = True
     ) -> Optional[Index]:
         if not ref or isinstance(ref, str):
@@ -319,7 +367,7 @@ class RepoIndexManager(FileIndexManager, CommitChangesDueToAddMixin):
             raise ArtifactNotFound(name)
 
 
-class EnrichmentManager(BaseManager, FromRemoteRepoMixin):
+class EnrichmentManager(BaseManager, GitRepoMixin):
     actions: FrozenSet[Action] = frozenset()
 
     @classmethod
@@ -416,13 +464,6 @@ class EnrichmentManager(BaseManager, FromRemoteRepoMixin):
         return state
 
 
-def init_index_manager(path):
-    try:
-        return RepoIndexManager.from_repo(path)
-    except NoRepo:
-        return FileIndexManager.from_path(path)
-
-
 class GTOInfo(EnrichmentInfo):
     source = "gto"
     artifact: Artifact
@@ -443,7 +484,8 @@ class GTOEnrichment(EnrichmentReader):
     def discover(  # pylint: disable=no-self-use
         self, repo, rev: Optional[Union[git.Reference, str]]
     ) -> Dict[str, GTOInfo]:
-        index = RepoIndexManager.from_repo(repo).get_commit_index(rev)
+        with RepoIndexManager.from_repo(repo) as index:
+            index = index.get_commit_index(rev)
         if index:
             return {
                 name: GTOInfo(artifact=artifact)
@@ -454,7 +496,8 @@ class GTOEnrichment(EnrichmentReader):
     def describe(  # pylint: disable=no-self-use
         self, repo, obj: str, rev: Optional[Union[git.Reference, str]]
     ) -> Optional[GTOInfo]:
-        index = RepoIndexManager.from_repo(repo).get_commit_index(rev)
+        with RepoIndexManager.from_repo(repo) as index:
+            index = index.get_commit_index(rev)
         if index and obj in index.state:
             return GTOInfo(artifact=index.state[obj])
         return None

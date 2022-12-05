@@ -18,6 +18,7 @@ from gto.constants import (
     VersionSort,
 )
 from gto.exceptions import GTOException, NotImplementedInGTO, WrongArgs
+from gto.index import RepoIndexManager
 from gto.ui import (
     EMOJI_FAIL,
     EMOJI_GTO,
@@ -857,10 +858,8 @@ def print_state(repo: str = option_repo):
 @gto_command(hidden=True)
 def print_index(repo: str = option_repo):
     """Technical cmd: Print repo index."""
-    index = gto.api._get_index(  # pylint: disable=protected-access
-        repo
-    ).artifact_centric_representation()
-    format_echo(index, "json")
+    with RepoIndexManager.from_repo(repo) as index:
+        format_echo(index.artifact_centric_representation(), "json")
 
 
 @gto_command(section=CommandGroups.enriching)
