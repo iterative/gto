@@ -23,7 +23,7 @@ from gto.git_utils import git_clone
 from gto.index import RepoIndexManager
 from gto.tag import find
 from gto.versions import SemVer
-from tests.skip_presets import skip_for_windows_py_lt_3_9
+from tests.skip_presets import skip_for_windows
 from tests.utils import (
     check_obj,
     convert_objects_to_str_in_json_serializable_object,
@@ -310,13 +310,13 @@ def test_is_gto_repo_because_of_artifacts_yaml(empty_git_repo):
     assert gto.api._is_gto_repo(repo)
 
 
-@skip_for_windows_py_lt_3_9
+@skip_for_windows
 def test_if_show_on_remote_git_repo_then_return_expected_registry():
     result = show(repo=tests.resources.SAMPLE_REMOTE_REPO_URL)
     assert result == tests.resources.get_sample_remote_repo_expected_registry()
 
 
-@skip_for_windows_py_lt_3_9
+@skip_for_windows
 @pytest.mark.parametrize(
     "ref,expected_stage,expected_version,expected_artifact",
     (
@@ -341,7 +341,7 @@ def test_if_check_ref_on_remote_git_repo_then_return_expected_reference(
 
 
 @freeze_time("1996-06-09 00:00:00", tz_offset=0)
-@skip_for_windows_py_lt_3_9
+@skip_for_windows
 def test_if_history_on_remote_git_repo_then_return_expected_history():
     result = gto.api.history(
         repo=tests.resources.SAMPLE_REMOTE_REPO_URL, artifact="churn"
@@ -352,13 +352,13 @@ def test_if_history_on_remote_git_repo_then_return_expected_history():
     )
 
 
-@skip_for_windows_py_lt_3_9
+@skip_for_windows
 def test_if_stages_on_remote_git_repo_then_return_expected_stages():
     result = gto.api.get_stages(repo=tests.resources.SAMPLE_REMOTE_REPO_URL)
     assert result == ["dev", "prod", "staging"]
 
 
-@skip_for_windows_py_lt_3_9
+@skip_for_windows
 def test_if_describe_on_remote_git_repo_then_return_expected_info():
     result = gto.api.describe(repo=tests.resources.SAMPLE_REMOTE_REPO_URL, name="churn")
     assert result[0].get_object().dict(exclude_defaults=True) == {
@@ -497,7 +497,7 @@ def test_if_deprecate_with_delete_and_auto_push_then_invoke_git_push_tag(
     )
 
 
-@skip_for_windows_py_lt_3_9
+@skip_for_windows
 def test_if_register_with_remote_repo_then_invoke_git_push_tag():
     with patch("gto.registry.git_push_tag") as mocked_git_push_tag:
         with patch("gto.git_utils.TemporaryDirectory") as MockedTemporaryDirectory:
@@ -517,7 +517,7 @@ def test_if_register_with_remote_repo_then_invoke_git_push_tag():
             tmp_dir.cleanup()
 
 
-@skip_for_windows_py_lt_3_9
+@skip_for_windows
 def test_if_assign_with_remote_repo_then_invoke_git_push_tag():
     with patch("gto.registry.git_push_tag") as mocked_git_push_tag:
         with patch("gto.git_utils.TemporaryDirectory") as MockedTemporaryDirectory:
@@ -546,7 +546,7 @@ def test_if_assign_with_remote_repo_then_invoke_git_push_tag():
             tmp_dir.cleanup()
 
 
-@skip_for_windows_py_lt_3_9
+@skip_for_windows
 def test_if_deprecate_with_remote_repo_then_invoke_git_push_tag():
     with patch("gto.registry.git_push_tag") as mocked_git_push_tag:
         with patch("gto.git_utils.TemporaryDirectory") as MockedTemporaryDirectory:
@@ -565,7 +565,7 @@ def test_if_deprecate_with_remote_repo_then_invoke_git_push_tag():
             tmp_dir.cleanup()
 
 
-@skip_for_windows_py_lt_3_9
+@skip_for_windows
 def test_if_deregister_with_remote_repo_then_invoke_git_push_tag():
     with patch("gto.registry.git_push_tag") as mocked_git_push_tag:
         with patch("gto.git_utils.TemporaryDirectory") as MockedTemporaryDirectory:
@@ -585,7 +585,7 @@ def test_if_deregister_with_remote_repo_then_invoke_git_push_tag():
             tmp_dir.cleanup()
 
 
-@skip_for_windows_py_lt_3_9
+@skip_for_windows
 def test_if_unassign_with_remote_repo_then_invoke_git_push_tag():
     with patch("gto.registry.git_push_tag") as mocked_git_push_tag:
         with patch("gto.git_utils.TemporaryDirectory") as MockedTemporaryDirectory:
@@ -721,7 +721,7 @@ def test_if_remove_with_auto_push_then_invoke_commit_and_push(
     mocked_git_push.assert_called_once_with(repo=repo)
 
 
-@skip_for_windows_py_lt_3_9
+@skip_for_windows
 def test_if_annotate_with_remote_repo_then_clone_and_push():
     with patch("gto.git_utils.git_push") as mocked_git_push:
         with patch("gto.git_utils.git_clone") as mocked_git_clone:
@@ -741,7 +741,7 @@ def test_if_annotate_with_remote_repo_then_clone_and_push():
     )
 
 
-@skip_for_windows_py_lt_3_9
+@skip_for_windows
 def test_if_remove_with_remote_repo_then_clone_and_push():
     with patch("gto.git_utils.git_push") as mocked_git_push:
         with patch("gto.git_utils.git_clone") as mocked_git_clone:
