@@ -64,30 +64,6 @@ class GitRepoMixin:
         return result
 
 
-def clone_on_remote_repo(f: Callable):
-    @wraps(f)
-    def wrapped_f(*args, **kwargs):
-        kwargs = _turn_args_into_kwargs(f, args, kwargs)
-
-        if isinstance(kwargs["repo"], str) and is_url_of_remote_repo(
-            repo_path=kwargs["repo"]
-        ):
-            try:
-                with cloned_git_repo(repo=kwargs["repo"]) as tmp_dir:
-                    kwargs["repo"] = tmp_dir
-                    return f(**kwargs)
-            except (NotADirectoryError, PermissionError) as e:
-                raise e.__class__(
-                    "Are you using windows with python < 3.9? "
-                    "This may be the reason of this error: https://bugs.python.org/issue42796. "
-                    "Consider upgrading python."
-                ) from e
-
-        return f(**kwargs)
-
-    return wrapped_f
-
-
 def set_push_on_remote_repo(f: Callable):
     @wraps(f)
     def wrapped_f(*args, **kwargs):
