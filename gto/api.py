@@ -19,7 +19,7 @@ from gto.constants import (
 )
 from gto.exceptions import NoRepo, NotImplementedInGTO, WrongArgs
 from gto.ext import EnrichmentInfo
-from gto.git_utils import set_push_on_remote_repo
+from gto.git_utils import is_url_of_remote_repo
 from gto.index import EnrichmentManager, RepoIndexManager
 from gto.registry import GitRegistry
 from gto.tag import NAME_REFERENCE
@@ -48,7 +48,6 @@ def get_stages(repo: Union[str, Repo], allowed: bool = False, used: bool = False
 
 
 # TODO: make this work the same as CLI version
-@set_push_on_remote_repo
 def annotate(
     repo: Union[str, Repo],
     name: str,
@@ -62,6 +61,8 @@ def annotate(
     # update: bool = False,
 ):
     """Add an artifact to the Index"""
+    if isinstance(repo, str) and is_url_of_remote_repo(repo_path=repo):
+        push = True
     with RepoIndexManager.from_repo(repo) as index:
         return index.add(
             name,
@@ -76,7 +77,6 @@ def annotate(
         )
 
 
-@set_push_on_remote_repo
 def remove(
     repo: Union[str, Repo],
     name: str,
@@ -84,11 +84,12 @@ def remove(
     push: bool = False,
 ):  # pylint: disable=unused-argument
     """Remove an artifact from the Index"""
+    if isinstance(repo, str) and is_url_of_remote_repo(repo_path=repo):
+        push = True
     with RepoIndexManager.from_repo(repo) as index:
         return index.remove(name, commit=commit, push=push)
 
 
-@set_push_on_remote_repo
 def register(
     repo: Union[str, Repo],
     name: str,
@@ -106,6 +107,8 @@ def register(
     author_email: Optional[str] = None,
 ):
     """Register new artifact version"""
+    if isinstance(repo, str) and is_url_of_remote_repo(repo_path=repo):
+        push = True
     with GitRegistry.from_repo(repo) as reg:
         return reg.register(
             name=name,
@@ -124,7 +127,6 @@ def register(
         )
 
 
-@set_push_on_remote_repo
 def assign(
     repo: Union[str, Repo],
     name: str,
@@ -142,6 +144,8 @@ def assign(
     author_email: Optional[str] = None,
 ):
     """Assign stage to specific artifact version"""
+    if isinstance(repo, str) and is_url_of_remote_repo(repo_path=repo):
+        push = True
     with GitRegistry.from_repo(repo) as reg:
         return reg.assign(
             name=name,
@@ -160,7 +164,6 @@ def assign(
         )
 
 
-@set_push_on_remote_repo
 def unassign(
     repo: Union[str, Repo],
     name: str,
@@ -176,6 +179,8 @@ def unassign(
     author: Optional[str] = None,
     author_email: Optional[str] = None,
 ):
+    if isinstance(repo, str) and is_url_of_remote_repo(repo_path=repo):
+        push = True
     with GitRegistry.from_repo(repo) as reg:
         return reg.unassign(
             name=name,
@@ -193,7 +198,6 @@ def unassign(
         )
 
 
-@set_push_on_remote_repo
 def deregister(
     repo: Union[str, Repo],
     name: str,
@@ -208,6 +212,8 @@ def deregister(
     author: Optional[str] = None,
     author_email: Optional[str] = None,
 ):
+    if isinstance(repo, str) and is_url_of_remote_repo(repo_path=repo):
+        push = True
     with GitRegistry.from_repo(repo) as reg:
         return reg.deregister(
             name=name,
@@ -224,7 +230,6 @@ def deregister(
         )
 
 
-@set_push_on_remote_repo
 def deprecate(
     repo: Union[str, Repo],
     name: str,
@@ -237,6 +242,8 @@ def deprecate(
     author: Optional[str] = None,
     author_email: Optional[str] = None,
 ):
+    if isinstance(repo, str) and is_url_of_remote_repo(repo_path=repo):
+        push = True
     with GitRegistry.from_repo(repo) as reg:
         return reg.deprecate(
             name=name,
