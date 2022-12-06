@@ -1,6 +1,6 @@
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Tuple, Union
+from typing import Tuple
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -14,7 +14,6 @@ from gto.git_utils import (
     git_push,
     git_push_tag,
     is_url_of_remote_repo,
-    set_push_on_remote_repo,
     stashed_changes,
 )
 from tests.skip_presets import skip_for_windows_py_lt_3_9
@@ -115,25 +114,6 @@ def test_git_push_tag_if_error_then_exit_with_code_1(
     assert (
         "Make sure your local repository is in sync with the remote" in error.value.msg
     )
-
-
-def test_set_auto_push_on_remote_repo_if_not_remote_then_auto_push_is_not_changed(
-    tmp_local_empty_git_repo,
-):
-    assert decorated_write_func(spam=37, repo=tmp_local_empty_git_repo, push=True)[0]
-    assert not decorated_write_func(spam=37, repo=tmp_local_empty_git_repo, push=False)[
-        0
-    ]
-
-
-@skip_for_windows_py_lt_3_9
-def test_set_auto_push_on_remote_repo_if_remote_then_auto_push_is_set_to_true():
-    assert decorated_write_func(
-        spam=37, repo=tests.resources.SAMPLE_HTTP_REMOTE_REPO, push=True
-    )[0]
-    assert decorated_write_func(
-        spam=37, repo=tests.resources.SAMPLE_HTTP_REMOTE_REPO, push=False
-    )[0]
 
 
 @skip_for_windows_py_lt_3_9
@@ -308,13 +288,6 @@ def test_git_push_if_called_then_corresponding_gitpython_functions_are_called(
 
     MockedRepo.assert_called_once_with(path=tmp_local_empty_git_repo)
     MockedRepo.return_value.git.push.assert_called_once_with()
-
-
-@set_push_on_remote_repo
-def decorated_write_func(
-    spam: int, repo: Union[Repo, str], push: bool
-):  # pylint: disable=unused-argument
-    return push, repo
 
 
 @pytest.fixture

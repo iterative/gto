@@ -19,7 +19,7 @@ from gto.constants import (
 )
 from gto.exceptions import NoRepo, NotImplementedInGTO, WrongArgs
 from gto.ext import EnrichmentInfo
-from gto.git_utils import set_push_on_remote_repo
+from gto.git_utils import is_url_of_remote_repo
 from gto.index import EnrichmentManager, RepoIndexManager
 from gto.registry import GitRegistry
 from gto.tag import NAME_REFERENCE
@@ -48,7 +48,6 @@ def get_stages(repo: Union[str, Repo], allowed: bool = False, used: bool = False
 
 
 # TODO: make this work the same as CLI version
-@set_push_on_remote_repo
 def annotate(
     repo: Union[str, Repo],
     name: str,
@@ -57,8 +56,8 @@ def annotate(
     must_exist: bool = False,
     labels: List[str] = None,
     description: str = "",
-    commit: bool = False,  # pylint: disable=unused-argument
-    push: bool = False,  # pylint: disable=unused-argument
+    commit: bool = False,
+    push: bool = False,
     # update: bool = False,
 ):
     """Add an artifact to the Index"""
@@ -72,23 +71,25 @@ def annotate(
             description=description,
             update=True,
             commit=commit,
-            push=push,
+            push=push or is_url_of_remote_repo(repo),
         )
 
 
-@set_push_on_remote_repo
 def remove(
     repo: Union[str, Repo],
     name: str,
     commit: bool = False,
     push: bool = False,
-):  # pylint: disable=unused-argument
+):
     """Remove an artifact from the Index"""
     with RepoIndexManager.from_repo(repo) as index:
-        return index.remove(name, commit=commit, push=push)
+        return index.remove(
+            name,
+            commit=commit,
+            push=push or is_url_of_remote_repo(repo),
+        )
 
 
-@set_push_on_remote_repo
 def register(
     repo: Union[str, Repo],
     name: str,
@@ -117,14 +118,13 @@ def register(
             bump_major=bump_major,
             bump_minor=bump_minor,
             bump_patch=bump_patch,
-            push=push,
+            push=push or is_url_of_remote_repo(repo),
             stdout=stdout,
             author=author,
             author_email=author_email,
         )
 
 
-@set_push_on_remote_repo
 def assign(
     repo: Union[str, Repo],
     name: str,
@@ -152,7 +152,7 @@ def assign(
             message=message,
             simple=simple,
             force=force,
-            push=push,
+            push=push or is_url_of_remote_repo(repo),
             skip_registration=skip_registration,
             stdout=stdout,
             author=author,
@@ -160,7 +160,6 @@ def assign(
         )
 
 
-@set_push_on_remote_repo
 def unassign(
     repo: Union[str, Repo],
     name: str,
@@ -187,13 +186,12 @@ def unassign(
             simple=simple if simple is not None else False,
             force=force,
             delete=delete,
-            push=push,
+            push=push or is_url_of_remote_repo(repo),
             author=author,
             author_email=author_email,
         )
 
 
-@set_push_on_remote_repo
 def deregister(
     repo: Union[str, Repo],
     name: str,
@@ -218,13 +216,12 @@ def deregister(
             simple=simple if simple is not None else True,
             force=force,
             delete=delete,
-            push=push,
+            push=push or is_url_of_remote_repo(repo),
             author=author,
             author_email=author_email,
         )
 
 
-@set_push_on_remote_repo
 def deprecate(
     repo: Union[str, Repo],
     name: str,
@@ -245,7 +242,7 @@ def deprecate(
             simple=simple if simple is not None else True,
             force=force,
             delete=delete,
-            push=push,
+            push=push or is_url_of_remote_repo(repo),
             author=author,
             author_email=author_email,
         )

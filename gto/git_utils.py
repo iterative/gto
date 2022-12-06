@@ -1,7 +1,6 @@
 import inspect
 import logging
 from contextlib import contextmanager
-from functools import wraps
 from tempfile import TemporaryDirectory
 from typing import Callable, Dict, List, Tuple, Union
 
@@ -63,21 +62,6 @@ class GitRepoMixin:
         return result
 
 
-def set_push_on_remote_repo(f: Callable):
-    @wraps(f)
-    def wrapped_f(*args, **kwargs):
-        kwargs = _turn_args_into_kwargs(f, args, kwargs)
-
-        if isinstance(kwargs["repo"], str) and is_url_of_remote_repo(
-            repo_path=kwargs["repo"]
-        ):
-            kwargs["push"] = True
-
-        return f(**kwargs)
-
-    return wrapped_f
-
-
 def are_files_in_repo_changed(repo: Union[str, git.Repo], files: List[str]) -> bool:
     tracked, untracked = _get_repo_changed_tracked_and_untracked_files(repo=repo)
     return (
@@ -87,7 +71,10 @@ def are_files_in_repo_changed(repo: Union[str, git.Repo], files: List[str]) -> b
 
 
 def is_url_of_remote_repo(repo_path: str) -> bool:
-    if remote_git_repo_regex.fullmatch(repo_path) is not None:
+    if (
+        isinstance(repo_path, str)
+        and remote_git_repo_regex.fullmatch(repo_path) is not None
+    ):
         logging.debug("%s recognized as remote git repo", repo_path)
         return True
 
