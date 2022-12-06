@@ -13,7 +13,9 @@ from gto.index import (
 
 
 def init_index(path):
-    return RepoIndexManager.from_repo(path)
+    # not correct, I believe, but tests pass
+    with RepoIndexManager.from_repo(path) as index:
+        return index
 
 
 @pytest.fixture
@@ -32,6 +34,8 @@ def test_git_index_add_virtual(git_index_repo):
         labels=[],
         description="",
         update=False,
+        commit=False,
+        commit_message=None,
     )
 
     new_index = init_index(repo.git_dir)
@@ -48,7 +52,15 @@ def test_git_index_add_virtual(git_index_repo):
 def test_git_index_remove_virtual(git_index_repo):
     index, repo = git_index_repo
     index.add(
-        "aa", "aa", "aa", must_exist=False, labels=[], description="", update=True
+        "aa",
+        "aa",
+        "aa",
+        must_exist=False,
+        labels=[],
+        description="",
+        update=True,
+        commit=False,
+        commit_message=None,
     )
 
     new_index = init_index(repo.git_dir)

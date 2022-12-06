@@ -14,7 +14,7 @@ from gto.exceptions import (
     UnknownType,
     ValidationError,
 )
-from gto.index import init_index_manager
+from gto.index import RepoIndexManager
 from gto.registry import GitRegistry
 
 CONFIG_CONTENT = """
@@ -42,13 +42,13 @@ def init_repo(empty_git_repo: Tuple[git.Repo, Callable]):
 
 
 def test_config_load_index(init_repo):
-    index = init_index_manager(init_repo)
-    assert index.config.TYPES == ["model", "dataset"]
+    with RepoIndexManager.from_repo(init_repo) as index:
+        assert index.config.TYPES == ["model", "dataset"]
 
 
 def test_config_load_registry(init_repo):
-    registry = GitRegistry.from_repo(init_repo)
-    assert registry.config.TYPES == ["model", "dataset"]
+    with GitRegistry.from_repo(repo=init_repo) as reg:
+        assert reg.config.TYPES == ["model", "dataset"]
 
 
 def test_adding_allowed_type(init_repo):

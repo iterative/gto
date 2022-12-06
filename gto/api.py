@@ -5,10 +5,6 @@ from typing import List, Optional, Union
 from funcy import distinct
 from git import Repo
 
-from gto.commit_message_generator import (
-    generate_annotate_commit_message,
-    generate_remove_commit_message,
-)
 from gto.constants import (
     ARTIFACT,
     ASSIGNMENTS_PER_VERSION,
@@ -23,18 +19,8 @@ from gto.constants import (
 )
 from gto.exceptions import NoRepo, NotImplementedInGTO, WrongArgs
 from gto.ext import EnrichmentInfo
-from gto.git_utils import (
-    clone_on_remote_repo,
-    commit_produced_changes_on_commit,
-    push_on_push,
-    set_push_on_remote_repo,
-)
-from gto.index import (
-    EnrichmentManager,
-    FileIndexManager,
-    RepoIndexManager,
-    init_index_manager,
-)
+from gto.git_utils import is_url_of_remote_repo
+from gto.index import EnrichmentManager, RepoIndexManager
 from gto.registry import GitRegistry
 from gto.tag import NAME_REFERENCE
 from gto.tag import parse_name as parse_tag_name
@@ -44,35 +30,24 @@ from gto.tag import parse_name_reference
 def _is_gto_repo(repo: Union[str, Repo]):
     """Check if repo is a gto repo"""
     try:
-        return GitRegistry.from_repo(repo).is_gto_repo()
+        with GitRegistry.from_repo(repo) as reg:
+            return reg.is_gto_repo()
     except NoRepo:
         return False
 
 
-def _get_index(repo: Union[str, Repo], file=False):
-    """Get index state"""
-    if file:
-        return FileIndexManager.from_path(
-            path=repo if isinstance(repo, str) else repo.working_dir
-        )
-    return RepoIndexManager.from_repo(repo)
-
-
 def _get_state(repo: Union[str, Repo]):
     """Show current registry state"""
-    return GitRegistry.from_repo(repo).get_state()
+    with GitRegistry.from_repo(repo) as reg:
+        return reg.get_state()
 
 
-@clone_on_remote_repo
 def get_stages(repo: Union[str, Repo], allowed: bool = False, used: bool = False):
-    return GitRegistry.from_repo(repo).get_stages(allowed=allowed, used=used)
+    with GitRegistry.from_repo(repo=repo) as reg:
+        return reg.get_stages(allowed=allowed, used=used)
 
 
 # TODO: make this work the same as CLI version
-@set_push_on_remote_repo
-@clone_on_remote_repo
-@push_on_push
-@commit_produced_changes_on_commit(message_generator=generate_annotate_commit_message)
 def annotate(
     repo: Union[str, Repo],
     name: str,
@@ -81,38 +56,40 @@ def annotate(
     must_exist: bool = False,
     labels: List[str] = None,
     description: str = "",
-    commit: bool = False,  # pylint: disable=unused-argument
-    push: bool = False,  # pylint: disable=unused-argument
+    commit: bool = False,
+    push: bool = False,
     # update: bool = False,
 ):
     """Add an artifact to the Index"""
-    return init_index_manager(path=repo).add(
-        name,
-        type=type,
-        path=path,
-        must_exist=must_exist,
-        labels=labels,
-        description=description,
-        update=True,
-    )
+    with RepoIndexManager.from_repo(repo) as index:
+        return index.add(
+            name,
+            type=type,
+            path=path,
+            must_exist=must_exist,
+            labels=labels,
+            description=description,
+            update=True,
+            commit=commit,
+            push=push or is_url_of_remote_repo(repo),
+        )
 
 
-@set_push_on_remote_repo
-@clone_on_remote_repo
-@push_on_push
-@commit_produced_changes_on_commit(message_generator=generate_remove_commit_message)
 def remove(
     repo: Union[str, Repo],
     name: str,
     commit: bool = False,
     push: bool = False,
-):  # pylint: disable=unused-argument
+):
     """Remove an artifact from the Index"""
-    return init_index_manager(path=repo).remove(name)
+    with RepoIndexManager.from_repo(repo) as index:
+        return index.remove(
+            name,
+            commit=commit,
+            push=push or is_url_of_remote_repo(repo),
+        )
 
 
-@set_push_on_remote_repo
-@clone_on_remote_repo
 def register(
     repo: Union[str, Repo],
     name: str,
@@ -130,25 +107,24 @@ def register(
     author_email: Optional[str] = None,
 ):
     """Register new artifact version"""
-    return GitRegistry.from_repo(repo).register(
-        name=name,
-        ref=ref,
-        version=version,
-        message=message,
-        simple=simple if simple is not None else True,
-        force=force,
-        bump_major=bump_major,
-        bump_minor=bump_minor,
-        bump_patch=bump_patch,
-        push=push,
-        stdout=stdout,
-        author=author,
-        author_email=author_email,
-    )
+    with GitRegistry.from_repo(repo) as reg:
+        return reg.register(
+            name=name,
+            ref=ref,
+            version=version,
+            message=message,
+            simple=simple if simple is not None else True,
+            force=force,
+            bump_major=bump_major,
+            bump_minor=bump_minor,
+            bump_patch=bump_patch,
+            push=push or is_url_of_remote_repo(repo),
+            stdout=stdout,
+            author=author,
+            author_email=author_email,
+        )
 
 
-@set_push_on_remote_repo
-@clone_on_remote_repo
 def assign(
     repo: Union[str, Repo],
     name: str,
@@ -166,25 +142,24 @@ def assign(
     author_email: Optional[str] = None,
 ):
     """Assign stage to specific artifact version"""
-    return GitRegistry.from_repo(repo).assign(
-        name=name,
-        stage=stage,
-        version=version,
-        ref=ref,
-        name_version=name_version,
-        message=message,
-        simple=simple,
-        force=force,
-        push=push,
-        skip_registration=skip_registration,
-        stdout=stdout,
-        author=author,
-        author_email=author_email,
-    )
+    with GitRegistry.from_repo(repo) as reg:
+        return reg.assign(
+            name=name,
+            stage=stage,
+            version=version,
+            ref=ref,
+            name_version=name_version,
+            message=message,
+            simple=simple,
+            force=force,
+            push=push or is_url_of_remote_repo(repo),
+            skip_registration=skip_registration,
+            stdout=stdout,
+            author=author,
+            author_email=author_email,
+        )
 
 
-@set_push_on_remote_repo
-@clone_on_remote_repo
 def unassign(
     repo: Union[str, Repo],
     name: str,
@@ -200,24 +175,23 @@ def unassign(
     author: Optional[str] = None,
     author_email: Optional[str] = None,
 ):
-    return GitRegistry.from_repo(repo).unassign(
-        name=name,
-        stage=stage,
-        ref=ref,
-        version=version,
-        message=message,
-        stdout=stdout,
-        simple=simple if simple is not None else False,
-        force=force,
-        delete=delete,
-        push=push,
-        author=author,
-        author_email=author_email,
-    )
+    with GitRegistry.from_repo(repo) as reg:
+        return reg.unassign(
+            name=name,
+            stage=stage,
+            ref=ref,
+            version=version,
+            message=message,
+            stdout=stdout,
+            simple=simple if simple is not None else False,
+            force=force,
+            delete=delete,
+            push=push or is_url_of_remote_repo(repo),
+            author=author,
+            author_email=author_email,
+        )
 
 
-@set_push_on_remote_repo
-@clone_on_remote_repo
 def deregister(
     repo: Union[str, Repo],
     name: str,
@@ -232,23 +206,22 @@ def deregister(
     author: Optional[str] = None,
     author_email: Optional[str] = None,
 ):
-    return GitRegistry.from_repo(repo).deregister(
-        name=name,
-        ref=ref,
-        version=version,
-        message=message,
-        stdout=stdout,
-        simple=simple if simple is not None else True,
-        force=force,
-        delete=delete,
-        push=push,
-        author=author,
-        author_email=author_email,
-    )
+    with GitRegistry.from_repo(repo) as reg:
+        return reg.deregister(
+            name=name,
+            ref=ref,
+            version=version,
+            message=message,
+            stdout=stdout,
+            simple=simple if simple is not None else True,
+            force=force,
+            delete=delete,
+            push=push or is_url_of_remote_repo(repo),
+            author=author,
+            author_email=author_email,
+        )
 
 
-@set_push_on_remote_repo
-@clone_on_remote_repo
 def deprecate(
     repo: Union[str, Repo],
     name: str,
@@ -261,17 +234,18 @@ def deprecate(
     author: Optional[str] = None,
     author_email: Optional[str] = None,
 ):
-    return GitRegistry.from_repo(repo).deprecate(
-        name=name,
-        message=message,
-        stdout=stdout,
-        simple=simple if simple is not None else True,
-        force=force,
-        delete=delete,
-        push=push,
-        author=author,
-        author_email=author_email,
-    )
+    with GitRegistry.from_repo(repo) as reg:
+        return reg.deprecate(
+            name=name,
+            message=message,
+            stdout=stdout,
+            simple=simple if simple is not None else True,
+            force=force,
+            delete=delete,
+            push=push or is_url_of_remote_repo(repo),
+            author=author,
+            author_email=author_email,
+        )
 
 
 def parse_tag(name: str):
@@ -285,7 +259,8 @@ def find_latest_version(
     registered: bool = True,
 ):
     """Return latest version for artifact"""
-    return GitRegistry.from_repo(repo).latest(name, all=all, registered=registered)
+    with GitRegistry.from_repo(repo) as reg:
+        return reg.latest(name, all=all, registered=registered)
 
 
 def find_versions_in_stage(
@@ -297,24 +272,23 @@ def find_versions_in_stage(
     registered_only: bool = False,
 ):
     """Return version of artifact with specific stage active"""
-    return GitRegistry.from_repo(repo).which(
-        name,
-        stage,
-        raise_if_not_found=False,
-        assignments_per_version=assignments_per_version,
-        versions_per_stage=versions_per_stage,
-        registered_only=registered_only,
-    )
+    with GitRegistry.from_repo(repo) as reg:
+        return reg.which(
+            name,
+            stage,
+            raise_if_not_found=False,
+            assignments_per_version=assignments_per_version,
+            versions_per_stage=versions_per_stage,
+            registered_only=registered_only,
+        )
 
 
-@clone_on_remote_repo
 def check_ref(repo: Union[str, Repo], ref: str):
     """Find out what have been registered/assigned in the provided ref"""
-    reg = GitRegistry.from_repo(repo)
-    return reg.check_ref(ref)
+    with GitRegistry.from_repo(repo=repo) as reg:
+        return reg.check_ref(ref)
 
 
-@clone_on_remote_repo
 def show(
     repo: Union[str, Repo],
     name: Optional[str] = None,
@@ -371,35 +345,38 @@ def _show_registry(
     def format_hexsha(hexsha):
         return hexsha[:7] if truncate_hexsha else hexsha
 
-    reg = GitRegistry.from_repo(repo)
-    stages = list(reg.get_stages())
-    models_state = {
-        o.artifact: {
-            "version": format_hexsha(o.get_latest_version(registered_only=True).version)
-            if o.get_latest_version(registered_only=True)
-            else None,
-            "stage": {
-                name: ", ".join(
-                    [
-                        format_hexsha(s.version)
-                        for s in o.get_vstages(
-                            registered_only=registered_only,
-                            assignments_per_version=assignments_per_version,
-                            versions_per_stage=versions_per_stage,
-                            sort=sort,
-                        ).get(name, [])
-                    ]
+    with GitRegistry.from_repo(repo=repo) as reg:
+        stages = list(reg.get_stages())
+        models_state = {
+            o.artifact: {
+                "version": format_hexsha(
+                    o.get_latest_version(registered_only=True).version
                 )
-                or None
-                for name in stages
-            },
-            "registered": o.is_registered,
+                if o.get_latest_version(registered_only=True)
+                else None,
+                "stage": {
+                    name: ", ".join(
+                        [
+                            format_hexsha(s.version)
+                            for s in o.get_vstages(
+                                registered_only=registered_only,
+                                assignments_per_version=assignments_per_version,
+                                versions_per_stage=versions_per_stage,
+                                sort=sort,
+                            ).get(name, [])
+                        ]
+                    )
+                    or None
+                    for name in stages
+                },
+                "registered": o.is_registered,
+            }
+            for o in reg.get_artifacts(
+                all_branches=all_branches,
+                all_commits=all_commits,
+            ).values()
         }
-        for o in reg.get_artifacts(
-            all_branches=all_branches,
-            all_commits=all_commits,
-        ).values()
-    }
+
     if not table:
         return models_state
 
@@ -440,15 +417,15 @@ def _show_versions(  # pylint: disable=too-many-locals
     if match:
         name = match["artifact"]
 
-    reg = GitRegistry.from_repo(repo)
-    if raw:
-        return reg.find_artifact(name).versions
+    with GitRegistry.from_repo(repo=repo) as reg:
+        if raw:
+            return reg.find_artifact(name).versions
 
-    artifact = reg.find_artifact(
-        name,
-        all_branches=all_branches,
-        all_commits=all_commits,
-    )
+        artifact = reg.find_artifact(
+            name,
+            all_branches=all_branches,
+            all_commits=all_commits,
+        )
     stages = artifact.get_vstages(
         registered_only=registered_only,
         assignments_per_version=assignments_per_version,
@@ -508,22 +485,22 @@ def _show_versions(  # pylint: disable=too-many-locals
     return versions_, "keys"
 
 
-@clone_on_remote_repo
 def describe(
     repo: Union[str, Repo], name: str, rev: str = None
 ) -> List[EnrichmentInfo]:
     """Find enrichments for the artifact"""
     ref_type, parsed = parse_name_reference(name)
     if ref_type == NAME_REFERENCE.NAME:
-        return EnrichmentManager.from_repo(repo).describe(name=name, rev=rev)
+        with EnrichmentManager.from_repo(repo) as em:
+            return em.describe(name=name, rev=rev)
     if ref_type == NAME_REFERENCE.TAG:
         if rev:
             raise WrongArgs("Should not specify revision if you pass git tag")
-        return EnrichmentManager.from_repo(repo).describe(name=parsed[NAME], rev=name)
+        with EnrichmentManager.from_repo(repo) as em:
+            return em.describe(name=parsed[NAME], rev=name)
     raise NotImplementedError
 
 
-@clone_on_remote_repo
 def history(
     repo: Union[str, Repo],
     artifact: str = None,
@@ -534,12 +511,11 @@ def history(
     table: bool = False,
     truncate_hexsha: bool = False,
 ):
-
-    reg = GitRegistry.from_repo(repo)
-    artifacts = reg.get_artifacts(
-        all_branches=all_branches,
-        all_commits=all_commits,
-    )
+    with GitRegistry.from_repo(repo=repo) as reg:
+        artifacts = reg.get_artifacts(
+            all_branches=all_branches,
+            all_commits=all_commits,
+        )
 
     def format_hexsha(hexsha):
         return hexsha[:7] if truncate_hexsha else hexsha
