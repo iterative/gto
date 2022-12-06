@@ -71,7 +71,10 @@ def are_files_in_repo_changed(repo: Union[str, git.Repo], files: List[str]) -> b
 
 
 def is_url_of_remote_repo(repo_path: str) -> bool:
-    if remote_git_repo_regex.fullmatch(repo_path) is not None:
+    if (
+        isinstance(repo_path, str)
+        and remote_git_repo_regex.fullmatch(repo_path) is not None
+    ):
         logging.debug("%s recognized as remote git repo", repo_path)
         return True
 

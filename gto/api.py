@@ -56,13 +56,11 @@ def annotate(
     must_exist: bool = False,
     labels: List[str] = None,
     description: str = "",
-    commit: bool = False,  # pylint: disable=unused-argument
-    push: bool = False,  # pylint: disable=unused-argument
+    commit: bool = False,
+    push: bool = False,
     # update: bool = False,
 ):
     """Add an artifact to the Index"""
-    if isinstance(repo, str) and is_url_of_remote_repo(repo_path=repo):
-        push = True
     with RepoIndexManager.from_repo(repo) as index:
         return index.add(
             name,
@@ -73,7 +71,7 @@ def annotate(
             description=description,
             update=True,
             commit=commit,
-            push=push,
+            push=push or is_url_of_remote_repo(repo),
         )
 
 
@@ -82,12 +80,14 @@ def remove(
     name: str,
     commit: bool = False,
     push: bool = False,
-):  # pylint: disable=unused-argument
+):
     """Remove an artifact from the Index"""
-    if isinstance(repo, str) and is_url_of_remote_repo(repo_path=repo):
-        push = True
     with RepoIndexManager.from_repo(repo) as index:
-        return index.remove(name, commit=commit, push=push)
+        return index.remove(
+            name,
+            commit=commit,
+            push=push or is_url_of_remote_repo(repo),
+        )
 
 
 def register(
@@ -107,8 +107,6 @@ def register(
     author_email: Optional[str] = None,
 ):
     """Register new artifact version"""
-    if isinstance(repo, str) and is_url_of_remote_repo(repo_path=repo):
-        push = True
     with GitRegistry.from_repo(repo) as reg:
         return reg.register(
             name=name,
@@ -120,7 +118,7 @@ def register(
             bump_major=bump_major,
             bump_minor=bump_minor,
             bump_patch=bump_patch,
-            push=push,
+            push=push or is_url_of_remote_repo(repo),
             stdout=stdout,
             author=author,
             author_email=author_email,
@@ -144,8 +142,6 @@ def assign(
     author_email: Optional[str] = None,
 ):
     """Assign stage to specific artifact version"""
-    if isinstance(repo, str) and is_url_of_remote_repo(repo_path=repo):
-        push = True
     with GitRegistry.from_repo(repo) as reg:
         return reg.assign(
             name=name,
@@ -156,7 +152,7 @@ def assign(
             message=message,
             simple=simple,
             force=force,
-            push=push,
+            push=push or is_url_of_remote_repo(repo),
             skip_registration=skip_registration,
             stdout=stdout,
             author=author,
@@ -179,8 +175,6 @@ def unassign(
     author: Optional[str] = None,
     author_email: Optional[str] = None,
 ):
-    if isinstance(repo, str) and is_url_of_remote_repo(repo_path=repo):
-        push = True
     with GitRegistry.from_repo(repo) as reg:
         return reg.unassign(
             name=name,
@@ -192,7 +186,7 @@ def unassign(
             simple=simple if simple is not None else False,
             force=force,
             delete=delete,
-            push=push,
+            push=push or is_url_of_remote_repo(repo),
             author=author,
             author_email=author_email,
         )
@@ -212,8 +206,6 @@ def deregister(
     author: Optional[str] = None,
     author_email: Optional[str] = None,
 ):
-    if isinstance(repo, str) and is_url_of_remote_repo(repo_path=repo):
-        push = True
     with GitRegistry.from_repo(repo) as reg:
         return reg.deregister(
             name=name,
@@ -224,7 +216,7 @@ def deregister(
             simple=simple if simple is not None else True,
             force=force,
             delete=delete,
-            push=push,
+            push=push or is_url_of_remote_repo(repo),
             author=author,
             author_email=author_email,
         )
@@ -242,8 +234,6 @@ def deprecate(
     author: Optional[str] = None,
     author_email: Optional[str] = None,
 ):
-    if isinstance(repo, str) and is_url_of_remote_repo(repo_path=repo):
-        push = True
     with GitRegistry.from_repo(repo) as reg:
         return reg.deprecate(
             name=name,
@@ -252,7 +242,7 @@ def deprecate(
             simple=simple if simple is not None else True,
             force=force,
             delete=delete,
-            push=push,
+            push=push or is_url_of_remote_repo(repo),
             author=author,
             author_email=author_email,
         )
