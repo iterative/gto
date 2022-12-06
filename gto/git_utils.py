@@ -5,25 +5,29 @@ from tempfile import TemporaryDirectory
 from typing import Callable, Dict, List, Tuple, Union
 
 import git
-from git import Repo
+from git import InvalidGitRepositoryError, NoSuchPathError
 
 from gto.config import RegistryConfig
 from gto.constants import remote_git_repo_regex
-from gto.exceptions import GTOException, WrongArgs
+from gto.exceptions import GTOException, NoRepo, WrongArgs
 
 
 class RemoteRepoMixin:
     @classmethod
-    def from_local_repo(cls, repo: Union[str, Repo], config: RegistryConfig = None):
+    def from_local_repo(cls, repo: Union[str, git.Repo], config: RegistryConfig = None):
         raise NotImplementedError()
 
     @classmethod
     @contextmanager
-    def from_repo(cls, repo: Union[str, Repo], config: RegistryConfig = None):
+    def from_repo(
+        cls, repo: Union[str, git.Repo], config: RegistryConfig = None, branch=None
+    ):
         if isinstance(repo, str) and is_url_of_remote_repo(repo_path=repo):
             try:
                 with cloned_git_repo(repo=repo) as tmp_dir:
-                    yield cls.from_local_repo(repo=tmp_dir, config=config)
+                    repo = read_repo(tmp_dir)
+                    repo.git.checkout(branch)
+                    yield cls.from_local_repo(repo=repo, config=config)
             except (NotADirectoryError, PermissionError) as e:
                 raise e.__class__(
                     "Are you using windows with python < 3.9? "
@@ -31,6 +35,8 @@ class RemoteRepoMixin:
                     "Consider upgrading python."
                 ) from e
         else:
+            if branch:
+                raise WrongArgs("branch can only be set for remote repos")
             yield cls.from_local_repo(repo=repo, config=config)
 
     def _call_commit_push(
@@ -142,8 +148,13 @@ def git_add_and_commit_all_changes(repo: Union[str, git.Repo], message: str) -> 
         repo.index.commit(message=message)
 
 
-def read_repo(repo: Union[str, git.Repo]) -> git.Repo:
-    return git.Repo(path=repo) if isinstance(repo, str) else repo
+def read_repo(repo: Union[str, git.Repo], search_parent_directories=False) -> git.Repo:
+    if isinstance(repo, git.Repo):
+        return repo
+    try:
+        return git.Repo(repo, search_parent_directories=search_parent_directories)
+    except (InvalidGitRepositoryError, NoSuchPathError) as e:
+        raise NoRepo(repo) from e
 
 
 @contextmanager

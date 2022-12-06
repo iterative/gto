@@ -29,12 +29,11 @@ from gto.exceptions import (
     ArtifactExists,
     ArtifactNotFound,
     NoFile,
-    NoRepo,
     PathIsUsed,
     WrongArgs,
 )
 from gto.ext import EnrichmentInfo, EnrichmentReader
-from gto.git_utils import RemoteRepoMixin
+from gto.git_utils import RemoteRepoMixin, read_repo
 from gto.utils import resolve_ref
 
 
@@ -265,11 +264,7 @@ class RepoIndexManager(FileIndexManager, RemoteRepoMixin):
 
     @classmethod
     def from_local_repo(cls, repo: Union[str, git.Repo], config: RegistryConfig = None):
-        if isinstance(repo, str):
-            try:
-                repo = git.Repo(repo, search_parent_directories=True)
-            except git.InvalidGitRepositoryError as e:
-                raise NoRepo("No git repo found") from e
+        repo = read_repo(repo, search_parent_directories=True)
         if config is None:
             config = read_registry_config(
                 os.path.join(repo.working_dir, CONFIG_FILE_NAME)

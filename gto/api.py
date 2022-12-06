@@ -58,10 +58,11 @@ def annotate(
     description: str = "",
     commit: bool = False,
     push: bool = False,
+    branch: str = None,
     # update: bool = False,
 ):
     """Add an artifact to the Index"""
-    with RepoIndexManager.from_repo(repo) as index:
+    with RepoIndexManager.from_repo(repo, branch=branch) as index:
         return index.add(
             name,
             type=type,
@@ -80,9 +81,10 @@ def remove(
     name: str,
     commit: bool = False,
     push: bool = False,
+    branch: str = None,
 ):
     """Remove an artifact from the Index"""
-    with RepoIndexManager.from_repo(repo) as index:
+    with RepoIndexManager.from_repo(repo, branch=branch) as index:
         return index.remove(
             name,
             commit=commit,

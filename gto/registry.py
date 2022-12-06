@@ -5,7 +5,6 @@ from typing import Optional, TypeVar, Union
 
 import git
 from funcy import distinct
-from git import InvalidGitRepositoryError, NoSuchPathError, Repo
 from pydantic import BaseModel
 
 from gto.base import (
@@ -25,13 +24,12 @@ from gto.config import (
 )
 from gto.constants import NAME
 from gto.exceptions import (
-    NoRepo,
     NotImplementedInGTO,
     VersionAlreadyRegistered,
     VersionExistsForCommit,
     WrongArgs,
 )
-from gto.git_utils import RemoteRepoMixin, git_push_tag
+from gto.git_utils import RemoteRepoMixin, git_push_tag, read_repo
 from gto.index import EnrichmentManager
 from gto.tag import (
     TagArtifactManager,
@@ -58,12 +56,8 @@ class GitRegistry(BaseModel, RemoteRepoMixin):
         arbitrary_types_allowed = True
 
     @classmethod
-    def from_local_repo(cls, repo: Union[str, Repo], config: RegistryConfig = None):
-        if isinstance(repo, str):
-            try:
-                repo = git.Repo(repo, search_parent_directories=True)
-            except (InvalidGitRepositoryError, NoSuchPathError) as e:
-                raise NoRepo(repo) from e
+    def from_local_repo(cls, repo: Union[str, git.Repo], config: RegistryConfig = None):
+        repo = read_repo(repo, search_parent_directories=True)
         if config is None:
             config = read_registry_config(
                 os.path.join(repo.working_dir, CONFIG_FILE_NAME)
