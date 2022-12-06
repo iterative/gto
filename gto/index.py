@@ -34,7 +34,7 @@ from gto.exceptions import (
     WrongArgs,
 )
 from gto.ext import EnrichmentInfo, EnrichmentReader
-from gto.git_utils import GitRepoMixin
+from gto.git_utils import RemoteRepoMixin
 from gto.utils import resolve_ref
 
 
@@ -257,14 +257,14 @@ ArtifactCommits = Dict[str, Artifact]
 ArtifactsCommits = Dict[str, ArtifactCommits]
 
 
-class RepoIndexManager(FileIndexManager, GitRepoMixin):
+class RepoIndexManager(FileIndexManager, RemoteRepoMixin):
     repo: git.Repo
 
     def __init__(self, repo, config):
         super().__init__(repo=repo, config=config)
 
     @classmethod
-    def _from_repo(cls, repo: Union[str, git.Repo], config: RegistryConfig = None):
+    def from_local_repo(cls, repo: Union[str, git.Repo], config: RegistryConfig = None):
         if isinstance(repo, str):
             try:
                 repo = git.Repo(repo, search_parent_directories=True)
@@ -367,11 +367,11 @@ class RepoIndexManager(FileIndexManager, GitRepoMixin):
             raise ArtifactNotFound(name)
 
 
-class EnrichmentManager(BaseManager, GitRepoMixin):
+class EnrichmentManager(BaseManager, RemoteRepoMixin):
     actions: FrozenSet[Action] = frozenset()
 
     @classmethod
-    def _from_repo(cls, repo: Union[str, Repo], config: RegistryConfig = None):
+    def from_local_repo(cls, repo: Union[str, Repo], config: RegistryConfig = None):
         if isinstance(repo, str):
             repo = git.Repo(repo, search_parent_directories=True)
         if config is None:

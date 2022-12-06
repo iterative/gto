@@ -31,7 +31,7 @@ from gto.exceptions import (
     VersionExistsForCommit,
     WrongArgs,
 )
-from gto.git_utils import GitRepoMixin, git_push_tag
+from gto.git_utils import RemoteRepoMixin, git_push_tag
 from gto.index import EnrichmentManager
 from gto.tag import (
     TagArtifactManager,
@@ -46,7 +46,7 @@ from gto.versions import SemVer
 TBaseEvent = TypeVar("TBaseEvent", bound=BaseEvent)
 
 
-class GitRegistry(BaseModel, GitRepoMixin):
+class GitRegistry(BaseModel, RemoteRepoMixin):
     repo: git.Repo
     artifact_manager: TagArtifactManager
     version_manager: TagVersionManager
@@ -58,7 +58,7 @@ class GitRegistry(BaseModel, GitRepoMixin):
         arbitrary_types_allowed = True
 
     @classmethod
-    def _from_repo(cls, repo: Union[str, Repo], config: RegistryConfig = None):
+    def from_local_repo(cls, repo: Union[str, Repo], config: RegistryConfig = None):
         if isinstance(repo, str):
             try:
                 repo = git.Repo(repo, search_parent_directories=True)

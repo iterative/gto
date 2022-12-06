@@ -12,9 +12,9 @@ from gto.constants import remote_git_repo_regex
 from gto.exceptions import GTOException, WrongArgs
 
 
-class GitRepoMixin:
+class RemoteRepoMixin:
     @classmethod
-    def _from_repo(cls, repo: Union[str, Repo], config: RegistryConfig = None):
+    def from_local_repo(cls, repo: Union[str, Repo], config: RegistryConfig = None):
         raise NotImplementedError()
 
     @classmethod
@@ -23,7 +23,7 @@ class GitRepoMixin:
         if isinstance(repo, str) and is_url_of_remote_repo(repo_path=repo):
             try:
                 with cloned_git_repo(repo=repo) as tmp_dir:
-                    yield cls._from_repo(repo=tmp_dir, config=config)
+                    yield cls.from_local_repo(repo=tmp_dir, config=config)
             except (NotADirectoryError, PermissionError) as e:
                 raise e.__class__(
                     "Are you using windows with python < 3.9? "
@@ -31,7 +31,7 @@ class GitRepoMixin:
                     "Consider upgrading python."
                 ) from e
         else:
-            yield cls._from_repo(repo=repo, config=config)
+            yield cls.from_local_repo(repo=repo, config=config)
 
     def _call_commit_push(
         self, func, commit=False, commit_message=None, push=False, **kwargs
