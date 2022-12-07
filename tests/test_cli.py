@@ -123,7 +123,7 @@ def test_commands(showcase):
     )
     _check_successful_cmd(
         "show",
-        ["-r", path, "rf@greatest", "--ref"],
+        ["-r", path, "rf@latest", "--ref"],
         "rf@v1.2.4\n",
     )
     _check_successful_cmd(
