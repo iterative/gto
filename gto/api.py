@@ -451,7 +451,7 @@ def _show_versions(  # pylint: disable=too-many-locals
         ]
         versions.append(v)
 
-    if match and match["greatest"]:
+    if match and (match["greatest"] or match["latest"]):
         versions = versions[:1]
     if match and match["stage"]:
         versions = [
