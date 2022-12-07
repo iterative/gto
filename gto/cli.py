@@ -373,19 +373,20 @@ option_push_tag = Option(
     is_flag=True,
     help="Push created tag automatically (experimental)",
 )
-
 option_commit = Option(
     False,
     "--commit",
     is_flag=True,
     help="Automatically commit changes due to this command (experimental)",
 )
-
 option_push_commit = Option(
     False,
     "--push",
     is_flag=True,
     help="Push created commit automatically (experimental) - will set commit=True",
+)
+option_branch = Option(
+    None, "-b", "--branch", help="Branch to commit to. Only for remote repos."
 )
 
 
@@ -496,6 +497,7 @@ def annotate(
     description: str = Option("", "-d", "--description", help="Artifact description"),
     commit: bool = option_commit,
     push: bool = option_push_commit,
+    branch: str = option_branch,
     # update: bool = Option(
     #     False, "-u", "--update", is_flag=True, help="Update artifact if it exists"
     # ),
@@ -511,6 +513,8 @@ def annotate(
         description=description,
         commit=commit,
         push=push,
+        branch=branch,
+        stdout=True,
         # update=update,
     )
 
@@ -521,9 +525,12 @@ def remove(
     name: str = arg_name,
     commit: bool = option_commit,
     push: bool = option_push_commit,
+    branch: str = option_branch,
 ):
     """Remove the enrichment for given artifact."""
-    gto.api.remove(repo, name, commit, push)
+    gto.api.remove(
+        repo=repo, name=name, commit=commit, push=push, branch=branch, stdout=True
+    )
 
 
 @gto_command(section=CommandGroups.modifying)

@@ -29,12 +29,12 @@ from gto.exceptions import (
     ArtifactExists,
     ArtifactNotFound,
     NoFile,
-    NoRepo,
     PathIsUsed,
     WrongArgs,
 )
 from gto.ext import EnrichmentInfo, EnrichmentReader
-from gto.git_utils import RemoteRepoMixin
+from gto.git_utils import RemoteRepoMixin, read_repo
+from gto.ui import echo
 from gto.utils import resolve_ref
 
 
@@ -189,7 +189,9 @@ class BaseIndexManager(BaseModel, ABC):
     def get_history(self) -> Dict[str, Index]:
         raise NotImplementedError
 
-    def add(self, name, type, path, must_exist, labels, description, update):
+    def add(
+        self, name, type, path, must_exist, labels, description, update, stdout=False
+    ):
         for arg in [name] + list(labels or []):
             assert_name_is_valid(arg)
         if type:
@@ -212,11 +214,15 @@ class BaseIndexManager(BaseModel, ABC):
             update=update,
         )
         self.update()
+        if stdout:
+            echo("Updated `artifacts.yaml`")
 
-    def remove(self, name):
+    def remove(self, name, stdout=False):
         index = self.get_index()
         index.remove(name)
         self.update()
+        if stdout:
+            echo("Updated `artifacts.yaml`")
 
 
 class FileIndexManager(BaseIndexManager):
@@ -265,11 +271,7 @@ class RepoIndexManager(FileIndexManager, RemoteRepoMixin):
 
     @classmethod
     def from_local_repo(cls, repo: Union[str, git.Repo], config: RegistryConfig = None):
-        if isinstance(repo, str):
-            try:
-                repo = git.Repo(repo, search_parent_directories=True)
-            except git.InvalidGitRepositoryError as e:
-                raise NoRepo("No git repo found") from e
+        repo = read_repo(repo, search_parent_directories=True)
         if config is None:
             config = read_registry_config(
                 os.path.join(repo.working_dir, CONFIG_FILE_NAME)
@@ -285,6 +287,7 @@ class RepoIndexManager(FileIndexManager, RemoteRepoMixin):
         labels,
         description,
         update,
+        stdout=False,
         commit=False,
         commit_message=None,
         push=False,
@@ -295,6 +298,7 @@ class RepoIndexManager(FileIndexManager, RemoteRepoMixin):
             commit_message=commit_message
             or generate_annotate_commit_message(name=name, type=type, path=path),
             push=push,
+            stdout=stdout,
             name=name,
             type=type,
             path=path,
@@ -307,6 +311,7 @@ class RepoIndexManager(FileIndexManager, RemoteRepoMixin):
     def remove(
         self,
         name,
+        stdout=False,
         commit=False,
         commit_message=None,
         push=False,
@@ -316,6 +321,7 @@ class RepoIndexManager(FileIndexManager, RemoteRepoMixin):
             commit=commit,
             commit_message=commit_message or generate_remove_commit_message(name=name),
             push=push,
+            stdout=stdout,
             name=name,
         )
 
