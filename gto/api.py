@@ -59,6 +59,7 @@ def annotate(
     commit: bool = False,
     push: bool = False,
     branch: str = None,
+    stdout: bool = False,
     # update: bool = False,
 ):
     """Add an artifact to the Index"""
@@ -73,6 +74,7 @@ def annotate(
             update=True,
             commit=commit,
             push=push or is_url_of_remote_repo(repo),
+            stdout=stdout,
         )
 
 
@@ -82,6 +84,7 @@ def remove(
     commit: bool = False,
     push: bool = False,
     branch: str = None,
+    stdout: bool = False,
 ):
     """Remove an artifact from the Index"""
     with RepoIndexManager.from_repo(repo, branch=branch) as index:
@@ -89,6 +92,7 @@ def remove(
             name,
             commit=commit,
             push=push or is_url_of_remote_repo(repo),
+            stdout=stdout,
         )
 
 

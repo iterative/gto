@@ -12,7 +12,7 @@ def generate_annotate_commit_message(
 
 
 def generate_remove_commit_message(name: str) -> str:
-    return f"Remove annotation for artifact {name}"
+    return f"Remove annotation for artifact `{name}`"
 
 
 def generate_empty_commit_message() -> str:

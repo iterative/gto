@@ -34,6 +34,7 @@ from gto.exceptions import (
 )
 from gto.ext import EnrichmentInfo, EnrichmentReader
 from gto.git_utils import RemoteRepoMixin, read_repo
+from gto.ui import echo
 from gto.utils import resolve_ref
 
 
@@ -188,7 +189,9 @@ class BaseIndexManager(BaseModel, ABC):
     def get_history(self) -> Dict[str, Index]:
         raise NotImplementedError
 
-    def add(self, name, type, path, must_exist, labels, description, update):
+    def add(
+        self, name, type, path, must_exist, labels, description, update, stdout=False
+    ):
         for arg in [name] + list(labels or []):
             assert_name_is_valid(arg)
         if type:
@@ -211,11 +214,15 @@ class BaseIndexManager(BaseModel, ABC):
             update=update,
         )
         self.update()
+        if stdout:
+            echo("Updated `artifacts.yaml`")
 
-    def remove(self, name):
+    def remove(self, name, stdout=False):
         index = self.get_index()
         index.remove(name)
         self.update()
+        if stdout:
+            echo("Updated `artifacts.yaml`")
 
 
 class FileIndexManager(BaseIndexManager):
@@ -280,6 +287,7 @@ class RepoIndexManager(FileIndexManager, RemoteRepoMixin):
         labels,
         description,
         update,
+        stdout=False,
         commit=False,
         commit_message=None,
         push=False,
@@ -290,6 +298,7 @@ class RepoIndexManager(FileIndexManager, RemoteRepoMixin):
             commit_message=commit_message
             or generate_annotate_commit_message(name=name, type=type, path=path),
             push=push,
+            stdout=stdout,
             name=name,
             type=type,
             path=path,
@@ -302,6 +311,7 @@ class RepoIndexManager(FileIndexManager, RemoteRepoMixin):
     def remove(
         self,
         name,
+        stdout=False,
         commit=False,
         commit_message=None,
         push=False,
@@ -311,6 +321,7 @@ class RepoIndexManager(FileIndexManager, RemoteRepoMixin):
             commit=commit,
             commit_message=commit_message or generate_remove_commit_message(name=name),
             push=push,
+            stdout=stdout,
             name=name,
         )
 

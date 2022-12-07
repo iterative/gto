@@ -246,7 +246,8 @@ def test_annotate(empty_git_repo: Tuple[git.Repo, Callable]):
             "--description",
             "some description",
         ],
-        "",
+        "Updated `artifacts.yaml`",
+        _check_output_contains,
     )
     _check_successful_cmd(
         "annotate",
@@ -259,7 +260,8 @@ def test_annotate(empty_git_repo: Tuple[git.Repo, Callable]):
             "--description",
             "new description",
         ],
-        "",
+        "Updated `artifacts.yaml`",
+        _check_output_contains,
     )
     with RepoIndexManager.from_repo(repo.working_dir) as index:
         artifact = index.get_index().state[name]  # pylint: disable=protected-access
@@ -280,7 +282,12 @@ def test_annotate(empty_git_repo: Tuple[git.Repo, Callable]):
     _check_successful_cmd(
         "describe", ["-r", repo.working_dir, name], EXPECTED_DESCRIBE_OUTPUT_2
     )
-    _check_successful_cmd("remove", ["-r", repo.working_dir, name], "")
+    _check_successful_cmd(
+        "remove",
+        ["-r", repo.working_dir, name],
+        "Updated `artifacts.yaml`",
+        _check_output_contains,
+    )
     write_file(name, "new-artifact update")
     repo.index.add(["artifacts.yaml"])
     repo.index.commit("Remove new artifact")

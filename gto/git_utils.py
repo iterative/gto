@@ -5,11 +5,12 @@ from tempfile import TemporaryDirectory
 from typing import Callable, Dict, List, Tuple, Union
 
 import git
-from git import InvalidGitRepositoryError, NoSuchPathError
+from git import InvalidGitRepositoryError, NoSuchPathError, Repo
 
 from gto.config import RegistryConfig
 from gto.constants import remote_git_repo_regex
 from gto.exceptions import GTOException, NoRepo, WrongArgs
+from gto.ui import echo
 
 
 class RemoteRepoMixin:
@@ -40,15 +41,21 @@ class RemoteRepoMixin:
             yield cls.from_local_repo(repo=repo, config=config)
 
     def _call_commit_push(
-        self, func, commit=False, commit_message=None, push=False, **kwargs
+        self,
+        func,
+        commit=False,
+        commit_message=None,
+        push=False,
+        stdout=False,
+        **kwargs,
     ):
         if not (commit or push):
-            return func(**kwargs)
+            return func(**kwargs, stdout=stdout)
         with stashed_changes(repo=self.repo, include_untracked=True) as (
             stashed_tracked,
             stashed_untracked,
         ):
-            result = func(**kwargs)
+            result = func(**kwargs, stdout=stdout)
             if are_files_in_repo_changed(
                 repo=self.repo,
                 files=stashed_tracked + stashed_untracked,
@@ -65,6 +72,13 @@ class RemoteRepoMixin:
             )
             if push:
                 git_push(repo=self.repo)
+            if stdout:
+                echo(
+                    "Running `git commit`"
+                    if not push
+                    else "Running `git commit` and `git push`"
+                    "\nSuccessfully pushed a new commit to remote."
+                )
         return result
 
 
@@ -149,7 +163,7 @@ def git_add_and_commit_all_changes(repo: Union[str, git.Repo], message: str) -> 
 
 
 def read_repo(repo: Union[str, git.Repo], search_parent_directories=False) -> git.Repo:
-    if isinstance(repo, git.Repo):
+    if isinstance(repo, Repo):
         return repo
     try:
         return git.Repo(repo, search_parent_directories=search_parent_directories)

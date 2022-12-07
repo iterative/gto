@@ -514,6 +514,7 @@ def annotate(
         commit=commit,
         push=push,
         branch=branch,
+        stdout=True,
         # update=update,
     )
 
@@ -527,7 +528,9 @@ def remove(
     branch: str = option_branch,
 ):
     """Remove the enrichment for given artifact."""
-    gto.api.remove(repo=repo, name=name, commit=commit, push=push, branch=branch)
+    gto.api.remove(
+        repo=repo, name=name, commit=commit, push=push, branch=branch, stdout=True
+    )
 
 
 @gto_command(section=CommandGroups.modifying)

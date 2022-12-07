@@ -70,7 +70,7 @@ def test_git_push_tag_if_called_then_gitpython_corresponding_methods_are_correct
 
     git_push_tag(repo=path, tag_name=tag_name, remote_name=remote_name)
 
-    MockedRepo.assert_called_once_with(path=path)
+    MockedRepo.assert_called_once_with(path, search_parent_directories=False)
     mocked_repo.remote.assert_called_once_with(name=remote_name)
     mocked_remote.push.assert_called_once_with([tag_name])
 
@@ -89,7 +89,7 @@ def test_git_push_tag_if_called_with_delete_then_gitpython_corresponding_methods
 
     git_push_tag(repo=path, tag_name=tag_name, delete=True, remote_name=remote_name)
 
-    MockedRepo.assert_called_once_with(path=path)
+    MockedRepo.assert_called_once_with(path, search_parent_directories=False)
     mocked_repo.remote.assert_called_once_with(name=remote_name)
     mocked_remote.push.assert_called_once_with(["--delete", tag_name])
 
@@ -286,7 +286,9 @@ def test_git_push_if_called_then_corresponding_gitpython_functions_are_called(
     with patch("gto.git_utils.git.Repo") as MockedRepo:
         git_push(repo=tmp_local_empty_git_repo)
 
-    MockedRepo.assert_called_once_with(path=tmp_local_empty_git_repo)
+    MockedRepo.assert_called_once_with(
+        tmp_local_empty_git_repo, search_parent_directories=False
+    )
     MockedRepo.return_value.git.push.assert_called_once_with()
 
 
