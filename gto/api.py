@@ -96,6 +96,22 @@ def remove(
         )
 
 
+def describe(
+    repo: Union[str, Repo], name: str, rev: str = None
+) -> List[EnrichmentInfo]:
+    """Find enrichments for the artifact"""
+    ref_type, parsed = parse_name_reference(name)
+    if ref_type == NAME_REFERENCE.NAME:
+        with EnrichmentManager.from_repo(repo) as em:
+            return em.describe(name=name, rev=rev)
+    if ref_type == NAME_REFERENCE.TAG:
+        if rev:
+            raise WrongArgs("Should not specify revision if you pass git tag")
+        with EnrichmentManager.from_repo(repo) as em:
+            return em.describe(name=parsed[NAME], rev=name)
+    raise NotImplementedError
+
+
 def register(
     repo: Union[str, Repo],
     name: str,
@@ -489,22 +505,6 @@ def _show_versions(  # pylint: disable=too-many-locals
         )
         versions_.append(v)
     return versions_, "keys"
-
-
-def describe(
-    repo: Union[str, Repo], name: str, rev: str = None
-) -> List[EnrichmentInfo]:
-    """Find enrichments for the artifact"""
-    ref_type, parsed = parse_name_reference(name)
-    if ref_type == NAME_REFERENCE.NAME:
-        with EnrichmentManager.from_repo(repo) as em:
-            return em.describe(name=name, rev=rev)
-    if ref_type == NAME_REFERENCE.TAG:
-        if rev:
-            raise WrongArgs("Should not specify revision if you pass git tag")
-        with EnrichmentManager.from_repo(repo) as em:
-            return em.describe(name=parsed[NAME], rev=name)
-    raise NotImplementedError
 
 
 def history(

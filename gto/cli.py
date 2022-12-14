@@ -533,6 +533,39 @@ def remove(
     )
 
 
+@gto_command(section=CommandGroups.enriching)
+def describe(
+    repo: str = option_repo,
+    name: str = arg_name,
+    rev: str = option_rev,
+    type: Optional[bool] = option_show_type,
+    path: Optional[bool] = option_show_path,
+    description: Optional[bool] = option_show_description,
+):
+    """Display enrichments for an artifact."""
+    assert (
+        sum(bool(i) for i in (type, path, description)) <= 1
+    ), "Can output one key only"
+    infos = gto.api.describe(repo=repo, name=name, rev=rev)
+    if not infos:
+        return
+    d = infos[0].get_object().dict(exclude_defaults=True)
+    if type:
+        if "type" not in d:
+            raise WrongArgs("No type in enrichment")
+        echo(d["type"])
+    elif path:
+        if "path" not in d:
+            raise WrongArgs("No path in enrichment")
+        echo(d["path"])
+    elif description:
+        if "description" not in d:
+            raise WrongArgs("No description in enrichment")
+        echo(d["description"])
+    else:
+        format_echo(d, "json")
+
+
 @gto_command(section=CommandGroups.modifying)
 def register(
     repo: str = option_repo,
@@ -875,37 +908,12 @@ def print_index(repo: str = option_repo):
         format_echo(index.artifact_centric_representation(), "json")
 
 
-@gto_command(section=CommandGroups.enriching)
-def describe(
+@gto_command()
+def doctor(
     repo: str = option_repo,
-    name: str = arg_name,
-    rev: str = option_rev,
-    type: Optional[bool] = option_show_type,
-    path: Optional[bool] = option_show_path,
-    description: Optional[bool] = option_show_description,
 ):
-    """Display enrichments for an artifact."""
-    assert (
-        sum(bool(i) for i in (type, path, description)) <= 1
-    ), "Can output one key only"
-    infos = gto.api.describe(repo=repo, name=name, rev=rev)
-    if not infos:
-        return
-    d = infos[0].get_object().dict(exclude_defaults=True)
-    if type:
-        if "type" not in d:
-            raise WrongArgs("No type in enrichment")
-        echo(d["type"])
-    elif path:
-        if "path" not in d:
-            raise WrongArgs("No path in enrichment")
-        echo(d["path"])
-    elif description:
-        if "description" not in d:
-            raise WrongArgs("No description in enrichment")
-        echo(d["description"])
-    else:
-        format_echo(d, "json")
+    """Check the registry for inconsistencies."""
+    gto.api._get_state(repo).dict()  # pylint: disable=protected-access
 
 
 if __name__ == "__main__":
