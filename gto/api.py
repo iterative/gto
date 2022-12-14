@@ -1,6 +1,6 @@
 import re
 from collections import OrderedDict
-from typing import List, Optional, Union
+from typing import Any, List, Optional, Union
 
 from funcy import distinct
 from git import Repo
@@ -56,6 +56,7 @@ def annotate(
     must_exist: bool = False,
     labels: List[str] = None,
     description: str = "",
+    custom: Any = None,
     commit: bool = False,
     push: bool = False,
     branch: str = None,
@@ -71,6 +72,7 @@ def annotate(
             must_exist=must_exist,
             labels=labels,
             description=description,
+            custom=custom,
             update=True,
             commit=commit,
             push=push or is_url_of_remote_repo(repo),
