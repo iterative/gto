@@ -164,6 +164,7 @@ class Index(BaseModel):
                 virtual=not must_exist,
                 labels=labels,
                 description=description,
+                custom=custom,
             )
         self.state_is_valid(self.state)
         return self.state[name]
