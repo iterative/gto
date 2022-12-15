@@ -17,7 +17,12 @@ from gto.constants import (
     VERSIONS_PER_STAGE,
     VersionSort,
 )
-from gto.exceptions import GTOException, NotImplementedInGTO, WrongArgs
+from gto.exceptions import (
+    GTOException,
+    NotImplementedInGTO,
+    WrongArgs,
+    WrongConfig,
+)
 from gto.index import RepoIndexManager
 from gto.ui import (
     EMOJI_FAIL,
@@ -568,7 +573,8 @@ def describe(
     if field is None:
         format_echo(annotation, "json")
     elif field in annotation:
-        echo(annotation[field])
+        with cli_echo():
+            echo(annotation[field])
 
 
 @gto_command(section=CommandGroups.modifying)
@@ -916,9 +922,26 @@ def print_index(repo: str = option_repo):
 @gto_command()
 def doctor(
     repo: str = option_repo,
+    all_commits: bool = option_all_commits,
 ):
     """Check the registry for inconsistencies."""
+    with cli_echo():
+        echo(f"{EMOJI_GTO} GTO Version: {gto.__version__}")
+        echo("---------------------------------")
+        try:
+            from gto.config import (  # pylint: disable=import-outside-toplevel
+                CONFIG,
+            )
+
+            echo(CONFIG.__repr_str__("\n"))
+        except WrongConfig:
+            echo(f"{EMOJI_FAIL} Fail to parse config")
+        echo("---------------------------------")
+
     gto.api._get_state(repo).dict()  # pylint: disable=protected-access
+    if all_commits:
+        with RepoIndexManager.from_repo(repo) as index:
+            index.artifact_centric_representation()
 
 
 if __name__ == "__main__":
