@@ -146,6 +146,7 @@ def test_commands(showcase):
         ["-r", path, "rf#production", "--ref"],
         "rf@v1.2.3\n",
     )
+    # FIXME
     _check_successful_cmd("describe", ["-r", path, "rf"], EXPECTED_DESCRIBE_OUTPUT)
     _check_successful_cmd(
         "describe", ["-r", path, "rf", "--path"], "models/random-forest.pkl\n"
@@ -266,11 +267,10 @@ def test_annotate(empty_git_repo: Tuple[git.Repo, Callable]):
     with RepoIndexManager.from_repo(repo.working_dir) as index:
         artifact = index.get_index().state[name]  # pylint: disable=protected-access
     check_obj(
-        artifact,
+        artifact.dict(exclude_defaults=True),
         dict(
             type="new-type",
             path="new/path",
-            virtual=True,
             labels=["another-label", "new-label", "some-label"],
             description="new description",
         ),

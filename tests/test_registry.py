@@ -32,6 +32,7 @@ EXPECTED_REGISTRY_TAG_TAG_STATE = {
                                         "virtual": False,
                                         "labels": [],
                                         "description": "",
+                                        "custom": None,
                                     },
                                 }
                             ],
@@ -116,6 +117,7 @@ EXPECTED_REGISTRY_TAG_TAG_STATE = {
                                         "virtual": False,
                                         "labels": [],
                                         "description": "",
+                                        "custom": None,
                                     },
                                 }
                             ],
@@ -216,6 +218,7 @@ EXPECTED_REGISTRY_TAG_TAG_STATE = {
                                         "virtual": False,
                                         "labels": [],
                                         "description": "",
+                                        "custom": None,
                                     },
                                 }
                             ],
@@ -287,6 +290,7 @@ EXPECTED_REGISTRY_TAG_TAG_STATE = {
                                         "virtual": False,
                                         "labels": [],
                                         "description": "",
+                                        "custom": None,
                                     },
                                 }
                             ],
@@ -329,6 +333,7 @@ EXPECTED_REGISTRY_TAG_TAG_STATE = {
                                         "virtual": True,
                                         "labels": [],
                                         "description": "",
+                                        "custom": None,
                                     },
                                 }
                             ],

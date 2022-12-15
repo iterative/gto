@@ -44,7 +44,7 @@ class Artifact(BaseModel):
     virtual: bool = True
     labels: List[str] = []  # TODO: allow key:value labels
     description: str = ""
-    custom: Any
+    custom: Any = None
 
 
 State = Dict[str, Artifact]

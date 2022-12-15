@@ -496,7 +496,8 @@ def annotate(
     label: List[str] = Option(None, "--label", help="Labels to add to artifact"),
     description: str = Option("", "-d", "--description", help="Artifact description"),
     custom: str = Option(
-        "",
+        None,
+        "-c",
         "--custom",
         help="Custom metadata to add to artifact. Treats input as string, edit artifacts.yaml otherwise.",
     ),
