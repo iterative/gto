@@ -98,6 +98,7 @@ def describe(repo: Union[str, Repo], name: str, rev: str = None) -> Optional[Art
     if match:
         if rev:
             raise WrongArgs("Either specify revision or use naming shortcut.")
+        # clones a remote repo second time, can be optimized
         versions = show(repo, name)
         if len(versions) == 0:  # nothing found
             return None
@@ -108,13 +109,19 @@ def describe(repo: Union[str, Repo], name: str, rev: str = None) -> Optional[Art
         rev = versions[0]["commit_hexsha"]
         name = match["artifact"]
 
-    if not rev:
-        # doesn't work for remote repos
+    if not is_url_of_remote_repo(repo) and rev is None:
         # read artifacts.yaml without using Git
-        artifact = FileIndexManager.from_path(repo).get_index().state.get(name)
-    # read Git repo
-    with RepoIndexManager.from_repo(repo) as index:
-        artifact = index.get_commit_index(rev).state.get(name)
+        artifact = (
+            FileIndexManager.from_path(
+                repo.working_dir if isinstance(repo, Repo) else repo
+            )
+            .get_index()
+            .state.get(name)
+        )
+    else:
+        # read Git repo
+        with RepoIndexManager.from_repo(repo) as index:
+            artifact = index.get_commit_index(rev).state.get(name)
     return artifact
 
 

@@ -20,7 +20,7 @@ from gto.commit_message_generator import (
 )
 from gto.exceptions import PathIsUsed, WrongArgs
 from gto.git_utils import git_clone
-from gto.index import RepoIndexManager
+from gto.index import Artifact, RepoIndexManager
 from gto.tag import find
 from gto.versions import SemVer
 from tests.skip_presets import skip_for_windows
@@ -102,6 +102,21 @@ def test_api_info_commands_repo_with_artifact(
     gto.api.show(repo.working_dir)
     gto.api.show(repo.working_dir, "new-artifact")
     gto.api.history(repo.working_dir)
+
+
+def test_describe(repo_with_artifact: Tuple[git.Repo, Callable]):
+    repo, write_file = repo_with_artifact
+    gto.api.annotate(repo, "new-artifact", path="other-path")
+    assert gto.api.describe(repo, "new-artifact") == Artifact(
+        name="new-artifact",
+        type="new-type",
+        path="other-path",
+    )
+    assert gto.api.describe(repo, "new-artifact", rev="HEAD") == Artifact(
+        name="new-artifact",
+        type="new-type",
+        path="path",
+    )
 
 
 def test_register_deregister(repo_with_artifact):
