@@ -9,7 +9,6 @@ from gto.constants import (
     ARTIFACT,
     ASSIGNMENTS_PER_VERSION,
     COMMIT,
-    NAME,
     STAGE,
     VERSION,
     VERSIONS_PER_STAGE,
@@ -18,13 +17,10 @@ from gto.constants import (
     shortcut_regexp,
 )
 from gto.exceptions import NoRepo, NotImplementedInGTO, WrongArgs
-from gto.ext import EnrichmentInfo
 from gto.git_utils import is_url_of_remote_repo
-from gto.index import EnrichmentManager, RepoIndexManager
+from gto.index import Artifact, FileIndexManager, RepoIndexManager
 from gto.registry import GitRegistry
-from gto.tag import NAME_REFERENCE
 from gto.tag import parse_name as parse_tag_name
-from gto.tag import parse_name_reference
 
 
 def _is_gto_repo(repo: Union[str, Repo]):
@@ -96,20 +92,30 @@ def remove(
         )
 
 
-def describe(
-    repo: Union[str, Repo], name: str, rev: str = None
-) -> List[EnrichmentInfo]:
+def describe(repo: Union[str, Repo], name: str, rev: str = None) -> Optional[Artifact]:
     """Find enrichments for the artifact"""
-    ref_type, parsed = parse_name_reference(name)
-    if ref_type == NAME_REFERENCE.NAME:
-        with EnrichmentManager.from_repo(repo) as em:
-            return em.describe(name=name, rev=rev)
-    if ref_type == NAME_REFERENCE.TAG:
+    match = re.search(shortcut_regexp, name)
+    if match:
         if rev:
-            raise WrongArgs("Should not specify revision if you pass git tag")
-        with EnrichmentManager.from_repo(repo) as em:
-            return em.describe(name=parsed[NAME], rev=name)
-    raise NotImplementedError
+            raise WrongArgs("Either specify revision or use naming shortcut.")
+        versions = show(repo, name)
+        if len(versions) == 0:  # nothing found
+            return None
+        if len(versions) > 1:
+            raise NotImplementedInGTO(
+                "Ambigious naming shortcut: multiple variants found."
+            )
+        rev = versions[0]["commit_hexsha"]
+        name = match["artifact"]
+
+    if not rev:
+        # doesn't work for remote repos
+        # read artifacts.yaml without using Git
+        artifact = FileIndexManager.from_path(repo).get_index().state.get(name)
+    # read Git repo
+    with RepoIndexManager.from_repo(repo) as index:
+        artifact = index.get_commit_index(rev).state.get(name)
+    return artifact
 
 
 def register(

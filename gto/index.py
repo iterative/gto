@@ -1,7 +1,6 @@
 import os
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from contextlib import contextmanager
 from datetime import datetime
 from functools import wraps
 from pathlib import Path
@@ -248,7 +247,6 @@ class FileIndexManager(BaseIndexManager):
     path: str = ""
 
     @classmethod
-    @contextmanager
     def from_path(cls, path: str, config: RegistryConfig = None):
         if config is None:
             config = read_registry_config(os.path.join(path, CONFIG_FILE_NAME))

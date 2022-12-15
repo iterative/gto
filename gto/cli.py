@@ -346,6 +346,9 @@ option_show_ref = Option(
 option_show_description = Option(
     False, "--description", is_flag=True, help="Show description", show_default=True
 )
+option_show_custom = Option(
+    False, "--custom", is_flag=True, help="Show custom metadata", show_default=True
+)
 option_json = Option(
     False,
     "--json",
@@ -541,29 +544,31 @@ def describe(
     type: Optional[bool] = option_show_type,
     path: Optional[bool] = option_show_path,
     description: Optional[bool] = option_show_description,
+    # custom: Optional[bool] = option_show_custom,
 ):
     """Display enrichments for an artifact."""
     assert (
-        sum(bool(i) for i in (type, path, description)) <= 1
+        sum(bool(i) for i in (type, path, description)) <= 1  # , custom
     ), "Can output one key only"
-    infos = gto.api.describe(repo=repo, name=name, rev=rev)
-    if not infos:
-        return
-    d = infos[0].get_object().dict(exclude_defaults=True)
     if type:
-        if "type" not in d:
-            raise WrongArgs("No type in enrichment")
-        echo(d["type"])
+        field = "type"
     elif path:
-        if "path" not in d:
-            raise WrongArgs("No path in enrichment")
-        echo(d["path"])
+        field = "path"
     elif description:
-        if "description" not in d:
-            raise WrongArgs("No description in enrichment")
-        echo(d["description"])
+        field = "description"
+    # elif custom:
+    #     field = "custom"
     else:
-        format_echo(d, "json")
+        field = None
+
+    artifact = gto.api.describe(repo=repo, name=name, rev=rev)
+    annotation = artifact.dict() if artifact else {}
+    if not field:
+        format_echo(annotation, "json")
+    elif field not in annotation:
+        raise WrongArgs(f"No '{field}' field in enrichment")
+    else:
+        echo(annotation[field])
 
 
 @gto_command(section=CommandGroups.modifying)
