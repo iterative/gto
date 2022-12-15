@@ -214,7 +214,7 @@ def test_commands(showcase):
     _check_successful_cmd(
         "doctor",
         ["-r", path],
-        "",
+        None,
     )
 
 
