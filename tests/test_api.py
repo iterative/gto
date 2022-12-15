@@ -20,7 +20,7 @@ from gto.commit_message_generator import (
 )
 from gto.exceptions import PathIsUsed, WrongArgs
 from gto.git_utils import git_clone
-from gto.index import Artifact, RepoIndexManager
+from gto.index import RepoIndexManager
 from gto.tag import find
 from gto.versions import SemVer
 from tests.skip_presets import skip_for_windows
@@ -107,15 +107,19 @@ def test_api_info_commands_repo_with_artifact(
 def test_describe(repo_with_artifact: Tuple[git.Repo, Callable]):
     repo, write_file = repo_with_artifact
     gto.api.annotate(repo, "new-artifact", path="other-path")
-    assert gto.api.describe(repo, "new-artifact") == Artifact(
-        name="new-artifact",
-        type="new-type",
-        path="other-path",
+    check_obj(
+        gto.api.describe(repo, "new-artifact").dict(exclude_defaults=True),  # type: ignore
+        dict(
+            type="new-type",
+            path="other-path",
+        ),
     )
-    assert gto.api.describe(repo, "new-artifact", rev="HEAD") == Artifact(
-        name="new-artifact",
-        type="new-type",
-        path="path",
+    check_obj(
+        gto.api.describe(repo, "new-artifact", rev="HEAD").dict(exclude_defaults=True),  # type: ignore
+        dict(
+            type="new-type",
+            path="path",
+        ),
     )
 
 
@@ -376,7 +380,7 @@ def test_if_stages_on_remote_git_repo_then_return_expected_stages():
 @skip_for_windows
 def test_if_describe_on_remote_git_repo_then_return_expected_info():
     result = gto.api.describe(repo=tests.resources.SAMPLE_REMOTE_REPO_URL, name="churn")
-    assert result[0].get_object().dict(exclude_defaults=True) == {
+    assert result.dict(exclude_defaults=True) == {
         "type": "model",
         "path": "models/churn.pkl",
         "virtual": False,

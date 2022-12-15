@@ -562,12 +562,12 @@ def describe(
         field = None
 
     artifact = gto.api.describe(repo=repo, name=name, rev=rev)
-    annotation = artifact.dict() if artifact else {}
-    if not field:
+    if not artifact:
+        return
+    annotation = artifact.dict(exclude_defaults=True)
+    if field is None:
         format_echo(annotation, "json")
-    elif field not in annotation:
-        raise WrongArgs(f"No '{field}' field in enrichment")
-    else:
+    elif field in annotation:
         echo(annotation[field])
 
 
