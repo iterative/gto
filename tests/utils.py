@@ -26,7 +26,7 @@ def assert_equals(left, right):
 def check_obj(
     obj: Union[BaseModel, Dict[str, Any]],
     values: Dict[str, Any],
-    skip_keys: Union[Set[str], Sequence[str]],
+    skip_keys: Union[Set[str], Sequence[str]] = (),
 ):
     if isinstance(obj, BaseModel):
         obj_values = obj.dict(exclude=set(skip_keys))

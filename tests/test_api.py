@@ -105,6 +105,25 @@ def test_api_info_commands_repo_with_artifact(
     gto.api.history(repo.working_dir)
 
 
+def test_describe(repo_with_artifact: Tuple[git.Repo, Callable]):
+    repo, write_file = repo_with_artifact
+    gto.api.annotate(repo, "new-artifact", path="other-path")
+    check_obj(
+        gto.api.describe(repo, "new-artifact").dict(exclude_defaults=True),  # type: ignore
+        dict(
+            type="new-type",
+            path="other-path",
+        ),
+    )
+    check_obj(
+        gto.api.describe(repo, "new-artifact", rev="HEAD").dict(exclude_defaults=True),  # type: ignore
+        dict(
+            type="new-type",
+            path="path",
+        ),
+    )
+
+
 def test_register_deregister(repo_with_artifact):
     repo, name = repo_with_artifact
     vname1, vname2 = "v1.0.0", "v1.0.1"
@@ -362,7 +381,7 @@ def test_if_stages_on_remote_git_repo_then_return_expected_stages():
 @skip_for_windows
 def test_if_describe_on_remote_git_repo_then_return_expected_info():
     result = gto.api.describe(repo=tests.resources.SAMPLE_REMOTE_REPO_URL, name="churn")
-    assert result[0].get_object().dict(exclude_defaults=True) == {
+    assert result.dict(exclude_defaults=True) == {
         "type": "model",
         "path": "models/churn.pkl",
         "virtual": False,

@@ -212,6 +212,11 @@ def test_commands(showcase):
         ["-r", path, "this-tag-does-not-exist"],
         "",
     )
+    _check_successful_cmd(
+        "doctor",
+        ["-r", path],
+        None,
+    )
 
 
 EXPECTED_DESCRIBE_OUTPUT_2 = """{
@@ -274,7 +279,6 @@ def test_annotate(empty_git_repo: Tuple[git.Repo, Callable]):
             labels=["another-label", "new-label", "some-label"],
             description="new description",
         ),
-        [],
     )
     repo.index.add(["artifacts.yaml"])
     repo.index.commit("Add new artifact")
@@ -292,7 +296,9 @@ def test_annotate(empty_git_repo: Tuple[git.Repo, Callable]):
     repo.index.add(["artifacts.yaml"])
     repo.index.commit("Remove new artifact")
 
-    _check_successful_cmd("describe", ["-r", repo.working_dir, name], "")
+    _check_successful_cmd(
+        "describe", ["-r", repo.working_dir, "this-artifact-doesnt-exist"], ""
+    )
 
 
 def test_register(repo_with_commit: Tuple[git.Repo, Callable]):

@@ -1,7 +1,7 @@
+import logging
 import os
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from contextlib import contextmanager
 from datetime import datetime
 from functools import wraps
 from pathlib import Path
@@ -9,7 +9,8 @@ from typing import IO, Any, Dict, FrozenSet, Generator, List, Optional, Union
 
 import git
 from git import Repo
-from pydantic import BaseModel, parse_obj_as, validator
+from pydantic import BaseModel, ValidationError, parse_obj_as, validator
+from ruamel.yaml import YAMLError
 
 from gto.base import BaseManager, BaseRegistryState
 from gto.base import Commit as EnrichmentEvent
@@ -31,11 +32,14 @@ from gto.exceptions import (
     NoFile,
     PathIsUsed,
     WrongArgs,
+    WrongArtifactsYaml,
 )
 from gto.ext import EnrichmentInfo, EnrichmentReader
 from gto.git_utils import RemoteRepoMixin, read_repo
 from gto.ui import echo
 from gto.utils import resolve_ref
+
+logger = logging.getLogger("gto")
 
 
 class Artifact(BaseModel):
@@ -119,10 +123,27 @@ class Index(BaseModel):
 
     @staticmethod
     def read_state(path_or_file: Union[str, IO]):
+        def read_yaml(stream: IO):
+            try:
+                return yaml.load(stream)
+            except YAMLError as e:
+                raise WrongArtifactsYaml() from e
+
+        # read contents of the yaml
         if isinstance(path_or_file, str):
-            with open(path_or_file, "r", encoding="utf8") as file:
-                return parse_obj_as(State, yaml.load(file))
-        state = parse_obj_as(State, yaml.load(path_or_file))
+            try:
+                with open(path_or_file, "r", encoding="utf8") as file:
+                    contents = read_yaml(file)
+            except FileNotFoundError as e:
+                raise NoFile("artifacts.yaml") from e
+        else:
+            contents = read_yaml(path_or_file)
+        # check yaml contents is a valid State
+        try:
+            state = parse_obj_as(State, contents)
+        except ValidationError as e:
+            raise WrongArtifactsYaml() from e
+        # validate that specific names conform to the naming convention
         for key in state:
             assert_name_is_valid(key)
         return state
@@ -242,7 +263,6 @@ class FileIndexManager(BaseIndexManager):
     path: str = ""
 
     @classmethod
-    @contextmanager
     def from_path(cls, path: str, config: RegistryConfig = None):
         if config is None:
             config = read_registry_config(os.path.join(path, CONFIG_FILE_NAME))
@@ -348,15 +368,24 @@ class RepoIndexManager(FileIndexManager, RemoteRepoMixin):
         arbitrary_types_allowed = True
 
     def get_commit_index(  # type: ignore # pylint: disable=arguments-differ
-        self, ref: Union[str, git.Reference, None], allow_to_not_exist: bool = True
+        self,
+        ref: Union[str, git.Reference, None],
+        allow_to_not_exist: bool = True,
+        ignore_corrupted: bool = False,
     ) -> Optional[Index]:
         if not ref or isinstance(ref, str):
             ref = resolve_ref(self.repo, ref)
         if self.config.INDEX in ref.tree:
-            return Index.read(
-                (ref.tree / self.config.INDEX).data_stream,
-                frozen=True,
-            )
+            try:
+                return Index.read(
+                    (ref.tree / self.config.INDEX).data_stream,
+                    frozen=True,
+                )
+            except WrongArtifactsYaml as e:
+                logger.warning("Corrupted artifacts.yaml file in commit %s", ref)
+                if ignore_corrupted:
+                    return None
+                raise e
         if allow_to_not_exist:
             return None
         raise ValueError(f"No Index exists at {ref}")
