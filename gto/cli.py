@@ -942,6 +942,8 @@ def doctor(
     if all_commits:
         with RepoIndexManager.from_repo(repo) as index:
             index.artifact_centric_representation()
+    with cli_echo():
+        echo(f"{EMOJI_OK} No issues found")
 
 
 if __name__ == "__main__":

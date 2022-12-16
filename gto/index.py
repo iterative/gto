@@ -1,3 +1,4 @@
+import logging
 import os
 from abc import ABC, abstractmethod
 from collections import defaultdict
@@ -37,6 +38,8 @@ from gto.ext import EnrichmentInfo, EnrichmentReader
 from gto.git_utils import RemoteRepoMixin, read_repo
 from gto.ui import echo
 from gto.utils import resolve_ref
+
+logger = logging.getLogger("gto")
 
 
 class Artifact(BaseModel):
@@ -350,15 +353,24 @@ class RepoIndexManager(FileIndexManager, RemoteRepoMixin):
         arbitrary_types_allowed = True
 
     def get_commit_index(  # type: ignore # pylint: disable=arguments-differ
-        self, ref: Union[str, git.Reference, None], allow_to_not_exist: bool = True
+        self,
+        ref: Union[str, git.Reference, None],
+        allow_to_not_exist: bool = True,
+        ignore_corrupted: bool = False,
     ) -> Optional[Index]:
         if not ref or isinstance(ref, str):
             ref = resolve_ref(self.repo, ref)
         if self.config.INDEX in ref.tree:
-            return Index.read(
-                (ref.tree / self.config.INDEX).data_stream,
-                frozen=True,
-            )
+            try:
+                return Index.read(
+                    (ref.tree / self.config.INDEX).data_stream,
+                    frozen=True,
+                )
+            except WrongArtifactsYaml as e:
+                logger.warning("Corrupted artifacts.yaml file in commit %s", ref)
+                if ignore_corrupted:
+                    return None
+                raise e
         if allow_to_not_exist:
             return None
         raise ValueError(f"No Index exists at {ref}")
