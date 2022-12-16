@@ -507,7 +507,7 @@ def annotate(
         None,
         "-c",
         "--custom",
-        help="Custom metadata to add to artifact. Treats input as string, edit artifacts.yaml otherwise.",
+        help="Custom metadata to add to artifact",
     ),
     commit: bool = option_commit,
     push: bool = option_push_commit,
