@@ -156,12 +156,22 @@ class Index(BaseModel):
 
     @not_frozen
     def add(
-        self, name, type, path, must_exist, labels, description, custom, update
+        self,
+        name,
+        type,
+        path,
+        must_exist,
+        allow_same_path,
+        labels,
+        description,
+        custom,
+        update,
     ) -> Artifact:
         if name in self and not update:
             raise ArtifactExists(name)
         if (
             path
+            and not allow_same_path
             and find_repeated_path(
                 path, [a.path for n, a in self.state.items() if n != name]
             )
@@ -219,6 +229,7 @@ class BaseIndexManager(BaseModel, ABC):
         type,
         path,
         must_exist,
+        allow_same_path,
         labels,
         description,
         custom,
@@ -242,6 +253,7 @@ class BaseIndexManager(BaseModel, ABC):
             type=type,
             path=path,
             must_exist=must_exist,
+            allow_same_path=allow_same_path,
             labels=labels or [],
             description=description,
             custom=custom,
@@ -317,6 +329,7 @@ class RepoIndexManager(FileIndexManager, RemoteRepoMixin):
         type,
         path,
         must_exist,
+        allow_same_path,
         labels,
         description,
         custom,
@@ -337,6 +350,7 @@ class RepoIndexManager(FileIndexManager, RemoteRepoMixin):
             type=type,
             path=path,
             must_exist=must_exist,
+            allow_same_path=allow_same_path,
             labels=labels,
             description=description,
             custom=custom,
