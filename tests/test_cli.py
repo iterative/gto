@@ -146,11 +146,21 @@ def test_commands(showcase):
         ["-r", path, "rf#production", "--ref"],
         "rf@v1.2.3\n",
     )
-    # FIXME
+    _check_successful_cmd("describe", ["-r", path, "artifactnotexist"], "")
+    _check_successful_cmd("describe", ["-r", path, "rf#stagenotexist"], "")
     _check_successful_cmd("describe", ["-r", path, "rf"], EXPECTED_DESCRIBE_OUTPUT)
+    _check_successful_cmd(
+        "describe", ["-r", path, "rf#production"], EXPECTED_DESCRIBE_OUTPUT
+    )
+    _check_successful_cmd(
+        "describe", ["-r", path, "rf@latest"], EXPECTED_DESCRIBE_OUTPUT
+    )
     _check_successful_cmd(
         "describe", ["-r", path, "rf", "--path"], "models/random-forest.pkl\n"
     )
+    _check_successful_cmd("describe", ["-r", path, "rf", "--type"], "model\n")
+    _check_successful_cmd("describe", ["-r", path, "rf", "--description"], "")
+    _check_successful_cmd("describe", ["-r", path, "rf", "--custom"], "")
     # None because of random order - fix this
     _check_successful_cmd("stages", ["-r", path], None)
     # None because of output randomness and complexity

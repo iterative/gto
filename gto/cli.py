@@ -556,7 +556,7 @@ def describe(
     type: Optional[bool] = option_show_type,
     path: Optional[bool] = option_show_path,
     description: Optional[bool] = option_show_description,
-    # custom: Optional[bool] = option_show_custom,
+    custom: Optional[bool] = option_show_custom,
 ):
     """Display enrichments for an artifact."""
     assert (
@@ -568,8 +568,8 @@ def describe(
         field = "path"
     elif description:
         field = "description"
-    # elif custom:
-    #     field = "custom"
+    elif custom:
+        field = "custom"
     else:
         field = None
 

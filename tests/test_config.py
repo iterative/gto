@@ -7,7 +7,7 @@ from typer.testing import CliRunner
 
 from gto.api import annotate, assign, get_stages, register
 from gto.cli import app
-from gto.config import CONFIG_FILE_NAME, check_name_is_valid
+from gto.config import CONFIG_FILE_NAME
 from gto.exceptions import (
     InvalidVersion,
     UnknownStage,
@@ -142,41 +142,3 @@ def test_prohibit_config_assign_incorrect_stage(init_repo_prohibit):
 def test_empty_config_type(empty_git_repo):
     repo, _ = empty_git_repo
     annotate(repo, ALLOWED_STRING, type=ALLOWED_STRING)
-
-
-@pytest.mark.parametrize(
-    "name",
-    [
-        "nn",
-        "m1",
-        "model-prod",
-        "model-prod-v1",
-        "namespace/model",
-    ],
-)
-def test_check_name_is_valid(name):
-    assert check_name_is_valid(name)
-
-
-@pytest.mark.parametrize(
-    "name",
-    [
-        "",
-        "m",
-        "1",
-        "m/",
-        "/m",
-        "1nn",
-        "###",
-        "@@@",
-        "a model",
-        "a_model",
-        "-model",
-        "model-",
-        "model@1",
-        "model#1",
-        "@namespace/model",
-    ],
-)
-def test_check_name_is_invalid(name):
-    assert not check_name_is_valid(name)

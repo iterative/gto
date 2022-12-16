@@ -1,5 +1,10 @@
 import re
 from enum import Enum
+from typing import Optional
+
+from pydantic import BaseModel
+
+from gto.exceptions import ValidationError
 
 COMMIT = "commit"
 REF = "ref"
@@ -34,6 +39,41 @@ tag_regexp = re.compile(
 shortcut_regexp = re.compile(
     f"^(?P<artifact>{name})(((#(?P<stage>{name})|@(?P<latest>latest)|@(?P<greatest>greatest))))$"
 )
+
+
+def check_name_is_valid(value):
+    return bool(re.search(name_regexp, value))
+
+
+def assert_name_is_valid(value):
+    if not check_name_is_valid(value):
+        raise ValidationError(
+            f"Invalid value '{value}'. Only lowercase english letters, , '-', '/' are allowed."
+            "Value must be of len >= 2, must with a letter and end with a letter or a number."
+        )
+
+
+class Shortcut(BaseModel):
+    name: str
+    stage: Optional[str] = None
+    latest: bool = False
+    shortcut: bool = False
+
+
+def parse_shortcut(value):
+    match = re.search(shortcut_regexp, value)
+    if match:
+        value = match["artifact"]
+        if match["stage"]:
+            assert_name_is_valid(match["stage"])
+    assert_name_is_valid(value)
+    return Shortcut(
+        name=value,
+        stage=match["stage"] if match and match["stage"] else None,
+        latest=bool(match and (match["latest"] or match["greatest"])),
+        shortcut=bool(match),
+    )
+
 
 # taken from https://stackoverflow.com/a/22312124/19782654, modified to include url without .git at the end
 remote_git_repo_regex = re.compile(
