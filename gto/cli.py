@@ -919,12 +919,12 @@ def print_index(repo: str = option_repo):
         format_echo(index.artifact_centric_representation(), "json")
 
 
-@gto_command()
+@gto_command(section=CommandGroups.querying)
 def doctor(
     repo: str = option_repo,
     all_commits: bool = option_all_commits,
 ):
-    """Check the registry for inconsistencies."""
+    """Display GTO version and check the registry for problems."""
     with cli_echo():
         echo(f"{EMOJI_GTO} GTO Version: {gto.__version__}")
         echo("---------------------------------")
