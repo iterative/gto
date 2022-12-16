@@ -503,6 +503,12 @@ def annotate(
     ),
     label: List[str] = Option(None, "--label", help="Labels to add to artifact"),
     description: str = Option("", "-d", "--description", help="Artifact description"),
+    custom: str = Option(
+        None,
+        "-c",
+        "--custom",
+        help="Custom metadata to add to artifact",
+    ),
     commit: bool = option_commit,
     push: bool = option_push_commit,
     branch: str = option_branch,
@@ -519,6 +525,7 @@ def annotate(
         must_exist=must_exist,
         labels=label,
         description=description,
+        custom=custom,
         commit=commit,
         push=push,
         branch=branch,
@@ -549,7 +556,7 @@ def describe(
     type: Optional[bool] = option_show_type,
     path: Optional[bool] = option_show_path,
     description: Optional[bool] = option_show_description,
-    # custom: Optional[bool] = option_show_custom,
+    custom: Optional[bool] = option_show_custom,
 ):
     """Display enrichments for an artifact."""
     assert (
@@ -561,8 +568,8 @@ def describe(
         field = "path"
     elif description:
         field = "description"
-    # elif custom:
-    #     field = "custom"
+    elif custom:
+        field = "custom"
     else:
         field = None
 

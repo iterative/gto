@@ -5,7 +5,7 @@ from collections import defaultdict
 from datetime import datetime
 from functools import wraps
 from pathlib import Path
-from typing import IO, Dict, FrozenSet, Generator, List, Optional, Union
+from typing import IO, Any, Dict, FrozenSet, Generator, List, Optional, Union
 
 import git
 from git import Repo
@@ -48,6 +48,7 @@ class Artifact(BaseModel):
     virtual: bool = True
     labels: List[str] = []  # TODO: allow key:value labels
     description: str = ""
+    custom: Any = None
 
 
 State = Dict[str, Artifact]
@@ -155,7 +156,7 @@ class Index(BaseModel):
 
     @not_frozen
     def add(
-        self, name, type, path, must_exist, labels, description, update
+        self, name, type, path, must_exist, labels, description, custom, update
     ) -> Artifact:
         if name in self and not update:
             raise ArtifactExists(name)
@@ -176,6 +177,7 @@ class Index(BaseModel):
                 self.state[name].virtual = True
             self.state[name].labels = sorted(set(self.state[name].labels).union(labels))
             self.state[name].description = description or self.state[name].description
+            self.state[name].custom = custom or self.state[name].custom
         else:
             self.state[name] = Artifact(
                 type=type,
@@ -183,6 +185,7 @@ class Index(BaseModel):
                 virtual=not must_exist,
                 labels=labels,
                 description=description,
+                custom=custom,
             )
         self.state_is_valid(self.state)
         return self.state[name]
@@ -211,7 +214,16 @@ class BaseIndexManager(BaseModel, ABC):
         raise NotImplementedError
 
     def add(
-        self, name, type, path, must_exist, labels, description, update, stdout=False
+        self,
+        name,
+        type,
+        path,
+        must_exist,
+        labels,
+        description,
+        custom,
+        update,
+        stdout=False,
     ):
         for arg in [name] + list(labels or []):
             assert_name_is_valid(arg)
@@ -232,6 +244,7 @@ class BaseIndexManager(BaseModel, ABC):
             must_exist=must_exist,
             labels=labels or [],
             description=description,
+            custom=custom,
             update=update,
         )
         self.update()
@@ -306,6 +319,7 @@ class RepoIndexManager(FileIndexManager, RemoteRepoMixin):
         must_exist,
         labels,
         description,
+        custom,
         update,
         stdout=False,
         commit=False,
@@ -325,6 +339,7 @@ class RepoIndexManager(FileIndexManager, RemoteRepoMixin):
             must_exist=must_exist,
             labels=labels,
             description=description,
+            custom=custom,
             update=update,
         )
 

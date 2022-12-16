@@ -1,6 +1,5 @@
-import re
 from collections import OrderedDict
-from typing import List, Optional, Union
+from typing import Any, List, Optional, Union
 
 from funcy import distinct
 from git import Repo
@@ -14,7 +13,7 @@ from gto.constants import (
     VERSIONS_PER_STAGE,
     VersionSort,
     mark_artifact_unregistered,
-    shortcut_regexp,
+    parse_shortcut,
 )
 from gto.exceptions import NoRepo, NotImplementedInGTO, WrongArgs
 from gto.git_utils import is_url_of_remote_repo
@@ -52,6 +51,7 @@ def annotate(
     must_exist: bool = False,
     labels: List[str] = None,
     description: str = "",
+    custom: Any = None,
     commit: bool = False,
     push: bool = False,
     branch: str = None,
@@ -67,6 +67,7 @@ def annotate(
             must_exist=must_exist,
             labels=labels,
             description=description,
+            custom=custom,
             update=True,
             commit=commit,
             push=push or is_url_of_remote_repo(repo),
@@ -92,10 +93,12 @@ def remove(
         )
 
 
-def describe(repo: Union[str, Repo], name: str, rev: str = None) -> Optional[Artifact]:
+def describe(
+    repo: Union[str, Repo], name: str, rev: Optional[str] = None
+) -> Optional[Artifact]:
     """Find enrichments for the artifact"""
-    match = re.search(shortcut_regexp, name)
-    if match:
+    shortcut = parse_shortcut(name)
+    if shortcut.shortcut:
         if rev:
             raise WrongArgs("Either specify revision or use naming shortcut.")
         # clones a remote repo second time, can be optimized
@@ -104,24 +107,20 @@ def describe(repo: Union[str, Repo], name: str, rev: str = None) -> Optional[Art
             return None
         if len(versions) > 1:
             raise NotImplementedInGTO(
-                "Ambigious naming shortcut: multiple variants found."
+                "Ambiguous naming shortcut: multiple variants found."
             )
         rev = versions[0]["commit_hexsha"]
-        name = match["artifact"]
 
-    if not is_url_of_remote_repo(repo) and rev is None:
+    repo_path = repo.working_dir if isinstance(repo, Repo) else repo
+    if not is_url_of_remote_repo(repo_path) and rev is None:
         # read artifacts.yaml without using Git
         artifact = (
-            FileIndexManager.from_path(
-                repo.working_dir if isinstance(repo, Repo) else repo
-            )
-            .get_index()
-            .state.get(name)
+            FileIndexManager.from_path(repo_path).get_index().state.get(shortcut.name)
         )
     else:
         # read Git repo
         with RepoIndexManager.from_repo(repo) as index:
-            artifact = index.get_commit_index(rev).state.get(name)
+            artifact = index.get_commit_index(rev).state.get(shortcut.name)
     return artifact
 
 
@@ -448,16 +447,14 @@ def _show_versions(  # pylint: disable=too-many-locals
     def format_hexsha(hexsha):
         return hexsha[:7] if truncate_hexsha else hexsha
 
-    match = re.search(shortcut_regexp, name)
-    if match:
-        name = match["artifact"]
+    shortcut = parse_shortcut(name)
 
     with GitRegistry.from_repo(repo=repo) as reg:
         if raw:
-            return reg.find_artifact(name).versions
+            return reg.find_artifact(shortcut.name).versions
 
         artifact = reg.find_artifact(
-            name,
+            shortcut.name,
             all_branches=all_branches,
             all_commits=all_commits,
         )
@@ -480,11 +477,11 @@ def _show_versions(  # pylint: disable=too-many-locals
         ]
         versions.append(v)
 
-    if match and (match["greatest"] or match["latest"]):
+    if shortcut.latest:
         versions = versions[:1]
-    if match and match["stage"]:
+    if shortcut.stage:
         versions = [
-            v for v in versions for a in v["stages"] if match["stage"] in a["stage"]
+            v for v in versions for a in v["stages"] if shortcut.stage == a["stage"]
         ]
 
     if not table:

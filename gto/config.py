@@ -1,6 +1,5 @@
 # pylint: disable=no-self-use, no-self-argument, inconsistent-return-statements, invalid-name, import-outside-toplevel
 import pathlib
-import re
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -8,31 +7,14 @@ from pydantic import BaseModel, BaseSettings, validator
 from pydantic.env_settings import InitSettingsSource
 from ruamel.yaml import YAML
 
-from gto.constants import name_regexp
-from gto.exceptions import (
-    UnknownStage,
-    UnknownType,
-    ValidationError,
-    WrongConfig,
-)
+from gto.constants import assert_name_is_valid
+from gto.exceptions import UnknownStage, UnknownType, WrongConfig
 from gto.ext import EnrichmentReader, find_enrichment_types, find_enrichments
 
 yaml = YAML(typ="safe", pure=True)
 yaml.default_flow_style = False
 
 CONFIG_FILE_NAME = ".gto"
-
-
-def check_name_is_valid(name):
-    return bool(re.search(name_regexp, name))
-
-
-def assert_name_is_valid(name):
-    if not check_name_is_valid(name):
-        raise ValidationError(
-            f"Invalid value '{name}'. Only lowercase english letters, , '-', '/' are allowed."
-            "Value must be of len >= 2, must with a letter and end with a letter or a number."
-        )
 
 
 class EnrichmentConfig(BaseModel):
