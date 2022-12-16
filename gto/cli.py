@@ -17,7 +17,12 @@ from gto.constants import (
     VERSIONS_PER_STAGE,
     VersionSort,
 )
-from gto.exceptions import GTOException, NotImplementedInGTO, WrongArgs
+from gto.exceptions import (
+    GTOException,
+    NotImplementedInGTO,
+    WrongArgs,
+    WrongConfig,
+)
 from gto.index import RepoIndexManager
 from gto.ui import (
     EMOJI_FAIL,
@@ -346,6 +351,9 @@ option_show_ref = Option(
 option_show_description = Option(
     False, "--description", is_flag=True, help="Show description", show_default=True
 )
+option_show_custom = Option(
+    False, "--custom", is_flag=True, help="Show custom metadata", show_default=True
+)
 option_json = Option(
     False,
     "--json",
@@ -531,6 +539,42 @@ def remove(
     gto.api.remove(
         repo=repo, name=name, commit=commit, push=push, branch=branch, stdout=True
     )
+
+
+@gto_command(section=CommandGroups.enriching)
+def describe(
+    repo: str = option_repo,
+    name: str = arg_name,
+    rev: str = option_rev,
+    type: Optional[bool] = option_show_type,
+    path: Optional[bool] = option_show_path,
+    description: Optional[bool] = option_show_description,
+    # custom: Optional[bool] = option_show_custom,
+):
+    """Display enrichments for an artifact."""
+    assert (
+        sum(bool(i) for i in (type, path, description)) <= 1  # , custom
+    ), "Can output one key only"
+    if type:
+        field = "type"
+    elif path:
+        field = "path"
+    elif description:
+        field = "description"
+    # elif custom:
+    #     field = "custom"
+    else:
+        field = None
+
+    artifact = gto.api.describe(repo=repo, name=name, rev=rev)
+    if not artifact:
+        return
+    annotation = artifact.dict(exclude_defaults=True)
+    if field is None:
+        format_echo(annotation, "json")
+    elif field in annotation:
+        with cli_echo():
+            echo(annotation[field])
 
 
 @gto_command(section=CommandGroups.modifying)
@@ -875,37 +919,31 @@ def print_index(repo: str = option_repo):
         format_echo(index.artifact_centric_representation(), "json")
 
 
-@gto_command(section=CommandGroups.enriching)
-def describe(
+@gto_command(section=CommandGroups.querying)
+def doctor(
     repo: str = option_repo,
-    name: str = arg_name,
-    rev: str = option_rev,
-    type: Optional[bool] = option_show_type,
-    path: Optional[bool] = option_show_path,
-    description: Optional[bool] = option_show_description,
+    all_commits: bool = option_all_commits,
 ):
-    """Display enrichments for an artifact."""
-    assert (
-        sum(bool(i) for i in (type, path, description)) <= 1
-    ), "Can output one key only"
-    infos = gto.api.describe(repo=repo, name=name, rev=rev)
-    if not infos:
-        return
-    d = infos[0].get_object().dict(exclude_defaults=True)
-    if type:
-        if "type" not in d:
-            raise WrongArgs("No type in enrichment")
-        echo(d["type"])
-    elif path:
-        if "path" not in d:
-            raise WrongArgs("No path in enrichment")
-        echo(d["path"])
-    elif description:
-        if "description" not in d:
-            raise WrongArgs("No description in enrichment")
-        echo(d["description"])
-    else:
-        format_echo(d, "json")
+    """Display GTO version and check the registry for problems."""
+    with cli_echo():
+        echo(f"{EMOJI_GTO} GTO Version: {gto.__version__}")
+        echo("---------------------------------")
+        try:
+            from gto.config import (  # pylint: disable=import-outside-toplevel
+                CONFIG,
+            )
+
+            echo(CONFIG.__repr_str__("\n"))
+        except WrongConfig:
+            echo(f"{EMOJI_FAIL} Fail to parse config")
+        echo("---------------------------------")
+
+    gto.api._get_state(repo).dict()  # pylint: disable=protected-access
+    if all_commits:
+        with RepoIndexManager.from_repo(repo) as index:
+            index.artifact_centric_representation()
+    with cli_echo():
+        echo(f"{EMOJI_OK} No issues found")
 
 
 if __name__ == "__main__":

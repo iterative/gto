@@ -27,8 +27,15 @@ class WrongConfig(GTOException):
         super().__init__(self.message)
 
 
+class WrongArtifactsYaml(GTOException):
+    message = "artifacts.yaml file doesn't conform to GTO format"
+
+    def __init__(self) -> None:
+        super().__init__(self.message)
+
+
 class NoFile(GTOException):
-    _message = "No file/folder found in '{path}' for checked out commit"
+    _message = "Nothing found in '{path}' for checked out commit"
 
     def __init__(self, path) -> None:
         self.message = self._message.format(path=path)
