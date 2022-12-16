@@ -32,7 +32,7 @@ from tests.utils import (
 
 def test_empty_index(empty_git_repo: Tuple[git.Repo, Callable]):
     repo, write_file = empty_git_repo
-    with RepoIndexManager.from_repo(repo.working_dir) as index:
+    with RepoIndexManager.from_repo(repo) as index:
         assert isinstance(index, RepoIndexManager)
         assert len(index.artifact_centric_representation()) == 0
 
@@ -57,7 +57,8 @@ def test_add_remove(empty_git_repo: Tuple[git.Repo, Callable]):
     )
     with pytest.raises(PathIsUsed):
         gto.api.annotate(repo.working_dir, "other-name", path=path)
-    with RepoIndexManager.from_repo(repo.working_dir) as index:
+    gto.api.annotate(repo.working_dir, "other-name", path=path, allow_same_path=True)
+    with RepoIndexManager.from_repo(repo) as index:
         index = index.get_index()
     assert name in index
     check_obj(
@@ -72,8 +73,8 @@ def test_add_remove(empty_git_repo: Tuple[git.Repo, Callable]):
         ),
         [],
     )
-    gto.api.remove(repo.working_dir, name)
-    with RepoIndexManager.from_repo(repo.working_dir) as index:
+    gto.api.remove(repo, name)
+    with RepoIndexManager.from_repo(repo) as index:
         index = index.get_index()
     assert name not in index
 
@@ -83,14 +84,10 @@ def repo_with_artifact(init_showcase_semver):
     repo: git.Repo
     repo, write_file = init_showcase_semver
     name, type, path, must_exist = "new-artifact", "new-type", "new/path", False
-    gto.api.annotate(
-        repo.working_dir, name, type=type, path=path, must_exist=must_exist
-    )
+    gto.api.annotate(repo, name, type=type, path=path, must_exist=must_exist)
     repo.index.add(["artifacts.yaml"])
     repo.index.commit("Added index")
-    gto.api.annotate(
-        repo.working_dir, name, type=type, path="path", must_exist=must_exist
-    )
+    gto.api.annotate(repo, name, type=type, path="path", must_exist=must_exist)
     repo.index.add(["artifacts.yaml"])
     repo.index.commit("Added index")
     return repo, name
@@ -100,9 +97,9 @@ def test_api_info_commands_repo_with_artifact(
     repo_with_artifact: Tuple[git.Repo, Callable]
 ):
     repo, write_file = repo_with_artifact
-    gto.api.show(repo.working_dir)
-    gto.api.show(repo.working_dir, "new-artifact")
-    gto.api.history(repo.working_dir)
+    gto.api.show(repo)
+    gto.api.show(repo, "new-artifact")
+    gto.api.history(repo)
 
 
 def test_describe(repo_with_artifact: Tuple[git.Repo, Callable]):

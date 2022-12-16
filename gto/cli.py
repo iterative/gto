@@ -501,6 +501,12 @@ def annotate(
         is_flag=True,
         help="Verify artifact is committed to Git",
     ),
+    allow_same_path: bool = Option(
+        False,
+        "--allow-same-path",
+        is_flag=True,
+        help="Allow multiple artifacts use the same path",
+    ),
     label: List[str] = Option(None, "--label", help="Labels to add to artifact"),
     description: str = Option("", "-d", "--description", help="Artifact description"),
     custom: str = Option(
@@ -523,6 +529,7 @@ def annotate(
         type=type,
         path=path,
         must_exist=must_exist,
+        allow_same_path=allow_same_path,
         labels=label,
         description=description,
         custom=custom,
