@@ -481,6 +481,8 @@ def _show_versions(  # pylint: disable=too-many-locals
 
     if shortcut.latest:
         versions = versions[:1]
+    if shortcut.version:
+        versions = [v for v in versions if shortcut.version == v["version"]]
     if shortcut.stage:
         versions = [
             v for v in versions for a in v["stages"] if shortcut.stage == a["stage"]
