@@ -32,17 +32,22 @@ class Action(Enum):
 name = "[a-z][a-z0-9-/]*[a-z0-9]"
 semver = r"(?P<major>0|[1-9]\d*)\.(?P<minor>0|[1-9]\d*)\.(?P<patch>0|[1-9]\d*)(?:-(?P<prerelease>(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+(?P<buildmetadata>[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?"
 counter = "?P<counter>[0-9]+"
-name_regexp = re.compile(f"^{name}$")
-tag_regexp = re.compile(
+name_re = re.compile(f"^{name}$")
+tag_re = re.compile(
     f"^(?P<artifact>{name})(((#(?P<stage>{name})|@(?P<version>v{semver}))(?P<cancel>!?))|@((?P<deprecated>deprecated)|(?P<created>created)))(#({counter}))?$"
 )
-shortcut_regexp = re.compile(
+shortcut_re = re.compile(
     f"^(?P<artifact>{name})(#(?P<stage>{name})|@(?P<version>latest|greatest|v{semver}))$"
 )
+git_hexsha_re = re.compile(r"^[0-9a-fA-F]{40}$")
+
+
+def is_hexsha(value):
+    return bool(git_hexsha_re.search(value))
 
 
 def check_name_is_valid(value):
-    return bool(re.search(name_regexp, value))
+    return bool(name_re.search(value))
 
 
 def assert_name_is_valid(value):
@@ -62,7 +67,7 @@ class Shortcut(BaseModel):
 
 
 def parse_shortcut(value):
-    match = re.search(shortcut_regexp, value)
+    match = re.search(shortcut_re, value)
     if match:
         value = match["artifact"]
         if match["stage"]:

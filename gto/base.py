@@ -426,7 +426,7 @@ class Artifact(BaseObject):
 
     @property
     def is_registered(self):
-        """Tells if this is an a registered artifact - i.e. there Git tags for it"""
+        """Tells if this is an a registered artifact - i.e. there are Git tags for it"""
         return not all(
             isinstance(e, Commit) for e in self.get_events(direct=True, indirect=True)
         )
@@ -442,6 +442,7 @@ class Artifact(BaseObject):
 
     def get_versions(
         self,
+        active_only=True,
         include_non_explicit=False,
         include_discovered=False,
         sort=VersionSort.SemVer,
@@ -450,7 +451,8 @@ class Artifact(BaseObject):
         versions = [
             v
             for v in self.versions
-            if v.is_active
+            if not active_only
+            or v.is_active
             and (
                 (v.is_registered and not v.discovered)
                 or (include_discovered and v.discovered)

@@ -156,6 +156,9 @@ def test_commands(showcase):
         "describe", ["-r", path, "rf@latest"], EXPECTED_DESCRIBE_OUTPUT
     )
     _check_successful_cmd(
+        "describe", ["-r", path, "rf@v1.2.3"], EXPECTED_DESCRIBE_OUTPUT
+    )
+    _check_successful_cmd(
         "describe", ["-r", path, "rf", "--path"], "models/random-forest.pkl\n"
     )
     _check_successful_cmd("describe", ["-r", path, "rf", "--type"], "model\n")

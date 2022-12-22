@@ -4,6 +4,7 @@ import os
 from contextlib import contextmanager
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from time import sleep
 from typing import Callable, Optional, Tuple
 from unittest.mock import call, patch
 
@@ -154,9 +155,14 @@ def test_register_deregister(repo_with_artifact):
     assert latest.author == author
     assert latest.author_email == author_email
 
+    assert len(gto.api.show(repo.working_dir, name, deprecated=False)) == 2
+
     gto.api.deregister(repo=repo.working_dir, name=name, version=vname2)
     latest = gto.api.find_latest_version(repo.working_dir, name)
     assert latest.version == vname1
+
+    assert len(gto.api.show(repo.working_dir, name, deprecated=False)) == 1
+    assert len(gto.api.show(repo.working_dir, name, deprecated=True)) == 2
 
 
 def test_assign(repo_with_artifact: Tuple[git.Repo, str]):
@@ -224,6 +230,38 @@ def test_assign_force_is_needed(repo_with_artifact: Tuple[git.Repo, str]):
         gto.api.assign(repo, name, "staging", ref="HEAD^1")
     gto.api.assign(repo, name, "staging", ref="HEAD", force=True)
     gto.api.assign(repo, name, "staging", ref="HEAD^1", force=True)
+
+
+def test_unassign(repo_with_artifact):
+    repo, _ = repo_with_artifact
+    gto.api.register(repo.working_dir, name="model", ref="HEAD")
+    gto.api.assign(repo.working_dir, name="model", ref="HEAD", stage="dev")
+    assert (
+        gto.api.find_versions_in_stage(repo.working_dir, name="model", stage="dev")
+        is not None
+    )
+
+    gto.api.unassign(repo.working_dir, name="model", ref="HEAD", stage="dev")
+    assert (
+        gto.api.find_versions_in_stage(repo.working_dir, name="model", stage="dev")
+        is None
+    )
+
+
+def test_deprecate(repo_with_artifact):
+    repo, _ = repo_with_artifact
+    gto.api.register(repo.working_dir, name="model", ref="HEAD")
+    assert len(gto.api.show(repo.working_dir, "model")) == 1
+
+    sleep(1)
+    gto.api.deprecate(repo.working_dir, name="model")
+    assert len(gto.api.show(repo.working_dir, "model", deprecated=False)) == 0
+    assert len(gto.api.show(repo.working_dir, "model", deprecated=True)) == 1
+
+    with pytest.raises(WrongArgs):
+        gto.api.deprecate(repo.working_dir, name="model")
+        gto.api.deprecate(repo.working_dir, name="model", simple=True, force=True)
+    gto.api.deprecate(repo.working_dir, name="model", force=True)
 
 
 @contextmanager

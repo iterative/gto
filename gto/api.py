@@ -12,6 +12,7 @@ from gto.constants import (
     VERSION,
     VERSIONS_PER_STAGE,
     VersionSort,
+    is_hexsha,
     mark_artifact_unregistered,
     parse_shortcut,
 )
@@ -275,7 +276,7 @@ def deprecate(
             name=name,
             message=message,
             stdout=stdout,
-            simple=simple if simple is not None else True,
+            simple=simple,
             force=force,
             delete=delete,
             push=push or is_url_of_remote_repo(repo),
@@ -332,6 +333,7 @@ def show(
     all_commits=False,
     truncate_hexsha=False,
     registered_only=False,
+    deprecated=False,
     assignments_per_version=ASSIGNMENTS_PER_VERSION,
     versions_per_stage=VERSIONS_PER_STAGE,
     sort=VersionSort.Timestamp,
@@ -344,6 +346,7 @@ def show(
             all_branches=all_branches,
             all_commits=all_commits,
             registered_only=registered_only,
+            deprecated=deprecated,
             assignments_per_version=assignments_per_version,
             versions_per_stage=versions_per_stage,
             sort=sort,
@@ -356,6 +359,7 @@ def show(
             all_branches=all_branches,
             all_commits=all_commits,
             registered_only=registered_only,
+            deprecated=deprecated,
             assignments_per_version=assignments_per_version,
             versions_per_stage=versions_per_stage,
             sort=sort,
@@ -370,6 +374,7 @@ def _show_registry(
     all_branches=False,
     all_commits=False,
     registered_only=False,
+    deprecated=False,
     assignments_per_version: int = None,
     versions_per_stage: int = None,
     sort: VersionSort = None,
@@ -406,11 +411,13 @@ def _show_registry(
                     for name in stages
                 },
                 "registered": o.is_registered,
+                "active": o.is_active,
             }
             for o in reg.get_artifacts(
                 all_branches=all_branches,
                 all_commits=all_commits,
             ).values()
+            if o.is_active or deprecated
         }
 
     if not table:
@@ -427,7 +434,7 @@ def _show_registry(
                 + [d["stage"][name] for name in stages],
             ),
         )
-        for name, d in models_state.items()
+        for name, d in sorted(models_state.items())
     ], "keys"
 
 
@@ -438,6 +445,7 @@ def _show_versions(  # pylint: disable=too-many-locals
     all_branches=False,
     all_commits=False,
     registered_only=False,
+    deprecated=False,
     assignments_per_version: int = None,
     versions_per_stage: int = None,
     sort: VersionSort = None,
@@ -447,7 +455,7 @@ def _show_versions(  # pylint: disable=too-many-locals
     """List versions of artifact"""
 
     def format_hexsha(hexsha):
-        return hexsha[:7] if truncate_hexsha else hexsha
+        return hexsha[:7] if truncate_hexsha and is_hexsha(hexsha) else hexsha
 
     shortcut = parse_shortcut(name)
 
@@ -468,7 +476,9 @@ def _show_versions(  # pylint: disable=too-many-locals
     )
     versions = []
     for v in artifact.get_versions(
-        include_non_explicit=not registered_only, include_discovered=True
+        active_only=not deprecated,
+        include_non_explicit=not registered_only,
+        include_discovered=True,
     ):
         v = v.dict_state()
         v["stages"] = [
@@ -477,13 +487,14 @@ def _show_versions(  # pylint: disable=too-many-locals
             for vstage in vstages
             if vstage.version == v["version"]
         ]
-        versions.append(v)
+        if artifact.is_active or deprecated:
+            versions.append(v)
 
     if shortcut.latest:
         versions = versions[:1]
-    if shortcut.version:
+    elif shortcut.version:
         versions = [v for v in versions if shortcut.version == v["version"]]
-    if shortcut.stage:
+    elif shortcut.stage:
         versions = [
             v for v in versions for a in v["stages"] if shortcut.stage == a["stage"]
         ]
@@ -506,6 +517,7 @@ def _show_versions(  # pylint: disable=too-many-locals
             )
         )
         v["commit_hexsha"] = format_hexsha(v["commit_hexsha"])
+        v["ref"] = format_hexsha(v["ref"])
         if len(v["registrations"]) > 1:
             raise NotImplementedInGTO(
                 "Multiple registrations are not supported currently. How you got in here?"
@@ -523,7 +535,7 @@ def _show_versions(  # pylint: disable=too-many-locals
 
 def history(
     repo: Union[str, Repo],
-    artifact: str = None,
+    artifact: Optional[str] = None,
     # action: str = None,
     all_branches=False,
     all_commits=False,
@@ -538,7 +550,7 @@ def history(
         )
 
     def format_hexsha(hexsha):
-        return hexsha[:7] if truncate_hexsha else hexsha
+        return hexsha[:7] if truncate_hexsha and is_hexsha(hexsha) else hexsha
 
     events = [
         OrderedDict(

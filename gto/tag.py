@@ -24,7 +24,7 @@ from .constants import (
     TAG,
     VERSION,
     Action,
-    tag_regexp,
+    tag_re,
 )
 from .exceptions import (
     InvalidTagName,
@@ -79,7 +79,7 @@ def name_tag(
 
 def parse_name(name: str, raise_on_fail: bool = True):
 
-    match = re.search(tag_regexp, name)
+    match = re.search(tag_re, name)
     if raise_on_fail and not match:
         raise InvalidTagName(name)
     if match:
