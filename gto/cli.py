@@ -293,10 +293,17 @@ def callback_sort(  # pylint: disable=inconsistent-return-statements
 option_all = Option(False, "--all", "-a", help="Return all versions sorted")
 option_registered_only = Option(
     False,
-    "--registered-only",
     "--ro",
+    "--registered-only",
     is_flag=True,
     help="Show only registered versions",
+)
+option_deprecated = Option(
+    False,
+    "-d",
+    "--deprecated",
+    is_flag=True,
+    help="Include deprecated in output",
 )
 option_expected = Option(
     False,
@@ -794,6 +801,7 @@ def show(  # pylint: disable=too-many-locals
     show_stage: bool = option_show_stage,
     show_ref: bool = option_show_ref,
     registered_only: bool = option_registered_only,
+    deprecated: bool = option_deprecated,
     assignments_per_version: int = option_assignments_per_version,
     versions_per_stage: int = option_versions_per_stage,
     sort: str = option_sort,
@@ -810,6 +818,7 @@ def show(  # pylint: disable=too-many-locals
             all_branches=all_branches,
             all_commits=all_commits,
             registered_only=registered_only,
+            deprecated=deprecated,
             assignments_per_version=assignments_per_version,
             versions_per_stage=versions_per_stage,
             sort=sort,
@@ -823,6 +832,7 @@ def show(  # pylint: disable=too-many-locals
             all_branches=all_branches,
             all_commits=all_commits,
             registered_only=registered_only,
+            deprecated=deprecated,
             assignments_per_version=assignments_per_version,
             versions_per_stage=versions_per_stage,
             sort=sort,
