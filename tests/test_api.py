@@ -4,6 +4,7 @@ import os
 from contextlib import contextmanager
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from time import sleep
 from typing import Callable, Optional, Tuple
 from unittest.mock import call, patch
 
@@ -249,9 +250,10 @@ def test_unassign(repo_with_artifact):
 
 def test_deprecate(repo_with_artifact):
     repo, _ = repo_with_artifact
-    gto.api.register(repo.working_dir, name="model", ref="HEAD^1")
+    gto.api.register(repo.working_dir, name="model", ref="HEAD")
     assert len(gto.api.show(repo.working_dir, "model")) == 1
 
+    sleep(1)
     gto.api.deprecate(repo.working_dir, name="model")
     assert len(gto.api.show(repo.working_dir, "model", deprecated=False)) == 0
     assert len(gto.api.show(repo.working_dir, "model", deprecated=True)) == 1
