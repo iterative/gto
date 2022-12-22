@@ -37,7 +37,7 @@ tag_regexp = re.compile(
     f"^(?P<artifact>{name})(((#(?P<stage>{name})|@(?P<version>v{semver}))(?P<cancel>!?))|@((?P<deprecated>deprecated)|(?P<created>created)))(#({counter}))?$"
 )
 shortcut_regexp = re.compile(
-    f"^(?P<artifact>{name})(((#(?P<stage>{name})|@(?P<latest>latest)|@(?P<greatest>greatest))))$"
+    f"^(?P<artifact>{name})(#(?P<stage>{name})|@(?P<version>latest|greatest|v{semver}))$"
 )
 
 
@@ -56,6 +56,7 @@ def assert_name_is_valid(value):
 class Shortcut(BaseModel):
     name: str
     stage: Optional[str] = None
+    version: Optional[str] = None
     latest: bool = False
     shortcut: bool = False
 
@@ -66,11 +67,12 @@ def parse_shortcut(value):
         value = match["artifact"]
         if match["stage"]:
             assert_name_is_valid(match["stage"])
-    assert_name_is_valid(value)
+    latest = bool(match and (match["version"] in ("latest", "greatest")))
     return Shortcut(
         name=value,
         stage=match["stage"] if match and match["stage"] else None,
-        latest=bool(match and (match["latest"] or match["greatest"])),
+        version=match["version"] if match and match["version"] and not latest else None,
+        latest=latest,
         shortcut=bool(match),
     )
 
