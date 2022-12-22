@@ -423,6 +423,10 @@ class GitRegistry(BaseModel, RemoteRepoMixin):
             found_artifact = self.find_artifact(name)
             if not found_artifact.is_active:
                 raise WrongArgs("Artifact was deprecated already")
+        else:
+            if simple:
+                raise WrongArgs("Can't use 'force' with 'simple=True'")
+            simple = False
         if delete:
             tags = distinct(
                 [

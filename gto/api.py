@@ -276,7 +276,7 @@ def deprecate(
             name=name,
             message=message,
             stdout=stdout,
-            simple=simple if simple is not None else True,
+            simple=simple,
             force=force,
             delete=delete,
             push=push or is_url_of_remote_repo(repo),

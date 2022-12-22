@@ -258,6 +258,11 @@ def test_deprecate(repo_with_artifact):
     assert len(gto.api.show(repo.working_dir, "model", deprecated=False)) == 0
     assert len(gto.api.show(repo.working_dir, "model", deprecated=True)) == 1
 
+    with pytest.raises(WrongArgs):
+        gto.api.deprecate(repo.working_dir, name="model")
+        gto.api.deprecate(repo.working_dir, name="model", simple=True, force=True)
+    gto.api.deprecate(repo.working_dir, name="model", force=True)
+
 
 @contextmanager
 def environ(**overrides):
