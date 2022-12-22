@@ -212,7 +212,7 @@ arg_name = Argument(..., help="Artifact name")
 arg_version = Argument(..., help="Artifact version")
 arg_stage = Argument(..., help="Stage to assign")
 option_version = Option(None, "--version", help="Version to register")
-option_stage = Option(None, "--stage", help="Stage to assign")
+option_stage = Option(..., "--stage", help="Stage to assign")
 option_to_version = Option(
     None, "--to-version", help="Version to use for stage assignment"
 )
