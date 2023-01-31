@@ -1,6 +1,6 @@
 import pytest
 
-from gto.constants import check_name_is_valid
+from gto.constants import Shortcut, check_name_is_valid, parse_shortcut
 
 
 @pytest.mark.parametrize(
@@ -39,3 +39,24 @@ def test_check_name_is_valid(name):
 )
 def test_check_name_is_invalid(name):
     assert not check_name_is_valid(name)
+
+
+@pytest.mark.parametrize(
+    "name,shortcut",
+    [
+        ("", None),
+        ("m", None),
+        ("m/", None),
+        ("nn", None),
+        ("model@v1.2.3", Shortcut(name="model", version="v1.2.3")),
+        ("model#prod", Shortcut(name="model", stage="prod")),
+        ("model:HEAD", Shortcut(name="model", ref="HEAD")),
+        (":HEAD", Shortcut(name=None, ref="HEAD")),
+        ("@v1.2.3", Shortcut(name=None, version="v1.2.3")),
+        ("#prod", Shortcut(name=None, stage="prod")),
+        # ("model:HEAD#prod", Shortcut(name="model", ref="HEAD", stage="prod")),
+        # ("model#prod:HEAD", Shortcut(name="model", ref="HEAD", stage="prod")),
+    ],
+)
+def test_parse_shortcut(name, shortcut):
+    assert parse_shortcut(name) == shortcut

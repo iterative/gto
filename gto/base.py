@@ -9,8 +9,10 @@ from gto.constants import (
     ASSIGNMENTS_PER_VERSION,
     VERSIONS_PER_STAGE,
     Action,
+    Shortcut,
     VersionSort,
 )
+from gto.utils import resolve_ref
 from gto.versions import SemVer
 
 from .exceptions import (
@@ -374,6 +376,21 @@ def sort_versions(
             key=lambda x: get(x, timestamp),
         )[:: 1 if ascending else -1]
     return sorted_versions
+
+
+def filter_versions(repo: git.Repo, versions: List[Version], shortcut: Shortcut):
+    if shortcut.latest:
+        versions = versions[:1]
+    elif shortcut.version:
+        versions = [v for v in versions if shortcut.version == v["version"]]
+    elif shortcut.stage:
+        versions = [
+            v for v in versions for a in v["stages"] if shortcut.stage == a["stage"]
+        ]
+    elif shortcut.ref:
+        commit_hexsha = resolve_ref(repo, shortcut.ref).hexsha
+        versions = [v for v in versions if commit_hexsha == v["commit_hexsha"]]
+    return versions
 
 
 class Artifact(BaseObject):

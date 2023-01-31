@@ -4,6 +4,7 @@ from typing import Any, List, Optional, Union
 from funcy import distinct
 from git import Repo
 
+from gto.base import Version, filter_versions
 from gto.constants import (
     ARTIFACT,
     ASSIGNMENTS_PER_VERSION,
@@ -11,6 +12,7 @@ from gto.constants import (
     STAGE,
     VERSION,
     VERSIONS_PER_STAGE,
+    Shortcut,
     VersionSort,
     is_hexsha,
     mark_artifact_unregistered,
@@ -21,6 +23,7 @@ from gto.git_utils import is_url_of_remote_repo
 from gto.index import Artifact, FileIndexManager, RepoIndexManager
 from gto.registry import GitRegistry
 from gto.tag import parse_name as parse_tag_name
+from gto.utils import resolve_ref
 
 
 def _is_gto_repo(repo: Union[str, Repo]):
@@ -101,7 +104,7 @@ def describe(
 ) -> Optional[Artifact]:
     """Find enrichments for the artifact"""
     shortcut = parse_shortcut(name)
-    if shortcut.shortcut:
+    if shortcut:
         if rev:
             raise WrongArgs("Either specify revision or use naming shortcut.")
         # clones a remote repo second time, can be optimized
@@ -113,17 +116,16 @@ def describe(
                 "Ambiguous naming shortcut: multiple variants found."
             )
         rev = versions[0]["commit_hexsha"]
+        name = shortcut.name
 
     repo_path = repo.working_dir if isinstance(repo, Repo) else repo
     if not is_url_of_remote_repo(repo_path) and rev is None:
         # read artifacts.yaml without using Git
-        artifact = (
-            FileIndexManager.from_path(repo_path).get_index().state.get(shortcut.name)
-        )
+        artifact = FileIndexManager.from_path(repo_path).get_index().state.get(name)
     else:
         # read Git repo
         with RepoIndexManager.from_repo(repo) as index:
-            artifact = index.get_commit_index(rev).state.get(shortcut.name)
+            artifact = index.get_commit_index(rev).state.get(name)
     return artifact
 
 
@@ -458,46 +460,55 @@ def _show_versions(  # pylint: disable=too-many-locals
         return hexsha[:7] if truncate_hexsha and is_hexsha(hexsha) else hexsha
 
     shortcut = parse_shortcut(name)
+    name = shortcut.name if shortcut else name
 
+    def get_versions(artifact):
+        versions = []
+        stages = artifact.get_vstages(
+            registered_only=registered_only,
+            assignments_per_version=assignments_per_version,
+            versions_per_stage=versions_per_stage,
+            sort=sort,
+        )
+        for v in artifact.get_versions(
+            active_only=not deprecated,
+            include_non_explicit=not registered_only,
+            include_discovered=False,
+        ):
+            v = v.dict_state()
+            v["stages"] = [
+                vstage.dict_state()
+                for vstages in stages.values()
+                for vstage in vstages
+                if vstage.version == v["version"]
+            ]
+            if artifact.is_active or deprecated:
+                versions.append(v)
+        return versions
+
+    versions = []
     with GitRegistry.from_repo(repo=repo) as reg:
         if raw:
-            return reg.find_artifact(shortcut.name).versions
+            return reg.find_artifact(name).versions
 
-        artifact = reg.find_artifact(
-            shortcut.name,
-            all_branches=all_branches,
-            all_commits=all_commits,
-        )
-    stages = artifact.get_vstages(
-        registered_only=registered_only,
-        assignments_per_version=assignments_per_version,
-        versions_per_stage=versions_per_stage,
-        sort=sort,
-    )
-    versions = []
-    for v in artifact.get_versions(
-        active_only=not deprecated,
-        include_non_explicit=not registered_only,
-        include_discovered=True,
-    ):
-        v = v.dict_state()
-        v["stages"] = [
-            vstage.dict_state()
-            for vstages in stages.values()
-            for vstage in vstages
-            if vstage.version == v["version"]
-        ]
-        if artifact.is_active or deprecated:
-            versions.append(v)
+        if name:
+            artifacts = [
+                reg.find_artifact(
+                    name,
+                    all_branches=all_branches,
+                    all_commits=all_commits,
+                )
+            ]
+        else:
+            artifacts = reg.get_artifacts(
+                all_branches=all_branches,
+                all_commits=all_commits,
+            ).values()
+        for artifact in artifacts:
+            versions.extend(get_versions(artifact))
 
-    if shortcut.latest:
-        versions = versions[:1]
-    elif shortcut.version:
-        versions = [v for v in versions if shortcut.version == v["version"]]
-    elif shortcut.stage:
-        versions = [
-            v for v in versions for a in v["stages"] if shortcut.stage == a["stage"]
-        ]
+    if shortcut:
+        versions = filter_versions(repo=repo, versions=versions, shortcut=shortcut)
 
     if not table:
         return versions
@@ -511,6 +522,8 @@ def _show_versions(  # pylint: disable=too-many-locals
             else mark_artifact_unregistered(v["artifact"])
         )
         v["version"] = format_hexsha(v["version"])
+        if v["discovered"]:
+            v["version"] = mark_artifact_unregistered(v["version"])
         v["stage"] = ", ".join(
             distinct(  # TODO: remove? no longer necessary
                 s["stage"] for s in v["stages"]

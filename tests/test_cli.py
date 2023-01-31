@@ -146,6 +146,46 @@ def test_commands(showcase):
         ["-r", path, "rf#production", "--ref"],
         "rf@v1.2.3\n",
     )
+    _check_successful_cmd(
+        "show",
+        ["-r", path, "nn", "--ro", "--ref"],
+        "nn@v0.0.1\n",
+    )
+    _check_successful_cmd(
+        "show",
+        ["-r", path, "#production", "--ref"],
+        "rf@v1.2.3\n",
+    )
+    _check_successful_cmd(
+        "show",
+        ["-r", path, "#staging", "--ref"],
+        "nn@v0.0.1\n" "rf@v1.2.4\n",
+    )
+    _check_successful_cmd(
+        "show",
+        ["-r", path, ":HEAD", "--ref", "--ro"],
+        "rf@v1.2.4\n",
+    )
+    _check_successful_cmd(
+        "show",
+        ["-r", path, "nn:HEAD", "--ref", "--ro"],
+        "",
+    )
+    _check_successful_cmd(
+        "show",
+        ["-r", path, "rf:HEAD", "--ref", "--ro"],
+        "rf@v1.2.4\n",
+    )
+    _check_successful_cmd(
+        "show",
+        ["-r", path, "@v1.2.4", "--ref"],
+        "rf@v1.2.4\n",
+    )
+    _check_successful_cmd(
+        "show",
+        ["-r", path, "--long"],
+        None,
+    )
     _check_successful_cmd("describe", ["-r", path, "artifactnotexist"], "")
     _check_successful_cmd("describe", ["-r", path, "rf#stagenotexist"], "")
     _check_successful_cmd("describe", ["-r", path, "rf"], EXPECTED_DESCRIBE_OUTPUT)

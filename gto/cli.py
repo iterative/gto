@@ -845,11 +845,14 @@ def show(  # pylint: disable=too-many-locals
         arg = "stage" if show_stage else arg
         arg = "ref" if show_ref else arg
         if arg:
-            if arg not in output[0][0]:
-                raise WrongArgs(f"Cannot apply --{arg}")
-            format_echo(
-                [v[arg] if isinstance(v, dict) else v for v in output[0]], "lines"
-            )
+            if output[0]:
+                if arg not in output[0][0]:
+                    raise WrongArgs(f"Cannot apply --{arg}")
+                format_echo(
+                    [v[arg] if isinstance(v, dict) else v for v in output[0]], "lines"
+                )
+            else:
+                format_echo([], "lines")
         else:
             format_echo(
                 output,

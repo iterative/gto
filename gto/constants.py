@@ -36,8 +36,9 @@ name_re = re.compile(f"^{name}$")
 tag_re = re.compile(
     f"^(?P<artifact>{name})(((#(?P<stage>{name})|@(?P<version>v{semver}))(?P<cancel>!?))|@((?P<deprecated>deprecated)|(?P<created>created)))(#({counter}))?$"
 )
+git_ref = "[^\s\r\n]+"  # this can be further restricted to allowed chars only
 shortcut_re = re.compile(
-    f"^(?P<artifact>{name})(#(?P<stage>{name})|@(?P<version>latest|greatest|v{semver}))$"
+    f"^(?P<artifact>{name})?(#(?P<stage>{name})|@(?P<version>latest|greatest|v{semver})|:(?P<ref>{git_ref}))$"
 )
 git_hexsha_re = re.compile(r"^[0-9a-fA-F]{40}$")
 
@@ -59,26 +60,27 @@ def assert_name_is_valid(value):
 
 
 class Shortcut(BaseModel):
-    name: str
+    name: Optional[str] = None
     stage: Optional[str] = None
     version: Optional[str] = None
+    ref: Optional[str] = None
     latest: bool = False
-    shortcut: bool = False
 
 
-def parse_shortcut(value):
+def parse_shortcut(value) -> Optional[Shortcut]:
     match = re.search(shortcut_re, value)
-    if match:
-        value = match["artifact"]
-        if match["stage"]:
-            assert_name_is_valid(match["stage"])
-    latest = bool(match and (match["version"] in ("latest", "greatest")))
+    if not match:
+        return None
+    value = match["artifact"]
+    if match["stage"]:
+        assert_name_is_valid(match["stage"])
+    latest = match["version"] in ("latest", "greatest")
     return Shortcut(
         name=value,
-        stage=match["stage"] if match and match["stage"] else None,
-        version=match["version"] if match and match["version"] and not latest else None,
+        stage=match["stage"] if match["stage"] else None,
+        version=match["version"] if match["version"] and not latest else None,
+        ref=match["ref"] if match["ref"] else None,
         latest=latest,
-        shortcut=bool(match),
     )
 
 
