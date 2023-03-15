@@ -38,7 +38,7 @@ Contributions are welcome! Please see our
 [Contributing Guide](https://mlem.ai/doc/contributing/core) for more details.
 
 Check out the
-[MLEM+GTO weekly board](https://github.com/orgs/iterative/projects/322/views/4)
+[DVC weekly board](https://github.com/orgs/iterative/projects/189)
 to learn about what we do, and about the exciting new functionality that is
 going to be added soon.
 
