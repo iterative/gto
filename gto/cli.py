@@ -23,7 +23,6 @@ from gto.exceptions import (
     WrongArgs,
     WrongConfig,
 )
-from gto.index import RepoIndexManager
 from gto.ui import (
     EMOJI_FAIL,
     EMOJI_GTO,
@@ -233,16 +232,6 @@ option_repo = Option(
     help="Local or remote repository",
     show_default=True,
 )
-option_all_branches = Option(
-    False,
-    "-a",
-    "--all-branches",
-    is_flag=True,
-    help="Read heads from all branches",
-)
-option_all_commits = Option(
-    False, "-A", "--all-commits", is_flag=True, help="Read all commits"
-)
 option_message = Option(
     None, "--message", "-m", help="Message to annotate the Git tag with"
 )
@@ -420,7 +409,6 @@ def gto_callback(
     artifact or it's readiness to be consumed by a specific environment.
     * GitOps: Signal CI/CD automation or other downstream systems to act upon these
     new versions and lifecycle updates.
-    * Enrichments: Annotate and query artifact metadata with additional information.
     """
     if ctx.invoked_subcommand is None and show_version:
         with cli_echo():
@@ -493,109 +481,6 @@ def gto_command(*args, section="other", aliases=None, parent=app, **kwargs):
         return inner
 
     return decorator
-
-
-@gto_command(section=CommandGroups.enriching)
-def annotate(
-    repo: str = option_repo,
-    name: str = arg_name,
-    type: str = Option(None, help="Artifact type"),
-    path: str = Option(None, help="Artifact path"),
-    must_exist: bool = Option(
-        False,
-        "-e",
-        "--must-exist",
-        is_flag=True,
-        help="Verify artifact is committed to Git",
-    ),
-    allow_same_path: bool = Option(
-        False,
-        "--allow-same-path",
-        is_flag=True,
-        help="Allow multiple artifacts use the same path",
-    ),
-    label: List[str] = Option(None, "--label", help="Labels to add to artifact"),
-    description: str = Option("", "-d", "--description", help="Artifact description"),
-    custom: str = Option(
-        None,
-        "-c",
-        "--custom",
-        help="Custom metadata to add to artifact",
-    ),
-    commit: bool = option_commit,
-    push: bool = option_push_commit,
-    branch: str = option_branch,
-    # update: bool = Option(
-    #     False, "-u", "--update", is_flag=True, help="Update artifact if it exists"
-    # ),
-):
-    """Update artifact metadata annotations."""
-    gto.api.annotate(
-        repo,
-        name,
-        type=type,
-        path=path,
-        must_exist=must_exist,
-        allow_same_path=allow_same_path,
-        labels=label,
-        description=description,
-        custom=custom,
-        commit=commit,
-        push=push,
-        branch=branch,
-        stdout=True,
-        # update=update,
-    )
-
-
-@gto_command(section=CommandGroups.enriching)
-def remove(
-    repo: str = option_repo,
-    name: str = arg_name,
-    commit: bool = option_commit,
-    push: bool = option_push_commit,
-    branch: str = option_branch,
-):
-    """Remove the enrichment for given artifact."""
-    gto.api.remove(
-        repo=repo, name=name, commit=commit, push=push, branch=branch, stdout=True
-    )
-
-
-@gto_command(section=CommandGroups.enriching)
-def describe(
-    repo: str = option_repo,
-    name: str = arg_name,
-    rev: str = option_rev,
-    type: Optional[bool] = option_show_type,
-    path: Optional[bool] = option_show_path,
-    description: Optional[bool] = option_show_description,
-    custom: Optional[bool] = option_show_custom,
-):
-    """Display enrichments for an artifact."""
-    assert (
-        sum(bool(i) for i in (type, path, description)) <= 1  # , custom
-    ), "Can output one key only"
-    if type:
-        field = "type"
-    elif path:
-        field = "path"
-    elif description:
-        field = "description"
-    elif custom:
-        field = "custom"
-    else:
-        field = None
-
-    artifact = gto.api.describe(repo=repo, name=name, rev=rev)
-    if not artifact:
-        return
-    annotation = artifact.dict(exclude_defaults=True)
-    if field is None:
-        format_echo(annotation, "json")
-    elif field in annotation:
-        with cli_echo():
-            echo(annotation[field])
 
 
 @gto_command(section=CommandGroups.modifying)
@@ -792,8 +677,6 @@ def check_ref(
 def show(  # pylint: disable=too-many-locals
     repo: str = option_repo,
     name: str = Argument(None, help="Artifact name to show. If empty, show registry"),
-    all_branches: bool = option_all_branches,
-    all_commits: bool = option_all_commits,
     json: bool = option_json,
     plain: bool = option_plain,
     show_name: bool = option_show_name,
@@ -815,8 +698,6 @@ def show(  # pylint: disable=too-many-locals
         output = gto.api.show(
             repo,
             name=name,
-            all_branches=all_branches,
-            all_commits=all_commits,
             registered_only=registered_only,
             deprecated=deprecated,
             assignments_per_version=assignments_per_version,
@@ -829,8 +710,6 @@ def show(  # pylint: disable=too-many-locals
         output = gto.api.show(
             repo,
             name=name,
-            all_branches=all_branches,
-            all_commits=all_commits,
             registered_only=registered_only,
             deprecated=deprecated,
             assignments_per_version=assignments_per_version,
@@ -863,8 +742,6 @@ def show(  # pylint: disable=too-many-locals
 def history(
     repo: str = option_repo,
     name: str = Argument(None, help="Artifact name to show. If empty, show all."),
-    all_branches: bool = option_all_branches,
-    all_commits: bool = option_all_commits,
     json: bool = option_json,
     plain: bool = option_plain,
     ascending: bool = option_ascending,
@@ -876,8 +753,6 @@ def history(
             gto.api.history(
                 repo,
                 name,
-                all_branches=all_branches,
-                all_commits=all_commits,
                 ascending=ascending,
                 table=False,
             ),
@@ -888,8 +763,6 @@ def history(
             gto.api.history(
                 repo,
                 name,
-                all_branches=all_branches,
-                all_commits=all_commits,
                 ascending=ascending,
                 table=True,
                 truncate_hexsha=True,
@@ -936,17 +809,9 @@ def print_state(repo: str = option_repo):
     format_echo(state, "json")
 
 
-@gto_command(hidden=True)
-def print_index(repo: str = option_repo):
-    """Technical cmd: Print repo index."""
-    with RepoIndexManager.from_repo(repo) as index:
-        format_echo(index.artifact_centric_representation(), "json")
-
-
 @gto_command(section=CommandGroups.querying)
 def doctor(
     repo: str = option_repo,
-    all_commits: bool = option_all_commits,
 ):
     """Display GTO version and check the registry for problems."""
     with cli_echo():
@@ -963,9 +828,6 @@ def doctor(
         echo("---------------------------------")
 
     gto.api._get_state(repo).dict()  # pylint: disable=protected-access
-    if all_commits:
-        with RepoIndexManager.from_repo(repo) as index:
-            index.artifact_centric_representation()
     with cli_echo():
         echo(f"{EMOJI_OK} No issues found")
 
