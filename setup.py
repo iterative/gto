@@ -8,7 +8,7 @@ install_requires = [
     "rich",
     "pydantic",
     "ruamel.yaml",
-    "semver==3.0.0",
+    "semver>=3.0.0",
     "entrypoints",
     "tabulate>=0.8.10",
     "funcy",
