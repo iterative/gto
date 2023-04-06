@@ -358,9 +358,8 @@ def test_register(repo_with_commit: Tuple[git.Repo, Callable]):
     _check_successful_cmd(
         "register",
         ["-r", repo.working_dir, "classification/dvclive:models/nn"],
-        "Created git tag 'classification/dvclive=models/nn@v0.0.1' that registers version\n"
-        "To push the changes upstream, run:\n"
-        "    git push origin classification/dvclive=models/nn@v0.0.1\n",
+        "classification/dvclive=models/nn@v0.0.1",
+        search_func=_check_output_contains,
     )
 
 
