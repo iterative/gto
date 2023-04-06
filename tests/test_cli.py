@@ -355,6 +355,13 @@ def test_register(repo_with_commit: Tuple[git.Repo, Callable]):
         "❌ Supplied version '1.2.3' cannot be parsed\n",
     )
 
+    _check_successful_cmd(
+        "register",
+        ["-r", repo.working_dir, "classification/dvclive:models/nn"],
+        "classification/dvclive=models/nn@v0.0.1",
+        search_func=_check_output_contains,
+    )
+
 
 def test_assign(repo_with_commit: Tuple[git.Repo, Callable]):
     repo, write_file = repo_with_commit
