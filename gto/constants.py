@@ -29,15 +29,29 @@ class Action(Enum):
     UNASSIGN = "unassign"
 
 
-name = "[a-z][a-z0-9-/]*[a-z0-9]"
+def name_to_tag(value):
+    return value.replace(":", "/")
+
+
+def tag_to_name(value):
+    return value.replace("/", ":")
+
+
+dirname = "[a-z0-9-_./]+"  # improve?
+name = r"[a-z]([a-z0-9-]*[a-z0-9])?"  # just like in DVC now
 semver = r"(?P<major>0|[1-9]\d*)\.(?P<minor>0|[1-9]\d*)\.(?P<patch>0|[1-9]\d*)(?:-(?P<prerelease>(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+(?P<buildmetadata>[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?"
 counter = "?P<counter>[0-9]+"
 name_re = re.compile(f"^{name}$")
+fullname = f"(?P<dirname>{dirname}:)?{name}"  # add test to check ":" is here only once?
+fullname_for_tag = name_to_tag(fullname)
+fullname_re = re.compile(f"^{fullname}$")
+fullname_for_tag_re = re.compile(f"^{fullname_for_tag}$")
+
 tag_re = re.compile(
-    f"^(?P<artifact>{name})(((#(?P<stage>{name})|@(?P<version>v{semver}))(?P<cancel>!?))|@((?P<deprecated>deprecated)|(?P<created>created)))(#({counter}))?$"
+    f"^(?P<artifact>{fullname_for_tag})(((#(?P<stage>{name})|@(?P<version>v{semver}))(?P<cancel>!?))|@((?P<deprecated>deprecated)|(?P<created>created)))(#({counter}))?$"
 )
 shortcut_re = re.compile(
-    f"^(?P<artifact>{name})(#(?P<stage>{name})|@(?P<version>latest|greatest|v{semver}))$"
+    f"^(?P<artifact>{fullname})(#(?P<stage>{name})|@(?P<version>latest|greatest|v{semver}))$"
 )
 git_hexsha_re = re.compile(r"^[0-9a-fA-F]{40}$")
 
@@ -46,12 +60,21 @@ def is_hexsha(value):
     return bool(git_hexsha_re.search(value))
 
 
-def check_name_is_valid(value):
-    return bool(name_re.search(value))
+def check_string_is_valid(value, regex=name_re):
+    return bool(regex.search(value))
 
 
 def assert_name_is_valid(value):
-    if not check_name_is_valid(value):
+    if not check_string_is_valid(value, regex=name_re):
+        raise ValidationError(
+            f"Invalid value '{value}'. Only lowercase english letters, , '-', '/' are allowed."
+            "Value must be of len >= 2, must with a letter and end with a letter or a number."
+        )
+
+
+def assert_fullname_is_valid(value):
+    if not check_string_is_valid(value, regex=fullname_re):
+        # fix error message to be regex-specific
         raise ValidationError(
             f"Invalid value '{value}'. Only lowercase english letters, , '-', '/' are allowed."
             "Value must be of len >= 2, must with a letter and end with a letter or a number."

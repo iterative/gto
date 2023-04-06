@@ -25,6 +25,7 @@ from .constants import (
     VERSION,
     Action,
     tag_re,
+    tag_to_name,
 )
 from .exceptions import (
     InvalidTagName,
@@ -83,7 +84,7 @@ def parse_name(name: str, raise_on_fail: bool = True):
     if raise_on_fail and not match:
         raise InvalidTagName(name)
     if match:
-        parsed = {NAME: match["artifact"]}
+        parsed = {tag_to_name(NAME): match["artifact"]}
         if match["deprecated"]:
             parsed[ACTION] = Action.DEPRECATE
         if match[VERSION]:

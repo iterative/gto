@@ -1,6 +1,6 @@
 import pytest
 
-from gto.constants import check_name_is_valid
+from gto.constants import check_string_is_valid
 
 
 @pytest.mark.parametrize(
@@ -14,7 +14,7 @@ from gto.constants import check_name_is_valid
     ],
 )
 def test_check_name_is_valid(name):
-    assert check_name_is_valid(name)
+    assert check_string_is_valid(name)
 
 
 @pytest.mark.parametrize(
@@ -38,4 +38,4 @@ def test_check_name_is_valid(name):
     ],
 )
 def test_check_name_is_invalid(name):
-    assert not check_name_is_valid(name)
+    assert not check_string_is_valid(name)
