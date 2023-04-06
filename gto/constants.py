@@ -29,26 +29,30 @@ class Action(Enum):
     UNASSIGN = "unassign"
 
 
+SEPARATOR_IN_NAME = ":"
+SEPARATOR_IN_TAG = "="
+
+
 def name_to_tag(value):
-    return value.replace(":", "/")
+    return value.replace(SEPARATOR_IN_NAME, SEPARATOR_IN_TAG)
 
 
 def tag_to_name(value):
-    return value.replace("/", ":")
+    return value.replace(SEPARATOR_IN_TAG, SEPARATOR_IN_NAME)
 
 
 dirname = "[a-z0-9-_./]+"  # improve?
-name = r"[a-z]([a-z0-9-]*[a-z0-9])?"  # just like in DVC now
+name = r"[a-z]([a-z0-9-/]*[a-z0-9])?"  # just like in DVC now + "/"
 semver = r"(?P<major>0|[1-9]\d*)\.(?P<minor>0|[1-9]\d*)\.(?P<patch>0|[1-9]\d*)(?:-(?P<prerelease>(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+(?P<buildmetadata>[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?"
 counter = "?P<counter>[0-9]+"
 name_re = re.compile(f"^{name}$")
-fullname = f"(?P<dirname>{dirname}:)?{name}"  # add test to check ":" is here only once?
-fullname_for_tag = name_to_tag(fullname)
+fullname = f"(?P<dirname>{dirname}{SEPARATOR_IN_NAME})?{name}"  # add test to check ":" is here only once?
+fullname_in_tag = name_to_tag(fullname)
 fullname_re = re.compile(f"^{fullname}$")
-fullname_for_tag_re = re.compile(f"^{fullname_for_tag}$")
+fullname_in_tag_re = re.compile(f"^{fullname_in_tag}$")
 
 tag_re = re.compile(
-    f"^(?P<artifact>{fullname_for_tag})(((#(?P<stage>{name})|@(?P<version>v{semver}))(?P<cancel>!?))|@((?P<deprecated>deprecated)|(?P<created>created)))(#({counter}))?$"
+    f"^(?P<artifact>{fullname_in_tag})(((#(?P<stage>{name})|@(?P<version>v{semver}))(?P<cancel>!?))|@((?P<deprecated>deprecated)|(?P<created>created)))(#({counter}))?$"
 )
 shortcut_re = re.compile(
     f"^(?P<artifact>{fullname})(#(?P<stage>{name})|@(?P<version>latest|greatest|v{semver}))$"
