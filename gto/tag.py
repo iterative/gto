@@ -24,6 +24,7 @@ from .constants import (
     TAG,
     VERSION,
     Action,
+    name_to_tag,
     tag_re,
     tag_to_name,
 )
@@ -59,6 +60,8 @@ def name_tag(
 ):
     if action not in TagTemplates:
         raise UnknownAction(action=action)
+
+    artifact = name_to_tag(artifact)
 
     tag = TagTemplates[action].format(artifact=artifact, version=version, stage=stage)
     if simple:
