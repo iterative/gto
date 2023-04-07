@@ -226,6 +226,12 @@ def test_commands(showcase):
         "",
     )
     _check_successful_cmd(
+        "parse-tag",
+        ["dvclive/dsd=nn@v0.0.1"],
+        "dvclive/dsd:nn",
+        _check_output_contains,
+    )
+    _check_successful_cmd(
         "doctor",
         ["-r", path],
         None,

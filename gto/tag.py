@@ -84,7 +84,7 @@ def parse_name(name: str, raise_on_fail: bool = True):
     if raise_on_fail and not match:
         raise InvalidTagName(name)
     if match:
-        parsed = {tag_to_name(NAME): match["artifact"]}
+        parsed = {NAME: tag_to_name(match["artifact"])}
         if match["deprecated"]:
             parsed[ACTION] = Action.DEPRECATE
         if match[VERSION]:
