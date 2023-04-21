@@ -54,7 +54,7 @@ def assert_name_is_valid(value):
     if not check_name_is_valid(value):
         raise ValidationError(
             f"Invalid value '{value}'. Only lowercase english letters, , '-', '/' are allowed."
-            "Value must be of len >= 2, must with a letter and end with a letter or a number."
+            "Value must be of len >= 2, must start with a letter and end with a letter or a number."
         )
 
 
