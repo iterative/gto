@@ -482,9 +482,9 @@ class GitRegistry(BaseModel, RemoteRepoMixin):
         return event
 
     @staticmethod
-    def _echo_git_suggestion(tag):
+    def _echo_git_suggestion(tag, delete=False):
         echo("To push the changes upstream, run:")
-        echo(f"    git push origin {tag}")
+        echo(f"    git push{' --delete ' if delete else ' '}origin {tag}")
 
     def _delete_tags(self, tags, stdout, push: bool):
         tags = list(tags)
@@ -594,4 +594,4 @@ class GitRegistry(BaseModel, RemoteRepoMixin):
                     f"Successfully {'deleted' if delete else 'pushed'} git tag {tag_name} on remote."
                 )
         elif stdout:
-            self._echo_git_suggestion(tag_name)
+            self._echo_git_suggestion(tag_name, delete=delete)
