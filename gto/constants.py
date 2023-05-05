@@ -81,7 +81,7 @@ def assert_fullname_is_valid(value):
         # fix error message to be regex-specific
         raise ValidationError(
             f"Invalid value '{value}'. Only lowercase english letters, , '-', '/' are allowed."
-            "Value must be of len >= 2, must with a letter and end with a letter or a number."
+            "Value must be of len >= 2, must start with a letter and end with a letter or a number."
         )
 
 

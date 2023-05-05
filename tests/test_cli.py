@@ -332,6 +332,14 @@ def test_register(repo_with_commit: Tuple[git.Repo, Callable]):
     )
 
     _check_successful_cmd(
+        "deprecate",
+        ["-r", repo.working_dir, "a1", "v0.0.1", "--delete"],
+        "Deleted git tag 'a1@v0.0.1'\n"
+        "To push the changes upstream, run:\n"
+        "    git push --delete origin a1@v0.0.1\n",
+    )
+
+    _check_successful_cmd(
         "register",
         ["-r", repo.working_dir, "a2", "--version", "v1.2.3"],
         "Created git tag 'a2@v1.2.3' that registers version\n"
