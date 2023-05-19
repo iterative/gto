@@ -10,9 +10,11 @@ from gto.constants import (
 @pytest.mark.parametrize(
     "name",
     [
+        "1",
         "m",
         "nn",
         "m1",
+        "1nn",
         "model-prod",
         "model-prod-v1",
         "dvclive/model",
@@ -26,10 +28,8 @@ def test_check_name_is_valid(name):
     "name",
     [
         "",
-        "1",
         "m/",
         "/m",
-        "1nn",
         "###",
         "@@@",
         "a model",
