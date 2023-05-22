@@ -226,6 +226,12 @@ def test_commands(showcase):
         "",
     )
     _check_successful_cmd(
+        "parse-tag",
+        ["dvclive/dsd=nn@v0.0.1"],
+        "dvclive/dsd:nn",
+        _check_output_contains,
+    )
+    _check_successful_cmd(
         "doctor",
         ["-r", path],
         None,
@@ -361,6 +367,13 @@ def test_register(repo_with_commit: Tuple[git.Repo, Callable]):
         "register",
         ["-r", repo.working_dir, "a3", "--version", "1.2.3"],
         "❌ Supplied version '1.2.3' cannot be parsed\n",
+    )
+
+    _check_successful_cmd(
+        "register",
+        ["-r", repo.working_dir, "classification/dvclive:models/nn"],
+        "classification/dvclive=models/nn@v0.0.1",
+        search_func=_check_output_contains,
     )
 
 

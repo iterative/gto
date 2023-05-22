@@ -24,7 +24,9 @@ from .constants import (
     TAG,
     VERSION,
     Action,
+    name_to_tag,
     tag_re,
+    tag_to_name,
 )
 from .exceptions import (
     InvalidTagName,
@@ -59,6 +61,8 @@ def name_tag(
     if action not in TagTemplates:
         raise UnknownAction(action=action)
 
+    artifact = name_to_tag(artifact)
+
     tag = TagTemplates[action].format(artifact=artifact, version=version, stage=stage)
     if simple:
         return tag
@@ -83,7 +87,7 @@ def parse_name(name: str, raise_on_fail: bool = True):
     if raise_on_fail and not match:
         raise InvalidTagName(name)
     if match:
-        parsed = {NAME: match["artifact"]}
+        parsed = {NAME: tag_to_name(match["artifact"])}
         if match["deprecated"]:
             parsed[ACTION] = Action.DEPRECATE
         if match[VERSION]:
