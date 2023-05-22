@@ -3,13 +3,12 @@ import pathlib
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, BaseSettings, validator
+from pydantic import BaseSettings, validator
 from pydantic.env_settings import InitSettingsSource
 from ruamel.yaml import YAML
 
 from gto.constants import assert_name_is_valid
-from gto.exceptions import UnknownStage, UnknownType, WrongConfig
-from gto.ext import EnrichmentReader, find_enrichment_types, find_enrichments
+from gto.exceptions import UnknownStage, WrongConfig
 
 yaml = YAML(typ="safe", pure=True)
 yaml.default_flow_style = False
@@ -17,51 +16,21 @@ yaml.default_flow_style = False
 CONFIG_FILE_NAME = ".gto"
 
 
-class EnrichmentConfig(BaseModel):
-    type: str
-    config: Dict = {}
-
-    def load(self) -> EnrichmentReader:
-        return find_enrichment_types()[self.type](**self.config)
-
-
 class NoFileConfig(BaseSettings):
     INDEX: str = "artifacts.yaml"
-    TYPES: Optional[List[str]]
     STAGES: Optional[List[str]]
     LOG_LEVEL: str = "INFO"
     DEBUG: bool = False
-    ENRICHMENTS: List[EnrichmentConfig] = []
-    AUTOLOAD_ENRICHMENTS: bool = True
     CONFIG_FILE_NAME: Optional[str] = CONFIG_FILE_NAME
     EMOJIS: bool = True
 
     class Config:
         env_prefix = "gto_"
 
-    def assert_type(self, name):
-        assert_name_is_valid(name)
-        if self.TYPES is not None and name not in self.TYPES:
-            raise UnknownType(name, self.TYPES)
-
     def assert_stage(self, name):
         assert_name_is_valid(name)
         if self.STAGES is not None and name not in self.STAGES:
             raise UnknownStage(name, self.STAGES)
-
-    @property
-    def enrichments(self) -> Dict[str, EnrichmentReader]:
-        res = {e.source: e for e in (e.load() for e in self.ENRICHMENTS)}
-        if self.AUTOLOAD_ENRICHMENTS:
-            return {**find_enrichments(), **res}
-        return res
-
-    @validator("TYPES")
-    def types_are_valid(cls, v):
-        if v:
-            for name in v:
-                assert_name_is_valid(name)
-        return v
 
     @validator("STAGES")
     def stages_are_valid(cls, v):

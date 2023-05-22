@@ -4,7 +4,6 @@ import gto
 from gto.base import (
     Artifact,
     Assignment,
-    Commit,
     Deregistration,
     Registration,
     Unassignment,
@@ -25,22 +24,16 @@ def test_api(showcase):
 
     gto.api.show(repo)
     gto.api.history(repo)
-    for name in "nn", "rf", "features":
+    for name in "nn", "rf":
         gto.api.show(repo, name)
         gto.api.history(repo, name)
 
     artifacts = gto.api._get_state(path).artifacts  # pylint: disable=protected-access
-    assert set(artifacts.keys()) == {"nn", "rf", "features"}
-    # assert isinstance(artifacts["features"], BaseArtifact)
-    # _check_obj(
-    #     artifacts["features"],
-    #     dict(name="features", versions=[]),
-    #     ["commits"],
-    # )
+    assert set(artifacts.keys()) == {"nn", "rf"}
     nn_artifact = artifacts["nn"]
     assert isinstance(nn_artifact, Artifact)
     assert nn_artifact.artifact == "nn"
-    assert len(nn_artifact.versions) == 2
+    assert len(nn_artifact.versions) == 1
     nn_version = nn_artifact.versions[0]
     assert isinstance(nn_version, Version)
     author = repo.commit().author.name
@@ -51,7 +44,6 @@ def test_api(showcase):
         "activated_at",
         "registrations",
         "deregistrations",
-        "enrichments",
         "tag",
         "message",
         "stages",
@@ -135,9 +127,9 @@ def test_api(showcase):
         skip_keys=skip_keys_registration,
     )
 
-    assert len(rf_artifact.get_events()) == 8
+    assert len(rf_artifact.get_events()) == 6
     assert all(
-        isinstance(p, (Assignment, Unassignment, Registration, Deregistration, Commit))
+        isinstance(p, (Assignment, Unassignment, Registration, Deregistration))
         for p in rf_artifact.get_events()
     )
     assert all(
@@ -145,15 +137,11 @@ def test_api(showcase):
         for p in rf_ver1.get_events(indirect=False) + rf_ver2.get_events(indirect=False)
     )
     assert all(
-        isinstance(p, (Assignment, Unassignment, Commit))
+        isinstance(p, (Assignment, Unassignment))
         for p in rf_ver1.get_events(direct=False) + rf_ver2.get_events(direct=False)
     )
-    rf_a4, rf_a1, rf_c1 = rf_ver1.get_events(
-        direct=False
-    )  # pylint: disable=unused-variable
-    rf_a3, rf_a2, rf_c2 = rf_ver2.get_events(
-        direct=False
-    )  # pylint: disable=unused-variable
+    rf_a4, rf_a1 = rf_ver1.get_events(direct=False)  # pylint: disable=unused-variable
+    rf_a3, rf_a2 = rf_ver2.get_events(direct=False)  # pylint: disable=unused-variable
 
     check_obj(
         rf_a1.dict_state(),

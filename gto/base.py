@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any, Dict, FrozenSet, List, Optional, Sequence, Union
+from typing import Dict, FrozenSet, List, Optional, Sequence, Union
 
 import git
 from pydantic import BaseModel
@@ -50,16 +50,15 @@ class BaseEvent(BaseModel):
         return getattr(self, "tag", self.commit_hexsha)
 
 
-class Commit(BaseEvent):
-    priority = 0
-    addition = True
-    version: str
-    enrichments: List[Any]
-    committer: str
-    committer_email: str
+# class Commit(BaseEvent):
+#     priority = 0
+#     addition = True
+#     version: str
+#     committer: str
+#     committer_email: str
 
-    def __str__(self):
-        return f'Artifact "{self.artifact}" is annotated'
+#     def __str__(self):
+#         return f'Artifact "{self.artifact}" is annotated'
 
 
 class Creation(BaseEvent):
@@ -236,7 +235,6 @@ class VStage(BaseObject):
 class Version(BaseObject):
     commit_hexsha: str
     version: str
-    enrichments: List[Commit] = []
     registrations: List[Registration] = []
     deregistrations: List[Deregistration] = []
     stages: Dict[str, VStage] = {}
@@ -250,9 +248,6 @@ class Version(BaseObject):
         elif isinstance(event, Deregistration):
             self.deregistrations.append(event)
             self.deregistrations.sort(key=lambda e: e.created_at)
-        elif isinstance(event, Commit):
-            self.enrichments.append(event)
-            self.enrichments.sort(key=lambda e: e.created_at)
         elif isinstance(event, (Assignment, Unassignment)):
             self.get_vstage(event.stage, create_new=True).add_event(event)
         else:
@@ -263,8 +258,7 @@ class Version(BaseObject):
         return sorted(
             (self.registrations + self.deregistrations if direct else [])
             + (
-                self.enrichments
-                + [e for s in self.stages.values() for e in s.get_events()]
+                [e for s in self.stages.values() for e in s.get_events()]
                 if indirect
                 else []
             ),
@@ -296,14 +290,6 @@ class Version(BaseObject):
     @property
     def discovered(self):
         return len(self.get_events(direct=True, indirect=False)) == 0
-
-    @property
-    def get_enrichments_info(self):
-        if len(self.enrichments) > 1:
-            raise NotImplementedInGTO(
-                "Multiple enrichments for a single version are not supported"
-            )
-        return self.enrichments[0].enrichments
 
     @property
     def semver(self):
@@ -391,7 +377,7 @@ class Artifact(BaseObject):
             self.deprecations.append(event)
             self.deprecations.sort(key=lambda e: e.created_at)
         elif isinstance(
-            event, (Registration, Deregistration, Assignment, Unassignment, Commit)
+            event, (Registration, Deregistration, Assignment, Unassignment)
         ):
             self.find_version(
                 event.version, commit_hexsha=event.commit_hexsha, create_new=True
@@ -427,9 +413,7 @@ class Artifact(BaseObject):
     @property
     def is_registered(self):
         """Tells if this is an a registered artifact - i.e. there are Git tags for it"""
-        return not all(
-            isinstance(e, Commit) for e in self.get_events(direct=True, indirect=True)
-        )
+        return bool(self.get_events(direct=True, indirect=True))
 
     @property
     def unique_stages(self):
