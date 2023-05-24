@@ -16,8 +16,9 @@ from gto.constants import (
     mark_artifact_unregistered,
     parse_shortcut,
 )
-from gto.exceptions import NoRepo, NotImplementedInGTO
+from gto.exceptions import NoRepo, NotImplementedInGTO, WrongArgs
 from gto.git_utils import is_url_of_remote_repo
+from gto.index import Artifact, FileIndexManager, RepoIndexManager
 from gto.registry import GitRegistry
 from gto.tag import parse_name as parse_tag_name
 
@@ -40,6 +41,37 @@ def _get_state(repo: Union[str, Repo]):
 def get_stages(repo: Union[str, Repo], allowed: bool = False, used: bool = False):
     with GitRegistry.from_repo(repo=repo) as reg:
         return reg.get_stages(allowed=allowed, used=used)
+
+
+def describe(
+    repo: Union[str, Repo], name: str, rev: Optional[str] = None
+) -> Optional[Artifact]:
+    """Find enrichments for the artifact"""
+    shortcut = parse_shortcut(name)
+    if shortcut.shortcut:
+        if rev:
+            raise WrongArgs("Either specify revision or use naming shortcut.")
+        # clones a remote repo second time, can be optimized
+        versions = show(repo, name)
+        if len(versions) == 0:  # nothing found
+            return None
+        if len(versions) > 1:
+            raise NotImplementedInGTO(
+                "Ambiguous naming shortcut: multiple variants found."
+            )
+        rev = versions[0]["commit_hexsha"]
+
+    repo_path = repo.working_dir if isinstance(repo, Repo) else repo
+    if not is_url_of_remote_repo(repo_path) and rev is None:
+        # read artifacts.yaml without using Git
+        artifact = (
+            FileIndexManager.from_path(repo_path).get_index().state.get(shortcut.name)
+        )
+    else:
+        # read Git repo
+        with RepoIndexManager.from_repo(repo) as index:
+            artifact = index.get_commit_index(rev).state.get(shortcut.name)
+    return artifact
 
 
 def register(
@@ -461,6 +493,7 @@ def history(
         )
         for o in artifacts.values()
         for e in o.get_events()
+        if type(e).__name__.lower() != "commit"
     ]
 
     events = sorted(

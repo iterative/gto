@@ -16,6 +16,7 @@ import gto
 import tests.resources
 from gto.api import show
 from gto.exceptions import WrongArgs
+from gto.index import RepoIndexManager
 from gto.tag import find
 from gto.versions import SemVer
 from tests.skip_presets import skip_for_windows
@@ -23,6 +24,13 @@ from tests.utils import (
     check_obj,
     convert_objects_to_str_in_json_serializable_object,
 )
+
+
+def test_empty_index(empty_git_repo: Tuple[git.Repo, Callable]):
+    repo, write_file = empty_git_repo
+    with RepoIndexManager.from_repo(repo) as index:
+        assert isinstance(index, RepoIndexManager)
+        assert len(index.artifact_centric_representation()) == 0
 
 
 def test_empty_state(empty_git_repo: Tuple[git.Repo, Callable]):
@@ -44,13 +52,13 @@ def repo_with_artifact(init_showcase_semver):
     with open(
         os.path.join(repo.working_dir, "artifacts.yaml"), "w", encoding="utf8"
     ) as f:
-        f.write("lol kek")
+        f.write("rf: \n  type: model\n  path: models/random-forest.pkl\n")
     repo.index.add(["artifacts.yaml"])
     repo.index.commit("Added index")
     with open(
         os.path.join(repo.working_dir, "artifacts.yaml"), "w", encoding="utf8"
     ) as f:
-        f.write("kek")
+        f.write("rf: \n  type: model\n  path: models/random-forest.pklx\n")
     repo.index.add(["artifacts.yaml"])
     repo.index.commit("Added index")
     return repo, "new-artifact"
@@ -370,14 +378,14 @@ def test_if_stages_on_remote_git_repo_then_return_expected_stages():
     assert result == ["dev", "prod", "staging"]
 
 
-# @skip_for_windows
-# def test_if_describe_on_remote_git_repo_then_return_expected_info():
-#     result = gto.api.describe(repo=tests.resources.SAMPLE_REMOTE_REPO_URL, name="churn")
-#     assert result.dict(exclude_defaults=True) == {
-#         "type": "model",
-#         "path": "models/churn.pkl",
-#         "virtual": False,
-#     }
+@skip_for_windows
+def test_if_describe_on_remote_git_repo_then_return_expected_info():
+    result = gto.api.describe(repo=tests.resources.SAMPLE_REMOTE_REPO_URL, name="churn")
+    assert result.dict(exclude_defaults=True) == {
+        "type": "model",
+        "path": "models/churn.pkl",
+        "virtual": False,
+    }
 
 
 def test_if_register_with_auto_push_then_invoke_git_push_tag(repo_with_artifact):

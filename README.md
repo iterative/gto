@@ -12,6 +12,7 @@ Git Tag Ops. Turn your Git repository into an Artifact Registry:
   artifact or it's readiness to be consumed by a specific environment.
 - GitOps: Signal CI/CD automation or other downstream systems to act upon these
   new versions and lifecycle updates.
+- Enrichments: Annotate and query artifact metadata with additional information.
 
 GTO works by creating annotated Git tags in a standard format.
 
