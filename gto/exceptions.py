@@ -27,11 +27,50 @@ class WrongConfig(GTOException):
         super().__init__(self.message)
 
 
+class WrongArtifactsYaml(GTOException):
+    message = "artifacts.yaml file doesn't conform to GTO format"
+
+    def __init__(self) -> None:
+        super().__init__(self.message)
+
+
+class NoFile(GTOException):
+    _message = "Nothing found in '{path}' for checked out commit"
+
+    def __init__(self, path) -> None:
+        self.message = self._message.format(path=path)
+        super().__init__(self.message)
+
+
+class UnknownType(GTOException):
+    _message = "Allowed types are: '{types}'"
+
+    def __init__(self, type, types) -> None:
+        self.message = self._message.format(type=type, types=types)
+        super().__init__(self.message)
+
+
+class ArtifactExists(GTOException):
+    _message = "Enrichment for '{name}' already exists"
+
+    def __init__(self, name) -> None:
+        self.message = self._message.format(name=name)
+        super().__init__(self.message)
+
+
 class ArtifactNotFound(GTOException):
     _message = "Cannot find artifact '{name}'"
 
     def __init__(self, name) -> None:
         self.message = self._message.format(name=name)
+        super().__init__(self.message)
+
+
+class PathIsUsed(GTOException):
+    _message = "Provided path conflicts with '{path}' ('{type}' '{name}')"
+
+    def __init__(self, type, name, path) -> None:
+        self.message = self._message.format(type=type, name=name, path=path)
         super().__init__(self.message)
 
 

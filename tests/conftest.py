@@ -70,6 +70,21 @@ def init_showcase_semver(empty_git_repo: Tuple[git.Repo, Callable]):
     return repo, write_file
 
 
+artifacts_yaml = """
+rf:
+  type: model
+  path: models/random-forest.pkl
+  virtual: false
+nn:
+  type: model
+  path: models/neural-network.pkl
+  virtual: false
+features:
+  type: dataset
+  path: datasets/features.csv
+"""
+
+
 @pytest.fixture
 def showcase(
     init_showcase_semver,
@@ -84,7 +99,7 @@ def showcase(
     repo.index.commit("Create models")
 
     with open(os.path.join(path, "artifacts.yaml"), "w", encoding="utf8") as file:
-        file.write("bla bla bla")
+        file.write(artifacts_yaml)
 
     repo.index.add(["artifacts.yaml"])
     first_commit = repo.index.commit("Add artifacts")

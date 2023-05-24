@@ -9,12 +9,16 @@ from gto.api import assign, get_stages, register
 from gto.cli import app
 from gto.config import CONFIG_FILE_NAME
 from gto.exceptions import InvalidVersion, UnknownStage, ValidationError
+from gto.index import RepoIndexManager
+from gto.registry import GitRegistry
 
 CONFIG_CONTENT = """
+types: [model, dataset]
 stages: [dev, prod]
 """
 
 PROHIBIT_CONFIG_CONTENT = """
+types: []
 stages: []
 """
 
@@ -30,6 +34,16 @@ def init_repo(empty_git_repo: Tuple[git.Repo, Callable]):
     repo.index.add([CONFIG_FILE_NAME])
     repo.index.commit("Initial commit")
     return repo
+
+
+def test_config_load_index(init_repo):
+    with RepoIndexManager.from_repo(init_repo) as index:
+        assert index.config.TYPES == ["model", "dataset"]
+
+
+def test_config_load_registry(init_repo):
+    with GitRegistry.from_repo(repo=init_repo) as reg:
+        assert reg.config.TYPES == ["model", "dataset"]
 
 
 def test_stages(init_repo):
