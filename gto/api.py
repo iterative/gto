@@ -21,6 +21,7 @@ from gto.git_utils import is_url_of_remote_repo
 from gto.index import Artifact, FileIndexManager, RepoIndexManager
 from gto.registry import GitRegistry
 from gto.tag import parse_name as parse_tag_name
+from gto.utils import resolve_ref
 
 
 def _is_gto_repo(repo: Union[str, Repo]):
@@ -374,37 +375,21 @@ def _show_registry(
     ], "keys"
 
 
-def _show_versions(  # pylint: disable=too-many-locals
-    repo: Union[str, Repo],
-    name: str,
-    raw: bool = False,
-    registered_only=False,
-    deprecated=False,
-    assignments_per_version: int = None,
-    versions_per_stage: int = None,
-    sort: VersionSort = None,
-    table: bool = False,
-    truncate_hexsha: bool = False,
+def _get_versions(
+    artifact,
+    deprecated,
+    registered_only,
+    assignments_per_version,
+    versions_per_stage,
+    sort,
 ):
-    """List versions of artifact"""
-
-    def format_hexsha(hexsha):
-        return hexsha[:7] if truncate_hexsha and is_hexsha(hexsha) else hexsha
-
-    shortcut = parse_shortcut(name)
-
-    with GitRegistry.from_repo(repo=repo) as reg:
-        if raw:
-            return reg.find_artifact(shortcut.name).versions
-
-        artifact = reg.find_artifact(shortcut.name)
+    versions = []
     stages = artifact.get_vstages(
         registered_only=registered_only,
         assignments_per_version=assignments_per_version,
         versions_per_stage=versions_per_stage,
         sort=sort,
     )
-    versions = []
     for v in artifact.get_versions(
         active_only=not deprecated,
         include_non_explicit=not registered_only,
@@ -419,8 +404,53 @@ def _show_versions(  # pylint: disable=too-many-locals
         ]
         if artifact.is_active or deprecated:
             versions.append(v)
+    return versions
 
-    if shortcut.latest:
+
+def _show_versions(  # pylint: disable=too-many-locals
+    repo: Union[str, Repo],
+    name: str,
+    ref: Optional[str] = None,
+    raw: bool = False,
+    registered_only=False,
+    deprecated=False,
+    assignments_per_version=ASSIGNMENTS_PER_VERSION,
+    versions_per_stage=VERSIONS_PER_STAGE,
+    sort=VersionSort.Timestamp,
+    table: bool = False,
+    truncate_hexsha: bool = False,
+):
+    """List versions of artifact"""
+
+    if isinstance(repo, str):
+        repo = Repo(repo)
+
+    def format_hexsha(hexsha):
+        return hexsha[:7] if truncate_hexsha and is_hexsha(hexsha) else hexsha
+
+    shortcut = parse_shortcut(name)
+    if shortcut.shortcut and ref:
+        raise WrongArgs("Cannot specify both shortcut and ref")
+
+    with GitRegistry.from_repo(repo=repo) as reg:
+        if raw:
+            return reg.find_artifact(shortcut.name).versions
+
+        artifact = reg.find_artifact(shortcut.name)
+
+    versions = _get_versions(
+        artifact,
+        deprecated,
+        registered_only,
+        assignments_per_version,
+        versions_per_stage,
+        sort,
+    )
+    if ref:
+        ref_hexsha = resolve_ref(repo, ref).hexsha
+        versions = [v for v in versions if v["commit_hexsha"] == ref_hexsha]
+
+    elif shortcut.latest:
         versions = versions[:1]
     elif shortcut.version:
         versions = [v for v in versions if shortcut.version == v["version"]]
