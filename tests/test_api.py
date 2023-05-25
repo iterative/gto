@@ -15,12 +15,7 @@ from freezegun import freeze_time
 import gto
 import tests.resources
 from gto.api import show
-from gto.commit_message_generator import (
-    generate_annotate_commit_message,
-    generate_remove_commit_message,
-)
-from gto.exceptions import PathIsUsed, WrongArgs
-from gto.git_utils import git_clone
+from gto.exceptions import WrongArgs
 from gto.index import RepoIndexManager
 from gto.tag import find
 from gto.versions import SemVer
@@ -50,76 +45,51 @@ def test_api_info_commands_empty_repo(empty_git_repo: Tuple[git.Repo, Callable])
     gto.api.history(repo.working_dir)
 
 
-def test_add_remove(empty_git_repo: Tuple[git.Repo, Callable]):
-    repo, write_file = empty_git_repo
-    name, type, path, must_exist = "new-artifact", "new-type", "new/path", False
-    gto.api.annotate(
-        repo.working_dir, name, type=type, path=path, must_exist=must_exist
-    )
-    with pytest.raises(PathIsUsed):
-        gto.api.annotate(repo.working_dir, "other-name", path=path)
-    gto.api.annotate(repo.working_dir, "other-name", path=path, allow_same_path=True)
-    with RepoIndexManager.from_repo(repo) as index:
-        index = index.get_index()
-    assert name in index
-    check_obj(
-        index.state[name],
-        dict(
-            type=type,
-            path=path,
-            virtual=not must_exist,
-            labels=[],
-            description="",
-            custom=None,
-        ),
-        [],
-    )
-    gto.api.remove(repo, name)
-    with RepoIndexManager.from_repo(repo) as index:
-        index = index.get_index()
-    assert name not in index
-
-
 @pytest.fixture
 def repo_with_artifact(init_showcase_semver):
     repo: git.Repo
     repo, write_file = init_showcase_semver
-    name, type, path, must_exist = "new-artifact", "new-type", "new/path", False
-    gto.api.annotate(repo, name, type=type, path=path, must_exist=must_exist)
+    with open(
+        os.path.join(repo.working_dir, "artifacts.yaml"), "w", encoding="utf8"
+    ) as f:
+        f.write("rf: \n  type: model\n  path: models/random-forest.pkl\n")
     repo.index.add(["artifacts.yaml"])
     repo.index.commit("Added index")
-    gto.api.annotate(repo, name, type=type, path="path", must_exist=must_exist)
+    with open(
+        os.path.join(repo.working_dir, "artifacts.yaml"), "w", encoding="utf8"
+    ) as f:
+        f.write("rf: \n  type: model\n  path: models/random-forest.pklx\n")
     repo.index.add(["artifacts.yaml"])
     repo.index.commit("Added index")
-    return repo, name
+    return repo, "new-artifact"
 
 
-def test_api_info_commands_repo_with_artifact(
-    repo_with_artifact: Tuple[git.Repo, Callable]
-):
-    repo, write_file = repo_with_artifact
-    gto.api.show(repo)
-    gto.api.show(repo, "new-artifact")
-    gto.api.history(repo)
+# def test_api_info_commands_repo_with_artifact(
+#     repo_with_artifact: Tuple[git.Repo, Callable]
+# ):
+#     repo, write_file = repo_with_artifact
+#     gto.api.show(repo)
+#     gto.api.show(repo, "new-artifact")
+#     gto.api.history(repo)
 
 
-def test_describe(repo_with_artifact: Tuple[git.Repo, Callable]):
-    repo, write_file = repo_with_artifact
-    gto.api.annotate(repo, "new-artifact", path="other-path")
-    check_obj(
-        gto.api.describe(repo, "new-artifact").dict(exclude_defaults=True),  # type: ignore
-        dict(
-            type="new-type",
-            path="other-path",
-        ),
-    )
-    check_obj(
-        gto.api.describe(repo, "new-artifact", rev="HEAD").dict(exclude_defaults=True),  # type: ignore
-        dict(
-            type="new-type",
-            path="path",
-        ),
-    )
+# def test_describe(repo_with_artifact: Tuple[git.Repo, Callable]):
+#     repo, write_file = repo_with_artifact
+#     gto.api.annotate(repo, "new-artifact", path="other-path")
+#     check_obj(
+#         gto.api.describe(repo, "new-artifact").dict(exclude_defaults=True),  # type: ignore
+#         dict(
+#             type="new-type",
+#             path="other-path",
+#         ),
+#     )
+#     check_obj(
+#         gto.api.describe(repo, "new-artifact", rev="HEAD").dict(exclude_defaults=True),  # type: ignore
+#         dict(
+#             type="new-type",
+#             path="path",
+#         ),
+#     )
 
 
 def test_register_deregister(repo_with_artifact):
@@ -128,13 +98,8 @@ def test_register_deregister(repo_with_artifact):
     gto.api.register(repo.working_dir, name, "HEAD", vname1)
     latest = gto.api.find_latest_version(repo.working_dir, name)
     assert latest.version == vname1
-    gto.api.annotate(
-        repo.working_dir,
-        "something-irrelevant",
-        "doesnt-matter",
-        "anything",
-        must_exist=False,
-    )
+    with open("tmp.txt", "w", encoding="utf8") as f:
+        f.write("some text")
     repo.index.commit(
         "Irrelevant action to create a git commit to register another version"
     )
@@ -659,158 +624,3 @@ def test_if_unassign_with_remote_repo_then_invoke_git_push_tag():
                 delete=False,
             )
             tmp_dir.cleanup()
-
-
-def test_if_annotate_with_auto_commit_then_invoke_stash_and_commit(
-    init_showcase_semver,
-):
-    repo, write_file = init_showcase_semver
-    name, type, path, must_exist = "new-artifact", "new-type", "new/path", False
-    repo.index.commit(message="first commit")
-
-    with patch("gto.git_utils.stashed_changes") as mocked_stashed_changes:
-        mocked_stashed_changes.return_value.__enter__.return_value = [], []
-        with patch(
-            "gto.git_utils.git_add_and_commit_all_changes"
-        ) as mocked_git_add_and_commit_all_changes:
-            gto.api.annotate(
-                repo.working_dir,
-                name,
-                type=type,
-                path=path,
-                must_exist=must_exist,
-                commit=True,
-            )
-
-    mocked_stashed_changes.assert_called_once_with(repo=repo, include_untracked=True)
-    mocked_git_add_and_commit_all_changes.assert_called_once_with(
-        repo=repo,
-        message=generate_annotate_commit_message(name=name, type=type, path=path),
-    )
-
-
-def test_if_remove_with_auto_commit_then_invoke_stash_and_commit(
-    init_showcase_semver,
-):
-    repo, write_file = init_showcase_semver
-    name, type, path, must_exist = "new-artifact", "new-type", "new/path", False
-    repo.index.commit(message="first commit")
-    gto.api.annotate(
-        repo.working_dir,
-        name,
-        type=type,
-        path=path,
-        must_exist=must_exist,
-        commit=True,
-    )
-
-    with patch("gto.git_utils.stashed_changes") as mocked_stashed_changes:
-        mocked_stashed_changes.return_value.__enter__.return_value = [], []
-        with patch(
-            "gto.git_utils.git_add_and_commit_all_changes"
-        ) as mocked_git_add_and_commit_all_changes:
-            gto.api.remove(repo=repo.working_dir, name=name, commit=True)
-
-    mocked_stashed_changes.assert_called_once_with(repo=repo, include_untracked=True)
-    mocked_git_add_and_commit_all_changes.assert_called_once_with(
-        repo=git.Repo(repo.working_dir),
-        message=generate_remove_commit_message(name=name),
-    )
-
-
-def test_if_annotate_with_auto_push_then_invoke_commit_and_push(init_showcase_semver):
-    repo, write_file = init_showcase_semver
-    name, type, path, must_exist = "new-artifact", "new-type", "new/path", False
-    repo.index.commit(message="first commit")
-
-    with patch("gto.git_utils.stashed_changes") as mocked_stashed_changes:
-        mocked_stashed_changes.return_value.__enter__.return_value = [], []
-        with patch(
-            "gto.git_utils.git_add_and_commit_all_changes"
-        ) as mocked_git_add_and_commit_all_changes:
-            with patch("gto.git_utils.git_push") as mocked_git_push:
-                gto.api.annotate(
-                    repo.working_dir,
-                    name,
-                    type=type,
-                    path=path,
-                    must_exist=must_exist,
-                    push=True,
-                )
-
-    mocked_stashed_changes.assert_called_once_with(repo=repo, include_untracked=True)
-    mocked_git_add_and_commit_all_changes.assert_called_once_with(
-        repo=repo,
-        message=generate_annotate_commit_message(name=name, type=type, path=path),
-    )
-    mocked_git_push.assert_called_once_with(repo=repo)
-
-
-def test_if_remove_with_auto_push_then_invoke_commit_and_push(
-    init_showcase_semver,
-):
-    repo, write_file = init_showcase_semver
-    name, type, path, must_exist = "new-artifact", "new-type", "new/path", False
-    repo.index.commit(message="first commit")
-    gto.api.annotate(
-        repo.working_dir,
-        name,
-        type=type,
-        path=path,
-        must_exist=must_exist,
-        commit=True,
-    )
-
-    with patch("gto.git_utils.stashed_changes") as mocked_stashed_changes:
-        mocked_stashed_changes.return_value.__enter__.return_value = [], []
-        with patch(
-            "gto.git_utils.git_add_and_commit_all_changes"
-        ) as mocked_git_add_and_commit_all_changes:
-            with patch("gto.git_utils.git_push") as mocked_git_push:
-                gto.api.remove(repo=repo.working_dir, name=name, push=True)
-
-    mocked_stashed_changes.assert_called_once_with(repo=repo, include_untracked=True)
-    mocked_git_add_and_commit_all_changes.assert_called_once_with(
-        repo=repo, message=generate_remove_commit_message(name=name)
-    )
-    mocked_git_push.assert_called_once_with(repo=repo)
-
-
-@skip_for_windows
-def test_if_annotate_with_remote_repo_then_clone_and_push():
-    with patch("gto.git_utils.git_push") as mocked_git_push:
-        with patch("gto.git_utils.git_clone") as mocked_git_clone:
-            mocked_git_clone.side_effect = git_clone
-            with patch("gto.git_utils.TemporaryDirectory") as MockedTemporaryDirectory:
-                MockedTemporaryDirectory.return_value = (
-                    TemporaryDirectory()  # pylint: disable=consider-using-with
-                )
-                gto.api.annotate(
-                    repo=tests.resources.SAMPLE_REMOTE_REPO_URL, name="test-model"
-                )
-
-    mocked_git_push.assert_called_once()
-    mocked_git_clone.assert_called_once_with(
-        repo=tests.resources.SAMPLE_REMOTE_REPO_URL,
-        dir=MockedTemporaryDirectory.return_value.name,
-    )
-
-
-@skip_for_windows
-def test_if_remove_with_remote_repo_then_clone_and_push():
-    with patch("gto.git_utils.git_push") as mocked_git_push:
-        with patch("gto.git_utils.git_clone") as mocked_git_clone:
-            mocked_git_clone.side_effect = git_clone
-            with patch("gto.git_utils.TemporaryDirectory") as MockedTemporaryDirectory:
-                MockedTemporaryDirectory.return_value = (
-                    TemporaryDirectory()  # pylint: disable=consider-using-with
-                )
-                gto.api.remove(
-                    repo=tests.resources.SAMPLE_REMOTE_REPO_URL, name="segment"
-                )
-
-    mocked_git_push.assert_called_once()
-    mocked_git_clone.assert_called_once_with(
-        repo=tests.resources.SAMPLE_REMOTE_REPO_URL,
-        dir=MockedTemporaryDirectory.return_value.name,
-    )

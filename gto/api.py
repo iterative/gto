@@ -1,5 +1,5 @@
 from collections import OrderedDict
-from typing import Any, List, Optional, Union
+from typing import Optional, Union
 
 from funcy import distinct
 from git import Repo
@@ -44,59 +44,6 @@ def _get_state(repo: Union[str, Repo]):
 def get_stages(repo: Union[str, Repo], allowed: bool = False, used: bool = False):
     with GitRegistry.from_repo(repo=repo) as reg:
         return reg.get_stages(allowed=allowed, used=used)
-
-
-# TODO: make this work the same as CLI version
-def annotate(
-    repo: Union[str, Repo],
-    name: str,
-    type: Optional[str] = None,
-    path: Optional[str] = None,
-    must_exist: bool = False,
-    allow_same_path: bool = False,
-    labels: List[str] = None,
-    description: str = "",
-    custom: Any = None,
-    commit: bool = False,
-    push: bool = False,
-    branch: str = None,
-    stdout: bool = False,
-    # update: bool = False,
-):
-    """Add an artifact to the Index"""
-    with RepoIndexManager.from_repo(repo, branch=branch) as index:
-        return index.add(
-            name,
-            type=type,
-            path=path,
-            must_exist=must_exist,
-            allow_same_path=allow_same_path,
-            labels=labels,
-            description=description,
-            custom=custom,
-            update=True,
-            commit=commit,
-            push=push or is_url_of_remote_repo(repo),
-            stdout=stdout,
-        )
-
-
-def remove(
-    repo: Union[str, Repo],
-    name: str,
-    commit: bool = False,
-    push: bool = False,
-    branch: str = None,
-    stdout: bool = False,
-):
-    """Remove an artifact from the Index"""
-    with RepoIndexManager.from_repo(repo, branch=branch) as index:
-        return index.remove(
-            name,
-            commit=commit,
-            push=push or is_url_of_remote_repo(repo),
-            stdout=stdout,
-        )
 
 
 def describe(
@@ -331,8 +278,6 @@ def check_ref(repo: Union[str, Repo], ref: str):
 def show(
     repo: Union[str, Repo],
     name: Optional[str] = None,
-    all_branches=False,
-    all_commits=False,
     truncate_hexsha=False,
     registered_only=False,
     deprecated=False,
@@ -345,8 +290,6 @@ def show(
         _show_versions(
             repo,
             name=name,
-            all_branches=all_branches,
-            all_commits=all_commits,
             registered_only=registered_only,
             deprecated=deprecated,
             assignments_per_version=assignments_per_version,
@@ -358,8 +301,6 @@ def show(
         if name
         else _show_registry(
             repo,
-            all_branches=all_branches,
-            all_commits=all_commits,
             registered_only=registered_only,
             deprecated=deprecated,
             assignments_per_version=assignments_per_version,
@@ -373,8 +314,6 @@ def show(
 
 def _show_registry(
     repo: Union[str, Repo],
-    all_branches=False,
-    all_commits=False,
     registered_only=False,
     deprecated=False,
     assignments_per_version: int = None,
@@ -415,10 +354,7 @@ def _show_registry(
                 "registered": o.is_registered,
                 "active": o.is_active,
             }
-            for o in reg.get_artifacts(
-                all_branches=all_branches,
-                all_commits=all_commits,
-            ).values()
+            for o in reg.get_artifacts().values()
             if o.is_active or deprecated
         }
 
@@ -444,8 +380,6 @@ def _show_versions(  # pylint: disable=too-many-locals
     repo: Union[str, Repo],
     name: str,
     raw: bool = False,
-    all_branches=False,
-    all_commits=False,
     registered_only=False,
     deprecated=False,
     assignments_per_version: int = None,
@@ -460,7 +394,8 @@ def _show_versions(  # pylint: disable=too-many-locals
         return hexsha[:7] if truncate_hexsha and is_hexsha(hexsha) else hexsha
 
     shortcut = parse_shortcut(name)
-    name = shortcut.name if shortcut else name
+    if not shortcut:
+        raise ValueError(f"Invalid artifact name / shortcut: '{name}'")
 
     def get_versions(artifact):
         versions = []
@@ -489,26 +424,13 @@ def _show_versions(  # pylint: disable=too-many-locals
     versions = []
     with GitRegistry.from_repo(repo=repo) as reg:
         if raw:
-            return reg.find_artifact(name).versions
+            return reg.find_artifact(shortcut.name).versions
+        artifacts = reg.get_artifacts().values()
 
-        if name:
-            artifacts = [
-                reg.find_artifact(
-                    name,
-                    all_branches=all_branches,
-                    all_commits=all_commits,
-                )
-            ]
-        else:
-            artifacts = reg.get_artifacts(
-                all_branches=all_branches,
-                all_commits=all_commits,
-            ).values()
-        for artifact in artifacts:
-            versions.extend(get_versions(artifact))
+    for artifact in artifacts:
+        versions.extend(get_versions(artifact))
 
-    if shortcut:
-        versions = filter_versions(repo=repo, versions=versions, shortcut=shortcut)
+    versions = filter_versions(repo=repo, versions=versions, shortcut=shortcut)
 
     if not table:
         return versions
@@ -550,17 +472,12 @@ def history(
     repo: Union[str, Repo],
     artifact: Optional[str] = None,
     # action: str = None,
-    all_branches=False,
-    all_commits=False,
     ascending: bool = False,
     table: bool = False,
     truncate_hexsha: bool = False,
 ):
     with GitRegistry.from_repo(repo=repo) as reg:
-        artifacts = reg.get_artifacts(
-            all_branches=all_branches,
-            all_commits=all_commits,
-        )
+        artifacts = reg.get_artifacts()
 
     def format_hexsha(hexsha):
         return hexsha[:7] if truncate_hexsha and is_hexsha(hexsha) else hexsha
@@ -581,6 +498,7 @@ def history(
         )
         for o in artifacts.values()
         for e in o.get_events()
+        if type(e).__name__.lower() != "commit"
     ]
 
     events = sorted(

@@ -44,48 +44,6 @@ class EnrichmentReader(BaseModel, ABC):
         raise NotImplementedError
 
 
-# class CLIEnrichmentInfo(EnrichmentInfo):
-#     data: Dict
-#     repr: str
-
-#     def get_object(self) -> BaseModel:
-#         return self
-
-#     def get_human_readable(self) -> str:
-#         return self.repr
-
-
-# class CLIEnrichment(EnrichmentReader):
-#     cmd: str
-#     info_type: Union[str, Type[EnrichmentInfo]] = CLIEnrichmentInfo
-
-#     @validator("info_type")
-#     def info_class_validator(
-#         cls, value
-#     ):  # pylint: disable=no-self-argument,no-self-use  # noqa: B902
-#         if isinstance(value, type):
-#             return value
-#         info_class = import_string(value)
-#         if not isinstance(info_class, type) or not issubclass(
-#             info_class, EnrichmentInfo
-#         ):
-#             raise ValueError(
-#                 "Wrong value for info_type: should be class or string path to class (e.g. `package.module.ClassName`)"
-#             )
-#         return info_class
-
-#     @property
-#     def info_class(self) -> Type[EnrichmentInfo]:
-#         return self.info_class_validator(self.info_type)
-
-#     def describe(self, obj: str) -> Optional[EnrichmentInfo]:
-#         try:
-#             data = loads(subprocess.check_output(self.cmd.split() + [obj]))
-#             return parse_obj_as(self.info_class, data)
-#         except subprocess.SubprocessError:
-#             return None
-
-
 @lru_cache()
 def _find_enrichments():
     eps = entrypoints.get_group_named(ENRICHMENT_ENTRYPOINT)

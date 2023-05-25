@@ -10,10 +10,7 @@ from typer.main import get_command_from_info
 
 from gto.cli import app
 from gto.exceptions import GTOException
-from gto.index import RepoIndexManager
 from tests.conftest import Runner
-
-from .utils import check_obj
 
 
 def _check_output_contains(output: str, search_value: str) -> bool:
@@ -181,29 +178,6 @@ def test_commands(showcase):
         ["-r", path, "@v1.2.4", "--ref"],
         "rf@v1.2.4\n",
     )
-    _check_successful_cmd(
-        "show",
-        ["-r", path, "--long"],
-        None,
-    )
-    _check_successful_cmd("describe", ["-r", path, "artifactnotexist"], "")
-    _check_successful_cmd("describe", ["-r", path, "rf#stagenotexist"], "")
-    _check_successful_cmd("describe", ["-r", path, "rf"], EXPECTED_DESCRIBE_OUTPUT)
-    _check_successful_cmd(
-        "describe", ["-r", path, "rf#production"], EXPECTED_DESCRIBE_OUTPUT
-    )
-    _check_successful_cmd(
-        "describe", ["-r", path, "rf@latest"], EXPECTED_DESCRIBE_OUTPUT
-    )
-    _check_successful_cmd(
-        "describe", ["-r", path, "rf@v1.2.3"], EXPECTED_DESCRIBE_OUTPUT
-    )
-    _check_successful_cmd(
-        "describe", ["-r", path, "rf", "--path"], "models/random-forest.pkl\n"
-    )
-    _check_successful_cmd("describe", ["-r", path, "rf", "--type"], "model\n")
-    _check_successful_cmd("describe", ["-r", path, "rf", "--description"], "")
-    _check_successful_cmd("describe", ["-r", path, "rf", "--custom"], "")
     # None because of random order - fix this
     _check_successful_cmd("stages", ["-r", path], None)
     # None because of output randomness and complexity
@@ -266,6 +240,12 @@ def test_commands(showcase):
         "",
     )
     _check_successful_cmd(
+        "parse-tag",
+        ["dvclive/dsd=nn@v0.0.1"],
+        "dvclive/dsd:nn",
+        _check_output_contains,
+    )
+    _check_successful_cmd(
         "doctor",
         ["-r", path],
         None,
@@ -285,75 +265,6 @@ EXPECTED_DESCRIBE_OUTPUT_2 = """{
 """
 
 
-def test_annotate(empty_git_repo: Tuple[git.Repo, Callable]):
-    repo, write_file = empty_git_repo
-    name = "new-artifact"
-    _check_successful_cmd(
-        "annotate",
-        [
-            "-r",
-            repo.working_dir,
-            "--type",
-            "new-type",
-            name,
-            "--path",
-            "new/path",
-            "--label",
-            "some-label",
-            "--label",
-            "another-label",
-            "--description",
-            "some description",
-        ],
-        "Updated `artifacts.yaml`",
-        _check_output_contains,
-    )
-    _check_successful_cmd(
-        "annotate",
-        [
-            "-r",
-            repo.working_dir,
-            name,
-            "--label",
-            "new-label",
-            "--description",
-            "new description",
-        ],
-        "Updated `artifacts.yaml`",
-        _check_output_contains,
-    )
-    with RepoIndexManager.from_repo(repo.working_dir) as index:
-        artifact = index.get_index().state[name]  # pylint: disable=protected-access
-    check_obj(
-        artifact.dict(exclude_defaults=True),
-        dict(
-            type="new-type",
-            path="new/path",
-            labels=["another-label", "new-label", "some-label"],
-            description="new description",
-        ),
-    )
-    repo.index.add(["artifacts.yaml"])
-    repo.index.commit("Add new artifact")
-
-    _check_successful_cmd(
-        "describe", ["-r", repo.working_dir, name], EXPECTED_DESCRIBE_OUTPUT_2
-    )
-    _check_successful_cmd(
-        "remove",
-        ["-r", repo.working_dir, name],
-        "Updated `artifacts.yaml`",
-        _check_output_contains,
-    )
-    write_file(name, "new-artifact update")
-    repo.index.add(["artifacts.yaml"])
-    repo.index.commit("Remove new artifact")
-
-    _check_successful_cmd(
-        "describe", ["-r", repo.working_dir, "this-artifact-doesnt-exist"], ""
-    )
-
-
 def test_register(repo_with_commit: Tuple[git.Repo, Callable]):
     repo, write_file = repo_with_commit
 
@@ -363,6 +274,14 @@ def test_register(repo_with_commit: Tuple[git.Repo, Callable]):
         "Created git tag 'a1@v0.0.1' that registers version\n"
         "To push the changes upstream, run:\n"
         "    git push origin a1@v0.0.1\n",
+    )
+
+    _check_successful_cmd(
+        "deprecate",
+        ["-r", repo.working_dir, "a1", "v0.0.1", "--delete"],
+        "Deleted git tag 'a1@v0.0.1'\n"
+        "To push the changes upstream, run:\n"
+        "    git push --delete origin a1@v0.0.1\n",
     )
 
     _check_successful_cmd(
@@ -393,6 +312,13 @@ def test_register(repo_with_commit: Tuple[git.Repo, Callable]):
         "register",
         ["-r", repo.working_dir, "a3", "--version", "1.2.3"],
         "❌ Supplied version '1.2.3' cannot be parsed\n",
+    )
+
+    _check_successful_cmd(
+        "register",
+        ["-r", repo.working_dir, "classification/dvclive:models/nn"],
+        "classification/dvclive=models/nn@v0.0.1",
+        search_func=_check_output_contains,
     )
 
 

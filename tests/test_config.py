@@ -5,15 +5,10 @@ import git
 import pytest
 from typer.testing import CliRunner
 
-from gto.api import annotate, assign, get_stages, register
+from gto.api import assign, get_stages, register
 from gto.cli import app
 from gto.config import CONFIG_FILE_NAME
-from gto.exceptions import (
-    InvalidVersion,
-    UnknownStage,
-    UnknownType,
-    ValidationError,
-)
+from gto.exceptions import InvalidVersion, UnknownStage, ValidationError
 from gto.index import RepoIndexManager
 from gto.registry import GitRegistry
 
@@ -51,38 +46,10 @@ def test_config_load_registry(init_repo):
         assert reg.config.TYPES == ["model", "dataset"]
 
 
-def test_adding_allowed_type(init_repo):
-    annotate(init_repo, ALLOWED_STRING, type="model")
-
-
-def test_adding_not_allowed_type(init_repo):
-    with pytest.raises(UnknownType):
-        annotate(init_repo, ALLOWED_STRING, type="unknown")
-
-
 def test_stages(init_repo):
     assert get_stages(init_repo) == ["dev", "prod"]
     assert get_stages(init_repo, allowed=True) == ["dev", "prod"]
     assert get_stages(init_repo, used=True) == []
-
-
-def test_correct_name(init_repo):
-    annotate(init_repo, ALLOWED_STRING)
-
-
-def test_annotate_incorrect_name(init_repo):
-    with pytest.raises(ValidationError):
-        annotate(init_repo, DISALLOWED_STRING)
-
-
-def test_annotate_incorrect_type(init_repo):
-    with pytest.raises(ValidationError):
-        annotate(init_repo, ALLOWED_STRING, type=DISALLOWED_STRING)
-
-
-def test_annotate_incorrect_labels(init_repo):
-    with pytest.raises(ValidationError):
-        annotate(init_repo, ALLOWED_STRING, labels=[DISALLOWED_STRING])
 
 
 def test_register_incorrect_name(init_repo):
@@ -129,16 +96,6 @@ def init_repo_prohibit(empty_git_repo: Tuple[git.Repo, Callable]):
     return repo
 
 
-def test_prohibit_config_type(init_repo_prohibit):
-    with pytest.raises(UnknownType):
-        annotate(init_repo_prohibit, ALLOWED_STRING, type="model")
-
-
 def test_prohibit_config_assign_incorrect_stage(init_repo_prohibit):
     with pytest.raises(UnknownStage):
         assign(init_repo_prohibit, ALLOWED_STRING, ref="HEAD", stage="dev")
-
-
-def test_empty_config_type(empty_git_repo):
-    repo, _ = empty_git_repo
-    annotate(repo, ALLOWED_STRING, type=ALLOWED_STRING)

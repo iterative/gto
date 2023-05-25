@@ -16,13 +16,8 @@ from gto.base import (
     Registration,
     Unassignment,
 )
-from gto.config import (
-    CONFIG_FILE_NAME,
-    RegistryConfig,
-    assert_name_is_valid,
-    read_registry_config,
-)
-from gto.constants import NAME
+from gto.config import CONFIG_FILE_NAME, RegistryConfig, read_registry_config
+from gto.constants import NAME, assert_fullname_is_valid
 from gto.exceptions import (
     NotImplementedInGTO,
     VersionAlreadyRegistered,
@@ -138,7 +133,7 @@ class GitRegistry(BaseModel, RemoteRepoMixin):
         author_email: Optional[str] = None,
     ) -> Registration:
         """Register artifact version"""
-        assert_name_is_valid(name)
+        assert_fullname_is_valid(name)
         version_args = sum(
             bool(i) for i in (version, bump_major, bump_minor, bump_patch)
         )
@@ -459,7 +454,7 @@ class GitRegistry(BaseModel, RemoteRepoMixin):
         return self._return_event(tag)
 
     def _check_args(self, name, version, ref, stage=None):
-        assert_name_is_valid(name)
+        assert_fullname_is_valid(name)
         if stage is not None:
             self.config.assert_stage(stage)
         if version:
@@ -482,9 +477,9 @@ class GitRegistry(BaseModel, RemoteRepoMixin):
         return event
 
     @staticmethod
-    def _echo_git_suggestion(tag):
+    def _echo_git_suggestion(tag, delete=False):
         echo("To push the changes upstream, run:")
-        echo(f"    git push origin {tag}")
+        echo(f"    git push{' --delete ' if delete else ' '}origin {tag}")
 
     def _delete_tags(self, tags, stdout, push: bool):
         tags = list(tags)
@@ -594,4 +589,4 @@ class GitRegistry(BaseModel, RemoteRepoMixin):
                     f"Successfully {'deleted' if delete else 'pushed'} git tag {tag_name} on remote."
                 )
         elif stdout:
-            self._echo_git_suggestion(tag_name)
+            self._echo_git_suggestion(tag_name, delete=delete)
