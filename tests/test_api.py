@@ -15,7 +15,7 @@ from freezegun import freeze_time
 import gto
 import tests.resources
 from gto.api import show
-from gto.exceptions import WrongArgs
+from gto.exceptions import RefNotFound, WrongArgs
 from gto.index import RepoIndexManager
 from gto.tag import find
 from gto.versions import SemVer
@@ -122,12 +122,31 @@ def test_register_deregister(repo_with_artifact):
 
     assert len(gto.api.show(repo.working_dir, name, deprecated=False)) == 2
 
+    # test _show_versions
+    assert (
+        gto.api._show_versions(repo.working_dir, name, ref="HEAD")[0]["ref"]
+        == f"{name}@v1.0.1"
+    )
+    assert (
+        gto.api._show_versions(repo.working_dir, name, ref="HEAD^1")[0]["ref"]
+        == f"{name}@v1.0.0"
+    )
+    assert (
+        gto.api._show_versions(repo.working_dir, name, ref=repo.commit().hexsha)[0][
+            "ref"
+        ]
+        == f"{name}@v1.0.1"
+    )
+    with pytest.raises(RefNotFound):
+        gto.api._show_versions(repo.working_dir, name, ref="HEAD^2")
+
     gto.api.deregister(repo=repo.working_dir, name=name, version=vname2)
     latest = gto.api.find_latest_version(repo.working_dir, name)
     assert latest.version == vname1
 
     assert len(gto.api.show(repo.working_dir, name, deprecated=False)) == 1
     assert len(gto.api.show(repo.working_dir, name, deprecated=True)) == 2
+    assert len(gto.api._show_versions(repo.working_dir, name, ref="HEAD")) == 0
 
 
 def test_assign(repo_with_artifact: Tuple[git.Repo, str]):
