@@ -375,7 +375,7 @@ option_push_tag = Option(
     False,
     "--push",
     is_flag=True,
-    help="Push created tag automatically (experimental)",
+    help="Push created git tag to `origin` (done automatically for remote repo)",
 )
 option_commit = Option(
     False,
