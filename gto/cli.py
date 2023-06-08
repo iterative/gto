@@ -579,6 +579,9 @@ def deprecate(
     name: str = arg_name,
     version: str = Argument(None, help="Artifact version"),
     stage: str = Argument(None, help="Stage to unassign"),
+    ref: Optional[str] = Option(
+        None, "--ref", help="Git reference to use (for model deprecation)"
+    ),
     message: Optional[str] = option_message,
     simple: str = option_simple,
     force: bool = option_force,
@@ -615,6 +618,7 @@ def deprecate(
         gto.api.deprecate(
             repo=repo,
             name=name,
+            ref=ref,
             message=message,
             simple=simple,  # type: ignore
             force=force,

@@ -210,7 +210,8 @@ def deregister(
 def deprecate(
     repo: Union[str, Repo],
     name: str,
-    message: str = None,
+    ref: Optional[str] = None,
+    message: Optional[str] = None,
     stdout: bool = False,
     simple: Optional[bool] = None,
     force: bool = False,
@@ -222,6 +223,7 @@ def deprecate(
     with GitRegistry.from_repo(repo) as reg:
         return reg.deprecate(
             name=name,
+            ref=ref,
             message=message,
             stdout=stdout,
             simple=simple,
