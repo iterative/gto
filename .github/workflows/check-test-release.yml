@@ -37,7 +37,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python: ["3.7", "3.8", "3.9"]
+        python: ["3.7", "3.8", "3.9", "3.10", "3.11"]
       fail-fast: false
     timeout-minutes: 10
     steps:
@@ -92,13 +92,3 @@ jobs:
       run: |
         echo ::set-output name=tag::${GITHUB_REF#refs/tags/}
         git log --pretty='format:%d%n- %s%n%b---' $(git tag --sort=v:refname | tail -n2 | head -n1)..HEAD > _CHANGES.md
-    # - if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
-    #   uses: softprops/action-gh-release@v1
-    #   env:
-    #     GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
-    #   with:
-    #     name: gto ${{ steps.meta.outputs.tag }} alpha
-    #     body_path: _CHANGES.md
-    #     draft: true
-    #     files: |
-    #       dist/${{ steps.dist.outputs.whl }}
