@@ -61,9 +61,9 @@ def name_tag(
     if action not in TagTemplates:
         raise UnknownAction(action=action)
 
-    artifact = name_to_tag(artifact)
-
-    tag = TagTemplates[action].format(artifact=artifact, version=version, stage=stage)
+    tag = TagTemplates[action].format(
+        artifact=name_to_tag(artifact), version=version, stage=stage
+    )
     if simple:
         return tag
     if repo is None:
