@@ -54,13 +54,13 @@ def repo_with_artifact(init_showcase_semver):
     ) as f:
         f.write("rf: \n  type: model\n  path: models/random-forest.pkl\n")
     repo.index.add(["artifacts.yaml"])
-    repo.index.commit("Added index")
+    repo.index.commit("Commit 1")
     with open(
         os.path.join(repo.working_dir, "artifacts.yaml"), "w", encoding="utf8"
     ) as f:
         f.write("rf: \n  type: model\n  path: models/random-forest.pklx\n")
     repo.index.add(["artifacts.yaml"])
-    repo.index.commit("Added index")
+    repo.index.commit("Commit 2")
     return repo, "new-artifact"
 
 
@@ -149,8 +149,16 @@ def test_register_deregister(repo_with_artifact):
     assert len(gto.api._show_versions(repo.working_dir, name, ref="HEAD")) == 0
 
 
-def test_assign(repo_with_artifact: Tuple[git.Repo, str]):
-    repo, name = repo_with_artifact
+@pytest.mark.parametrize(
+    "name",
+    (
+        "model",
+        "folder:artifact",
+        "some/folder:some/artifact",
+    ),
+)
+def test_assign(repo_with_artifact: Tuple[git.Repo, str], name):
+    repo, _ = repo_with_artifact
     stage = "staging"
     repo.create_tag("v1.0.0")
     repo.create_tag("wrong-tag-unrelated")
@@ -184,6 +192,22 @@ def test_assign(repo_with_artifact: Tuple[git.Repo, str]):
         ),
         {"created_at", "assignments", "unassignments", "tag", "activated_at"},
     )
+    event = gto.api.assign(
+        repo.working_dir,
+        name,
+        stage,
+        ref="HEAD^1",
+        name_version="v0.0.2",
+        message=message,
+        author=author,
+        author_email=author_email,
+    )
+    assignments = gto.api.find_versions_in_stage(repo.working_dir, name, stage)
+    assert len(assignments) == 1
+    assignments = gto.api.find_versions_in_stage(
+        repo.working_dir, name, stage, versions_per_stage=-1
+    )
+    assert len(assignments) == 2
 
 
 def test_assign_skip_registration(repo_with_artifact: Tuple[git.Repo, str]):
