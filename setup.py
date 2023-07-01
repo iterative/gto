@@ -6,7 +6,7 @@ install_requires = [
     "gitpython",
     "typer>=0.4.1",
     "rich",
-    "pydantic",
+    "pydantic>=1.9.0,<2",
     "ruamel.yaml",
     "semver>=3.0.0",
     "entrypoints",
