@@ -1,8 +1,8 @@
 from datetime import datetime
 from typing import Any, Dict, FrozenSet, List, Optional, Sequence, Union
 
-import git
 from pydantic import BaseModel
+from scmrepo.git import Git
 
 from gto.config import RegistryConfig
 from gto.constants import (
@@ -619,7 +619,7 @@ class BaseRegistryState(BaseModel):
 
 
 class BaseManager(BaseModel):
-    repo: git.Repo
+    scm: Git
     actions: FrozenSet[Action]
     config: RegistryConfig
 
