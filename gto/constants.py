@@ -109,12 +109,6 @@ def parse_shortcut(value):
     )
 
 
-# taken from https://stackoverflow.com/a/22312124/19782654, modified to include url without .git at the end
-remote_git_repo_regex = re.compile(
-    r"((git|ssh|http(s)?)|(git@[\w\.]+))(:(//)?)([\w\.@\:/\-~]+)(/)?"
-)
-
-
 def mark_artifact_unregistered(artifact_name):
     return f"*{artifact_name}"
 
