@@ -83,7 +83,7 @@ class VersionRequired(GTOException):
 
 
 class ManyVersions(GTOException):
-    _message = "'{versions}' versions of artifact '{name}' found"
+    _message = "Multiple versions ('{versions}') of artifact '{name}' found on the same git commit. Multiple versions are not allowed."
 
     def __init__(self, name, versions) -> None:
         self.message = self._message.format(name=name, versions=versions)
