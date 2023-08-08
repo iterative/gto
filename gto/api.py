@@ -1,8 +1,10 @@
 from collections import OrderedDict
+from pathlib import Path
 from typing import Optional, Union
 
 from funcy import distinct
-from git import Repo
+from scmrepo.exceptions import RevError
+from scmrepo.git import Git
 
 from gto.constants import (
     ARTIFACT,
@@ -16,43 +18,41 @@ from gto.constants import (
     mark_artifact_unregistered,
     parse_shortcut,
 )
-from gto.exceptions import NoRepo, NotImplementedInGTO, WrongArgs
-from gto.git_utils import is_url_of_remote_repo
-from gto.index import Artifact, FileIndexManager, RepoIndexManager
+from gto.exceptions import NoRepo, NotImplementedInGTO, RefNotFound, WrongArgs
+from gto.git_utils import has_remote
+from gto.index import Artifact, RepoIndexManager
 from gto.registry import GitRegistry
 from gto.tag import parse_name as parse_tag_name
-from gto.utils import resolve_ref
 
 
-def _is_gto_repo(repo: Union[str, Repo]):
+def _is_gto_repo(repo: Union[str, Path, Git]):
     """Check if repo is a gto repo"""
     try:
-        with GitRegistry.from_repo(repo) as reg:
+        with GitRegistry.from_url(repo) as reg:
             return reg.is_gto_repo()
     except NoRepo:
         return False
 
 
-def _get_state(repo: Union[str, Repo]):
+def _get_state(repo: Union[str, Path, Git]):
     """Show current registry state"""
-    with GitRegistry.from_repo(repo) as reg:
+    with GitRegistry.from_url(repo) as reg:
         return reg.get_state()
 
 
-def get_stages(repo: Union[str, Repo], allowed: bool = False, used: bool = False):
-    with GitRegistry.from_repo(repo=repo) as reg:
+def get_stages(repo: Union[str, Path, Git], allowed: bool = False, used: bool = False):
+    with GitRegistry.from_url(repo) as reg:
         return reg.get_stages(allowed=allowed, used=used)
 
 
 def describe(
-    repo: Union[str, Repo], name: str, rev: Optional[str] = None
+    repo: Union[str, Path, Git], name: str, rev: Optional[str] = None
 ) -> Optional[Artifact]:
     """Find enrichments for the artifact"""
     shortcut = parse_shortcut(name)
     if shortcut.shortcut:
         if rev:
             raise WrongArgs("Either specify revision or use naming shortcut.")
-        # clones a remote repo second time, can be optimized
         versions = show(repo, name)
         if len(versions) == 0:  # nothing found
             return None
@@ -62,21 +62,15 @@ def describe(
             )
         rev = versions[0]["commit_hexsha"]
 
-    repo_path = repo.working_dir if isinstance(repo, Repo) else repo
-    if not is_url_of_remote_repo(repo_path) and rev is None:
-        # read artifacts.yaml without using Git
-        artifact = (
-            FileIndexManager.from_path(repo_path).get_index().state.get(shortcut.name)
+    with RepoIndexManager.from_url(repo) as index:
+        artifact = index.get_commit_index(rev or index.scm.get_rev()).state.get(
+            shortcut.name
         )
-    else:
-        # read Git repo
-        with RepoIndexManager.from_repo(repo) as index:
-            artifact = index.get_commit_index(rev).state.get(shortcut.name)
     return artifact
 
 
 def register(
-    repo: Union[str, Repo],
+    repo: Union[str, Path, Git],
     name: str,
     ref: str,
     version: str = None,
@@ -92,10 +86,10 @@ def register(
     author_email: Optional[str] = None,
 ):
     """Register new artifact version"""
-    with GitRegistry.from_repo(repo) as reg:
+    with GitRegistry.from_url(repo) as reg:
         return reg.register(
             name=name,
-            ref=ref,
+            rev=ref,
             version=version,
             message=message,
             simple=simple if simple is not None else True,
@@ -103,7 +97,7 @@ def register(
             bump_major=bump_major,
             bump_minor=bump_minor,
             bump_patch=bump_patch,
-            push=push or is_url_of_remote_repo(repo),
+            push=push or has_remote(reg.scm),
             stdout=stdout,
             author=author,
             author_email=author_email,
@@ -111,7 +105,7 @@ def register(
 
 
 def assign(
-    repo: Union[str, Repo],
+    repo: Union[str, Path, Git],
     name: str,
     stage: str,
     version: Optional[str] = None,
@@ -127,17 +121,17 @@ def assign(
     author_email: Optional[str] = None,
 ):
     """Assign stage to specific artifact version"""
-    with GitRegistry.from_repo(repo) as reg:
+    with GitRegistry.from_url(repo) as reg:
         return reg.assign(
             name=name,
             stage=stage,
             version=version,
-            ref=ref,
+            rev=ref,
             name_version=name_version,
             message=message,
             simple=simple,
             force=force,
-            push=push or is_url_of_remote_repo(repo),
+            push=push or has_remote(reg.scm),
             skip_registration=skip_registration,
             stdout=stdout,
             author=author,
@@ -146,7 +140,7 @@ def assign(
 
 
 def unassign(
-    repo: Union[str, Repo],
+    repo: Union[str, Path, Git],
     name: str,
     ref: str = None,
     version: str = None,
@@ -160,25 +154,25 @@ def unassign(
     author: Optional[str] = None,
     author_email: Optional[str] = None,
 ):
-    with GitRegistry.from_repo(repo) as reg:
+    with GitRegistry.from_url(repo) as reg:
         return reg.unassign(
             name=name,
             stage=stage,
-            ref=ref,
+            rev=ref,
             version=version,
             message=message,
             stdout=stdout,
             simple=simple if simple is not None else False,
             force=force,
             delete=delete,
-            push=push or is_url_of_remote_repo(repo),
+            push=push or has_remote(reg.scm),
             author=author,
             author_email=author_email,
         )
 
 
 def deregister(
-    repo: Union[str, Repo],
+    repo: Union[str, Path, Git],
     name: str,
     ref: str = None,
     version: str = None,
@@ -191,24 +185,24 @@ def deregister(
     author: Optional[str] = None,
     author_email: Optional[str] = None,
 ):
-    with GitRegistry.from_repo(repo) as reg:
+    with GitRegistry.from_url(repo) as reg:
         return reg.deregister(
             name=name,
-            ref=ref,
+            rev=ref,
             version=version,
             message=message,
             stdout=stdout,
             simple=simple if simple is not None else True,
             force=force,
             delete=delete,
-            push=push or is_url_of_remote_repo(repo),
+            push=push or has_remote(reg.scm),
             author=author,
             author_email=author_email,
         )
 
 
 def deprecate(
-    repo: Union[str, Repo],
+    repo: Union[str, Path, Git],
     name: str,
     ref: Optional[str] = None,
     message: Optional[str] = None,
@@ -220,16 +214,16 @@ def deprecate(
     author: Optional[str] = None,
     author_email: Optional[str] = None,
 ):
-    with GitRegistry.from_repo(repo) as reg:
+    with GitRegistry.from_url(repo) as reg:
         return reg.deprecate(
             name=name,
-            ref=ref,
+            rev=ref,
             message=message,
             stdout=stdout,
             simple=simple,
             force=force,
             delete=delete,
-            push=push or is_url_of_remote_repo(repo),
+            push=push or has_remote(reg.scm),
             author=author,
             author_email=author_email,
         )
@@ -240,18 +234,18 @@ def parse_tag(name: str):
 
 
 def find_latest_version(
-    repo: Union[str, Repo],
+    repo: Union[str, Path, Git],
     name: str,
     all: bool = False,
     registered: bool = True,
 ):
     """Return latest version for artifact"""
-    with GitRegistry.from_repo(repo) as reg:
+    with GitRegistry.from_url(repo) as reg:
         return reg.latest(name, all=all, registered=registered)
 
 
 def find_versions_in_stage(
-    repo: Union[str, Repo],
+    repo: Union[str, Path, Git],
     name: str,
     stage: str,
     assignments_per_version=ASSIGNMENTS_PER_VERSION,
@@ -259,7 +253,7 @@ def find_versions_in_stage(
     registered_only: bool = False,
 ):
     """Return version of artifact with specific stage active"""
-    with GitRegistry.from_repo(repo) as reg:
+    with GitRegistry.from_url(repo) as reg:
         return reg.which(
             name,
             stage,
@@ -270,14 +264,14 @@ def find_versions_in_stage(
         )
 
 
-def check_ref(repo: Union[str, Repo], ref: str):
+def check_ref(repo: Union[str, Path, Git], ref: str):
     """Find out what have been registered/assigned in the provided ref"""
-    with GitRegistry.from_repo(repo=repo) as reg:
+    with GitRegistry.from_url(repo) as reg:
         return reg.check_ref(ref)
 
 
 def show(
-    repo: Union[str, Repo],
+    repo: Union[str, Path, Git],
     name: Optional[str] = None,
     truncate_hexsha=False,
     registered_only=False,
@@ -314,7 +308,7 @@ def show(
 
 
 def _show_registry(
-    repo: Union[str, Repo],
+    repo: Union[str, Path, Git],
     registered_only=False,
     deprecated=False,
     assignments_per_version: int = None,
@@ -328,7 +322,7 @@ def _show_registry(
     def format_hexsha(hexsha):
         return hexsha[:7] if truncate_hexsha else hexsha
 
-    with GitRegistry.from_repo(repo=repo) as reg:
+    with GitRegistry.from_url(repo) as reg:
         stages = list(reg.get_stages())
         models_state = {
             o.artifact: {
@@ -410,7 +404,7 @@ def _get_versions(
 
 
 def _show_versions(  # pylint: disable=too-many-locals
-    repo: Union[str, Repo],
+    repo: Union[str, Path, Git],
     name: str,
     ref: Optional[str] = None,
     raw: bool = False,
@@ -424,9 +418,6 @@ def _show_versions(  # pylint: disable=too-many-locals
 ):
     """List versions of artifact"""
 
-    if isinstance(repo, str):
-        repo = Repo(repo)
-
     def format_hexsha(hexsha):
         return hexsha[:7] if truncate_hexsha and is_hexsha(hexsha) else hexsha
 
@@ -434,32 +425,34 @@ def _show_versions(  # pylint: disable=too-many-locals
     if shortcut.shortcut and ref:
         raise WrongArgs("Cannot specify both shortcut and ref")
 
-    with GitRegistry.from_repo(repo=repo) as reg:
+    with GitRegistry.from_url(repo) as reg:
         if raw:
             return reg.find_artifact(shortcut.name).versions
 
         artifact = reg.find_artifact(shortcut.name)
 
-    versions = _get_versions(
-        artifact,
-        deprecated,
-        registered_only,
-        assignments_per_version,
-        versions_per_stage,
-        sort,
-    )
-    if ref:
-        ref_hexsha = resolve_ref(repo, ref).hexsha
-        versions = [v for v in versions if v["commit_hexsha"] == ref_hexsha]
-
-    elif shortcut.latest:
-        versions = versions[:1]
-    elif shortcut.version:
-        versions = [v for v in versions if shortcut.version == v["version"]]
-    elif shortcut.stage:
-        versions = [
-            v for v in versions for a in v["stages"] if shortcut.stage == a["stage"]
-        ]
+        versions = _get_versions(
+            artifact,
+            deprecated,
+            registered_only,
+            assignments_per_version,
+            versions_per_stage,
+            sort,
+        )
+        if ref:
+            try:
+                ref_hexsha = reg.scm.resolve_rev(ref)
+            except RevError as e:
+                raise RefNotFound(ref=ref) from e
+            versions = [v for v in versions if v["commit_hexsha"] == ref_hexsha]
+        elif shortcut.latest:
+            versions = versions[:1]
+        elif shortcut.version:
+            versions = [v for v in versions if shortcut.version == v["version"]]
+        elif shortcut.stage:
+            versions = [
+                v for v in versions for a in v["stages"] if shortcut.stage == a["stage"]
+            ]
 
     if not table:
         return versions
@@ -496,14 +489,14 @@ def _show_versions(  # pylint: disable=too-many-locals
 
 
 def history(
-    repo: Union[str, Repo],
+    repo: Union[str, Path, Git],
     artifact: Optional[str] = None,
     # action: str = None,
     ascending: bool = False,
     table: bool = False,
     truncate_hexsha: bool = False,
 ):
-    with GitRegistry.from_repo(repo=repo) as reg:
+    with GitRegistry.from_url(repo) as reg:
         artifacts = reg.get_artifacts()
 
     def format_hexsha(hexsha):

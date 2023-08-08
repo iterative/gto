@@ -6,7 +6,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Union
 
-from scmrepo.exceptions import SCMError
+from scmrepo.exceptions import InvalidRemote, SCMError
 from scmrepo.git import Git, SyncStatus
 
 from gto.config import RegistryConfig
@@ -152,3 +152,12 @@ def git_add_and_commit_all_changes(scm: Git, message: str) -> None:
 def _reset_repo_to_head(scm: Git) -> None:
     if scm.stash.push(include_untracked=True):
         scm.stash.drop()
+
+
+def has_remote(scm: Git, remote: str = "origin") -> bool:
+    try:
+        scm.validate_git_remote(remote)
+        return True
+    except InvalidRemote:
+        pass
+    return False
