@@ -1,11 +1,11 @@
 import logging
 import os
-from pathlib import Path
-from typing import Optional, TypeVar, Union
+from contextlib import contextmanager
+from typing import Optional, TypeVar
 
-import git
 from funcy import distinct
 from pydantic import BaseModel
+from scmrepo.git import Git
 
 from gto.base import (
     Assignment,
@@ -19,12 +19,13 @@ from gto.base import (
 from gto.config import CONFIG_FILE_NAME, RegistryConfig, read_registry_config
 from gto.constants import NAME, assert_fullname_is_valid
 from gto.exceptions import (
+    InvalidTagName,
     NotImplementedInGTO,
     VersionAlreadyRegistered,
     VersionExistsForCommit,
     WrongArgs,
 )
-from gto.git_utils import RemoteRepoMixin, git_push_tag, read_repo
+from gto.git_utils import RemoteRepoMixin, git_push_tag
 from gto.index import EnrichmentManager
 from gto.tag import (
     TagArtifactManager,
@@ -40,7 +41,7 @@ TBaseEvent = TypeVar("TBaseEvent", bound=BaseEvent)
 
 
 class GitRegistry(BaseModel, RemoteRepoMixin):
-    repo: git.Repo
+    scm: Git
     artifact_manager: TagArtifactManager
     version_manager: TagVersionManager
     stage_manager: TagStageManager
@@ -51,26 +52,24 @@ class GitRegistry(BaseModel, RemoteRepoMixin):
         arbitrary_types_allowed = True
 
     @classmethod
-    def from_local_repo(cls, repo: Union[str, git.Repo], config: RegistryConfig = None):
-        repo = read_repo(repo, search_parent_directories=True)
+    @contextmanager
+    def from_scm(cls, scm: Git, config: RegistryConfig = None):
         if config is None:
-            config = read_registry_config(
-                os.path.join(repo.working_dir, CONFIG_FILE_NAME)
-            )
+            config = read_registry_config(os.path.join(scm.root_dir, CONFIG_FILE_NAME))
 
-        return cls(
-            repo=repo,
+        yield cls(
+            scm=scm,
             config=config,
-            artifact_manager=TagArtifactManager(repo=repo, config=config),
-            version_manager=TagVersionManager(repo=repo, config=config),
-            stage_manager=TagStageManager(repo=repo, config=config),
-            enrichment_manager=EnrichmentManager(repo=repo, config=config),
+            artifact_manager=TagArtifactManager(scm=scm, config=config),
+            version_manager=TagVersionManager(scm=scm, config=config),
+            stage_manager=TagStageManager(scm=scm, config=config),
+            enrichment_manager=EnrichmentManager(scm=scm, config=config),
         )
 
     def is_gto_repo(self):
         if self.config.config_file_exists():
             return True
-        if self.config.check_index_exist(self.repo.working_dir):
+        if self.config.check_index_exist(self.scm.root_dir):
             return True
         if self.get_state() != BaseRegistryState():
             return True
@@ -119,7 +118,7 @@ class GitRegistry(BaseModel, RemoteRepoMixin):
     def register(  # pylint: disable=too-many-locals
         self,
         name,
-        ref,
+        rev,
         version=None,
         message=None,
         simple=None,
@@ -139,10 +138,10 @@ class GitRegistry(BaseModel, RemoteRepoMixin):
         )
         if version_args > 1:
             raise WrongArgs("Need to specify either version or single bump argument")
-        ref = self.repo.commit(ref).hexsha
+        rev = self.scm.resolve_rev(rev)
         found_artifact = self.find_artifact(name, create_new=True)
         # check that this commit don't have a version already
-        found_version = found_artifact.find_version(commit_hexsha=ref)
+        found_version = found_artifact.find_version(commit_hexsha=rev)
         if found_version is not None:
             if not force and found_version.is_registered and found_version.is_active:
                 raise VersionExistsForCommit(name, found_version.version)
@@ -179,7 +178,7 @@ class GitRegistry(BaseModel, RemoteRepoMixin):
         tag = self.version_manager.register(
             name,
             version,
-            ref,
+            rev,
             message=message or f"Registering artifact {name} version {version}",
             simple=simple,
             author=author,
@@ -193,7 +192,7 @@ class GitRegistry(BaseModel, RemoteRepoMixin):
     def deregister(  # pylint: disable=too-many-locals
         self,
         name,
-        ref=None,
+        rev=None,
         version=None,
         message=None,
         simple=None,
@@ -205,13 +204,13 @@ class GitRegistry(BaseModel, RemoteRepoMixin):
         author_email: Optional[str] = None,
     ) -> Deregistration:
         """Deregister artifact version"""
-        self._check_args(name, version, ref)
-        if ref is not None:
-            ref = self.repo.commit(ref).hexsha
+        self._check_args(name, version, rev)
+        if rev is not None:
+            rev = self.scm.resolve_rev(rev)
         found_artifact = self.find_artifact(name, create_new=True)
         if not force:
             found_version = found_artifact.find_version(
-                name=version, commit_hexsha=ref, raise_if_not_found=True
+                name=version, commit_hexsha=rev, raise_if_not_found=True
             )
             if not found_version.is_registered:
                 raise WrongArgs(
@@ -222,9 +221,9 @@ class GitRegistry(BaseModel, RemoteRepoMixin):
                     f"The version at ref '{found_version.commit_hexsha}' was deregistered already"
                 )
 
-        found_version = found_artifact.find_version(name=version, commit_hexsha=ref)
+        found_version = found_artifact.find_version(name=version, commit_hexsha=rev)
         version = version or getattr(found_version, "version", None)
-        commit_hexsha = ref or getattr(found_version, "commit_hexsha", None)
+        commit_hexsha = rev or getattr(found_version, "commit_hexsha", None)
         if not (version and commit_hexsha):
             raise WrongArgs("Can't deregister a version that have no git tags")
 
@@ -259,7 +258,7 @@ class GitRegistry(BaseModel, RemoteRepoMixin):
         name,
         stage,
         version=None,
-        ref=None,
+        rev=None,
         name_version=None,
         message=None,
         simple=False,
@@ -271,15 +270,15 @@ class GitRegistry(BaseModel, RemoteRepoMixin):
         author_email: Optional[str] = None,
     ) -> Assignment:
         """Assign stage to specific artifact version"""
-        self._check_args(name, version, ref, stage)
+        self._check_args(name, version, rev, stage)
         if name_version:
             self._check_version(name_version)
         if name_version and skip_registration:
             raise WrongArgs(
                 "You either need to supply version name or skip registration"
             )
-        if ref:
-            ref = self.repo.commit(ref).hexsha
+        if rev:
+            rev = self.scm.resolve_rev(rev)
         found_artifact = self.find_artifact(name, create_new=True)
         if version:
             found_version = found_artifact.find_version(
@@ -287,9 +286,9 @@ class GitRegistry(BaseModel, RemoteRepoMixin):
             )
             if not found_version:
                 raise WrongArgs(f"Version '{version}' is not registered")
-            ref = self.find_commit(name, version)
+            rev = self.find_commit(name, version)
         else:
-            found_version = found_artifact.find_version(commit_hexsha=ref)
+            found_version = found_artifact.find_version(commit_hexsha=rev)
             if found_version:
                 if name_version:
                     raise WrongArgs(
@@ -300,13 +299,13 @@ class GitRegistry(BaseModel, RemoteRepoMixin):
                     self.register(
                         name,
                         version=name_version,
-                        ref=ref,
+                        rev=rev,
                         simple=True,
                         stdout=stdout,
                         push=push,
                     )
                 found_version = self.find_artifact(name, create_new=True).find_version(
-                    commit_hexsha=ref, create_new=True
+                    commit_hexsha=rev, create_new=True
                 )
         if (
             not force
@@ -324,11 +323,11 @@ class GitRegistry(BaseModel, RemoteRepoMixin):
         tag = self.stage_manager.assign(  # type: ignore
             name,
             stage,
-            ref=ref,
+            rev=rev,
             message=message
             or f"Assigning stage {stage} to artifact {name} "
             + (
-                f"version {found_version.version}" if found_version else f"commit {ref}"
+                f"version {found_version.version}" if found_version else f"commit {rev}"
             ),
             simple=simple,
             author=author,
@@ -346,7 +345,7 @@ class GitRegistry(BaseModel, RemoteRepoMixin):
         name,
         stage,
         version=None,
-        ref=None,
+        rev=None,
         message=None,
         simple=False,
         force=False,
@@ -357,12 +356,12 @@ class GitRegistry(BaseModel, RemoteRepoMixin):
         author_email: Optional[str] = None,
     ) -> Unassignment:
         """Unassign stage to specific artifact version"""
-        self._check_args(name, version, ref, stage)
-        if ref:
-            ref = self.repo.commit(ref).hexsha
+        self._check_args(name, version, rev, stage)
+        if rev:
+            rev = self.scm.resolve_rev(rev)
         found_artifact = self.find_artifact(name)
         found_version = found_artifact.find_version(
-            name=version, commit_hexsha=ref, raise_if_not_found=True
+            name=version, commit_hexsha=rev, raise_if_not_found=True
         )
         if not force and all(s != stage for s in getattr(found_version, "stages", [])):
             raise WrongArgs(
@@ -385,7 +384,7 @@ class GitRegistry(BaseModel, RemoteRepoMixin):
         tag = self.stage_manager.unassign(  # type: ignore
             name,
             stage,
-            ref=found_version.commit_hexsha,
+            rev=found_version.commit_hexsha,
             message=message
             or f"Unassigning stage '{stage}' to artifact '{name}' version '{found_version.version}'",
             simple=simple,
@@ -404,7 +403,7 @@ class GitRegistry(BaseModel, RemoteRepoMixin):
     def deprecate(
         self,
         name,
-        ref=None,
+        rev=None,
         message=None,
         simple=False,
         force=False,
@@ -433,14 +432,14 @@ class GitRegistry(BaseModel, RemoteRepoMixin):
                 ]
             )
             return self._delete_tags(tags, stdout=stdout, push=push)
-        if ref is None:
+        if rev is None:
             if name in self.get_artifacts():
-                ref = self.find_artifact(name=name).get_events()[0].commit_hexsha
+                rev = self.find_artifact(name=name).get_events()[0].commit_hexsha
             else:
-                ref = "HEAD"
+                rev = "HEAD"
         tag = self.artifact_manager.deprecate(  # type: ignore
             name,
-            ref=ref,
+            rev=rev,
             message=message or f"Deprecating artifact '{name}'",
             simple=simple,
             author=author,
@@ -453,14 +452,14 @@ class GitRegistry(BaseModel, RemoteRepoMixin):
         )
         return self._return_event(tag)
 
-    def _check_args(self, name, version, ref, stage=None):
+    def _check_args(self, name, version, rev, stage=None):
         assert_fullname_is_valid(name)
         if stage is not None:
             self.config.assert_stage(stage)
         if version:
             self._check_version(version)
-        if not (version is None) ^ (ref is None):
-            raise WrongArgs("One and only one of (version, ref) must be specified.")
+        if not (version is None) ^ (rev is None):
+            raise WrongArgs("One and only one of (version, rev) must be specified.")
 
     @staticmethod
     def _check_version(version):
@@ -484,7 +483,7 @@ class GitRegistry(BaseModel, RemoteRepoMixin):
     def _delete_tags(self, tags, stdout, push: bool):
         tags = list(tags)
         for tag in tags:
-            delete_tag(self.repo, tag)
+            delete_tag(self.scm, tag)
             if stdout:
                 echo(f"Deleted git tag '{tag}'")
             self._push_tag_or_echo_reminder(
@@ -497,15 +496,14 @@ class GitRegistry(BaseModel, RemoteRepoMixin):
     def check_ref(self, ref: str):
         "Find out what was registered/assigned in this ref"
         try:
-            if ref.startswith("refs/tags/"):
-                ref = ref[len("refs/tags/") :]
-            if ref.startswith("refs/heads/"):
-                ref = self.repo.commit(ref).hexsha
-            # check the ref exists
-            _ = self.repo.tags[ref]
-            # check the ref follows the GTO format
-            name = parse_name(ref)[NAME]
-        except (KeyError, ValueError, IndexError):
+            name = ""
+            tag_name = ref[len("refs/tags/") :] if ref.startswith("refs/tags/") else ref
+            if self.scm.get_tag(tag_name):
+                # check the ref follows the GTO format
+                name = parse_name(tag_name)[NAME]
+        except InvalidTagName:
+            pass
+        if not name:
             logging.info("Provided ref doesn't exist or it is not of GTO format")
             return []
         state = self.get_state()
@@ -580,7 +578,7 @@ class GitRegistry(BaseModel, RemoteRepoMixin):
                     f"Running `git push{' --delete ' if delete else ' '}origin {tag_name}`"
                 )
             git_push_tag(
-                repo=Path(self.repo.git_dir).parent.as_posix(),
+                scm=self.scm,
                 tag_name=tag_name,
                 delete=delete,
             )
