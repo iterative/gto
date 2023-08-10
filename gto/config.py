@@ -25,7 +25,7 @@ class EnrichmentConfig(BaseModel):
         return find_enrichment_types()[self.type](**self.config)
 
 
-class NoFileConfig(BaseSettings):
+class NoFileConfig(BaseSettings):  # type: ignore[valid-type]
     INDEX: str = "artifacts.yaml"
     TYPES: Optional[List[str]]
     STAGES: Optional[List[str]]
