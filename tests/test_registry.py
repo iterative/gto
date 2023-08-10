@@ -1,4 +1,9 @@
-# pylint: disable=unused-variable, too-many-locals
+# pylint: disable=too-many-locals
+from typing import Dict, List
+
+import pytest
+from pytest_test_utils import TmpDir
+
 from gto.registry import GitRegistry
 
 from .utils import check_obj
@@ -361,13 +366,13 @@ def iter_over(sequence):
     raise NotImplementedError
 
 
-def test_registry_state_tag_tag(showcase):
-    path, repo, write_file, first_commit, second_commit = showcase
-    with GitRegistry.from_repo(repo) as reg:
+@pytest.mark.usefixtures("showcase")
+def test_registry_state_tag_tag(tmp_dir: TmpDir):
+    with GitRegistry.from_url(tmp_dir) as reg:
         appeared_state = reg.get_state().dict()
 
     # TODO: update state
-    exclude = {
+    exclude: Dict[str, List[str]] = {
         "commits": [],
         "versions": [
             "author",
