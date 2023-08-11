@@ -3,7 +3,7 @@ from unittest.mock import MagicMock
 import pytest
 from pytest_test_utils import TmpDir
 from scmrepo.exceptions import SCMError
-from scmrepo.git import Git
+from scmrepo.git import Git, SyncStatus
 
 from gto.exceptions import GTOException
 from gto.git_utils import git_add_and_commit_all_changes, git_push_tag
@@ -19,6 +19,9 @@ def _mocked_scm() -> MagicMock:
 
 def test_git_push_tag(mocked_scm):
     tag_name = "test_tag"
+    mocked_scm.push_refspecs = MagicMock(
+        return_value={f"refs/tag/{tag_name}": SyncStatus.SUCCESS}
+    )
     git_push_tag(mocked_scm, tag_name=tag_name)
     mocked_scm.push_refspecs.assert_called_once_with(
         "origin", "refs/tags/test_tag:refs/tags/test_tag"
@@ -27,6 +30,9 @@ def test_git_push_tag(mocked_scm):
 
 def test_git_push_tag_with_delete(mocked_scm):
     tag_name = "test_tag"
+    mocked_scm.push_refspecs = MagicMock(
+        return_value={f"refs/tag/{tag_name}": SyncStatus.SUCCESS}
+    )
     git_push_tag(mocked_scm, tag_name=tag_name, delete=True)
     mocked_scm.push_refspecs.assert_called_once_with("origin", ":refs/tags/test_tag")
 
