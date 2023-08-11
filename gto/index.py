@@ -2,15 +2,28 @@ import logging
 import os
 from abc import ABC, abstractmethod
 from collections import defaultdict
+from contextlib import contextmanager
 from datetime import datetime
 from functools import wraps
 from pathlib import Path
-from typing import IO, Any, Dict, FrozenSet, Generator, List, Optional, Union
+from typing import (
+    IO,
+    Any,
+    Dict,
+    FrozenSet,
+    Iterable,
+    Iterator,
+    List,
+    Optional,
+    Set,
+    Union,
+)
 
-import git
-from git import Repo
 from pydantic import BaseModel, ValidationError, parse_obj_as, validator
 from ruamel.yaml import YAMLError
+from scmrepo.exceptions import SCMError
+from scmrepo.git import Git
+from scmrepo.git.objects import GitCommit
 
 from gto.base import BaseManager, BaseRegistryState
 from gto.base import Commit as EnrichmentEvent
@@ -35,9 +48,8 @@ from gto.exceptions import (
     WrongArtifactsYaml,
 )
 from gto.ext import EnrichmentInfo, EnrichmentReader
-from gto.git_utils import RemoteRepoMixin, read_repo
+from gto.git_utils import RemoteRepoMixin
 from gto.ui import echo
-from gto.utils import resolve_ref
 
 logger = logging.getLogger("gto")
 
@@ -65,7 +77,7 @@ def not_frozen(func):
 
 
 def find_repeated_path(
-    path: Union[str, Path], paths: List[Union[str, Path]]
+    path: Union[str, Path], paths: Iterable[Union[str, Path]]
 ) -> Optional[Path]:
     """Return the path from "paths" that conflicts with "path":
     is equal to it or is a subpath (in both directions).
@@ -79,23 +91,19 @@ def find_repeated_path(
     return None
 
 
-def check_if_path_exists(path: str, repo: git.Repo = None, ref: str = None):
+def check_if_path_exists(
+    path: Union[str, Path], scm: Optional[Git] = None, ref: str = None
+):
     """Check if path was committed to repo
     or it just exists in case the repo is not provided.
     """
-    if repo is None:
+    if scm is None:
         return Path(path).exists()
     try:
-        _ = (repo.commit(ref).tree / path).data_stream
-        return True
-    except KeyError:
+        fs = scm.get_fs(ref)
+        return fs.exists(str(path))
+    except SCMError:
         return False
-
-
-def traverse_commit(commit: git.Commit) -> Generator[git.Commit, None, None]:
-    yield commit
-    for parent in commit.parents:
-        yield from traverse_commit(parent)
 
 
 class Index(BaseModel):
@@ -197,7 +205,7 @@ class Index(BaseModel):
                 description=description,
                 custom=custom,
             )
-        self.state_is_valid(self.state)
+        self.state_is_valid(self.state)  # type: ignore[call-arg]
         return self.state[name]
 
     @not_frozen
@@ -244,7 +252,7 @@ class BaseIndexManager(BaseModel, ABC):
             if not path:
                 raise WrongArgs("`path` is required when `must_exist` is set to True")
             if not check_if_path_exists(
-                path, self.repo if hasattr(self, "repo") else None
+                path, self.scm if hasattr(self, "scm") else None
             ):
                 raise NoFile(path)
         index = self.get_index()
@@ -309,19 +317,17 @@ ArtifactsCommits = Dict[str, ArtifactCommits]
 
 
 class RepoIndexManager(FileIndexManager, RemoteRepoMixin):
-    repo: git.Repo
+    scm: Git
 
-    def __init__(self, repo, config):
-        super().__init__(repo=repo, config=config)
+    def __init__(self, scm: Git, config):
+        super().__init__(scm=scm, config=config)
 
     @classmethod
-    def from_local_repo(cls, repo: Union[str, git.Repo], config: RegistryConfig = None):
-        repo = read_repo(repo, search_parent_directories=True)
+    @contextmanager
+    def from_scm(cls, scm: Git, config: RegistryConfig = None):
         if config is None:
-            config = read_registry_config(
-                os.path.join(repo.working_dir, CONFIG_FILE_NAME)
-            )
-        return cls(repo=repo, config=config)
+            config = read_registry_config(os.path.join(scm.root_dir, CONFIG_FILE_NAME))
+        yield cls(scm=scm, config=config)
 
     def add(
         self,
@@ -376,45 +382,60 @@ class RepoIndexManager(FileIndexManager, RemoteRepoMixin):
 
     def index_path(self):
         # TODO: config should be loaded from repo too
-        return os.path.join(os.path.dirname(self.repo.git_dir), self.config.INDEX)
+        return os.path.join(self.scm.root_dir, self.config.INDEX)
 
     class Config:
         arbitrary_types_allowed = True
 
     def get_commit_index(  # type: ignore # pylint: disable=arguments-differ
         self,
-        ref: Union[str, git.Reference, None],
+        rev: Union[str, GitCommit],
         allow_to_not_exist: bool = True,
         ignore_corrupted: bool = False,
     ) -> Optional[Index]:
-        if not ref or isinstance(ref, str):
-            ref = resolve_ref(self.repo, ref)
-        if self.config.INDEX in ref.tree:
-            try:
-                return Index.read(
-                    (ref.tree / self.config.INDEX).data_stream,
-                    frozen=True,
-                )
-            except WrongArtifactsYaml as e:
-                logger.warning("Corrupted artifacts.yaml file in commit %s", ref)
-                if ignore_corrupted:
-                    return None
-                raise e
-        if allow_to_not_exist:
-            return None
-        raise ValueError(f"No Index exists at {ref}")
+        rev = rev.hexsha if isinstance(rev, GitCommit) else self.scm.resolve_rev(rev)
+        return self._get_commit_index(
+            rev,
+            allow_to_not_exist=allow_to_not_exist,
+            ignore_corrupted=ignore_corrupted,
+        )
+
+    def _get_commit_index(  # type: ignore # pylint: disable=arguments-differ
+        self,
+        rev: str,
+        allow_to_not_exist: bool = True,
+        ignore_corrupted: bool = False,
+    ) -> Optional[Index]:
+        fs = self.scm.get_fs(rev)
+        try:
+            with fs.open(self.config.INDEX) as f:
+                try:
+                    return Index.read(f, frozen=True)
+                except WrongArtifactsYaml as e:
+                    logger.warning("Corrupted artifacts.yaml file in commit %s", rev)
+                    if ignore_corrupted:
+                        return None
+                    raise e
+        except FileNotFoundError:
+            if allow_to_not_exist:
+                return None
+        raise ValueError(f"No Index exists at {rev}")
 
     def get_history(self) -> Dict[str, Index]:
-        commits = {
-            commit
-            for branch in self.repo.heads
-            for commit in traverse_commit(branch.commit)
+        revs = {
+            rev
+            for branch in self.scm.iter_refs("refs/heads/")
+            for rev in self.scm.branch_revs(branch)
         }
-        return {
-            commit.hexsha: self.get_commit_index(commit)  # type: ignore
-            for commit in commits
-            if self.config.INDEX in commit.tree
-        }
+        history = {}
+        for rev in revs:
+            try:
+                index = self._get_commit_index(rev)
+                if index is not None:
+                    history[rev] = index
+            except ValueError:
+                pass
+        return history
 
     def artifact_centric_representation(self) -> ArtifactsCommits:
         representation = defaultdict(dict)  # type: ArtifactsCommits
@@ -435,41 +456,42 @@ class EnrichmentManager(BaseManager, RemoteRepoMixin):
     actions: FrozenSet[Action] = frozenset()
 
     @classmethod
-    def from_local_repo(cls, repo: Union[str, Repo], config: RegistryConfig = None):
-        if isinstance(repo, str):
-            repo = git.Repo(repo, search_parent_directories=True)
+    @contextmanager
+    def from_scm(cls, scm: Git, config: RegistryConfig = None):
         if config is None:
-            config = read_registry_config(
-                os.path.join(repo.working_dir, CONFIG_FILE_NAME)
-            )
-        return cls(repo=repo, config=config)
+            config = read_registry_config(os.path.join(scm.root_dir, CONFIG_FILE_NAME))
+        yield cls(scm=scm, config=config)
 
     def describe(self, name: str, rev: str = None) -> List[EnrichmentInfo]:
         enrichments = self.config.enrichments
         res = []
         gto_enrichment = enrichments.pop("gto")
-        gto_info = gto_enrichment.describe(self.repo, name, rev)
+        gto_info = gto_enrichment.describe(self.scm, name, rev)
         if gto_info:
             res.append(gto_info)
             path = gto_info.get_path()  # type: ignore
             for enrichment in enrichments.values():
-                enrichment_data = enrichment.describe(self.repo, path, rev)
+                enrichment_data = enrichment.describe(self.scm, path, rev)
                 if enrichment_data is not None:
                     res.append(enrichment_data)
         return res
 
-    def get_commits(self, all_branches=False, all_commits=False):
-        if not self.repo.refs:
-            return {}
-        if all_commits:
-            return {
-                commit
-                for branch in self.repo.heads
-                for commit in traverse_commit(branch.commit)
-            }
-        if all_branches:
-            return {branch.commit for branch in self.repo.heads}
-        return {self.repo.commit()}
+    def get_commits(self, all_branches=False, all_commits=False) -> Iterator[GitCommit]:
+        revs: Set[str] = set()
+        if all_commits or all_branches:
+            branches = list(self.scm.iter_refs("refs/heads/"))
+            if all_commits:
+                revs.update(
+                    rev for branch in branches for rev in self.scm.branch_revs(branch)
+                )
+            elif all_branches:
+                revs.update(self.scm.resolve_rev(branch) for branch in branches)
+        else:
+            try:
+                revs.add(self.scm.get_rev())
+            except SCMError:
+                pass  # empty git repo
+        yield from (self.scm.resolve_commit(rev) for rev in revs)
 
     def update_state(
         self,
@@ -480,7 +502,7 @@ class EnrichmentManager(BaseManager, RemoteRepoMixin):
         # processing registered artifacts and versions first
         for artifact in state.get_artifacts().values():
             for version in artifact.versions:
-                commit = self.repo.commit(version.commit_hexsha)
+                commit = self.scm.resolve_commit(version.commit_hexsha)
                 enrichments = self.describe(
                     artifact.artifact,
                     # faster to make git.Reference here
@@ -490,13 +512,13 @@ class EnrichmentManager(BaseManager, RemoteRepoMixin):
                     EnrichmentEvent(
                         artifact=artifact.artifact,
                         version=version.version,
-                        created_at=datetime.fromtimestamp(commit.committed_date),
-                        author=commit.author.name,
-                        author_email=commit.author.email,
+                        created_at=datetime.fromtimestamp(commit.commit_time),
+                        author=commit.author_name,
+                        author_email=commit.author_email,
                         commit_hexsha=commit.hexsha,
                         message=commit.message,
-                        committer=commit.committer.name,
-                        committer_email=commit.committer.email,
+                        committer=commit.committer_name,
+                        committer_email=commit.committer_email,
                         enrichments=enrichments,
                     )
                 )
@@ -504,7 +526,7 @@ class EnrichmentManager(BaseManager, RemoteRepoMixin):
         for commit in self.get_commits(
             all_branches=all_branches, all_commits=all_commits
         ):
-            for art_name in GTOEnrichment().discover(self.repo, commit):
+            for art_name in GTOEnrichment().discover(self.scm, commit):
                 enrichments = self.describe(art_name, rev=commit)
                 artifact = state.find_artifact(art_name, create_new=True)
                 version = artifact.find_version(
@@ -514,13 +536,13 @@ class EnrichmentManager(BaseManager, RemoteRepoMixin):
                     EnrichmentEvent(
                         artifact=artifact.artifact,
                         version=version.version,
-                        created_at=datetime.fromtimestamp(commit.committed_date),
-                        author=commit.author.name,
-                        author_email=commit.author.email,
+                        created_at=datetime.fromtimestamp(commit.commit_time),
+                        author=commit.author_name,
+                        author_email=commit.author_email,
                         commit_hexsha=commit.hexsha,
                         message=commit.message,
-                        committer=commit.committer.name,
-                        committer_email=commit.committer.email,
+                        committer=commit.committer_name,
+                        committer_email=commit.committer_email,
                         enrichments=enrichments,
                     )
                 )
@@ -546,9 +568,9 @@ class GTOEnrichment(EnrichmentReader):
     source = "gto"
 
     def discover(  # pylint: disable=no-self-use
-        self, repo, rev: Optional[Union[git.Reference, str]]
+        self, url_or_scm: Union[str, Git], rev: str
     ) -> Dict[str, GTOInfo]:
-        with RepoIndexManager.from_repo(repo) as index:
+        with RepoIndexManager.from_url(url_or_scm) as index:
             index = index.get_commit_index(rev)
         if index:
             return {
@@ -558,10 +580,10 @@ class GTOEnrichment(EnrichmentReader):
         return {}
 
     def describe(  # pylint: disable=no-self-use
-        self, repo, obj: str, rev: Optional[Union[git.Reference, str]]
+        self, url_or_scm: Union[str, Git], obj: str, rev: Optional[str]
     ) -> Optional[GTOInfo]:
-        with RepoIndexManager.from_repo(repo) as index:
-            index = index.get_commit_index(rev)
+        with RepoIndexManager.from_url(url_or_scm) as index:
+            index = index.get_commit_index(rev or index.scm.get_rev())
         if index and obj in index.state:
             return GTOInfo(artifact=index.state[obj])
         return None

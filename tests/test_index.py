@@ -1,7 +1,8 @@
-from typing import Callable, Tuple
+from typing import Sequence
 
-import git
 import pytest
+from pytest_test_utils import TmpDir
+from scmrepo.git import Git
 
 from gto import CONFIG
 from gto.index import (
@@ -12,20 +13,13 @@ from gto.index import (
 )
 
 
-def init_index(path):
-    # not correct, I believe, but tests pass
-    with RepoIndexManager.from_repo(path) as index:
-        return index
+@pytest.fixture(name="index")
+def _index(empty_git_repo: str) -> RepoIndexManager:
+    with RepoIndexManager.from_url(empty_git_repo) as index:
+        yield index
 
 
-@pytest.fixture
-def git_index_repo(empty_git_repo: Tuple[git.Repo, Callable]):
-    repo, write_file = empty_git_repo  # pylint: disable=unused-variable
-    return init_index(repo.working_dir), repo
-
-
-def test_git_index_add_virtual(git_index_repo):
-    index, repo = git_index_repo
+def test_git_index_add_virtual(tmp_dir: TmpDir, scm: Git, index: RepoIndexManager):
     index.add(
         "nn",
         type="tt",
@@ -40,19 +34,19 @@ def test_git_index_add_virtual(git_index_repo):
         commit_message=None,
     )
 
-    new_index = init_index(repo.git_dir)
-    assert isinstance(new_index, RepoIndexManager)
-    index_value = new_index.get_index()
-    assert index_value.state["nn"] == Artifact(path="pp", type="tt", virtual=True)
+    with RepoIndexManager.from_url(tmp_dir) as new_index:
+        assert isinstance(new_index, RepoIndexManager)
+        index_value = new_index.get_index()
+        assert index_value.state["nn"] == Artifact(path="pp", type="tt", virtual=True)
 
-    repo.index.add(CONFIG.INDEX)
-    commit = repo.index.commit("add index")
+        scm.add(CONFIG.INDEX)
+        scm.commit("add index")
+        rev = scm.get_rev()
 
-    assert new_index.get_history()[commit.hexsha].state == index_value.state
+        assert new_index.get_history()[rev].state == index_value.state
 
 
-def test_git_index_remove_virtual(git_index_repo):
-    index, repo = git_index_repo
+def test_git_index_remove_virtual(tmp_dir: TmpDir, index: RepoIndexManager):
     index.add(
         "aa",
         "aa",
@@ -67,12 +61,12 @@ def test_git_index_remove_virtual(git_index_repo):
         commit_message=None,
     )
 
-    new_index = init_index(repo.git_dir)
-    assert isinstance(new_index, RepoIndexManager)
+    with RepoIndexManager.from_url(tmp_dir) as new_index:
+        assert isinstance(new_index, RepoIndexManager)
 
-    new_index.remove("aa")
-    index_value = new_index.get_index()
-    assert index_value.state == {}
+        new_index.remove("aa")
+        index_value = new_index.get_index()
+        assert index_value.state == {}
 
 
 @pytest.mark.parametrize(
@@ -85,7 +79,7 @@ def test_git_index_remove_virtual(git_index_repo):
         ("models/m1.txt/", ["models/m1.txt"]),
     ],
 )
-def test_check_path_found(path, paths):
+def test_check_path_found(path: str, paths: Sequence[str]):
     assert find_repeated_path(path, paths) is not None
 
 
@@ -93,29 +87,27 @@ def test_check_path_found(path, paths):
     "path, paths",
     [("models/m1.txt", ["models/m2.txt"]), ("models/a/m1.txt", ["models/m1.txt"])],
 )
-def test_check_path_not_found(path, paths):
+def test_check_path_not_found(path: str, paths: Sequence[str]):
     assert find_repeated_path(path, paths) is None
 
 
-def test_check_existence_repo(empty_git_repo: Tuple[git.Repo, Callable]):
-    repo, write_file = empty_git_repo
+def test_check_existence_repo(tmp_dir: TmpDir, scm: Git):
+    tmp_dir.gen("m1.txt", "some content")
+    scm.add(["m1.txt"])
+    scm.commit("commit config file")
+    tmp_dir.gen({"a": {"b": "some content"}})
+    scm.add([str(tmp_dir / "a" / "b")])
+    (tmp_dir / "m1.txt").unlink()
+    scm.add(["m1.txt"])
+    scm.commit("commit a/b")
 
-    write_file("m1.txt", "some content")
-    repo.index.add(["m1.txt"])
-    repo.index.commit("commit config file")
-    write_file("a/b", "some content")
-    repo.index.add(["a/b"])
-    repo.index.remove(["m1.txt"])
-    repo.index.commit("commit a/b")
-
-    assert check_if_path_exists("m1.txt", repo, "HEAD^1")
-    assert not check_if_path_exists("m1.txt", repo, "HEAD")
-    assert not check_if_path_exists("a/b", repo, "HEAD^1")
-    assert check_if_path_exists("a/b", repo, "HEAD")
+    assert check_if_path_exists("m1.txt", scm, "HEAD^1")
+    assert not check_if_path_exists("m1.txt", scm, "HEAD")
+    assert not check_if_path_exists("a/b", scm, "HEAD^1")
+    assert check_if_path_exists("a/b", scm, "HEAD")
 
 
-def test_check_existence_no_repo(tmp_path):
-    with open(tmp_path / "m1.txt", "w", encoding="utf8") as f:
-        f.write("some content")
-    assert check_if_path_exists(tmp_path / "m1.txt")
-    assert not check_if_path_exists(tmp_path / "not/exists")
+def test_check_existence_no_repo(tmp_dir: TmpDir):
+    tmp_dir.gen("m1.txt", "some content")
+    assert check_if_path_exists(tmp_dir / "m1.txt")
+    assert not check_if_path_exists(tmp_dir / "not" / "exists")

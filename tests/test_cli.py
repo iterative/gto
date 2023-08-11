@@ -2,10 +2,10 @@
 from typing import Callable, Optional, Tuple
 from unittest import mock
 
-import git
 import pytest
 import typer
 from packaging import version
+from pytest_test_utils import TmpDir
 from typer.main import get_command_from_info
 
 from gto.cli import app
@@ -88,16 +88,15 @@ def test_commands_args_help(app_cli_cmd):
     assert not no_help, f"{no_help} cli command args do not have help!"
 
 
-def test_show(empty_git_repo: Tuple[git.Repo, Callable]):
-    repo, write_file = empty_git_repo
+def test_show(empty_git_repo: str):
     _check_successful_cmd(
         "show",
-        ["-r", repo.working_dir],
+        ["-r", empty_git_repo],
         "Nothing found in the current workspace\n",
     )
     _check_successful_cmd(
         "history",
-        ["-r", repo.working_dir],
+        ["-r", empty_git_repo],
         "Nothing found in the current workspace\n",
     )
 
@@ -111,97 +110,97 @@ EXPECTED_DESCRIBE_OUTPUT = """{
 
 
 # this is one function because showcase fixture takes some time to be created
-def test_commands(showcase):
-    path, repo, write_file, first_commit, second_commit = showcase
+def test_commands(tmp_dir: TmpDir, showcase: Tuple[str, str]):
+    first_commit, second_commit = showcase
     _check_successful_cmd(
         "show",
-        ["-r", path, "rf@greatest", "--version"],
+        ["-r", tmp_dir, "rf@greatest", "--version"],
         "v1.2.4\n",
     )
     _check_successful_cmd(
         "show",
-        ["-r", path, "rf@latest", "--ref"],
+        ["-r", tmp_dir, "rf@latest", "--ref"],
         "rf@v1.2.4\n",
     )
     _check_successful_cmd(
         "show",
-        ["-r", path, "rf#production", "--version"],
+        ["-r", tmp_dir, "rf#production", "--version"],
         "v1.2.3\n",
     )
     _check_successful_cmd(
         "show",
-        ["-r", path, "rf#production", "--vs", "-1", "--version"],
+        ["-r", tmp_dir, "rf#production", "--vs", "-1", "--version"],
         "v1.2.4\nv1.2.3\n",
     )
     _check_successful_cmd(
         "show",
-        ["-r", path, "rf#staging", "--vs", "-1", "--version"],
+        ["-r", tmp_dir, "rf#staging", "--vs", "-1", "--version"],
         "v1.2.4\n",
     )
     _check_successful_cmd(
         "show",
-        ["-r", path, "rf#production", "--ref"],
+        ["-r", tmp_dir, "rf#production", "--ref"],
         "rf@v1.2.3\n",
     )
     # None because of random order - fix this
-    _check_successful_cmd("stages", ["-r", path], None)
+    _check_successful_cmd("stages", ["-r", tmp_dir], None)
     # None because of output randomness and complexity
     _check_successful_cmd(
         "show",
-        ["-r", path],
+        ["-r", tmp_dir],
         None,
     )
     # None because of output randomness and complexity
     _check_successful_cmd(
         "history",
-        ["-r", path],
+        ["-r", tmp_dir],
         None,
     )
     # check-ref
     _check_successful_cmd(
         "check-ref",
-        ["-r", path, "rf#production#3", "--name"],
+        ["-r", tmp_dir, "rf#production#3", "--name"],
         "rf\n",
     )
     _check_successful_cmd(
         "check-ref",
-        ["-r", path, "rf#production#3", "--stage"],
+        ["-r", tmp_dir, "rf#production#3", "--stage"],
         "production\n",
     )
     _check_successful_cmd(
         "check-ref",
-        ["-r", path, "rf#production#3", "--version"],
+        ["-r", tmp_dir, "rf#production#3", "--version"],
         "v1.2.4\n",
     )
     _check_successful_cmd(
         "check-ref",
-        ["-r", path, "rf@v1.2.4", "--version"],
+        ["-r", tmp_dir, "rf@v1.2.4", "--version"],
         "v1.2.4\n",
     )
     _check_successful_cmd(
         "check-ref",
-        ["-r", path, "rf@v1.2.4", "--event"],
+        ["-r", tmp_dir, "rf@v1.2.4", "--event"],
         "registration\n",
     )
     _check_successful_cmd(
         "check-ref",
-        ["-r", path, "rf@v1.2.4"],
+        ["-r", tmp_dir, "rf@v1.2.4"],
         '✅  Version "v1.2.4" of artifact "rf" was registered\n',
     )
     _check_successful_cmd(
         "check-ref",
-        ["-r", path, "rf#production#3", "--event"],
+        ["-r", tmp_dir, "rf#production#3", "--event"],
         "assignment\n",
     )
     _check_successful_cmd(
         "check-ref",
-        ["-r", path, "rf#production#3"],
+        ["-r", tmp_dir, "rf#production#3"],
         '✅  Stage "production" was assigned to version "v1.2.4" of artifact "rf"\n',
     )
     # TODO: make unsuccessful
     _check_successful_cmd(
         "check-ref",
-        ["-r", path, "this-tag-does-not-exist"],
+        ["-r", tmp_dir, "this-tag-does-not-exist"],
         "",
     )
     _check_successful_cmd(
@@ -212,7 +211,7 @@ def test_commands(showcase):
     )
     _check_successful_cmd(
         "doctor",
-        ["-r", path],
+        ["-r", tmp_dir],
         None,
     )
 
@@ -230,12 +229,10 @@ EXPECTED_DESCRIBE_OUTPUT_2 = """{
 """
 
 
-def test_register(repo_with_commit: Tuple[git.Repo, Callable]):
-    repo, write_file = repo_with_commit
-
+def test_register(repo_with_commit: str):
     _check_successful_cmd(
         "register",
-        ["-r", repo.working_dir, "a1"],
+        ["-r", repo_with_commit, "a1"],
         "Created git tag 'a1@v0.0.1' that registers version\n"
         "To push the changes upstream, run:\n"
         "    git push origin a1@v0.0.1\n",
@@ -243,7 +240,7 @@ def test_register(repo_with_commit: Tuple[git.Repo, Callable]):
 
     _check_successful_cmd(
         "deprecate",
-        ["-r", repo.working_dir, "a1", "v0.0.1", "--delete"],
+        ["-r", repo_with_commit, "a1", "v0.0.1", "--delete"],
         "Deleted git tag 'a1@v0.0.1'\n"
         "To push the changes upstream, run:\n"
         "    git push --delete origin a1@v0.0.1\n",
@@ -251,7 +248,7 @@ def test_register(repo_with_commit: Tuple[git.Repo, Callable]):
 
     _check_successful_cmd(
         "register",
-        ["-r", repo.working_dir, "a2", "--version", "v1.2.3"],
+        ["-r", repo_with_commit, "a2", "--version", "v1.2.3"],
         "Created git tag 'a2@v1.2.3' that registers version\n"
         "To push the changes upstream, run:\n"
         "    git push origin a2@v1.2.3\n",
@@ -259,7 +256,7 @@ def test_register(repo_with_commit: Tuple[git.Repo, Callable]):
 
     _check_successful_cmd(
         "deprecate",
-        ["-r", repo.working_dir, "a2", "v1.2.3"],
+        ["-r", repo_with_commit, "a2", "v1.2.3"],
         "Created git tag 'a2@v1.2.3!' that deregisters version\n"
         "To push the changes upstream, run:\n"
         "    git push origin a2@v1.2.3!\n",
@@ -267,7 +264,7 @@ def test_register(repo_with_commit: Tuple[git.Repo, Callable]):
 
     _check_successful_cmd(
         "register",
-        ["-r", repo.working_dir, "a2", "--simple", "false"],
+        ["-r", repo_with_commit, "a2", "--simple", "false"],
         "Created git tag 'a2@v1.2.3#1' that registers version\n"
         "To push the changes upstream, run:\n"
         "    git push origin a2@v1.2.3#1\n",
@@ -275,24 +272,22 @@ def test_register(repo_with_commit: Tuple[git.Repo, Callable]):
 
     _check_failing_cmd(
         "register",
-        ["-r", repo.working_dir, "a3", "--version", "1.2.3"],
+        ["-r", repo_with_commit, "a3", "--version", "1.2.3"],
         "❌ Supplied version '1.2.3' cannot be parsed\n",
     )
 
     _check_successful_cmd(
         "register",
-        ["-r", repo.working_dir, "classification/dvclive:models/nn"],
+        ["-r", repo_with_commit, "classification/dvclive:models/nn"],
         "classification/dvclive=models/nn@v0.0.1",
         search_func=_check_output_contains,
     )
 
 
-def test_assign(repo_with_commit: Tuple[git.Repo, Callable]):
-    repo, write_file = repo_with_commit
-
+def test_assign(repo_with_commit: str):
     _check_successful_cmd(
         "register",
-        ["-r", repo.working_dir, "nn1"],
+        ["-r", repo_with_commit, "nn1"],
         "Created git tag 'nn1@v0.0.1' that registers version\n"
         "To push the changes upstream, run:\n"
         "    git push origin nn1@v0.0.1\n",
@@ -300,7 +295,7 @@ def test_assign(repo_with_commit: Tuple[git.Repo, Callable]):
     # this check depends on the previous one
     _check_successful_cmd(
         "assign",
-        ["-r", repo.working_dir, "nn1", "HEAD", "--stage", "prod"],
+        ["-r", repo_with_commit, "nn1", "HEAD", "--stage", "prod"],
         "Created git tag 'nn1#prod#1' that assigns stage to version 'v0.0.1'\n"
         "To push the changes upstream, run:\n"
         "    git push origin nn1#prod#1\n",
@@ -310,7 +305,7 @@ def test_assign(repo_with_commit: Tuple[git.Repo, Callable]):
         "assign",
         [
             "-r",
-            repo.working_dir,
+            repo_with_commit,
             "nn1",
             "HEAD",
             "--version",
@@ -325,7 +320,7 @@ def test_assign(repo_with_commit: Tuple[git.Repo, Callable]):
         "assign",
         [
             "-r",
-            repo.working_dir,
+            repo_with_commit,
             "nn2",
             "HEAD",
             "--version",
@@ -338,7 +333,7 @@ def test_assign(repo_with_commit: Tuple[git.Repo, Callable]):
 
     _check_successful_cmd(
         "assign",
-        ["-r", repo.working_dir, "nn2", "HEAD", "--stage", "prod"],
+        ["-r", repo_with_commit, "nn2", "HEAD", "--stage", "prod"],
         "Created git tag 'nn2@v0.0.1' that registers version\n"
         "To push the changes upstream, run:\n"
         "    git push origin nn2@v0.0.1\n"

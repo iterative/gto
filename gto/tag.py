@@ -1,10 +1,12 @@
+import os
 import re
 from datetime import datetime
 from enum import Enum
 from typing import FrozenSet, Iterable, Optional, Union
 
-import git
 from pydantic import BaseModel
+from scmrepo.exceptions import RevError
+from scmrepo.git import Git, GitTag
 
 from .base import (
     Artifact,
@@ -55,7 +57,7 @@ def name_tag(
     artifact: str,
     version: Optional[str] = None,
     stage: Optional[str] = None,
-    repo: Optional[git.Repo] = None,
+    scm: Optional[Git] = None,
     simple: bool = False,
 ):
     if action not in TagTemplates:
@@ -66,11 +68,11 @@ def name_tag(
     )
     if simple:
         return tag
-    if repo is None:
-        raise MissingArg(arg="repo")
+    if scm is None:
+        raise MissingArg(arg="scm")
     counter = 0
-    for t in repo.tags:
-        parsed = parse_name(t.name, raise_on_fail=False)  # type: ignore
+    for t in scm.list_tags():
+        parsed = parse_name(t, raise_on_fail=False)  # type: ignore
         if (
             parsed
             and parsed[NAME] == artifact
@@ -124,16 +126,16 @@ class Tag(BaseModel):
     version: Optional[str]
     stage: Optional[str]
     created_at: datetime
-    tag: git.Tag
+    tag: GitTag
 
     class Config:
         arbitrary_types_allowed = True
 
 
-def parse_tag(tag: git.Tag):
+def parse_tag(tag: GitTag):
     return Tag(
         tag=tag,
-        created_at=datetime.fromtimestamp(tag.tag.tagged_date),
+        created_at=datetime.fromtimestamp(tag.tag_time),
         **parse_name(tag.name),
     )
 
@@ -143,65 +145,85 @@ def find(
     name: Optional[str] = None,
     version: Optional[str] = None,
     stage: Optional[str] = None,
-    repo: Optional[git.Repo] = None,
+    scm: Optional[Git] = None,
     sort: str = "by_time",
-    tags: Optional[Iterable[git.Tag]] = None,
+    tags: Optional[Iterable[GitTag]] = None,
 ):
     if isinstance(action, Action):
         action = frozenset([action])
-    if tags is None:
-        if repo is None:
-            raise MissingArg(arg="repo")
-        tags = [t for t in repo.tags if parse_name(t.name, raise_on_fail=False)]
-    if action:
-        tags = [t for t in tags if parse_name(t.name)[ACTION] in action]
-    if name:
-        tags = [t for t in tags if parse_name(t.name).get(NAME) == name]
-    if version:
-        tags = [t for t in tags if parse_name(t.name).get(VERSION) == version]
-    if stage:
-        tags = [t for t in tags if parse_name(t.name).get(STAGE) == stage]
-    # remove lightweight tags - better to do later so the function is faster
-    tags = [t for t in tags if t.tag is not None]
+    if scm is None:
+        raise MissingArg(arg="scm")
+    result = []
+    tag_names = [t.name for t in tags] if tags else scm.list_tags()
+    for t in tag_names:
+        try:
+            parsed = parse_name(t)
+        except InvalidTagName:
+            continue
+        if (  # pylint: disable=too-many-boolean-expressions
+            parsed
+            and (not action or parsed[ACTION] in action)
+            and (not name or parsed.get(NAME) == name)
+            and (not version or parsed.get(VERSION) == version)
+            and (not stage or parsed.get(STAGE) == stage)
+        ):
+            tag = scm.get_tag(t)
+            # remove lightweight tags
+            if isinstance(tag, GitTag):
+                result.append(tag)
     if sort == "by_time":
-        tags = sorted(tags, key=lambda t: t.tag.tagged_date)
-    else:
-        raise NotImplementedError(f"Unknown sort: {sort}")
-    return tags
+        return sorted(result, key=lambda t: t.tag_time)
+    raise NotImplementedError(f"Unknown sort: {sort}")
 
 
-def create_tag(
-    repo: git.Repo,
+def create_tag(  # pylint: disable=too-many-branches
+    scm: Git,
     name: str,
-    ref: str,
+    rev: str,
     message: str,
     tagger: str = None,
     tagger_email: str = None,
 ):
     try:
-        repo.commit(ref)
-    except (ValueError, git.BadName) as e:
-        raise RefNotFound(ref=ref) from e
-    if name in repo.refs:
+        rev = scm.resolve_rev(rev)
+    except RevError as e:
+        raise RefNotFound(ref=rev) from e
+    if scm.get_tag(name):
         raise TagExists(name=name)
 
-    env = {}
     if tagger:
-        env["GIT_COMMITTER_NAME"] = tagger
+        orig_name: Optional[str] = os.environ.get("GIT_COMMITTER_NAME")
+        os.environ["GIT_COMMITTER_NAME"] = tagger
+    else:
+        orig_name = None
     if tagger_email:
-        env["GIT_COMMITTER_EMAIL"] = tagger_email
-
-    repo.git.tag(["-a", name, "-m", message, ref], env=env)
-
-
-def delete_tag(repo: git.Repo, name: str):
+        orig_email: Optional[str] = os.environ.get("GIT_COMMITTER_EMAIL")
+        os.environ["GIT_COMMITTER_EMAIL"] = tagger_email
+    else:
+        orig_email = None
     try:
-        repo.delete_tag(name)
-    except git.BadName as e:
-        raise TagNotFound(name=name) from e
+        scm.tag(name, target=rev, annotated=True, message=message)
+    finally:
+        if tagger:
+            if orig_name:
+                os.environ["GIT_COMMITTER_NAME"] = orig_name
+            else:
+                del os.environ["GIT_COMMITTER_NAME"]
+        if tagger_email:
+            if orig_email:
+                os.environ["GIT_COMMITTER_EMAIL"] = orig_email
+            else:
+                del os.environ["GIT_COMMITTER_EMAIL"]
 
 
-def index_tag(artifact: Artifact, tag: git.TagReference) -> Artifact:
+def delete_tag(scm: Git, name: str):
+    ref = f"refs/tags/{name}"
+    if not scm.get_ref(ref):
+        raise TagNotFound(name=name)
+    scm.remove_ref(ref)
+
+
+def index_tag(artifact: Artifact, tag: GitTag) -> Artifact:
     event: Union[Deprecation, Registration, Deregistration, Assignment, Unassignment]
     mtag = parse_tag(tag)
     if mtag.action == Action.REGISTER:
@@ -209,10 +231,10 @@ def index_tag(artifact: Artifact, tag: git.TagReference) -> Artifact:
             artifact=mtag.name,
             version=mtag.version,
             created_at=mtag.created_at,
-            author=tag.tag.tagger.name,
-            author_email=tag.tag.tagger.email,
-            message=tag.tag.message,
-            commit_hexsha=tag.commit.hexsha,
+            author=tag.tagger_name,
+            author_email=tag.tagger_email,
+            message=tag.message.strip(),
+            commit_hexsha=tag.target,
             tag=tag.name,
         )
     elif mtag.action == Action.DEREGISTER:
@@ -220,15 +242,15 @@ def index_tag(artifact: Artifact, tag: git.TagReference) -> Artifact:
             artifact=mtag.name,
             version=mtag.version,
             created_at=mtag.created_at,
-            author=tag.tag.tagger.name,
-            author_email=tag.tag.tagger.email,
-            message=tag.tag.message,
-            commit_hexsha=tag.commit.hexsha,
+            author=tag.tagger_name,
+            author_email=tag.tagger_email,
+            message=tag.message.strip(),
+            commit_hexsha=tag.target,
             tag=tag.name,
         )
     elif mtag.action in (Action.ASSIGN, Action.UNASSIGN):
         version = artifact.find_version(
-            commit_hexsha=tag.commit.hexsha, create_new=True
+            commit_hexsha=tag.target, create_new=True
         ).version  # type: ignore
         if mtag.action == Action.ASSIGN:
             event = Assignment(
@@ -236,10 +258,10 @@ def index_tag(artifact: Artifact, tag: git.TagReference) -> Artifact:
                 version=version,
                 stage=mtag.stage,
                 created_at=mtag.created_at,
-                author=tag.tag.tagger.name,
-                author_email=tag.tag.tagger.email,
-                message=tag.tag.message,
-                commit_hexsha=tag.commit.hexsha,
+                author=tag.tagger_name,
+                author_email=tag.tagger_email,
+                message=tag.message.strip(),
+                commit_hexsha=tag.target,
                 tag=tag.name,
             )
         else:
@@ -248,20 +270,20 @@ def index_tag(artifact: Artifact, tag: git.TagReference) -> Artifact:
                 version=version,
                 stage=mtag.stage,
                 created_at=mtag.created_at,
-                author=tag.tag.tagger.name,
-                author_email=tag.tag.tagger.email,
-                message=tag.tag.message,
-                commit_hexsha=tag.commit.hexsha,
+                author=tag.tagger_name,
+                author_email=tag.tagger_email,
+                message=tag.message.strip(),
+                commit_hexsha=tag.target,
                 tag=tag.name,
             )
     elif mtag.action == Action.DEPRECATE:
         event = Deprecation(
             artifact=mtag.name,
             created_at=mtag.created_at,
-            author=tag.tag.tagger.name,
-            author_email=tag.tag.tagger.email,
-            message=tag.tag.message,
-            commit_hexsha=tag.commit.hexsha,
+            author=tag.tagger_name,
+            author_email=tag.tagger_email,
+            message=tag.message.strip(),
+            commit_hexsha=tag.target,
             tag=tag.name,
         )
     artifact.add_event(event)
@@ -272,12 +294,10 @@ class TagManager(BaseManager):  # pylint: disable=abstract-method
     def update_state(self, state: BaseRegistryState) -> BaseRegistryState:
         # tags are sorted and then indexed by timestamp
         # this is important to check that history is not broken
-        for tag in find(repo=self.repo, action=self.actions):
+        for tag in find(scm=self.scm, action=self.actions):
             state.update_artifact(
                 index_tag(
-                    state.find_artifact(
-                        parse_name(tag.tag.tag)["name"], create_new=True
-                    ),
+                    state.find_artifact(parse_name(tag.name)["name"], create_new=True),
                     tag,
                 )
             )
@@ -295,7 +315,7 @@ class TagArtifactManager(TagManager):
     def deprecate(
         self,
         name,
-        ref,
+        rev,
         message,
         simple,
         author: Optional[str] = None,
@@ -304,13 +324,13 @@ class TagArtifactManager(TagManager):
         tag = name_tag(
             Action.DEPRECATE,
             name,
-            repo=self.repo,
+            scm=self.scm,
             simple=simple,
         )
         create_tag(
-            self.repo,
+            self.scm,
             tag,
-            ref=ref,
+            rev=rev,
             message=message,
             tagger=author,
             tagger_email=author_email,
@@ -325,19 +345,19 @@ class TagVersionManager(TagManager):
         self,
         name,
         version,
-        ref,
+        rev,
         message,
         simple,
         author: Optional[str] = None,
         author_email: Optional[str] = None,
     ):
         tag = name_tag(
-            Action.REGISTER, name, version=version, repo=self.repo, simple=simple
+            Action.REGISTER, name, version=version, scm=self.scm, simple=simple
         )
         create_tag(
-            self.repo,
+            self.scm,
             tag,
-            ref=ref,
+            rev=rev,
             message=message,
             tagger=author,
             tagger_email=author_email,
@@ -348,19 +368,19 @@ class TagVersionManager(TagManager):
         self,
         name,
         version,
-        ref,
+        rev,
         message,
         simple,
         author: Optional[str] = None,
         author_email: Optional[str] = None,
     ):
         tag = name_tag(
-            Action.DEREGISTER, name, version=version, repo=self.repo, simple=simple
+            Action.DEREGISTER, name, version=version, scm=self.scm, simple=simple
         )
         create_tag(
-            self.repo,
+            self.scm,
             tag,
-            ref=ref,
+            rev=rev,
             message=message,
             tagger=author,
             tagger_email=author_email,
@@ -375,17 +395,17 @@ class TagStageManager(TagManager):
         self,
         name,
         stage,
-        ref,
+        rev,
         message,
         simple,
         author: Optional[str] = None,
         author_email: Optional[str] = None,
     ) -> str:
-        tag = name_tag(Action.ASSIGN, name, stage=stage, repo=self.repo, simple=simple)
+        tag = name_tag(Action.ASSIGN, name, stage=stage, scm=self.scm, simple=simple)
         create_tag(
-            self.repo,
+            self.scm,
             tag,
-            ref=ref,
+            rev=rev,
             message=message,
             tagger=author,
             tagger_email=author_email,
@@ -396,19 +416,17 @@ class TagStageManager(TagManager):
         self,
         name,
         stage,
-        ref,
+        rev,
         message,
         simple,
         author: Optional[str] = None,
         author_email: Optional[str] = None,
     ) -> str:
-        tag = name_tag(
-            Action.UNASSIGN, name, stage=stage, repo=self.repo, simple=simple
-        )
+        tag = name_tag(Action.UNASSIGN, name, stage=stage, scm=self.scm, simple=simple)
         create_tag(
-            self.repo,
+            self.scm,
             tag,
-            ref=ref,
+            rev=rev,
             message=message,
             tagger=author,
             tagger_email=author_email,

@@ -1,5 +1,10 @@
 """TODO: break this file into multiple test/files"""
-# pylint: disable=unused-variable, too-many-locals, too-many-statements
+# pylint: disable=too-many-locals, too-many-statements
+from typing import Tuple
+
+from pytest_test_utils import TmpDir
+from scmrepo.git import Git
+
 import gto
 from gto.base import (
     Artifact,
@@ -14,22 +19,18 @@ from gto.base import (
 from tests.utils import check_obj
 
 
-def test_api(showcase):
-    (
-        path,
-        repo,
-        write_file,
-        first_commit,
-        second_commit,
-    ) = showcase
+def test_api(tmp_dir: TmpDir, scm: Git, showcase: Tuple[str, str]):
+    first_commit, second_commit = showcase
 
-    gto.api.show(repo)
-    gto.api.history(repo)
+    gto.api.show(scm)
+    gto.api.history(scm)
     for name in "nn", "rf", "features":
-        gto.api.show(repo, name)
-        gto.api.history(repo, name)
+        gto.api.show(scm, name)
+        gto.api.history(scm, name)
 
-    artifacts = gto.api._get_state(path).artifacts  # pylint: disable=protected-access
+    artifacts = gto.api._get_state(  # pylint: disable=protected-access
+        tmp_dir
+    ).artifacts
     assert set(artifacts.keys()) == {"nn", "rf", "features"}
     # assert isinstance(artifacts["features"], BaseArtifact)
     # _check_obj(
@@ -43,8 +44,9 @@ def test_api(showcase):
     assert len(nn_artifact.versions) == 2
     nn_version = nn_artifact.versions[0]
     assert isinstance(nn_version, Version)
-    author = repo.commit().author.name
-    author_email = repo.commit().author.email
+    commit = scm.resolve_commit("HEAD")
+    author = commit.author_name
+    author_email = commit.author_email
 
     skip_keys_registration = {
         "created_at",
@@ -74,7 +76,7 @@ def test_api(showcase):
             version="v0.0.1",
             author=author,
             author_email=author_email,
-            commit_hexsha=first_commit.hexsha,
+            commit_hexsha=first_commit,
             discovered=False,
             is_active=True,
             ref="nn@v0.0.1",
@@ -94,7 +96,7 @@ def test_api(showcase):
             ref="nn#staging#1",
             author=author,
             author_email=author_email,
-            commit_hexsha=first_commit.hexsha,
+            commit_hexsha=first_commit,
         ),
         skip_keys=skip_keys_assignment,
     )
@@ -115,7 +117,7 @@ def test_api(showcase):
             ref="rf@v1.2.3",
             author=author,
             author_email=author_email,
-            commit_hexsha=first_commit.hexsha,
+            commit_hexsha=first_commit,
             discovered=False,
         ),
         skip_keys=skip_keys_registration,
@@ -129,7 +131,7 @@ def test_api(showcase):
             ref="rf@v1.2.4",
             author=author,
             author_email=author_email,
-            commit_hexsha=second_commit.hexsha,
+            commit_hexsha=second_commit,
             discovered=False,
         ),
         skip_keys=skip_keys_registration,
@@ -148,12 +150,8 @@ def test_api(showcase):
         isinstance(p, (Assignment, Unassignment, Commit))
         for p in rf_ver1.get_events(direct=False) + rf_ver2.get_events(direct=False)
     )
-    rf_a4, rf_a1, rf_c1 = rf_ver1.get_events(
-        direct=False
-    )  # pylint: disable=unused-variable
-    rf_a3, rf_a2, rf_c2 = rf_ver2.get_events(
-        direct=False
-    )  # pylint: disable=unused-variable
+    _rf_a4, rf_a1, _rf_c1 = rf_ver1.get_events(direct=False)
+    rf_a3, rf_a2, _rf_c2 = rf_ver2.get_events(direct=False)
 
     check_obj(
         rf_a1.dict_state(),
@@ -164,7 +162,7 @@ def test_api(showcase):
             tag="rf#production#1",
             author=author,
             author_email=author_email,
-            commit_hexsha=first_commit.hexsha,
+            commit_hexsha=first_commit,
         ),
         skip_keys=skip_keys_assignment,
     )
@@ -177,7 +175,7 @@ def test_api(showcase):
             tag="rf#production#3",
             author=author,
             author_email=author_email,
-            commit_hexsha=second_commit.hexsha,
+            commit_hexsha=second_commit,
         ),
         skip_keys=skip_keys_assignment,
     )
@@ -190,7 +188,7 @@ def test_api(showcase):
             tag="rf#staging#2",
             author=author,
             author_email=author_email,
-            commit_hexsha=second_commit.hexsha,
+            commit_hexsha=second_commit,
         ),
         skip_keys=skip_keys_assignment,
     )

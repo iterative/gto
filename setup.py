@@ -3,7 +3,7 @@ from pathlib import Path
 from setuptools import find_packages, setup
 
 install_requires = [
-    "gitpython",
+    "scmrepo>=1.2.1,<2",
     "typer>=0.4.1",
     "rich",
     "pydantic>=1.9.0,<2",
@@ -20,6 +20,7 @@ tests = [
     "pytest-cov",
     "pytest-lazy-fixture==0.6.3",
     "pytest-mock",
+    "pytest-test-utils",
     "pylint<2.14",
     # we use this to suppress pytest-related false positives in our tests.
     "pylint-pytest",
@@ -45,12 +46,10 @@ setup_args = dict(  # noqa: C408
     install_requires=install_requires,
     extras_require={"tests": tests},
     keywords="git repo repository artifact registry developer-tools collaboration",
-    python_requires=">=3.6",
+    python_requires=">=3.8",
     classifiers=[
         "Development Status :: 2 - Pre-Alpha",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.6",
-        "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",

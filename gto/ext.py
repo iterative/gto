@@ -1,10 +1,11 @@
 from abc import ABC, abstractmethod
 from functools import lru_cache
 from importlib import import_module
-from typing import Dict, Optional, Type
+from typing import Dict, Optional, Type, Union
 
 import entrypoints
 from pydantic import BaseModel
+from scmrepo.git import Git
 
 ENRICHMENT_ENTRYPOINT = "gto.enrichment"
 
@@ -39,7 +40,7 @@ class EnrichmentReader(BaseModel, ABC):
 
     @abstractmethod
     def describe(
-        self, repo: str, obj: str, rev: Optional[str]
+        self, url_or_scm: Union[str, Git], obj: str, rev: Optional[str]
     ) -> Optional[EnrichmentInfo]:
         raise NotImplementedError
 
