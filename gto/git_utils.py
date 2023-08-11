@@ -131,7 +131,7 @@ def git_push_tag(
             msg=f"The command `git push {remote_name} {tag_name}` failed. "
             f"Make sure your local repository is in sync with the remote."
         ) from e
-    for _ref, status in result:
+    for _ref, status in result.items():
         if status == SyncStatus.DIVERGED:
             raise GTOException(
                 msg=f"The command `git push {remote_name} {tag_name}` failed. "
