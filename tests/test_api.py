@@ -1,9 +1,9 @@
-# pylint: disable=unused-variable, protected-access
+# pylint: disable=protected-access
 """TODO: add more tests for API"""
 import os
 from contextlib import contextmanager
 from time import sleep
-from typing import Optional, Tuple
+from typing import Optional
 from unittest.mock import ANY, call, patch
 
 import pytest
@@ -267,7 +267,8 @@ def environ(**overrides):
             os.environ.pop(name, None)
 
 
-def test_check_ref_detailed(scm: Git, artifact: str):
+@pytest.mark.usefixtures("artifact")
+def test_check_ref_detailed(scm: Git):
     NAME = "model"
     SEMVER = "v1.2.3"
     GIT_AUTHOR_NAME = "Alexander Guschin"
@@ -299,9 +300,8 @@ def test_check_ref_detailed(scm: Git, artifact: str):
     )
 
 
-def test_check_ref_multiple_showcase(scm: Git, showcase: Tuple[str, str]):
-    first_commit, second_commit = showcase
-
+@pytest.mark.usefixtures("showcase")
+def test_check_ref_multiple_showcase(scm: Git):
     for tag in find(scm=scm):
         events = gto.api.check_ref(scm, tag.name)
         assert len(events) == 1, "Should return one event"
