@@ -1,7 +1,7 @@
 import logging
 import os
 from contextlib import contextmanager
-from typing import Optional, TypeVar
+from typing import List, Optional, TypeVar, cast
 
 from funcy import distinct
 from pydantic import BaseModel
@@ -472,8 +472,7 @@ class GitRegistry(BaseModel, RemoteRepoMixin):
         event = self.check_ref(tag)
         if len(event) > 1:
             raise NotImplementedInGTO("Can't process a tag that caused multiple events")
-        event = event[0]
-        return event
+        return cast(TBaseEvent, event[0])
 
     @staticmethod
     def _echo_git_suggestion(tag, delete=False):
@@ -493,7 +492,7 @@ class GitRegistry(BaseModel, RemoteRepoMixin):
                 delete=True,
             )
 
-    def check_ref(self, ref: str):
+    def check_ref(self, ref: str) -> List[BaseEvent]:
         "Find out what was registered/assigned in this ref"
         try:
             name = ""
@@ -513,7 +512,7 @@ class GitRegistry(BaseModel, RemoteRepoMixin):
             if aname == name
             for event in artifact.get_events()
             # TODO: support matching the shortened commit hashes
-            if event.ref == ref
+            if event.ref == tag_name
         ]
 
     def find_commit(self, name, version):
