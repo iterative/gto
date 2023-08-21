@@ -268,7 +268,8 @@ def environ(**overrides):
 
 
 @pytest.mark.usefixtures("artifact")
-def test_check_ref_detailed(scm: Git):
+@pytest.mark.parametrize("with_prefix", [True, False])
+def test_check_ref_detailed(scm: Git, with_prefix: bool):
     NAME = "model"
     SEMVER = "v1.2.3"
     GIT_AUTHOR_NAME = "Alexander Guschin"
@@ -284,7 +285,10 @@ def test_check_ref_detailed(scm: Git):
     ):
         gto.api.register(scm, name=NAME, ref="HEAD", version=SEMVER)
 
-    events = gto.api.check_ref(scm, f"{NAME}@{SEMVER}")
+    ref = f"{NAME}@{SEMVER}"
+    if with_prefix:
+        ref = f"refs/tags/{ref}"
+    events = gto.api.check_ref(scm, ref)
     assert len(events) == 1, "Should return one event"
     check_obj(
         events[0].dict_state(),
