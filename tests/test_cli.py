@@ -164,6 +164,11 @@ def test_commands(tmp_dir: TmpDir, showcase: Tuple[str, str]):
     )
     _check_successful_cmd(
         "check-ref",
+        ["-r", tmp_dir, "refs/tags/rf#production#3", "--name"],
+        "rf\n",
+    )
+    _check_successful_cmd(
+        "check-ref",
         ["-r", tmp_dir, "rf#production#3", "--stage"],
         "production\n",
     )
