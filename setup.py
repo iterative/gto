@@ -3,7 +3,7 @@ from pathlib import Path
 from setuptools import find_packages, setup
 
 install_requires = [
-    "scmrepo>=1.3.0,<2",
+    "scmrepo>=1.3.1,<2",
     "typer>=0.4.1",
     "rich",
     "pydantic>=1.9.0,<2",
