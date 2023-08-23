@@ -14,10 +14,12 @@ from tests.conftest import Runner
 
 
 def _check_output_contains(output: str, search_value: str) -> bool:
+    """Check if output contains search_value."""
     return search_value in output
 
 
 def _check_output_exact_match(output: str, search_value: str) -> bool:
+    """Check if output exactly matches search_value."""
     return search_value == output
 
 
