@@ -25,6 +25,7 @@ from tests.utils import (
 
 
 def test_empty_index(scm: Git):
+    """Test if index is empty."""
     with RepoIndexManager.from_scm(scm) as index:
         assert isinstance(index, RepoIndexManager)
         assert len(index.artifact_centric_representation()) == 0
@@ -32,6 +33,7 @@ def test_empty_index(scm: Git):
 
 @pytest.mark.usefixtures("scm")
 def test_empty_state(tmp_dir: TmpDir):
+    """Test if state is empty."""
     state = gto.api._get_state(tmp_dir)
     assert len(state.artifacts) == 0
 
