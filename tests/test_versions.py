@@ -7,6 +7,7 @@ from gto.versions import SemVer
     "version", ["v0.1.2", "v3.4.5-pre.2+build.4", "v3.4.5-pre.2-build.4"]
 )
 def test_semver_is_valid(version):
+    """Test if version is valid."""
     assert SemVer.is_valid(version)
 
 
@@ -14,6 +15,7 @@ def test_semver_is_valid(version):
     "version", [1, "1", "v1", "v1.2", "0.1.2", "3.4.5-pre.2+build.4"]
 )
 def test_semver_is_not_valid(version):
+    """Test if version is not valid."""
     assert not SemVer.is_valid(version)
 
 
