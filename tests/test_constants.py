@@ -21,6 +21,7 @@ from gto.constants import (
     ],
 )
 def test_check_name_is_valid(name):
+    """Test if name is valid."""
     assert check_string_is_valid(name)
 
 
@@ -42,6 +43,7 @@ def test_check_name_is_valid(name):
     ],
 )
 def test_check_name_is_invalid(name):
+    """Test if name is invalid."""
     assert not check_string_is_valid(name)
 
 
