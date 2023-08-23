@@ -243,7 +243,7 @@ option_force = Option(
 )
 
 
-def callback_simple(  # pylint: disable=inconsistent-return-statements
+def callback_simple(
     ctx: typer.Context,
     param: typer.CallbackParam,  # pylint: disable=unused-argument
     value: str,
@@ -678,7 +678,7 @@ def check_ref(
 
 
 @gto_command(section=CommandGroups.querying)
-def show(  # pylint: disable=too-many-locals
+def show(
     repo: str = option_repo,
     name: str = Argument(None, help="Artifact name to show. If empty, show registry"),
     json: bool = option_json,
@@ -808,7 +808,7 @@ def stages(
 def print_state(repo: str = option_repo):
     """Technical cmd: Print current registry state."""
     state = make_ready_to_serialize(
-        gto.api._get_state(repo).dict()  # pylint: disable=protected-access
+        gto.api._get_state(repo).dict()
     )
     format_echo(state, "json")
 
