@@ -628,5 +628,5 @@ class BaseManager(BaseModel):
 
     def update_state(
         self, state: BaseRegistryState
-    ) -> BaseRegistryState:  # pylint: disable=no-self-use
+    ) -> BaseRegistryState:
         raise NotImplementedError
