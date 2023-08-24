@@ -321,43 +321,42 @@ option_versions_per_stage = Option(
     help="Show N last versions for each stage. -1 for all. Applied after 'assignments-per-version'",
 )
 
-# Typer options to format the output
-option_ascending = Option(
-    False,
-    "--ascending",
-    "--asc",
-    help="Show new first",
-    show_default=True,
+import logging
+from collections import defaultdict
+from functools import partial, wraps
+from gettext import gettext
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
+
+import click
+import typer
+from click import Abort, ClickException, Command, Context, HelpFormatter
+from click.exceptions import Exit
+from typer import Argument, Option, Typer
+from typer.core import TyperCommand, TyperGroup
+
+import gto
+from gto.constants import (
+    ASSIGNMENTS_PER_VERSION,
+    VERSIONS_PER_STAGE,
+    VersionSort,
 )
-option_show_name = Option(False, "--name", is_flag=True, help="Show artifact name")
-option_show_version = Option(
-    False, "--version", is_flag=True, help="Output artifact version"
+from gto.exceptions import (
+    GTOException,
+    NotImplementedInGTO,
+    WrongArgs,
+    WrongConfig,
 )
-option_show_event = Option(False, "--event", is_flag=True, help="Show event")
-option_show_stage = Option(False, "--stage", is_flag=True, help="Show artifact stage")
-option_show_type = Option(
-    False, "--type", is_flag=True, help="Show type", show_default=True
+from gto.ui import (
+    EMOJI_FAIL,
+    EMOJI_GTO,
+    EMOJI_OK,
+    bold,
+    cli_echo,
+    color,
+    echo,
+    stderr_echo,
 )
-option_show_path = Option(
-    False, "--path", is_flag=True, help="Show path", show_default=True
-)
-option_show_ref = Option(
-    False, "--ref", is_flag=True, help="Show ref", show_default=True
-)
-option_show_description = Option(
-    False, "--description", is_flag=True, help="Show description", show_default=True
-)
-option_show_custom = Option(
-    False, "--custom", is_flag=True, help="Show custom metadata", show_default=True
-)
-option_json = Option(
-    False,
-    "--json",
-    is_flag=True,
-    help="Print output in json format",
-    show_default=True,
-)
-option_plain = Option(
+from gto.utils import format_echo, make_ready_to_serialize
     False,
     "--plain",
     is_flag=True,
