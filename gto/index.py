@@ -1,5 +1,4 @@
 import logging
-import os
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from contextlib import contextmanager
@@ -107,6 +106,9 @@ def check_if_path_exists(
 
 
 class Index(BaseModel):
+    """
+    This class represents an index in the GTO system.
+    """
     state: State = {}  # TODO should not be populated until load() is called
     frozen: bool = False
 
