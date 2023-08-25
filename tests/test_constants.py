@@ -21,6 +21,7 @@ from gto.constants import (
     ],
 )
 def test_check_name_is_valid(name):
+    """Test that the check_string_is_valid function returns True for valid names."""
     assert check_string_is_valid(name)
 
 
@@ -42,6 +43,7 @@ def test_check_name_is_valid(name):
     ],
 )
 def test_check_name_is_invalid(name):
+    """Test that the check_string_is_valid function returns False for invalid names."""
     assert not check_string_is_valid(name)
 
 
@@ -54,6 +56,7 @@ def test_check_name_is_invalid(name):
     ],
 )
 def test_check_fullname_is_valid(name):
+    """Test that the check_string_is_valid function returns True for valid full names."""
     assert check_string_is_valid(name, regex=fullname_re)
 
 
@@ -66,4 +69,5 @@ def test_check_fullname_is_valid(name):
     ],
 )
 def test_check_fullname_in_tag_is_valid(name):
+    """Test that the check_string_is_valid function returns True for valid full names in tags."""
     assert check_string_is_valid(name, regex=fullname_in_tag_re)
