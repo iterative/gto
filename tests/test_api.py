@@ -58,33 +58,6 @@ def _artifact(tmp_dir: TmpDir, scm: Git, request: pytest.FixtureRequest) -> str:
     return "new-artifact"
 
 
-# def test_api_info_commands_repo_with_artifact(
-#     scm: Git,
-#     artifact: str,
-# ):
-#     gto.api.show(scm)
-#     gto.api.show(scm, artifact)
-#     gto.api.history(scm)
-
-
-# def test_describe(scm: Git, artifact: str):
-#     gto.api.annotate(scm, artifact, path="other-path")
-#     check_obj(
-#         gto.api.describe(scm, artifact).dict(exclude_defaults=True),  # type: ignore
-#         dict(
-#             type="new-type",
-#             path="other-path",
-#         ),
-#     )
-#     check_obj(
-#         gto.api.describe(scm, artifact, rev="HEAD").dict(exclude_defaults=True),  # type: ignore
-#         dict(
-#             type="new-type",
-#             path="path",
-#         ),
-#     )
-
-
 def test_register_deregister(tmp_dir: TmpDir, scm: Git, artifact: str):
     vname1, vname2 = "v1.0.0", "v1.0.1"
     gto.api.register(tmp_dir, artifact, "HEAD", vname1)
