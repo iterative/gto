@@ -83,24 +83,24 @@ def test_api(tmp_dir: TmpDir, scm: Git, showcase: Tuple[str, str]):
         },
         skip_keys=skip_keys_registration,
     )
+
     nn_vstages = nn_artifact.get_vstages()
     assert len(nn_vstages) == 1
     assert isinstance(nn_vstages["staging"][0], VStage)
     check_obj(
-        nn_vstages["staging"][0].dict_state(),
+        nn_version.dict_state(),
         {
             "artifact": "nn",
             "version": "v0.0.1",
-            "stage": "staging",
-            "is_active": True,
-            "ref": "nn#staging#1",
             "author": author,
             "author_email": author_email,
             "commit_hexsha": first_commit,
+            "discovered": False,
+            "is_active": True,
+            "ref": "nn@v0.0.1",
         },
-        skip_keys=skip_keys_assignment,
+        skip_keys=skip_keys_registration,
     )
-
     rf_artifact = artifacts["rf"]
     assert isinstance(rf_artifact, Artifact)
     assert rf_artifact.artifact == "rf"

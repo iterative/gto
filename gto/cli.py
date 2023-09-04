@@ -488,10 +488,10 @@ def register(
     repo: str = option_repo,
     name: str = arg_name,
     ref: str = Argument("HEAD", help="Git reference to use for registration"),
-    version: Optional[str] = Option(
+    version: str = Option(
         None, "--version", "--ver", help="Version name in SemVer format"
     ),
-    message: Optional[str] = option_message,
+    message: str = option_message,
     simple: str = option_simple,
     force: bool = option_force,
     bump_major: bool = Option(
@@ -582,7 +582,7 @@ def deprecate(
     ref: Optional[str] = Option(
         None, "--ref", help="Git reference to use (for model deprecation)"
     ),
-    message: Optional[str] = option_message,
+    message: str = option_message,
     simple: str = option_simple,
     force: bool = option_force,
     delete: bool = option_delete,

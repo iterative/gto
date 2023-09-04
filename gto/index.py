@@ -19,6 +19,7 @@ from typing import (
     Union,
 )
 
+from pydantic import BaseModel, Field, ValidationError, parse_obj_as, validator
 from ruamel.yaml import YAMLError
 from scmrepo.exceptions import SCMError
 from scmrepo.git import Git
@@ -49,8 +50,6 @@ from gto.exceptions import (
 from gto.ext import EnrichmentInfo, EnrichmentReader
 from gto.git_utils import RemoteRepoMixin
 from gto.ui import echo
-
-from ._pydantic import BaseModel, ValidationError, parse_obj_as, validator
 
 logger = logging.getLogger("gto")
 
@@ -112,7 +111,7 @@ class Index(BaseModel):
     frozen: bool = False
 
     @validator("state")
-    def state_is_valid(cls, v):  # pylint: disable=no-self-argument, no-self-use
+    def state_is_valid(cls, v):  # pylint: disable=no-self-argument
         for name, artifact in v.items():
             assert_name_is_valid(name)
             if artifact.type:
@@ -568,14 +567,12 @@ class GTOInfo(EnrichmentInfo):
 class GTOEnrichment(EnrichmentReader):
     source: str = "gto"
 
-    def discover(  # pylint: disable=no-self-use
-        self, url_or_scm: Union[str, Git], rev: str
-    ) -> Dict[str, GTOInfo]:
+    def discover(self, url_or_scm: Union[str, Git], rev: str) -> Dict[str, GTOInfo]:
         with RepoIndexManager.from_url(url_or_scm) as index:
             index = index.get_commit_index(rev)
         if index:
             return {
-                name: GTOInfo(artifact=artifact)
+                name: GTOInfo(artifact=artifact)  # type: ignore
                 for name, artifact in index.state.items()
             }
         return {}
