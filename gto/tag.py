@@ -304,7 +304,7 @@ class TagManager(BaseManager):  # pylint: disable=abstract-method
 class TagArtifactManager(TagManager):
     actions: FrozenSet[Action] = frozenset((Action.CREATE, Action.DEPRECATE))
 
-    def create(self):  # pylint: disable=no-self-use
+    def create(self):
         raise NotImplementedInGTO(
             "If you want to create artifact, register a version or assign a stage for it"
         )
