@@ -1,7 +1,7 @@
 # pylint: disable=no-self-argument, inconsistent-return-statements, invalid-name, import-outside-toplevel
 import pathlib
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Type
 
 from pydantic import field_validator
 from pydantic.fields import FieldInfo
@@ -70,7 +70,7 @@ class YamlSettingsSource(PydanticBaseSettingsSource):
     Source class for loading values from yaml file.
     """
 
-    def __init__(self, settings_cls: type[BaseSettings]):
+    def __init__(self, settings_cls: Type[BaseSettings]):
         self.init_kwargs: Dict[str, Any] = {}
         config_file = Path(CONFIG_FILE_NAME)
         if config_file.exists():
@@ -94,7 +94,7 @@ class RegistryConfig(NoFileConfig):
     @classmethod
     def settings_customise_sources(
         cls,
-        settings_cls: type[BaseSettings],
+        settings_cls: Type[BaseSettings],
         init_settings: PydanticBaseSettingsSource,
         env_settings: PydanticBaseSettingsSource,
         dotenv_settings: PydanticBaseSettingsSource,
