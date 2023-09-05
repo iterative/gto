@@ -4,6 +4,7 @@ from contextlib import contextmanager
 from typing import List, Optional, TypeVar, cast
 
 from funcy import distinct
+from pydantic import BaseModel, ConfigDict
 from scmrepo.git import Git
 
 from gto.base import (
@@ -25,7 +26,6 @@ from gto.exceptions import (
     WrongArgs,
 )
 from gto.git_utils import RemoteRepoMixin, git_push_tag
-from gto.index import EnrichmentManager
 from gto.tag import (
     TagArtifactManager,
     TagStageManager,
@@ -36,8 +36,6 @@ from gto.tag import (
 from gto.ui import echo
 from gto.versions import SemVer
 
-from ._pydantic import BaseModel
-
 TBaseEvent = TypeVar("TBaseEvent", bound=BaseEvent)
 
 
@@ -46,11 +44,8 @@ class GitRegistry(BaseModel, RemoteRepoMixin):
     artifact_manager: TagArtifactManager
     version_manager: TagVersionManager
     stage_manager: TagStageManager
-    enrichment_manager: EnrichmentManager
     config: RegistryConfig
-
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     @classmethod
     @contextmanager
@@ -64,7 +59,6 @@ class GitRegistry(BaseModel, RemoteRepoMixin):
             artifact_manager=TagArtifactManager(scm=scm, config=config),
             version_manager=TagVersionManager(scm=scm, config=config),
             stage_manager=TagStageManager(scm=scm, config=config),
-            enrichment_manager=EnrichmentManager(scm=scm, config=config),
         )
 
     def is_gto_repo(self):
@@ -78,41 +72,24 @@ class GitRegistry(BaseModel, RemoteRepoMixin):
 
     def get_state(
         self,
-        all_branches=False,
-        all_commits=False,
     ) -> BaseRegistryState:
         state = BaseRegistryState()
         state = self.artifact_manager.update_state(state)
         state = self.version_manager.update_state(state)
         state = self.stage_manager.update_state(state)
-        state = self.enrichment_manager.update_state(
-            state,
-            all_branches=all_branches,
-            all_commits=all_commits,
-        )
         return state
 
     def get_artifacts(
         self,
-        all_branches=False,
-        all_commits=False,
     ):
-        return self.get_state(
-            all_branches=all_branches,
-            all_commits=all_commits,
-        ).get_artifacts()
+        return self.get_state().get_artifacts()
 
     def find_artifact(
         self,
         name: Optional[str] = None,
         create_new=False,
-        all_branches=False,
-        all_commits=False,
     ):
-        return self.get_state(
-            all_branches=all_branches,
-            all_commits=all_commits,
-        ).find_artifact(
+        return self.get_state().find_artifact(
             name, create_new=create_new  # type: ignore
         )
 

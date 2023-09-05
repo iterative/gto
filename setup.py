@@ -6,9 +6,8 @@ install_requires = [
     "scmrepo>=1.3.1,<2",
     "typer>=0.4.1",
     "rich",
-    # pydantic.v1.parse_obj is broken in ==2.0.0:
-    # https://github.com/pydantic/pydantic/issues/6361
-    "pydantic>=1.9.0,<3,!=2.0.0",
+    "pydantic>=2.0.0,<3",
+    "pydantic-settings>=2.0.0,<3",
     "ruamel.yaml",
     "semver>=3.0.0",
     "entrypoints",
@@ -63,9 +62,6 @@ setup_args = {
     "include_package_data": True,
     "entry_points": {
         "console_scripts": ["gto = gto.cli:app"],
-        "gto.enrichment": [
-            "gto = gto.index:GTOEnrichment",
-        ],
     },
     "zip_safe": False,
 }

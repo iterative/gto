@@ -24,24 +24,19 @@ def test_api(tmp_dir: TmpDir, scm: Git, showcase: Tuple[str, str]):
 
     gto.api.show(scm)
     gto.api.history(scm)
-    for name in "nn", "rf", "features":
+    for name in "nn", "rf":
         gto.api.show(scm, name)
         gto.api.history(scm, name)
 
     artifacts = gto.api._get_state(  # pylint: disable=protected-access
         tmp_dir
     ).artifacts
-    assert set(artifacts.keys()) == {"nn", "rf", "features"}
-    # assert isinstance(artifacts["features"], BaseArtifact)
-    # _check_obj(
-    #     artifacts["features"],
-    #     dict(name="features", versions=[]),
-    #     ["commits"],
-    # )
+    assert set(artifacts.keys()) == {"nn", "rf"}
+
     nn_artifact = artifacts["nn"]
     assert isinstance(nn_artifact, Artifact)
     assert nn_artifact.artifact == "nn"
-    assert len(nn_artifact.versions) == 2
+    assert len(nn_artifact.versions) == 1
     nn_version = nn_artifact.versions[0]
     assert isinstance(nn_version, Version)
     commit = scm.resolve_commit("HEAD")
@@ -137,7 +132,7 @@ def test_api(tmp_dir: TmpDir, scm: Git, showcase: Tuple[str, str]):
         skip_keys=skip_keys_registration,
     )
 
-    assert len(rf_artifact.get_events()) == 8
+    assert len(rf_artifact.get_events()) == 6
     assert all(
         isinstance(p, (Assignment, Unassignment, Registration, Deregistration, Commit))
         for p in rf_artifact.get_events()
@@ -150,8 +145,8 @@ def test_api(tmp_dir: TmpDir, scm: Git, showcase: Tuple[str, str]):
         isinstance(p, (Assignment, Unassignment, Commit))
         for p in rf_ver1.get_events(direct=False) + rf_ver2.get_events(direct=False)
     )
-    _rf_a4, rf_a1, _rf_c1 = rf_ver1.get_events(direct=False)
-    rf_a3, rf_a2, _rf_c2 = rf_ver2.get_events(direct=False)
+    _rf_a4, rf_a1 = rf_ver1.get_events(direct=False)
+    rf_a3, rf_a2 = rf_ver2.get_events(direct=False)
 
     check_obj(
         rf_a1.dict_state(),

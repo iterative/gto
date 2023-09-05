@@ -15,19 +15,12 @@ import gto
 import tests.resources
 from gto.api import show
 from gto.exceptions import RefNotFound, WrongArgs
-from gto.index import RepoIndexManager
 from gto.tag import find
 from gto.versions import SemVer
 from tests.utils import (
     check_obj,
     convert_objects_to_str_in_json_serializable_object,
 )
-
-
-def test_empty_index(scm: Git):
-    with RepoIndexManager.from_scm(scm) as index:
-        assert isinstance(index, RepoIndexManager)
-        assert len(index.artifact_centric_representation()) == 0
 
 
 @pytest.mark.usefixtures("scm")
@@ -365,15 +358,6 @@ def test_if_history_on_remote_git_repo_then_return_expected_history():
 def test_if_stages_on_remote_git_repo_then_return_expected_stages():
     result = gto.api.get_stages(repo=tests.resources.SAMPLE_REMOTE_REPO_URL)
     assert result == ["dev", "prod", "staging"]
-
-
-def test_if_describe_on_remote_git_repo_then_return_expected_info():
-    result = gto.api.describe(repo=tests.resources.SAMPLE_REMOTE_REPO_URL, name="churn")
-    assert result.dict(exclude_defaults=True) == {
-        "type": "model",
-        "path": "models/churn.pkl",
-        "virtual": False,
-    }
 
 
 @pytest.mark.usefixtures("artifact")

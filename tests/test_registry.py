@@ -311,49 +311,6 @@ EXPECTED_REGISTRY_TAG_TAG_STATE = {
             "creations": [],
             "deprecations": [],
         },
-        "features": {
-            "artifact": "features",
-            "versions": [
-                {
-                    "artifact": "features",
-                    "commit_hexsha": "04d79900801d9aa7ec726169706280a32a25d198",
-                    "version": "04d79900801d9aa7ec726169706280a32a25d198",
-                    "enrichments": [
-                        {
-                            "priority": 0,
-                            "addition": True,
-                            "artifact": "features",
-                            "created_at": "2022-08-04T16:56:59",
-                            "author": "Alexander Guschin",
-                            "author_email": "1aguschin@gmail.com",
-                            "message": "Update model",
-                            "commit_hexsha": "04d79900801d9aa7ec726169706280a32a25d198",
-                            "version": "04d79900801d9aa7ec726169706280a32a25d198",
-                            "enrichments": [
-                                {
-                                    "source": "gto",
-                                    "artifact": {
-                                        "type": "dataset",
-                                        "path": "datasets/features.csv",
-                                        "virtual": True,
-                                        "labels": [],
-                                        "description": "",
-                                        "custom": None,
-                                    },
-                                }
-                            ],
-                            "committer": "Alexander Guschin",
-                            "committer_email": "1aguschin@gmail.com",
-                        }
-                    ],
-                    "registrations": [],
-                    "deregistrations": [],
-                    "stages": {},
-                }
-            ],
-            "creations": [],
-            "deprecations": [],
-        },
     }
 }
 

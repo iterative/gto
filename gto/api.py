@@ -20,7 +20,6 @@ from gto.constants import (
 )
 from gto.exceptions import NoRepo, NotImplementedInGTO, RefNotFound, WrongArgs
 from gto.git_utils import has_remote
-from gto.index import Artifact, RepoIndexManager
 from gto.registry import GitRegistry
 from gto.tag import parse_name as parse_tag_name
 
@@ -43,30 +42,6 @@ def _get_state(repo: Union[str, Path, Git]):
 def get_stages(repo: Union[str, Path, Git], allowed: bool = False, used: bool = False):
     with GitRegistry.from_url(repo) as reg:
         return reg.get_stages(allowed=allowed, used=used)
-
-
-def describe(
-    repo: Union[str, Path, Git], name: str, rev: Optional[str] = None
-) -> Optional[Artifact]:
-    """Find enrichments for the artifact"""
-    shortcut = parse_shortcut(name)
-    if shortcut.shortcut:
-        if rev:
-            raise WrongArgs("Either specify revision or use naming shortcut.")
-        versions = show(repo, name)
-        if len(versions) == 0:  # nothing found
-            return None
-        if len(versions) > 1:
-            raise NotImplementedInGTO(
-                "Ambiguous naming shortcut: multiple variants found."
-            )
-        rev = versions[0]["commit_hexsha"]
-
-    with RepoIndexManager.from_url(repo) as index:
-        artifact = index.get_commit_index(rev or index.scm.get_rev()).state.get(
-            shortcut.name
-        )
-    return artifact
 
 
 def register(

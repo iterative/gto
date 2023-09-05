@@ -3,13 +3,17 @@ import pathlib
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from pydantic import field_validator
+from pydantic.fields import FieldInfo
+from pydantic_settings import (
+    BaseSettings,
+    PydanticBaseSettingsSource,
+    SettingsConfigDict,
+)
 from ruamel.yaml import YAML
 
 from gto.constants import assert_name_is_valid
-from gto.exceptions import UnknownStage, UnknownType, WrongConfig
-from gto.ext import EnrichmentReader, find_enrichment_types, find_enrichments
-
-from ._pydantic import BaseModel, BaseSettings, InitSettingsSource, validator
+from gto.exceptions import UnknownStage, WrongConfig
 
 yaml = YAML(typ="safe", pure=True)
 yaml.default_flow_style = False
@@ -17,33 +21,14 @@ yaml.default_flow_style = False
 CONFIG_FILE_NAME = ".gto"
 
 
-class EnrichmentConfig(BaseModel):
-    type: str
-    config: Dict = {}
-
-    def load(self) -> EnrichmentReader:
-        return find_enrichment_types()[self.type](**self.config)
-
-
 class NoFileConfig(BaseSettings):  # type: ignore[valid-type]
     INDEX: str = "artifacts.yaml"
-    TYPES: Optional[List[str]] = None
     STAGES: Optional[List[str]] = None
     LOG_LEVEL: str = "INFO"
     DEBUG: bool = False
-    ENRICHMENTS: List[EnrichmentConfig] = []
-    AUTOLOAD_ENRICHMENTS: bool = True
-    CONFIG_FILE_NAME: Optional[str] = CONFIG_FILE_NAME
+    CONFIG_FILE_NAME: str = CONFIG_FILE_NAME
     EMOJIS: bool = True
-
-    class Config:
-        env_prefix = "gto_"
-
-    def assert_type(self, name):
-        assert_name_is_valid(name)
-        # pylint: disable-next=unsupported-membership-test
-        if self.TYPES is not None and name not in self.TYPES:
-            raise UnknownType(name, self.TYPES)
+    model_config = SettingsConfigDict(env_prefix="gto_")
 
     def assert_stage(self, name):
         assert_name_is_valid(name)
@@ -51,22 +36,9 @@ class NoFileConfig(BaseSettings):  # type: ignore[valid-type]
         if self.STAGES is not None and name not in self.STAGES:
             raise UnknownStage(name, self.STAGES)
 
-    @property
-    def enrichments(self) -> Dict[str, EnrichmentReader]:
-        res = {e.source: e for e in (e.load() for e in self.ENRICHMENTS)}
-        if self.AUTOLOAD_ENRICHMENTS:
-            return {**find_enrichments(), **res}
-        return res
-
-    @validator("TYPES")
-    def types_are_valid(cls, v):  # pylint: disable=no-self-use
-        if v:
-            for name in v:
-                assert_name_is_valid(name)
-        return v
-
-    @validator("STAGES")
-    def stages_are_valid(cls, v):  # pylint: disable=no-self-use
+    @field_validator("STAGES")
+    @classmethod
+    def stages_are_valid(cls, v):
         if v:
             for name in v:
                 assert_name_is_valid(name)
@@ -75,17 +47,6 @@ class NoFileConfig(BaseSettings):  # type: ignore[valid-type]
     def check_index_exist(self, repo: str):
         index = pathlib.Path(repo) / pathlib.Path(self.INDEX)
         return index.exists() and index.is_file()
-
-
-def _set_location_init_source(init_source: InitSettingsSource):
-    def inner(settings: "RegistryConfig"):
-        if "CONFIG_FILE_NAME" in init_source.init_kwargs:
-            settings.__dict__["CONFIG_FILE_NAME"] = init_source.init_kwargs[
-                "CONFIG_FILE_NAME"
-            ]
-        return {}
-
-    return inner
 
 
 def config_settings_source(settings: "RegistryConfig") -> Dict[str, Any]:
@@ -104,25 +65,47 @@ def config_settings_source(settings: "RegistryConfig") -> Dict[str, Any]:
     return {k.upper(): v for k, v in conf.items()} if conf else {}
 
 
-class RegistryConfig(NoFileConfig):
-    class Config:
-        env_prefix = "gto_"
-        env_file_encoding = "utf-8"
+class YamlSettingsSource(PydanticBaseSettingsSource):
+    """
+    Source class for loading values from yaml file.
+    """
 
-        @classmethod
-        def customise_sources(
-            cls,
+    def __init__(self, settings_cls: type[BaseSettings]):
+        self.init_kwargs: Dict[str, Any] = {}
+        config_file = Path(CONFIG_FILE_NAME)
+        if config_file.exists():
+            self.init_kwargs = yaml.load(config_file.read_text(encoding="utf-8")) or {}
+
+        self.init_kwargs = {k.upper(): v for k, v in self.init_kwargs.items()}
+
+        super().__init__(settings_cls)
+
+    def get_field_value(
+        self, field: FieldInfo, field_name: str
+    ) -> tuple[Any, str, bool]:
+        # Nothing to do here. Only implement the return statement to make mypy happy
+        return None, "", False
+
+    def __call__(self) -> dict[str, Any]:
+        return self.init_kwargs
+
+
+class RegistryConfig(NoFileConfig):
+    @classmethod
+    def settings_customise_sources(
+        cls,
+        settings_cls: type[BaseSettings],
+        init_settings: PydanticBaseSettingsSource,
+        env_settings: PydanticBaseSettingsSource,
+        dotenv_settings: PydanticBaseSettingsSource,
+        file_secret_settings: PydanticBaseSettingsSource,
+    ):
+        return (
             init_settings,
             env_settings,
+            YamlSettingsSource(settings_cls),
             file_secret_settings,
-        ):
-            return (
-                _set_location_init_source(init_settings),
-                init_settings,
-                env_settings,
-                config_settings_source,
-                file_secret_settings,
-            )
+        )
 
     def config_file_exists(self):
         config = pathlib.Path(self.CONFIG_FILE_NAME)
