@@ -32,9 +32,9 @@ class NoFileConfig(BaseSettings):
 
     def assert_stage(self, name):
         assert_name_is_valid(name)
-        # pylint: disable-next=unsupported-membership-test
-        if self.STAGES is not None and name not in self.STAGES:
-            raise UnknownStage(name, self.STAGES)
+        if self.STAGES is not None:
+            if name not in self.STAGES:
+                raise UnknownStage(name, self.STAGES)
 
     @field_validator("STAGES")
     @classmethod
