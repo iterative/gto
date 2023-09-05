@@ -21,7 +21,7 @@ yaml.default_flow_style = False
 CONFIG_FILE_NAME = ".gto"
 
 
-class NoFileConfig(BaseSettings):  # type: ignore[valid-type]
+class NoFileConfig(BaseSettings):
     INDEX: str = "artifacts.yaml"
     STAGES: Optional[List[str]] = None
     LOG_LEVEL: str = "INFO"
