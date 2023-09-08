@@ -17,6 +17,7 @@ from gto.constants import (
         "1nn",
         "model-prod",
         "model-prod-v1",
+        "model_prod_v1",
         "dvclive/model",
     ],
 )
@@ -33,12 +34,13 @@ def test_check_name_is_valid(name):
         "###",
         "@@@",
         "a model",
-        "a_model",
+        "_model",
         "-model",
         "model-",
         "model@1",
         "model#1",
         "@namespace/model",
+        "DVCLive/Model",
     ],
 )
 def test_check_name_is_invalid(name):
