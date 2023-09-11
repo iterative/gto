@@ -68,13 +68,13 @@ jobs:
         fail_ci_if_error: false
         token: ${{ secrets.CODECOV_TOKEN }}
   deploy:
-    environment: pypi
     name: PyPI Deploy
     needs: [check, test]
-    runs-on: ubuntu-latest
+    environment: pypi
     permissions:
       contents: write
       id-token: write
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
       with:
