@@ -1,7 +1,6 @@
 from datetime import datetime
 from typing import Any, Dict, FrozenSet, List, Optional, Sequence, Union
 
-from pydantic import BaseModel
 from scmrepo.git import Git
 
 from gto.config import RegistryConfig
@@ -13,6 +12,7 @@ from gto.constants import (
 )
 from gto.versions import SemVer
 
+from ._pydantic import BaseModel
 from .exceptions import (
     ArtifactNotFound,
     ManyVersions,

@@ -3,13 +3,13 @@ import pathlib
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, BaseSettings, validator
-from pydantic.env_settings import InitSettingsSource
 from ruamel.yaml import YAML
 
 from gto.constants import assert_name_is_valid
 from gto.exceptions import UnknownStage, UnknownType, WrongConfig
 from gto.ext import EnrichmentReader, find_enrichment_types, find_enrichments
+
+from ._pydantic import BaseModel, BaseSettings, InitSettingsSource, validator
 
 yaml = YAML(typ="safe", pure=True)
 yaml.default_flow_style = False
@@ -27,8 +27,8 @@ class EnrichmentConfig(BaseModel):
 
 class NoFileConfig(BaseSettings):  # type: ignore[valid-type]
     INDEX: str = "artifacts.yaml"
-    TYPES: Optional[List[str]]
-    STAGES: Optional[List[str]]
+    TYPES: Optional[List[str]] = None
+    STAGES: Optional[List[str]] = None
     LOG_LEVEL: str = "INFO"
     DEBUG: bool = False
     ENRICHMENTS: List[EnrichmentConfig] = []
@@ -41,11 +41,13 @@ class NoFileConfig(BaseSettings):  # type: ignore[valid-type]
 
     def assert_type(self, name):
         assert_name_is_valid(name)
+        # pylint: disable-next=unsupported-membership-test
         if self.TYPES is not None and name not in self.TYPES:
             raise UnknownType(name, self.TYPES)
 
     def assert_stage(self, name):
         assert_name_is_valid(name)
+        # pylint: disable-next=unsupported-membership-test
         if self.STAGES is not None and name not in self.STAGES:
             raise UnknownStage(name, self.STAGES)
 

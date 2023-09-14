@@ -2,9 +2,9 @@ import re
 from enum import Enum
 from typing import Optional
 
-from pydantic import BaseModel
-
 from gto.exceptions import ValidationError
+
+from ._pydantic import BaseModel
 
 COMMIT = "commit"
 REF = "ref"

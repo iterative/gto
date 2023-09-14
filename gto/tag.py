@@ -4,10 +4,10 @@ from datetime import datetime
 from enum import Enum
 from typing import FrozenSet, Iterable, Optional, Union
 
-from pydantic import BaseModel
 from scmrepo.exceptions import RevError
 from scmrepo.git import Git, GitTag
 
+from ._pydantic import BaseModel
 from .base import (
     Artifact,
     Assignment,
