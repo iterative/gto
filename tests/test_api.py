@@ -140,17 +140,17 @@ def test_assign(tmp_dir: TmpDir, scm: Git, name: str):
     assert len(assignments) == 1
     check_obj(
         assignments[0].dict_state(),
-        dict(
-            artifact=name,
-            version="v0.0.1",
-            stage=stage,
-            author=author,
-            author_email=author_email,
-            message=message,
-            commit_hexsha=scm.get_rev(),
-            is_active=True,
-            ref=event.ref,
-        ),
+        {
+            "artifact": name,
+            "version": "v0.0.1",
+            "stage": stage,
+            "author": author,
+            "author_email": author_email,
+            "message": message,
+            "commit_hexsha": scm.get_rev(),
+            "is_active": True,
+            "ref": event.ref,
+        },
         {"created_at", "assignments", "unassignments", "tag", "activated_at"},
     )
     event = gto.api.assign(

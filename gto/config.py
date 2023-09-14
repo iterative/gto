@@ -1,4 +1,4 @@
-# pylint: disable=no-self-use, no-self-argument, inconsistent-return-statements, invalid-name, import-outside-toplevel
+# pylint: disable=no-self-argument, inconsistent-return-statements, invalid-name, import-outside-toplevel
 import pathlib
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -57,14 +57,14 @@ class NoFileConfig(BaseSettings):  # type: ignore[valid-type]
         return res
 
     @validator("TYPES")
-    def types_are_valid(cls, v):
+    def types_are_valid(cls, v):  # pylint: disable=no-self-use
         if v:
             for name in v:
                 assert_name_is_valid(name)
         return v
 
     @validator("STAGES")
-    def stages_are_valid(cls, v):
+    def stages_are_valid(cls, v):  # pylint: disable=no-self-use
         if v:
             for name in v:
                 assert_name_is_valid(name)

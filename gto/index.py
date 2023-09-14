@@ -579,7 +579,7 @@ class GTOEnrichment(EnrichmentReader):
             }
         return {}
 
-    def describe(  # pylint: disable=no-self-use
+    def describe(
         self, url_or_scm: Union[str, Git], obj: str, rev: Optional[str]
     ) -> Optional[GTOInfo]:
         with RepoIndexManager.from_url(url_or_scm) as index:

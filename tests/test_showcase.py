@@ -71,16 +71,16 @@ def test_api(tmp_dir: TmpDir, scm: Git, showcase: Tuple[str, str]):
 
     check_obj(
         nn_version.dict_state(),
-        dict(
-            artifact="nn",
-            version="v0.0.1",
-            author=author,
-            author_email=author_email,
-            commit_hexsha=first_commit,
-            discovered=False,
-            is_active=True,
-            ref="nn@v0.0.1",
-        ),
+        {
+            "artifact": "nn",
+            "version": "v0.0.1",
+            "author": author,
+            "author_email": author_email,
+            "commit_hexsha": first_commit,
+            "discovered": False,
+            "is_active": True,
+            "ref": "nn@v0.0.1",
+        },
         skip_keys=skip_keys_registration,
     )
     nn_vstages = nn_artifact.get_vstages()
@@ -88,16 +88,16 @@ def test_api(tmp_dir: TmpDir, scm: Git, showcase: Tuple[str, str]):
     assert isinstance(nn_vstages["staging"][0], VStage)
     check_obj(
         nn_vstages["staging"][0].dict_state(),
-        dict(
-            artifact="nn",
-            version="v0.0.1",
-            stage="staging",
-            is_active=True,
-            ref="nn#staging#1",
-            author=author,
-            author_email=author_email,
-            commit_hexsha=first_commit,
-        ),
+        {
+            "artifact": "nn",
+            "version": "v0.0.1",
+            "stage": "staging",
+            "is_active": True,
+            "ref": "nn#staging#1",
+            "author": author,
+            "author_email": author_email,
+            "commit_hexsha": first_commit,
+        },
         skip_keys=skip_keys_assignment,
     )
 
@@ -110,30 +110,30 @@ def test_api(tmp_dir: TmpDir, scm: Git, showcase: Tuple[str, str]):
     rf_ver1, rf_ver2 = rf_artifact.versions
     check_obj(
         rf_ver1.dict_state(),
-        dict(
-            artifact="rf",
-            version="v1.2.3",
-            is_active=True,
-            ref="rf@v1.2.3",
-            author=author,
-            author_email=author_email,
-            commit_hexsha=first_commit,
-            discovered=False,
-        ),
+        {
+            "artifact": "rf",
+            "version": "v1.2.3",
+            "is_active": True,
+            "ref": "rf@v1.2.3",
+            "author": author,
+            "author_email": author_email,
+            "commit_hexsha": first_commit,
+            "discovered": False,
+        },
         skip_keys=skip_keys_registration,
     )
     check_obj(
         rf_ver2.dict_state(),
-        dict(
-            artifact="rf",
-            version="v1.2.4",
-            is_active=True,
-            ref="rf@v1.2.4",
-            author=author,
-            author_email=author_email,
-            commit_hexsha=second_commit,
-            discovered=False,
-        ),
+        {
+            "artifact": "rf",
+            "version": "v1.2.4",
+            "is_active": True,
+            "ref": "rf@v1.2.4",
+            "author": author,
+            "author_email": author_email,
+            "commit_hexsha": second_commit,
+            "discovered": False,
+        },
         skip_keys=skip_keys_registration,
     )
 
@@ -155,40 +155,40 @@ def test_api(tmp_dir: TmpDir, scm: Git, showcase: Tuple[str, str]):
 
     check_obj(
         rf_a1.dict_state(),
-        dict(
-            artifact="rf",
-            version="v1.2.3",
-            stage="production",
-            tag="rf#production#1",
-            author=author,
-            author_email=author_email,
-            commit_hexsha=first_commit,
-        ),
+        {
+            "artifact": "rf",
+            "version": "v1.2.3",
+            "stage": "production",
+            "tag": "rf#production#1",
+            "author": author,
+            "author_email": author_email,
+            "commit_hexsha": first_commit,
+        },
         skip_keys=skip_keys_assignment,
     )
     check_obj(
         rf_a3.dict_state(),
-        dict(
-            artifact="rf",
-            version="v1.2.4",
-            stage="production",
-            tag="rf#production#3",
-            author=author,
-            author_email=author_email,
-            commit_hexsha=second_commit,
-        ),
+        {
+            "artifact": "rf",
+            "version": "v1.2.4",
+            "stage": "production",
+            "tag": "rf#production#3",
+            "author": author,
+            "author_email": author_email,
+            "commit_hexsha": second_commit,
+        },
         skip_keys=skip_keys_assignment,
     )
     check_obj(
         rf_a2.dict_state(),
-        dict(
-            artifact="rf",
-            version="v1.2.4",
-            stage="staging",
-            tag="rf#staging#2",
-            author=author,
-            author_email=author_email,
-            commit_hexsha=second_commit,
-        ),
+        {
+            "artifact": "rf",
+            "version": "v1.2.4",
+            "stage": "staging",
+            "tag": "rf#staging#2",
+            "author": author,
+            "author_email": author_email,
+            "commit_hexsha": second_commit,
+        },
         skip_keys=skip_keys_assignment,
     )
