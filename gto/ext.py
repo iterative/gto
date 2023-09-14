@@ -58,7 +58,7 @@ def find_enrichments() -> Dict[str, EnrichmentReader]:
     for name, e in enrichments.items():
         # if isinstance(e, type) and issubclass(e, Enrichment) and not e.__fields_set__:
         if isinstance(e, type) and issubclass(e, EnrichmentReader):
-            res[name] = e()
+            res[name] = e()  # type: ignore[call-arg]
         if isinstance(e, EnrichmentReader):
             res[name] = e
     return res

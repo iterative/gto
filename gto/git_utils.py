@@ -4,7 +4,7 @@ from contextlib import contextmanager
 from itertools import chain
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Union
+from typing import Optional, Union
 
 from scmrepo.exceptions import InvalidRemote, SCMError
 from scmrepo.git import Git, SyncStatus
@@ -17,7 +17,7 @@ from gto.ui import echo
 class RemoteRepoMixin:
     @classmethod
     @contextmanager
-    def from_scm(cls, scm: Git, config: RegistryConfig = None):
+    def from_scm(cls, scm: Git, config: Optional[RegistryConfig] = None):
         raise NotImplementedError()
 
     @classmethod
@@ -25,7 +25,7 @@ class RemoteRepoMixin:
     def from_url(
         cls,
         url_or_scm: Union[str, Path, Git],
-        config: RegistryConfig = None,
+        config: Optional[RegistryConfig] = None,
         branch=None,
     ):
         if isinstance(url_or_scm, Git):

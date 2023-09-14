@@ -53,7 +53,7 @@ class GitRegistry(BaseModel, RemoteRepoMixin):
 
     @classmethod
     @contextmanager
-    def from_scm(cls, scm: Git, config: RegistryConfig = None):
+    def from_scm(cls, scm: Git, config: Optional[RegistryConfig] = None):
         if config is None:
             config = read_registry_config(os.path.join(scm.root_dir, CONFIG_FILE_NAME))
 
@@ -103,7 +103,7 @@ class GitRegistry(BaseModel, RemoteRepoMixin):
 
     def find_artifact(
         self,
-        name: str = None,
+        name: Optional[str] = None,
         create_new=False,
         all_branches=False,
         all_commits=False,
@@ -468,7 +468,7 @@ class GitRegistry(BaseModel, RemoteRepoMixin):
                 f"Version '{version}' is not valid. Example of valid version: 'v1.0.0'"
             )
 
-    def _return_event(self, tag) -> TBaseEvent:
+    def _return_event(self, tag) -> TBaseEvent:  # type: ignore[type-var]
         event = self.check_ref(tag)
         if len(event) > 1:
             raise NotImplementedInGTO("Can't process a tag that caused multiple events")

@@ -140,7 +140,7 @@ def parse_tag(tag: GitTag):
 
 
 def find(
-    action: Union[Action, FrozenSet[Action]] = None,
+    action: Optional[Union[Action, FrozenSet[Action]]] = None,
     name: Optional[str] = None,
     version: Optional[str] = None,
     stage: Optional[str] = None,
@@ -180,8 +180,8 @@ def create_tag(  # pylint: disable=too-many-branches
     name: str,
     rev: str,
     message: str,
-    tagger: str = None,
-    tagger_email: str = None,
+    tagger: Optional[str] = None,
+    tagger_email: Optional[str] = None,
 ):
     try:
         rev = scm.resolve_rev(rev)

@@ -53,7 +53,7 @@ class GtoCliMixin(Command):
         name: Optional[str],
         examples: Optional[str],
         section: str = "other",
-        aliases: List[str] = None,
+        aliases: Optional[List[str]] = None,
         **kwargs,
     ):
         super().__init__(name=name, **kwargs)
@@ -99,7 +99,7 @@ class GtoCommand(GtoCliMixin, TyperCommand):
         self,
         name: Optional[str],
         section: str = "other",
-        aliases: List[str] = None,
+        aliases: Optional[List[str]] = None,
         help: Optional[str] = None,
         **kwargs,
     ):
@@ -127,8 +127,8 @@ class GtoGroup(GtoCliMixin, TyperGroup):
         name: Optional[str] = None,
         commands: Optional[Union[Dict[str, Command], Sequence[Command]]] = None,
         section: str = "other",
-        aliases: List[str] = None,
-        help: str = None,
+        aliases: Optional[List[str]] = None,
+        help: Optional[str] = None,
         **attrs: Any,
     ) -> None:
         examples, help = _extract_examples(help)
