@@ -4,3 +4,24 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools_scm]
 write_to = "gto/_gto_version.py"
+
+[tool.pylint.master]
+extension-pkg-whitelist = ["pydantic", "pytest-lazy-fixture", "pytest"]
+load-plugins= ["pylint.extensions.no_self_use"]
+
+[tool.pylint.message_control]
+enable = ["c-extension-no-member", "no-else-return", "no-self-use"]
+disable = [
+    "format", "refactoring", "spelling", "design",
+    "invalid-name", "duplicate-code", "fixme",
+    "unused-wildcard-import", "cyclic-import", "wrong-import-order",
+    "wrong-import-position", "ungrouped-imports", "multiple-imports",
+    "logging-format-interpolation", "logging-fstring-interpolation",
+    "missing-function-docstring", "missing-module-docstring",
+    "missing-class-docstring", "raise-missing-from", "import-outside-toplevel",
+    "redefined-builtin", # fixme
+]
+
+[tool.pylint.variables]
+dummy-variables-rgx = "_+$|(_[a-zA-Z0-9_]*[a-zA-Z0-9]+?$)|dummy|^ignored_|^unused_"
+ignored-argument-names = "_.*|^ignored_|^unused_|args|kwargs"
