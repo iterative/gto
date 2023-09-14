@@ -34,27 +34,45 @@ def test_name_tag(scm: Git):
 
 
 def test_parse_name():
-    assert parse_name("path@v1.2.3") == dict(
-        name="path", version="v1.2.3", action=Action.REGISTER
-    )
-    assert parse_name("path@v1.2.3#5") == dict(
-        name="path", version="v1.2.3", action=Action.REGISTER, counter=5
-    )
-    assert parse_name("path@v1.2.3!") == dict(
-        name="path", version="v1.2.3", action=Action.DEREGISTER
-    )
-    assert parse_name("path@v1.2.3!#2") == dict(
-        name="path", version="v1.2.3", action=Action.DEREGISTER, counter=2
-    )
-    assert parse_name("path#stage") == dict(
-        name="path", action=Action.ASSIGN, stage="stage"
-    )
-    assert parse_name("path#stage#1") == dict(
-        name="path", action=Action.ASSIGN, stage="stage", counter=1
-    )
-    assert parse_name("path#stage!#2") == dict(
-        name="path", action=Action.UNASSIGN, stage="stage", counter=2
-    )
+    assert parse_name("path@v1.2.3") == {
+        "name": "path",
+        "version": "v1.2.3",
+        "action": Action.REGISTER,
+    }
+    assert parse_name("path@v1.2.3#5") == {
+        "name": "path",
+        "version": "v1.2.3",
+        "action": Action.REGISTER,
+        "counter": 5,
+    }
+    assert parse_name("path@v1.2.3!") == {
+        "name": "path",
+        "version": "v1.2.3",
+        "action": Action.DEREGISTER,
+    }
+    assert parse_name("path@v1.2.3!#2") == {
+        "name": "path",
+        "version": "v1.2.3",
+        "action": Action.DEREGISTER,
+        "counter": 2,
+    }
+    assert parse_name("path#stage") == {
+        "name": "path",
+        "action": Action.ASSIGN,
+        "stage": "stage",
+    }
+    assert parse_name("path#stage#1") == {
+        "name": "path",
+        "action": Action.ASSIGN,
+        "stage": "stage",
+        "counter": 1,
+    }
+    assert parse_name("path#stage!#2") == {
+        "name": "path",
+        "action": Action.UNASSIGN,
+        "stage": "stage",
+        "counter": 2,
+    }
 
 
 @pytest.mark.parametrize(

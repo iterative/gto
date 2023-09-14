@@ -626,7 +626,5 @@ class BaseManager(BaseModel):
     class Config:
         arbitrary_types_allowed = True
 
-    def update_state(
-        self, state: BaseRegistryState
-    ) -> BaseRegistryState:  # pylint: disable=no-self-use
+    def update_state(self, state: BaseRegistryState) -> BaseRegistryState:
         raise NotImplementedError
