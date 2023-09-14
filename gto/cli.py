@@ -657,7 +657,9 @@ def check_ref(
     ), "Only one output formatting flags is allowed"
     result = gto.api.check_ref(repo, ref)
     if len(result) > 1:
-        NotImplementedInGTO("Checking refs that created 1+ events is not supported")
+        raise NotImplementedInGTO(
+            "Checking refs that created 1+ events is not supported"
+        )
     if len(result) == 0:
         return
     found_event = result[0]
