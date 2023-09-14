@@ -426,7 +426,6 @@ def test_registry_state_tag_tag(tmp_dir: TmpDir):
 
     expected_state = EXPECTED_REGISTRY_TAG_TAG_STATE
     for artifact in expected_state["artifacts"]:
-
         for appeared, expected in zip(
             iter_over(appeared_state["artifacts"][artifact]["versions"]),
             iter_over(expected_state["artifacts"][artifact]["versions"]),

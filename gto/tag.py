@@ -84,7 +84,6 @@ def name_tag(
 
 
 def parse_name(name: str, raise_on_fail: bool = True):
-
     match = re.search(tag_re, name)
     if raise_on_fail and not match:
         raise InvalidTagName(name)
