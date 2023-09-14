@@ -51,8 +51,8 @@ class BaseEvent(BaseModel):
 
 
 class Commit(BaseEvent):
-    priority = 0
-    addition = True
+    priority: int = 0
+    addition: bool = True
     version: str
     enrichments: List[Any]
     committer: str
@@ -63,8 +63,8 @@ class Commit(BaseEvent):
 
 
 class Creation(BaseEvent):
-    priority = 1
-    addition = True
+    priority: int = 1
+    addition: bool = True
     tag: str
 
     def __str__(self):
@@ -72,8 +72,8 @@ class Creation(BaseEvent):
 
 
 class Deprecation(BaseEvent):
-    priority = 2
-    addition = False
+    priority: int = 2
+    addition: bool = False
     tag: str
 
     def __str__(self):
@@ -81,8 +81,8 @@ class Deprecation(BaseEvent):
 
 
 class Registration(BaseEvent):
-    priority = 3
-    addition = True
+    priority: int = 3
+    addition: bool = True
     tag: str
     version: str
 
@@ -91,8 +91,8 @@ class Registration(BaseEvent):
 
 
 class Deregistration(BaseEvent):
-    priority = 4
-    addition = False
+    priority: int = 4
+    addition: bool = False
     tag: str
     version: str
 
@@ -103,8 +103,8 @@ class Deregistration(BaseEvent):
 
 
 class Assignment(BaseEvent):
-    priority = 5
-    addition = True
+    priority: int = 5
+    addition: bool = True
     tag: str
     version: str
     stage: str
@@ -114,8 +114,8 @@ class Assignment(BaseEvent):
 
 
 class Unassignment(BaseEvent):
-    priority = 6
-    addition = False
+    priority: int = 6
+    addition: bool = False
     tag: str
     version: str
     stage: str
@@ -515,8 +515,8 @@ class Artifact(BaseObject):
 
     def find_version(
         self,
-        name: str = None,
-        commit_hexsha: str = None,
+        name: Optional[str] = None,
+        commit_hexsha: Optional[str] = None,
         raise_if_not_found: bool = False,
         allow_multiple=False,
         include_discovered=False,
@@ -532,8 +532,8 @@ class Artifact(BaseObject):
         if create_new and not versions:
             v = Version(
                 artifact=self.artifact,
-                version=name or commit_hexsha,
-                commit_hexsha=commit_hexsha,
+                version=name or commit_hexsha,  # type: ignore[arg-type]
+                commit_hexsha=commit_hexsha,  # type: ignore[arg-type]
             )
             self.versions.append(v)
             versions = [v]
@@ -549,7 +549,7 @@ class Artifact(BaseObject):
         return versions[0] if versions else None
 
     def find_version_at_commit(
-        self, commit_hexsha: str, latest_datetime: datetime = None
+        self, commit_hexsha: str, latest_datetime: Optional[datetime] = None
     ):
         return [
             v

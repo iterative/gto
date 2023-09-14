@@ -92,7 +92,7 @@ def find_repeated_path(
 
 
 def check_if_path_exists(
-    path: Union[str, Path], scm: Optional[Git] = None, ref: str = None
+    path: Union[str, Path], scm: Optional[Git] = None, ref: Optional[str] = None
 ):
     """Check if path was committed to repo
     or it just exists in case the repo is not provided.
@@ -283,10 +283,10 @@ class FileIndexManager(BaseIndexManager):
     path: str = ""
 
     @classmethod
-    def from_path(cls, path: str, config: RegistryConfig = None):
+    def from_path(cls, path: str, config: Optional[RegistryConfig] = None):
         if config is None:
             config = read_registry_config(os.path.join(path, CONFIG_FILE_NAME))
-        return cls(path=path, config=config)
+        return cls(path=path, config=config)  # type: ignore[call-arg]
 
     def index_path(self):
         return str(Path(self.path) / self.config.INDEX)
@@ -320,11 +320,11 @@ class RepoIndexManager(FileIndexManager, RemoteRepoMixin):
     scm: Git
 
     def __init__(self, scm: Git, config):
-        super().__init__(scm=scm, config=config)
+        super().__init__(scm=scm, config=config)  # type: ignore[call-arg]
 
     @classmethod
     @contextmanager
-    def from_scm(cls, scm: Git, config: RegistryConfig = None):
+    def from_scm(cls, scm: Git, config: Optional[RegistryConfig] = None):
         if config is None:
             config = read_registry_config(os.path.join(scm.root_dir, CONFIG_FILE_NAME))
         yield cls(scm=scm, config=config)
@@ -457,12 +457,12 @@ class EnrichmentManager(BaseManager, RemoteRepoMixin):
 
     @classmethod
     @contextmanager
-    def from_scm(cls, scm: Git, config: RegistryConfig = None):
+    def from_scm(cls, scm: Git, config: Optional[RegistryConfig] = None):
         if config is None:
             config = read_registry_config(os.path.join(scm.root_dir, CONFIG_FILE_NAME))
         yield cls(scm=scm, config=config)
 
-    def describe(self, name: str, rev: str = None) -> List[EnrichmentInfo]:
+    def describe(self, name: str, rev: Optional[str] = None) -> List[EnrichmentInfo]:
         enrichments = self.config.enrichments
         res = []
         gto_enrichment = enrichments.pop("gto")
@@ -551,7 +551,7 @@ class EnrichmentManager(BaseManager, RemoteRepoMixin):
 
 
 class GTOInfo(EnrichmentInfo):
-    source = "gto"
+    source: str = "gto"
     artifact: Artifact
 
     def get_object(self) -> BaseModel:
@@ -565,7 +565,7 @@ class GTOInfo(EnrichmentInfo):
 
 
 class GTOEnrichment(EnrichmentReader):
-    source = "gto"
+    source: str = "gto"
 
     def discover(  # pylint: disable=no-self-use
         self, url_or_scm: Union[str, Git], rev: str
