@@ -1,7 +1,7 @@
 # pylint: disable=no-self-argument, inconsistent-return-statements, invalid-name, import-outside-toplevel
 import pathlib
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Type
+from typing import Any, Dict, List, Optional, Tuple, Type
 
 from pydantic import field_validator
 from pydantic.fields import FieldInfo
@@ -82,11 +82,11 @@ class YamlSettingsSource(PydanticBaseSettingsSource):
 
     def get_field_value(
         self, field: FieldInfo, field_name: str
-    ) -> tuple[Any, str, bool]:
+    ) -> Tuple[Any, str, bool]:
         # Nothing to do here. Only implement the return statement to make mypy happy
         return None, "", False
 
-    def __call__(self) -> dict[str, Any]:
+    def __call__(self) -> Dict[str, Any]:
         return self.init_kwargs
 
 
