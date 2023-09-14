@@ -6,7 +6,7 @@ install_requires = [
     "scmrepo>=1.3.1,<2",
     "typer>=0.4.1",
     "rich",
-    "pydantic>=1.9.0,<2",
+    "pydantic>=2.3,<3",
     "ruamel.yaml",
     "semver>=3.0.0",
     "entrypoints",
