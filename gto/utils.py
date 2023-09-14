@@ -48,7 +48,6 @@ def make_ready_to_serialize(
 
 
 def format_echo(result, format, format_table=None, if_empty="", missing_value="-"):
-
     if format == "yaml":
         yaml.dump(make_ready_to_serialize(result), sys.stdout)
         # or another way
