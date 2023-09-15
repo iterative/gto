@@ -4,7 +4,6 @@ from contextlib import contextmanager
 from typing import List, Optional, TypeVar, cast
 
 from funcy import distinct
-from pydantic import BaseModel
 from scmrepo.git import Git
 
 from gto.base import (
@@ -36,6 +35,8 @@ from gto.tag import (
 )
 from gto.ui import echo
 from gto.versions import SemVer
+
+from ._pydantic import BaseModel
 
 TBaseEvent = TypeVar("TBaseEvent", bound=BaseEvent)
 

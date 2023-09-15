@@ -19,7 +19,6 @@ from typing import (
     Union,
 )
 
-from pydantic import BaseModel, ValidationError, parse_obj_as, validator
 from ruamel.yaml import YAMLError
 from scmrepo.exceptions import SCMError
 from scmrepo.git import Git
@@ -50,6 +49,8 @@ from gto.exceptions import (
 from gto.ext import EnrichmentInfo, EnrichmentReader
 from gto.git_utils import RemoteRepoMixin
 from gto.ui import echo
+
+from ._pydantic import BaseModel, ValidationError, parse_obj_as, validator
 
 logger = logging.getLogger("gto")
 

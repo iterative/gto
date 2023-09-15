@@ -4,8 +4,9 @@ from importlib import import_module
 from typing import Dict, Optional, Type, Union
 
 import entrypoints
-from pydantic import BaseModel
 from scmrepo.git import Git
+
+from ._pydantic import BaseModel
 
 ENRICHMENT_ENTRYPOINT = "gto.enrichment"
 

@@ -3,7 +3,8 @@ from copy import deepcopy
 from typing import Any, Dict, Sequence, Set, Union
 
 from funcy import omit
-from pydantic import BaseModel
+
+from gto._pydantic import BaseModel
 
 
 def show_difference(left: Dict, right: Dict):

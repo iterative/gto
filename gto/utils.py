@@ -6,10 +6,11 @@ from datetime import datetime
 from enum import Enum
 
 import click
-from pydantic import BaseModel
 from tabulate import tabulate
 
 from gto.config import yaml
+
+from ._pydantic import BaseModel
 
 
 def flatten(obj):
