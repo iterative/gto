@@ -8,7 +8,7 @@ install_requires = [
     "rich",
     # pydantic.v1.parse_obj is broken in ==2.0.0:
     # https://github.com/pydantic/pydantic/issues/6361
-    "pydantic>=1.9.0,!=2.0.0",
+    "pydantic>=1.9.0,<3,!=2.0.0",
     "ruamel.yaml",
     "semver>=3.0.0",
     "entrypoints",
