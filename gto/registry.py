@@ -43,6 +43,7 @@ TBaseEvent = TypeVar("TBaseEvent", bound=BaseEvent)
 
 class GitRegistry(BaseModel, RemoteRepoMixin):
     scm: Git
+    cloned: bool
     artifact_manager: TagArtifactManager
     version_manager: TagVersionManager
     stage_manager: TagStageManager
@@ -54,12 +55,18 @@ class GitRegistry(BaseModel, RemoteRepoMixin):
 
     @classmethod
     @contextmanager
-    def from_scm(cls, scm: Git, config: Optional[RegistryConfig] = None):
+    def from_scm(
+        cls,
+        scm: Git,
+        cloned: bool = False,
+        config: Optional[RegistryConfig] = None,
+    ):
         if config is None:
             config = read_registry_config(os.path.join(scm.root_dir, CONFIG_FILE_NAME))
 
         yield cls(
             scm=scm,
+            cloned=cloned,
             config=config,
             artifact_manager=TagArtifactManager(scm=scm, config=config),
             version_manager=TagVersionManager(scm=scm, config=config),
@@ -572,7 +579,7 @@ class GitRegistry(BaseModel, RemoteRepoMixin):
     def _push_tag_or_echo_reminder(
         self, tag_name: str, push: bool, stdout: bool, delete: bool = False
     ) -> None:
-        if push:
+        if push or self.cloned:
             if stdout:
                 echo(
                     f"Running `git push{' --delete ' if delete else ' '}origin {tag_name}`"

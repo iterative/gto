@@ -8,6 +8,7 @@ from unittest.mock import ANY, call, patch
 
 import pytest
 from freezegun import freeze_time
+from pytest_mock import MockFixture
 from pytest_test_utils import TmpDir
 from scmrepo.git import Git
 
@@ -15,6 +16,7 @@ import gto
 import tests.resources
 from gto.api import show
 from gto.exceptions import RefNotFound, WrongArgs
+from gto.git_utils import cloned_git_repo
 from gto.index import RepoIndexManager
 from gto.tag import find
 from gto.versions import SemVer
@@ -590,3 +592,16 @@ def test_if_unassign_with_remote_repo_then_invoke_git_push_tag(tmp_dir: TmpDir):
                 tag_name="churn#staging!#3",
                 delete=False,
             )
+
+
+def test_action_doesnt_push_even_if_repo_has_remotes_set(mocker: MockFixture):
+    # test for https://github.com/iterative/gto/issues/405
+    with cloned_git_repo(tests.resources.SAMPLE_REMOTE_REPO_URL) as scm:
+        mocked_git_push_tag = mocker.patch("gto.registry.git_push_tag")
+        gto.api.unassign(
+            repo=scm,
+            name="churn",
+            stage="staging",
+            version="v3.1.0",
+        )
+        mocked_git_push_tag.assert_not_called()

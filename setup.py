@@ -24,8 +24,6 @@ tests = [
     "pytest-mock",
     "pytest-test-utils",
     "pylint==2.17.5",
-    # we use this to suppress pytest-related false positives in our tests.
-    "pylint-pytest",
     # we use this to suppress some messages in tests, eg: foo/bar naming,
     # and, protected method calls in our tests
     "pylint-plugin-utils",
