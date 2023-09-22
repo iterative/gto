@@ -41,6 +41,7 @@ def test_check_name_is_valid(name):
         "model#1",
         "@namespace/model",
         "DVCLive/Model",
+        "model A",
     ],
 )
 def test_check_name_is_invalid(name):
