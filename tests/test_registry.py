@@ -2,7 +2,9 @@
 from typing import Dict, List
 
 import pytest
+from pytest_mock import MockFixture
 from pytest_test_utils import TmpDir
+from scmrepo.git import Git
 
 from gto.registry import GitRegistry
 
@@ -443,3 +445,50 @@ def test_registry_state_tag_tag(tmp_dir: TmpDir):
                 check_obj(
                     appeared["stages"][key], expected["stages"][key], exclude["stages"]
                 )
+
+
+def test_from_url_sets_cloned_property(tmp_dir: TmpDir, scm: Git, mocker: MockFixture):
+    with GitRegistry.from_url(tmp_dir) as reg:
+        assert reg.cloned is False
+
+    with GitRegistry.from_url(scm) as reg:
+        assert reg.cloned is False
+
+    cloned_git_repo_mock = mocker.patch("gto.git_utils.cloned_git_repo")
+    cloned_git_repo_mock.return_value.__enter__.return_value = scm
+
+    with GitRegistry.from_url("https://github.com/iterative/gto") as reg:
+        assert reg.cloned is True
+
+
+# Some method parameters (model names, versions, revs, etc) depend and set by
+# the `showcase` fixture setup in the conftest.py.
+@pytest.mark.parametrize(
+    "method,args,kwargs",
+    [
+        ("register", ["new_model", "HEAD"], {}),
+        ("deregister", ["nn"], {"version": "v0.0.1"}),
+        ("assign", ["nn", "new_stage"], {"version": "v0.0.1"}),
+        ("unassign", ["nn", "staging"], {"version": "v0.0.1"}),
+        ("deprecate", ["nn"], {}),
+    ],
+)
+@pytest.mark.usefixtures("showcase")
+def test_tag_is_pushed_if_cloned_is_set(
+    tmp_dir: TmpDir,
+    mocker: MockFixture,
+    method,
+    args,
+    kwargs,
+):
+    with GitRegistry.from_url(tmp_dir) as reg:
+        # imitate that we are doing actions on the remote repo
+        assert reg.cloned is False
+        reg.cloned = True
+
+        # check that it attempts to push tag to a remote repo, even if
+        # push=False is set in a call. `cloned` overrides it in this case
+        git_push_tag_mock = mocker.patch("gto.registry.git_push_tag")
+        kwargs["push"] = False
+        getattr(reg, method)(*args, **kwargs)
+        git_push_tag_mock.assert_called_once()

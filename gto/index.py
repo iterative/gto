@@ -319,16 +319,22 @@ ArtifactsCommits = Dict[str, ArtifactCommits]
 
 class RepoIndexManager(FileIndexManager, RemoteRepoMixin):
     scm: Git
+    cloned: bool
 
-    def __init__(self, scm: Git, config):
-        super().__init__(scm=scm, config=config)  # type: ignore[call-arg]
+    def __init__(self, scm: Git, cloned: bool, config):
+        super().__init__(scm=scm, cloned=cloned, config=config)  # type: ignore[call-arg]
 
     @classmethod
     @contextmanager
-    def from_scm(cls, scm: Git, config: Optional[RegistryConfig] = None):
+    def from_scm(
+        cls,
+        scm: Git,
+        cloned: bool = False,
+        config: Optional[RegistryConfig] = None,
+    ):
         if config is None:
             config = read_registry_config(os.path.join(scm.root_dir, CONFIG_FILE_NAME))
-        yield cls(scm=scm, config=config)
+        yield cls(scm=scm, cloned=cloned, config=config)
 
     def add(
         self,
@@ -351,7 +357,7 @@ class RepoIndexManager(FileIndexManager, RemoteRepoMixin):
             commit=commit,
             commit_message=commit_message
             or generate_annotate_commit_message(name=name, type=type, path=path),
-            push=push,
+            push=push or self.cloned,
             stdout=stdout,
             name=name,
             type=type,
@@ -458,7 +464,12 @@ class EnrichmentManager(BaseManager, RemoteRepoMixin):
 
     @classmethod
     @contextmanager
-    def from_scm(cls, scm: Git, config: Optional[RegistryConfig] = None):
+    def from_scm(
+        cls,
+        scm: Git,
+        cloned: Optional[bool] = False,
+        config: Optional[RegistryConfig] = None,
+    ):
         if config is None:
             config = read_registry_config(os.path.join(scm.root_dir, CONFIG_FILE_NAME))
         yield cls(scm=scm, config=config)

@@ -6,7 +6,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Optional, Union
 
-from scmrepo.exceptions import InvalidRemote, SCMError
+from scmrepo.exceptions import SCMError
 from scmrepo.git import Git, SyncStatus
 
 from gto.config import RegistryConfig
@@ -17,7 +17,17 @@ from gto.ui import echo
 class RemoteRepoMixin:
     @classmethod
     @contextmanager
-    def from_scm(cls, scm: Git, config: Optional[RegistryConfig] = None):
+    def from_scm(
+        cls,
+        scm: Git,
+        cloned: bool = False,
+        config: Optional[RegistryConfig] = None,
+    ):
+        """
+        `cloned` - scm is a remote repo that was cloned locally into a tmp
+                   directory to be used for the duration of the context manager.
+                   Means that we push tags and changes back to the remote repo.
+        """
         raise NotImplementedError()
 
     @classmethod
@@ -51,7 +61,7 @@ class RemoteRepoMixin:
             with cloned_git_repo(url_or_scm) as scm:
                 if branch:
                     scm.checkout(branch)
-                with cls.from_scm(scm=scm, config=config) as obj:
+                with cls.from_scm(scm=scm, config=config, cloned=True) as obj:
                     yield obj
 
     def _call_commit_push(
@@ -152,12 +162,3 @@ def git_add_and_commit_all_changes(scm: Git, message: str) -> None:
 def _reset_repo_to_head(scm: Git) -> None:
     if scm.stash.push(include_untracked=True):
         scm.stash.drop()
-
-
-def has_remote(scm: Git, remote: str = "origin") -> bool:
-    try:
-        scm.validate_git_remote(remote)
-        return True
-    except InvalidRemote:
-        pass
-    return False

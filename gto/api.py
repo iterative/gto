@@ -19,7 +19,6 @@ from gto.constants import (
     parse_shortcut,
 )
 from gto.exceptions import NoRepo, NotImplementedInGTO, RefNotFound, WrongArgs
-from gto.git_utils import has_remote
 from gto.index import Artifact, RepoIndexManager
 from gto.registry import GitRegistry
 from gto.tag import parse_name as parse_tag_name
@@ -97,7 +96,7 @@ def register(
             bump_major=bump_major,
             bump_minor=bump_minor,
             bump_patch=bump_patch,
-            push=push or has_remote(reg.scm),
+            push=push,
             stdout=stdout,
             author=author,
             author_email=author_email,
@@ -131,7 +130,7 @@ def assign(
             message=message,
             simple=simple,
             force=force,
-            push=push or has_remote(reg.scm),
+            push=push,
             skip_registration=skip_registration,
             stdout=stdout,
             author=author,
@@ -165,7 +164,7 @@ def unassign(
             simple=simple if simple is not None else False,
             force=force,
             delete=delete,
-            push=push or has_remote(reg.scm),
+            push=push,
             author=author,
             author_email=author_email,
         )
@@ -195,7 +194,7 @@ def deregister(
             simple=simple if simple is not None else True,
             force=force,
             delete=delete,
-            push=push or has_remote(reg.scm),
+            push=push,
             author=author,
             author_email=author_email,
         )
@@ -223,7 +222,7 @@ def deprecate(
             simple=simple,
             force=force,
             delete=delete,
-            push=push or has_remote(reg.scm),
+            push=push,
             author=author,
             author_email=author_email,
         )

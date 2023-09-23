@@ -1,6 +1,7 @@
 from typing import Sequence
 
 import pytest
+from pytest_mock import MockFixture
 from pytest_test_utils import TmpDir
 from scmrepo.git import Git
 
@@ -111,3 +112,17 @@ def test_check_existence_no_repo(tmp_dir: TmpDir):
     tmp_dir.gen("m1.txt", "some content")
     assert check_if_path_exists(tmp_dir / "m1.txt")
     assert not check_if_path_exists(tmp_dir / "not" / "exists")
+
+
+def test_from_url_sets_cloned_property(tmp_dir: TmpDir, scm: Git, mocker: MockFixture):
+    with RepoIndexManager.from_url(tmp_dir) as idx:
+        assert idx.cloned is False
+
+    with RepoIndexManager.from_url(scm) as idx:
+        assert idx.cloned is False
+
+    cloned_git_repo_mock = mocker.patch("gto.git_utils.cloned_git_repo")
+    cloned_git_repo_mock.return_value.__enter__.return_value = scm
+
+    with RepoIndexManager.from_url("https://github.com/iterative/gto") as idx:
+        assert idx.cloned is True
