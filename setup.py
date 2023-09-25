@@ -23,7 +23,7 @@ tests = [
     "pytest-lazy-fixture==0.6.3",
     "pytest-mock",
     "pytest-test-utils",
-    "pylint==2.17.5",
+    "pylint==2.17.6",
     # we use this to suppress some messages in tests, eg: foo/bar naming,
     # and, protected method calls in our tests
     "pylint-plugin-utils",
