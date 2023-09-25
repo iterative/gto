@@ -66,6 +66,7 @@ def test_check_fullname_is_valid(name):
         "model",
         "dvclive=model",
         "some/folder=some/model",
+        "Some/folder/A=model",
     ],
 )
 def test_check_fullname_in_tag_is_valid(name):
