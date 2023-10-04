@@ -42,7 +42,7 @@ def tag_to_name(value):
 
 
 dirname = "[a-zA-Z0-9-_./]+"  # improve?
-name = r"[a-z0-9]([a-z0-9-/_]*[a-z0-9])?"
+name = r"[a-zA-Z0-9]([a-zA-Z0-9-/_]*[a-zA-Z0-9])?"
 semver = r"(?P<major>0|[1-9]\d*)\.(?P<minor>0|[1-9]\d*)\.(?P<patch>0|[1-9]\d*)(?:-(?P<prerelease>(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+(?P<buildmetadata>[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?"
 counter = "?P<counter>[0-9]+"
 name_re = re.compile(f"^{name}$")
