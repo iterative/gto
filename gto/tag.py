@@ -1,6 +1,6 @@
+import datetime
 import os
 import re
-from datetime import datetime
 from enum import Enum
 from typing import FrozenSet, Iterable, Optional, Union
 
@@ -124,7 +124,7 @@ class Tag(BaseModel):
     name: str
     version: Optional[str]
     stage: Optional[str]
-    created_at: datetime
+    created_at: datetime.datetime
     tag: GitTag
 
     class Config:
@@ -134,7 +134,7 @@ class Tag(BaseModel):
 def parse_tag(tag: GitTag):
     return Tag(
         tag=tag,
-        created_at=datetime.fromtimestamp(tag.tag_time),
+        created_at=tag.tag_datetime,
         **parse_name(tag.name),
     )
 
