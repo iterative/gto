@@ -420,9 +420,8 @@ class GitRegistry(BaseModel, RemoteRepoMixin):
         stdout=False,
         author: Optional[str] = None,
         author_email: Optional[str] = None,
-        deprecate_model: bool = False,
     ) -> Optional[Deprecation]:
-        self._check_args(name=name, version=None, rev=rev, deprecate_model=deprecate_model)
+        self._check_args(name=name, version=None, rev=rev, deprecate_model=True)
         if force:
             if simple:
                 raise WrongArgs("Can't use 'force' with 'simple=True'")

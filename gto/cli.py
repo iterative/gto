@@ -624,8 +624,7 @@ def deprecate(
             force=force,
             delete=delete,
             push=push,
-            stdout=True,
-            deprecate_model=True,
+            stdout=True
         )
 
 
