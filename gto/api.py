@@ -212,6 +212,7 @@ def deprecate(
     push: bool = False,
     author: Optional[str] = None,
     author_email: Optional[str] = None,
+    deprecate_model: bool = False,
 ):
     with GitRegistry.from_url(repo) as reg:
         return reg.deprecate(
@@ -225,6 +226,7 @@ def deprecate(
             push=push,
             author=author,
             author_email=author_email,
+            deprecate_model=deprecate_model,
         )
 
 
