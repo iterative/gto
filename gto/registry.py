@@ -421,7 +421,8 @@ class GitRegistry(BaseModel, RemoteRepoMixin):
         author: Optional[str] = None,
         author_email: Optional[str] = None,
     ) -> Optional[Deprecation]:
-        self._check_args(name=name, version=None, rev=rev, deprecate_model=True)
+        """Deprecate artifact"""
+        assert_fullname_is_valid(name)
         if force:
             if simple:
                 raise WrongArgs("Can't use 'force' with 'simple=True'")
@@ -461,13 +462,13 @@ class GitRegistry(BaseModel, RemoteRepoMixin):
         )
         return self._return_event(tag)
 
-    def _check_args(self, name, version, rev, stage=None, deprecate_model=False):
+    def _check_args(self, name, version, rev, stage=None):
         assert_fullname_is_valid(name)
         if stage is not None:
             self.config.assert_stage(stage)
         if version:
             self._check_version(version)
-        if not deprecate_model and not (version is None) ^ (rev is None):
+        if not (version is None) ^ (rev is None):
             raise WrongArgs("One and only one of (version, rev) must be specified.")
 
     @staticmethod
