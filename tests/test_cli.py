@@ -353,7 +353,7 @@ def test_deprecate_artifact(repo_with_commit: str):
         "deprecate",
         ["-r", repo_with_commit, "a4!"],
         "❌ Invalid value 'a4!'."
-        " Only letters, numbers, '_', '-', '/' are allowed!"
+        " Only letters, numbers, '_', '-', '/' are allowed."
         " Value must be of len >= 2 and must start and end with a letter or a number.\n",
     )
 
