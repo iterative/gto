@@ -18,7 +18,7 @@ def _check_output_contains(output: str, search_value: str) -> bool:
 
 
 def _check_output_exact_match(output: str, search_value: str) -> bool:
-    return ''.join(search_value.split('\n')) == ''.join(output.split('\n'))
+    return "".join(search_value.split("\n")) == "".join(output.split("\n"))
 
 
 def _check_successful_cmd(
