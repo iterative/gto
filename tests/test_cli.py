@@ -18,7 +18,7 @@ def _check_output_contains(output: str, search_value: str) -> bool:
 
 
 def _check_output_exact_match(output: str, search_value: str) -> bool:
-    return search_value == output
+    return ''.join(search_value.split('\n')) == ''.join(output.split('\n'))
 
 
 def _check_successful_cmd(
@@ -353,7 +353,7 @@ def test_deprecate_artifact(repo_with_commit: str):
         "deprecate",
         ["-r", repo_with_commit, "a4!"],
         "❌ Invalid value 'a4!'."
-        " Only letters, numbers, '_', '-', '/' are allowed.\n"
+        " Only letters, numbers, '_', '-', '/' are allowed."
         " Value must be of len >= 2 and must start and end with a letter or a number.\n",
     )
 

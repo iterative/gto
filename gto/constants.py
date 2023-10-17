@@ -71,7 +71,7 @@ def check_string_is_valid(value, regex=name_re):
 def assert_name_is_valid(value):
     if not check_string_is_valid(value, regex=name_re):
         raise ValidationError(
-            f"Invalid value '{value}'. Only letters, numbers, '_', '-', '/' are allowed.\n"
+            f"Invalid value '{value}'. Only letters, numbers, '_', '-', '/' are allowed."
             " Value must be of len >= 2 and must start and end with a letter or a number."
         )
 
@@ -80,7 +80,7 @@ def assert_fullname_is_valid(value):
     if not check_string_is_valid(value, regex=fullname_re):
         # fix error message to be regex-specific
         raise ValidationError(
-            f"Invalid value '{value}'. Only letters, numbers, '_', '-', '/' are allowed.\n"
+            f"Invalid value '{value}'. Only letters, numbers, '_', '-', '/' are allowed."
             " Value must be of len >= 2 and must start and end with a letter or a number."
         )
 
