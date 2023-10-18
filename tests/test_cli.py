@@ -20,10 +20,10 @@ def _check_output_contains(output: str, search_value: str) -> bool:
 
 def _check_output_exact_match(output: str, search_value: str) -> bool:
     print("search_value: ", search_value)
-    print("after re.sub: ", re.sub(r"[\r\n]+", "", search_value))
+    print("after re.sub: ", re.sub(r"[\r\n]+", " ", search_value))
     print("output: ", output)
-    print("after re.sub: ", re.sub(r"[\r\n]+", "", output))
-    return re.sub(r"[\r\n]+", "", search_value) == re.sub(r"[\r\n]+", "", output)
+    print("after re.sub: ", re.sub(r"[\r\n]+", " ", output))
+    return re.sub(r"[\r\n]+", " ", search_value) == re.sub(r"[\r\n]+", " ", output)
 
 
 def _check_successful_cmd(
