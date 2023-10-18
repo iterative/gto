@@ -4,7 +4,6 @@ from unittest import mock
 
 import pytest
 import typer
-import re
 from packaging import version
 from pytest_test_utils import TmpDir
 from typer.main import get_command_from_info
@@ -19,7 +18,7 @@ def _check_output_contains(output: str, search_value: str) -> bool:
 
 
 def _check_output_exact_match(output: str, search_value: str) -> bool:
-    return re.sub(r'[\n\r\t]', '', search_value) == re.sub(r'[\n\r\t]', '', output)
+    return search_value.replace("\n", "") == output.replace("\n", "")
 
 
 def _check_successful_cmd(
