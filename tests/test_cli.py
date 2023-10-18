@@ -1,11 +1,11 @@
 # pylint: disable=unused-variable, redefined-outer-name
+import os
+import re
 from typing import Callable, Optional, Tuple
 from unittest import mock
 
 import pytest
 import typer
-import os
-import re
 from packaging import version
 from pytest_test_utils import TmpDir
 from typer.main import get_command_from_info
