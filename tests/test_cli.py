@@ -1,6 +1,4 @@
 # pylint: disable=unused-variable, redefined-outer-name
-import os
-import re
 from typing import Callable, Optional, Tuple
 from unittest import mock
 
@@ -20,10 +18,7 @@ def _check_output_contains(output: str, search_value: str) -> bool:
 
 
 def _check_output_exact_match(output: str, search_value: str) -> bool:
-    replace_char = " " if os.name == "nt" else ""
-    return re.sub(r"[\r\n]+", replace_char, search_value) == re.sub(
-        r"[\r\n]+", replace_char, output
-    )
+    return search_value == output
 
 
 def _check_successful_cmd(
@@ -358,7 +353,7 @@ def test_deprecate_artifact(repo_with_commit: str):
         "deprecate",
         ["-r", repo_with_commit, "a4!"],
         "❌ Invalid value 'a4!'."
-        " Only letters, numbers, '_', '-', '/' are allowed."
+        " Only letters, numbers, '_', '-', '/' are allowed.\n"
         " Value must be of len >= 2 and must start and end with a letter or a number.\n",
     )
 
