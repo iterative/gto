@@ -4,6 +4,7 @@ from unittest import mock
 
 import pytest
 import typer
+import os
 import re
 from packaging import version
 from pytest_test_utils import TmpDir
@@ -23,7 +24,9 @@ def _check_output_exact_match(output: str, search_value: str) -> bool:
     print("after re.sub: ", re.sub(r"[\r\n]+", " ", search_value))
     print("output: ", output)
     print("after re.sub: ", re.sub(r"[\r\n]+", " ", output))
-    return re.sub(r"[\r\n]+", " ", search_value) == re.sub(r"[\r\n]+", " ", output)
+
+    replace_char = " " if os.name == 'nt' else ""
+    return re.sub(r"[\r\n]+", replace_char, search_value) == re.sub(r"[\r\n]+", replace_char, output)
 
 
 def _check_successful_cmd(
