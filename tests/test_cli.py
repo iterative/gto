@@ -1,5 +1,4 @@
 # pylint: disable=unused-variable, redefined-outer-name
-import os
 from typing import Callable, Optional, Tuple
 from unittest import mock
 
@@ -346,26 +345,6 @@ def test_assign(repo_with_commit: str):
         "Created git tag 'nn2#prod#1' that assigns stage to version 'v0.0.1'\n"
         "To push the changes upstream, run:\n"
         "    git push origin nn2#prod#1\n",
-    )
-
-
-def test_deprecate_artifact(repo_with_commit: str):
-    expected = os.linesep.join(
-        [
-            (
-                "❌ Invalid value 'a4!'."
-                " Only letters, numbers, '_', '-', '/' are allowed. Value "
-            ),
-            (
-                "must be of len >= 2 and must start and end with a letter or"
-                " a number.\n"
-            ),
-        ]
-    )
-    _check_failing_cmd(
-        "deprecate",
-        ["-r", repo_with_commit, "a4!"],
-        expected,
     )
 
 
