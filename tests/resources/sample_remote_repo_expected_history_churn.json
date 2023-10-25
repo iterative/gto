@@ -1,6 +1,6 @@
 [
   {
-    "timestamp": "2022-05-26 23:49:52",
+    "timestamp": "2022-05-27 02:49:52+03:00",
     "artifact": "churn",
     "event": "assignment",
     "priority": 5,
@@ -13,7 +13,7 @@
     "ref": "churn#prod#2"
   },
   {
-    "timestamp": "2022-05-25 20:03:12",
+    "timestamp": "2022-05-25 23:03:12+03:00",
     "artifact": "churn",
     "event": "assignment",
     "priority": 5,
@@ -26,7 +26,7 @@
     "ref": "churn#staging#1"
   },
   {
-    "timestamp": "2022-05-24 16:16:32",
+    "timestamp": "2022-05-24 19:16:32+03:00",
     "artifact": "churn",
     "event": "registration",
     "priority": 3,
@@ -39,7 +39,7 @@
     "ref": "churn@v3.1.0"
   },
   {
-    "timestamp": "2022-05-20 01:09:52",
+    "timestamp": "2022-05-20 04:09:52+03:00",
     "artifact": "churn",
     "event": "registration",
     "priority": 3,

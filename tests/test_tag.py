@@ -3,7 +3,7 @@ from scmrepo.git import Git
 
 from gto.constants import Action
 from gto.exceptions import RefNotFound, TagExists
-from gto.tag import create_tag, find, name_tag, parse_name
+from gto.tag import create_tag, find, name_tag, parse_name, parse_tag
 
 
 def test_name_tag(scm: Git):
@@ -148,3 +148,11 @@ def test_create_tag_repeated_tagname(scm: Git):
 def test_lightweight_tag(scm: Git):
     scm.tag("lightweight-tag@v0.0.1")
     assert find(scm=scm) == []
+
+
+@pytest.mark.usefixtures("repo_with_commit")
+def test_parse_tag_created_at_timezone(scm: Git):
+    create_tag(scm, "nn#prod", rev="HEAD", message="msg")
+    tag = parse_tag(scm.get_tag("nn#prod"))
+    d = tag.created_at
+    assert d.tzinfo is not None and d.tzinfo.utcoffset(d) is not None

@@ -3,7 +3,6 @@ import os
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from contextlib import contextmanager
-from datetime import datetime
 from functools import wraps
 from pathlib import Path
 from typing import (
@@ -524,7 +523,7 @@ class EnrichmentManager(BaseManager, RemoteRepoMixin):
                     EnrichmentEvent(
                         artifact=artifact.artifact,
                         version=version.version,
-                        created_at=datetime.fromtimestamp(commit.commit_time),
+                        created_at=commit.commit_datetime,
                         author=commit.author_name,
                         author_email=commit.author_email,
                         commit_hexsha=commit.hexsha,
@@ -548,7 +547,7 @@ class EnrichmentManager(BaseManager, RemoteRepoMixin):
                     EnrichmentEvent(
                         artifact=artifact.artifact,
                         version=version.version,
-                        created_at=datetime.fromtimestamp(commit.commit_time),
+                        created_at=commit.commit_datetime,
                         author=commit.author_name,
                         author_email=commit.author_email,
                         commit_hexsha=commit.hexsha,
