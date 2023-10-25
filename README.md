@@ -27,17 +27,17 @@ $ pip install gto
 ```
 
 This will install the `gto`
-[command-line interface](https://mlem.ai/doc/gto/command-reference) (CLI) and
+[command-line interface](https://dvc.org/doc/gto/command-reference) (CLI) and
 make the Python API available for use in code.
 
 ## Getting started
 
-To Get Started, please head to [GTO docs](https://mlem.ai/doc/gto/get-started).
+To Get Started, please head to [GTO docs](https://dvc.org/doc/gto/get-started).
 
 ## Contributing
 
 Contributions are welcome! Please see our
-[Contributing Guide](https://mlem.ai/doc/contributing/core) for more details.
+[Contributing Guide](https://dvc.org/doc/contributing/core) for more details.
 
 Check out the
 [DVC weekly board](https://github.com/orgs/iterative/projects/189)
@@ -87,7 +87,7 @@ $ gto show -v
 ```
 
 The code that generates this folder could be found
-[in this fixture](https://github.com/iterative/gto/blob/main/tests/conftest.py#L58).
+[in this fixture](https://github.com/iterative/gto/blob/main/tests/conftest.py).
 
 To continue experimenting, call `gto --help`
 
