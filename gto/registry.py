@@ -421,6 +421,8 @@ class GitRegistry(BaseModel, RemoteRepoMixin):
         author: Optional[str] = None,
         author_email: Optional[str] = None,
     ) -> Optional[Deprecation]:
+        """Deprecate artifact"""
+        assert_fullname_is_valid(name)
         if force:
             if simple:
                 raise WrongArgs("Can't use 'force' with 'simple=True'")
