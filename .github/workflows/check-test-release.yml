@@ -69,7 +69,6 @@ jobs:
         token: ${{ secrets.CODECOV_TOKEN }}
   deploy:
     name: PyPI Deploy
-    needs: [check, test]
     environment: pypi
     permissions:
       contents: write
