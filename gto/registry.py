@@ -513,7 +513,7 @@ class GitRegistry(BaseModel, RemoteRepoMixin):
         except InvalidTagName:
             pass
         if not name:
-            logging.info("Provided ref doesn't exist or it is not of GTO format")
+            logging.info(f"Ref '{ref}' doesn't exist or it is not of GTO format")
             return []
         state = self.get_state()
         return [
