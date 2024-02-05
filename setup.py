@@ -3,7 +3,7 @@ from pathlib import Path
 from setuptools import find_packages, setup
 
 install_requires = [
-    "scmrepo>=1.4.0,<3",
+    "scmrepo>=3,<4",
     "typer>=0.4.1",
     "rich",
     # pydantic.v1.parse_obj is broken in ==2.0.0:
