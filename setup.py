@@ -20,7 +20,6 @@ install_requires = [
 tests = [
     "pytest",
     "pytest-cov",
-    "pytest-lazy-fixture==0.6.3",
     "pytest-mock",
     "pytest-test-utils",
     "pylint==3.0.3",
@@ -48,11 +47,10 @@ setup_args = {
     "install_requires": install_requires,
     "extras_require": {"tests": tests},
     "keywords": "git repo repository artifact registry developer-tools collaboration",
-    "python_requires": ">=3.8",
+    "python_requires": ">=3.9",
     "classifiers": [
         "Development Status :: 2 - Pre-Alpha",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
