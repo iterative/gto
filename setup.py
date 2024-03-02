@@ -22,7 +22,7 @@ tests = [
     "pytest-cov",
     "pytest-mock",
     "pytest-test-utils",
-    "pylint==3.0.3",
+    "pylint==3.1.0",
     # we use this to suppress some messages in tests, eg: foo/bar naming,
     # and, protected method calls in our tests
     "pylint-plugin-utils",
