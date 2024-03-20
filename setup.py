@@ -10,7 +10,7 @@ install_requires = [
     # https://github.com/pydantic/pydantic/issues/6361
     "pydantic>=1.9.0,<3,!=2.0.0",
     "ruamel.yaml",
-    "semver==2.13.0",
+    "semver>=2.13.0",
     "entrypoints",
     "tabulate>=0.8.10",
     "funcy",
