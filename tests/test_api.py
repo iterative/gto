@@ -1,5 +1,6 @@
 # pylint: disable=protected-access
 """TODO: add more tests for API"""
+
 import os
 from contextlib import contextmanager
 from time import sleep

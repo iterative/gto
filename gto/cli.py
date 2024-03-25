@@ -475,7 +475,7 @@ def gto_command(*args, section="other", aliases=None, parent=app, **kwargs):
                 raise typer.Exit(1) from e
             finally:
                 # TODO: analytics
-                error  # pylint: disable=pointless-statement
+                error  # pylint: disable=pointless-statement  # noqa: B018
                 # send_cli_call(cmd_name, error_msg=error, **res)
 
         return inner

@@ -37,6 +37,6 @@ def check_obj(
 
 
 def convert_objects_to_str_in_json_serializable_object(
-    o: Union[list, dict]
+    o: Union[list, dict],
 ) -> Union[list, dict]:
     return json.loads(json.dumps(o, default=str))

@@ -43,7 +43,7 @@ class SemVer(AbstractVersion):
             return False
 
     @classmethod
-    def parse(cls, version: str) -> "SemVer":
+    def parse(cls, version: str) -> "semver.VersionInfo":
         """
         Parse version string to a Version instance.
 

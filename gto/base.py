@@ -213,7 +213,8 @@ class VStage(BaseObject):
         self, direct=True, indirect=True, ascending=False
     ) -> Sequence[BaseEvent]:  # pylint: disable=unused-argument
         return sorted(
-            self.assignments + self.unassignments if direct else [], key=lambda e: e.created_at  # type: ignore
+            self.assignments + self.unassignments if direct else [],  # type: ignore
+            key=lambda e: e.created_at,
         )[:: 1 if ascending else -1]
 
     @property

@@ -100,7 +100,7 @@ def check_if_path_exists(
     if scm is None:
         return Path(path).exists()
     try:
-        fs = scm.get_fs(ref)
+        fs = scm.get_fs(ref)  # type: ignore[arg-type]
         return fs.exists(str(path))
     except SCMError:
         return False
