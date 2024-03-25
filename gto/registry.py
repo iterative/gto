@@ -124,7 +124,7 @@ class GitRegistry(BaseModel, RemoteRepoMixin):
             create_new=create_new,
         )
 
-    def register(  # pylint: disable=too-many-locals
+    def register(  # pylint: disable=too-many-locals  # noqa: C901
         self,
         name,
         rev,
@@ -262,7 +262,7 @@ class GitRegistry(BaseModel, RemoteRepoMixin):
         )
         return self._return_event(tag)
 
-    def assign(  # pylint: disable=too-many-locals
+    def assign(  # pylint: disable=too-many-locals  # noqa: C901
         self,
         name,
         stage,

@@ -101,10 +101,7 @@ output-format = "full"
 show-fixes = true
 
 [tool.ruff.lint]
-extend-select = ["I", "B", "C4", "T10", "Q"]
-
-[tool.ruff.lint.mccabe]
-max-complexity = 15
+extend-select = ["I", "B", "C4", "C90", "T10", "Q"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["gto", "tests"]
