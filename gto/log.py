@@ -1,6 +1,7 @@
 """
 Loggers used in other parts of GTO
 """
+
 import logging.config
 
 from gto.config import CONFIG

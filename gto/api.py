@@ -402,7 +402,7 @@ def _get_versions(
     return versions
 
 
-def _show_versions(  # pylint: disable=too-many-locals
+def _show_versions(  # pylint: disable=too-many-locals  # noqa: C901
     repo: Union[str, Path, Git],
     name: str,
     ref: Optional[str] = None,

@@ -4,7 +4,7 @@ from contextlib import contextmanager
 from itertools import chain
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Optional, Union
+from typing import Iterator, Optional, Union
 
 from scmrepo.exceptions import SCMError
 from scmrepo.git import Git, SyncStatus
@@ -46,7 +46,7 @@ class RemoteRepoMixin:
         if os.path.exists(url_or_scm):
             scm = Git(url_or_scm)
             try:
-                scm.dir
+                scm.dir  # noqa: B018
             except SCMError as e:
                 scm.close()
                 raise NoRepo(url_or_scm) from e
@@ -103,12 +103,12 @@ class RemoteRepoMixin:
 
 
 @contextmanager
-def cloned_git_repo(url: str) -> Git:
+def cloned_git_repo(url: str) -> Iterator[Git]:
     with TemporaryDirectory() as tmp_dir:
         logging.debug("create temporary directory %s", tmp_dir)
         scm = Git.clone(url, tmp_dir)
         try:
-            scm.dir
+            scm.dir  # noqa: B018
         except SCMError as e:
             scm.close()
             raise NoRepo(url) from e

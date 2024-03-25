@@ -120,10 +120,11 @@ class GitRegistry(BaseModel, RemoteRepoMixin):
             all_branches=all_branches,
             all_commits=all_commits,
         ).find_artifact(
-            name, create_new=create_new  # type: ignore
+            name,  # type: ignore
+            create_new=create_new,
         )
 
-    def register(  # pylint: disable=too-many-locals
+    def register(  # pylint: disable=too-many-locals  # noqa: C901
         self,
         name,
         rev,
@@ -261,7 +262,7 @@ class GitRegistry(BaseModel, RemoteRepoMixin):
         )
         return self._return_event(tag)
 
-    def assign(  # pylint: disable=too-many-locals
+    def assign(  # pylint: disable=too-many-locals  # noqa: C901
         self,
         name,
         stage,
