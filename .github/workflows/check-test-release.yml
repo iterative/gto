@@ -1,55 +1,46 @@
 name: Check, test and release
 on:
   push:
+    branches:
+    - main
   pull_request:
+  release:
+    types:
+    - published
   schedule:
   - cron: '0 7 * * 1'  # M H d m w (Mondays at 7:00)
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
-  check:
-    if: startsWith(github.ref, 'refs/tags') || github.event_name == 'pull_request' || github.event_name == 'schedule' || github.repository_owner != 'iterative'
-    name: Check
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-    - uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
-    - run: pip install -e .[dev]
-    - uses: pre-commit/action@v3.0.1
-      env:
-        SKIP: pylint
   test:
-    if: startsWith(github.ref, 'refs/tags') || github.event_name == 'pull_request' || github.event_name == 'schedule' || github.repository_owner != 'iterative'
-    name: Test ${{ matrix.os }} with py${{ matrix.python }}
+    timeout-minutes: 10
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
         python: ["3.9", "3.10", "3.11", "3.12"]
-      fail-fast: false
-    timeout-minutes: 10
+
     steps:
     - uses: actions/checkout@v4
       with:
         fetch-depth: 0
+
     - uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python }}
         cache: 'pip'
-        cache-dependency-path: 'setup.py'
-    - name: Install
-      run: |
-        pip install --upgrade pip setuptools wheel
-        pip install pre-commit .[dev]
-    - run: pre-commit run pylint -a -v --show-diff-on-failure
+        cache-dependency-path: 'pyproject.toml'
+
+    - run: pip install .[dev]
+    - uses: pre-commit/action@v3.0.1
     - name: Run tests
       run: |
         git config --global user.email "olivaw@iterative.ai"
@@ -58,16 +49,20 @@ jobs:
       env:
         GITHUB_MATRIX_OS: ${{ matrix.os }}
         GITHUB_MATRIX_PYTHON: ${{ matrix.python }}
+
     - name: "Upload coverage to Codecov"
       uses: codecov/codecov-action@v4
       with:
         fail_ci_if_error: false
         token: ${{ secrets.CODECOV_TOKEN }}
+
   deploy:
     name: PyPI Deploy
-    environment: pypi
+    environment:
+      name: pypi
+      url: https://pypi.org/p/gto
     permissions:
-      contents: write
+      contents: read
       id-token: write
     runs-on: ubuntu-latest
     steps:
@@ -76,15 +71,10 @@ jobs:
         fetch-depth: 0
     - uses: actions/setup-python@v5
       with:
-        python-version: '3.11'
-    - uses: casperdcl/deploy-pypi@v2
-      with:
-        build: true
-        upload: false
-    - if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
+        python-version: '3.12'
+
+    - run: pip install build twine
+    - run: python -m build
+    - run: twine check --strict dist/*
+    - if: github.event_name == 'release'
       uses: pypa/gh-action-pypi-publish@release/v1
-    - id: meta
-      name: Changelog
-      run: |
-        echo ::set-output name=tag::${GITHUB_REF#refs/tags/}
-        git log --pretty='format:%d%n- %s%n%b---' $(git tag --sort=v:refname | tail -n2 | head -n1)..HEAD > _CHANGES.md
