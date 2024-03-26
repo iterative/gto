@@ -41,14 +41,7 @@ jobs:
 
     - run: pip install .[dev]
     - uses: pre-commit/action@v3.0.1
-    - name: Run tests
-      run: |
-        git config --global user.email "olivaw@iterative.ai"
-        git config --global user.name "Olivaw"
-        pytest
-      env:
-        GITHUB_MATRIX_OS: ${{ matrix.os }}
-        GITHUB_MATRIX_PYTHON: ${{ matrix.python }}
+    - run: pytest
 
     - name: "Upload coverage to Codecov"
       uses: codecov/codecov-action@v4
