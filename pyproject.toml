@@ -40,6 +40,7 @@ Source = "https://github.com/iterative/gto"
 [project.optional-dependencies]
 tests = [
     "freezegun",
+    "pygit2",
     "pytest",
     "pytest-cov",
     "pytest-mock",
@@ -104,7 +105,7 @@ extend-select = ["I", "B", "C4", "C90", "T10", "Q"]
 known-first-party = ["gto", "tests"]
 
 [tool.pylint.master]
-extension-pkg-whitelist = ["pydantic", "pytest-lazy-fixture", "pytest"]
+extension-pkg-whitelist = ["pydantic", "pytest-lazy-fixture", "pygit2", "pytest"]
 load-plugins= ["pylint.extensions.no_self_use"]
 
 [tool.pylint.message_control]

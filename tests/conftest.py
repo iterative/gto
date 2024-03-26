@@ -1,8 +1,10 @@
 # pylint: disable=redefined-outer-name
+import os
 import sys
 from time import sleep
-from typing import Tuple
+from typing import Iterator, Tuple
 
+import pygit2
 import pytest
 from click.testing import Result
 from pytest_test_utils import TmpDir
@@ -25,6 +27,34 @@ class Runner:
 @pytest.fixture
 def runner() -> Runner:
     return Runner()
+
+
+@pytest.fixture(scope="session", autouse=True)
+def isolate(tmp_path_factory: pytest.TempPathFactory) -> Iterator[None]:
+    path = tmp_path_factory.mktemp("mock")
+    home_dir = path / "home"
+    home_dir.mkdir()
+
+    monkeypatch = pytest.MonkeyPatch()
+    if sys.platform == "win32":
+        home_drive, home_path = os.path.splitdrive(home_dir)
+        monkeypatch.setenv("USERPROFILE", str(home_dir))
+        monkeypatch.setenv("HOMEDRIVE", home_drive)
+        monkeypatch.setenv("HOMEPATH", home_path)
+    else:
+        monkeypatch.setenv("HOME", str(home_dir))
+
+    monkeypatch.setenv("GIT_CONFIG_NOSYSTEM", "1")
+    contents = b"""
+[user]
+name=GTO Tester
+email=gtotester@example.com
+"""
+    (home_dir / ".gitconfig").write_bytes(contents)
+    pygit2.settings.search_path[pygit2.GIT_CONFIG_LEVEL_GLOBAL] = str(home_dir)
+
+    yield
+    monkeypatch.undo()
 
 
 @pytest.fixture
