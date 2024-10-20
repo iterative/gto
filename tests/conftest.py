@@ -51,7 +51,7 @@ name=GTO Tester
 email=gtotester@example.com
 """
     (home_dir / ".gitconfig").write_bytes(contents)
-    pygit2.settings.search_path[pygit2.GIT_CONFIG_LEVEL_GLOBAL] = str(home_dir)
+    pygit2.settings.search_path[pygit2.GIT_CONFIG_LEVEL_GLOBAL] = str(home_dir)  # type: ignore[attr-defined]
 
     yield
     monkeypatch.undo()

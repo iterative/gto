@@ -474,11 +474,11 @@ class Artifact(BaseObject):
 
     def get_vstages(
         self,
-        registered_only=False,
-        assignments_per_version=ASSIGNMENTS_PER_VERSION,
-        versions_per_stage=VERSIONS_PER_STAGE,
-        sort=VersionSort.SemVer,
-    ):
+        registered_only: bool = False,
+        assignments_per_version: int = ASSIGNMENTS_PER_VERSION,
+        versions_per_stage: int = VERSIONS_PER_STAGE,
+        sort: VersionSort = VersionSort.SemVer,
+    ) -> Dict[str, List[VStage]]:
         if assignments_per_version < -1:
             raise WrongArgs("'assignments_per_version' must be >= -1")
         if versions_per_stage < -1:
