@@ -394,7 +394,7 @@ option_branch = Option(
 )
 
 
-@app.callback("gto", invoke_without_command=True, no_args_is_help=True)
+@app.callback(invoke_without_command=True, no_args_is_help=True)
 def gto_callback(
     ctx: Context,
     show_version: bool = Option(False, "--version", help="Show version and exit"),
