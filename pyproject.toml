@@ -50,7 +50,7 @@ tests = [
 dev = [
     "gto[tests]",
     "mypy==1.14.1",
-    "pylint==3.3.4",
+    "pylint==3.3.6",
     "types-PyYAML",
     "types-filelock",
     "types-freezegun",
