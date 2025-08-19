@@ -18,7 +18,7 @@ from gto.config import CONFIG_FILE_NAME
 
 class Runner:
     def __init__(self):
-        self._runner = CliRunner(mix_stderr=False)
+        self._runner = CliRunner()
 
     def invoke(self, *args, **kwargs) -> Result:
         return self._runner.invoke(app, *args, **kwargs)
@@ -51,14 +51,14 @@ name=GTO Tester
 email=gtotester@example.com
 """
     (home_dir / ".gitconfig").write_bytes(contents)
-    pygit2.settings.search_path[pygit2.GIT_CONFIG_LEVEL_GLOBAL] = str(home_dir)  # type: ignore[attr-defined]
+    pygit2.settings.search_path[pygit2.GIT_CONFIG_LEVEL_GLOBAL] = str(home_dir)  # type: ignore[index]
 
     yield
     monkeypatch.undo()
 
 
 @pytest.fixture
-def scm(tmp_dir: TmpDir) -> Git:
+def scm(tmp_dir: TmpDir) -> Iterator[Git]:
     scm_instance = Git.init(tmp_dir)
     try:
         yield scm_instance

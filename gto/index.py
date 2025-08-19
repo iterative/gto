@@ -516,8 +516,7 @@ class EnrichmentManager(BaseManager, RemoteRepoMixin):
                 commit = self.scm.resolve_commit(version.commit_hexsha)
                 enrichments = self.describe(
                     artifact.artifact,
-                    # faster to make git.Reference here
-                    rev=commit,
+                    rev=commit.hexsha,
                 )
                 version.add_event(
                     EnrichmentEvent(
@@ -537,12 +536,16 @@ class EnrichmentManager(BaseManager, RemoteRepoMixin):
         for commit in self.get_commits(
             all_branches=all_branches, all_commits=all_commits
         ):
-            for art_name in GTOEnrichment().discover(self.scm, commit):
-                enrichments = self.describe(art_name, rev=commit)
+            for art_name in GTOEnrichment().discover(self.scm, commit.hexsha):
+                enrichments = self.describe(art_name, rev=commit.hexsha)
                 artifact = state.find_artifact(art_name, create_new=True)
                 version = artifact.find_version(
                     commit_hexsha=commit.hexsha, create_new=True
                 )
+
+                assert version is not None and not isinstance(
+                    version, list
+                ), "Expected a single Version instance"
                 version.add_event(
                     EnrichmentEvent(
                         artifact=artifact.artifact,
