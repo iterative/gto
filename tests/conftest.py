@@ -18,7 +18,7 @@ from gto.config import CONFIG_FILE_NAME
 
 class Runner:
     def __init__(self):
-        self._runner = CliRunner()
+        self._runner = CliRunner(mix_stderr=False)
 
     def invoke(self, *args, **kwargs) -> Result:
         return self._runner.invoke(app, *args, **kwargs)
