@@ -19,7 +19,8 @@ from gto.config import CONFIG_FILE_NAME
 
 class Runner:
     def __init__(self):
-        # Check if CliRunner supports mix_stderr parameter
+        # Older versions of CliRunner need this
+        # Can we removed when we drop Py 3.9 support
         init_sig = inspect.signature(CliRunner.__init__)
         if "mix_stderr" in init_sig.parameters:
             self._runner = CliRunner(mix_stderr=False)  # pylint: disable=unexpected-keyword-arg
