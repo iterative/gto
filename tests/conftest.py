@@ -1,4 +1,5 @@
 # pylint: disable=redefined-outer-name
+import inspect
 import os
 import sys
 from time import sleep
@@ -18,7 +19,12 @@ from gto.config import CONFIG_FILE_NAME
 
 class Runner:
     def __init__(self):
-        self._runner = CliRunner(mix_stderr=False)
+        # Check if CliRunner supports mix_stderr parameter
+        init_sig = inspect.signature(CliRunner.__init__)
+        if "mix_stderr" in init_sig.parameters:
+            self._runner = CliRunner(mix_stderr=False)  # pylint: disable=unexpected-keyword-arg
+        else:
+            self._runner = CliRunner()
 
     def invoke(self, *args, **kwargs) -> Result:
         return self._runner.invoke(app, *args, **kwargs)
