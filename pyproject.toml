@@ -52,7 +52,7 @@ dev = [
     # mypy>=1.11.0 crashes when used with pydantic-settings on Python 3.9,
     # see: https://github.com/python/mypy/issues/17535
     "mypy<1.11.0; python_version <= '3.9'",
-    "pylint==3.3.8",
+    "pylint==3.3.9",
     "types-PyYAML",
     "types-filelock",
     "types-freezegun",
