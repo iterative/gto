@@ -48,10 +48,10 @@ tests = [
 ]
 dev = [
     "gto[tests]",
-    "mypy==1.17.1; python_version > '3.9'",
+    "mypy==1.18.2; python_version > '3.9'",
     # mypy>=1.11.0 crashes when used with pydantic-settings on Python 3.9,
     # see: https://github.com/python/mypy/issues/17535
-    "mypy<1.11.0; python_version <= '3.9'",
+    "mypy<1.18.3; python_version <= '3.9'",
     "pylint==3.3.8",
     "types-PyYAML",
     "types-filelock",
