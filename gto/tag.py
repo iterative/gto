@@ -4,10 +4,10 @@ import re
 from enum import Enum
 from typing import FrozenSet, Iterable, Optional, Union
 
+from pydantic import BaseModel, ConfigDict
 from scmrepo.exceptions import RevError
 from scmrepo.git import Git, GitTag
 
-from ._pydantic import BaseModel
 from .base import (
     Artifact,
     Assignment,
@@ -122,13 +122,11 @@ def parse_name_reference(name: str):
 class Tag(BaseModel):
     action: Action
     name: str
-    version: Optional[str]
-    stage: Optional[str]
     created_at: datetime.datetime
     tag: GitTag
-
-    class Config:
-        arbitrary_types_allowed = True
+    version: Optional[str] = None
+    stage: Optional[str] = None
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
 def parse_tag(tag: GitTag):

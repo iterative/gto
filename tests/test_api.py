@@ -372,7 +372,7 @@ def test_if_stages_on_remote_git_repo_then_return_expected_stages():
 
 def test_if_describe_on_remote_git_repo_then_return_expected_info():
     result = gto.api.describe(repo=tests.resources.SAMPLE_REMOTE_REPO_URL, name="churn")
-    assert result.dict(exclude_defaults=True) == {
+    assert result.model_dump(exclude_defaults=True) == {
         "type": "model",
         "path": "models/churn.pkl",
         "virtual": False,

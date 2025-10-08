@@ -3,8 +3,7 @@ from copy import deepcopy
 from typing import Any, Dict, Sequence, Set, Union
 
 from funcy import omit
-
-from gto._pydantic import BaseModel
+from pydantic import BaseModel
 
 
 def show_difference(left: Dict, right: Dict):
@@ -29,7 +28,7 @@ def check_obj(
     skip_keys: Union[Set[str], Sequence[str]] = (),
 ):
     if isinstance(obj, BaseModel):
-        obj_values = obj.dict(exclude=set(skip_keys))
+        obj_values = obj.model_dump(exclude=set(skip_keys))
     else:
         obj_values = omit(obj, skip_keys)
     values = omit(values, skip_keys)

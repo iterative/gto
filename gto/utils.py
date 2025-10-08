@@ -6,11 +6,10 @@ from datetime import datetime
 from enum import Enum
 
 import click
+from pydantic import BaseModel
 from tabulate import tabulate
 
 from gto.config import yaml
-
-from ._pydantic import BaseModel
 
 
 def flatten(obj):
@@ -42,7 +41,7 @@ def make_ready_to_serialize(
     if data is None:
         return data
     if isinstance(data, BaseModel):
-        return make_ready_to_serialize(data.dict())
+        return make_ready_to_serialize(data.model_dump())
     raise NotImplementedError(
         f"Serialisation is not implemented for {data_to_serialize} of type {type(data_to_serialize)}"
     )

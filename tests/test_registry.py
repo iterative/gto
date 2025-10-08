@@ -371,7 +371,7 @@ def iter_over(sequence):
 @pytest.mark.usefixtures("showcase")
 def test_registry_state_tag_tag(tmp_dir: TmpDir):
     with GitRegistry.from_url(tmp_dir) as reg:
-        appeared_state = reg.get_state().dict()
+        appeared_state = reg.get_state().model_dump()
 
     # TODO: update state
     exclude: Dict[str, List[str]] = {

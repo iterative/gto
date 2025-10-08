@@ -1,6 +1,7 @@
 from datetime import datetime
 from typing import Any, Dict, FrozenSet, List, Optional, Sequence, Union
 
+from pydantic import BaseModel, ConfigDict
 from scmrepo.git import Git
 
 from gto.config import RegistryConfig
@@ -12,7 +13,6 @@ from gto.constants import (
 )
 from gto.versions import SemVer
 
-from ._pydantic import BaseModel
 from .exceptions import (
     ArtifactNotFound,
     ManyVersions,
@@ -41,7 +41,7 @@ class BaseEvent(BaseModel):
         return self.__class__.__name__.lower()
 
     def dict_state(self, exclude=None):
-        state = self.dict(exclude=exclude)
+        state = self.model_dump(exclude=exclude)
         state["event"] = self.event
         return state
 
@@ -178,7 +178,7 @@ class BaseObject(BaseModel):
         return self.authoring_event.ref
 
     def dict_state(self, exclude=None):
-        version = self.dict(exclude=exclude)
+        version = self.model_dump(exclude=exclude)
         version["is_active"] = self.is_active
         version["activated_at"] = self.activated_at
         version["created_at"] = self.created_at
@@ -565,9 +565,7 @@ class Artifact(BaseObject):
 
 class BaseRegistryState(BaseModel):
     artifacts: Dict[str, Artifact] = {}
-
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     def add_artifact(self, name):
         self.artifacts[name] = Artifact(artifact=name, versions=[])
@@ -623,9 +621,7 @@ class BaseManager(BaseModel):
     scm: Git
     actions: FrozenSet[Action]
     config: RegistryConfig
-
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     def update_state(self, state: BaseRegistryState) -> BaseRegistryState:
         raise NotImplementedError

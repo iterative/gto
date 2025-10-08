@@ -34,12 +34,12 @@ def _init_repo(tmp_dir: TmpDir, scm: Git) -> TmpDir:
 
 def test_config_load_index(init_repo: TmpDir):
     with RepoIndexManager.from_url(init_repo) as index:
-        assert index.config.TYPES == ["model", "dataset"]
+        assert index.config.types == ["model", "dataset"]
 
 
 def test_config_load_registry(init_repo: TmpDir):
     with GitRegistry.from_url(init_repo) as reg:
-        assert reg.config.TYPES == ["model", "dataset"]
+        assert reg.config.types == ["model", "dataset"]
 
 
 def test_stages(init_repo: TmpDir):

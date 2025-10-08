@@ -18,6 +18,13 @@ from typing import (
     Union,
 )
 
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    TypeAdapter,
+    ValidationError,
+    field_validator,
+)
 from ruamel.yaml import YAMLError
 from scmrepo.exceptions import SCMError
 from scmrepo.git import Git
@@ -49,8 +56,6 @@ from gto.ext import EnrichmentInfo, EnrichmentReader
 from gto.git_utils import RemoteRepoMixin
 from gto.ui import echo
 
-from ._pydantic import BaseModel, ValidationError, parse_obj_as, validator
-
 logger = logging.getLogger("gto")
 
 
@@ -64,6 +69,7 @@ class Artifact(BaseModel):
 
 
 State = Dict[str, Artifact]
+state_adapter = TypeAdapter(State)
 
 
 def not_frozen(func):
@@ -110,7 +116,8 @@ class Index(BaseModel):
     state: State = {}  # TODO should not be populated until load() is called
     frozen: bool = False
 
-    @validator("state")
+    @field_validator("state")
+    @classmethod
     def state_is_valid(cls, v):  # pylint: disable=no-self-argument, no-self-use
         for name, artifact in v.items():
             assert_name_is_valid(name)
@@ -147,8 +154,9 @@ class Index(BaseModel):
         else:
             contents = read_yaml(path_or_file)
         # check yaml contents is a valid State
+
         try:
-            state = parse_obj_as(State, contents)
+            state = state_adapter.validate_python(contents)
         except ValidationError as e:
             raise WrongArtifactsYaml() from e
         # validate that specific names conform to the naming convention
@@ -159,7 +167,7 @@ class Index(BaseModel):
     def write_state(self, path_or_file: Union[str, IO]):
         if isinstance(path_or_file, str):
             with open(path_or_file, "w", encoding="utf8") as file:
-                state = self.dict(exclude_defaults=True).get("state", {})
+                state = self.model_dump(exclude_defaults=True).get("state", {})
                 yaml.dump(state, file)
 
     @not_frozen
@@ -216,7 +224,7 @@ class Index(BaseModel):
 
 
 class BaseIndexManager(BaseModel, ABC):
-    current: Optional[Index]
+    current: Optional[Index] = None
     config: RegistryConfig
 
     @abstractmethod
@@ -321,7 +329,7 @@ class RepoIndexManager(FileIndexManager, RemoteRepoMixin):
     cloned: bool
 
     def __init__(self, scm: Git, cloned: bool, config):
-        super().__init__(scm=scm, cloned=cloned, config=config)  # type: ignore[call-arg]
+        super().__init__(scm=scm, cloned=cloned, config=config, current=None)  # type: ignore[call-arg]
 
     @classmethod
     @contextmanager
@@ -390,8 +398,7 @@ class RepoIndexManager(FileIndexManager, RemoteRepoMixin):
         # TODO: config should be loaded from repo too
         return os.path.join(self.scm.root_dir, self.config.INDEX)
 
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     def get_commit_index(  # type: ignore # pylint: disable=arguments-differ
         self,
@@ -474,7 +481,7 @@ class EnrichmentManager(BaseManager, RemoteRepoMixin):
         yield cls(scm=scm, config=config)
 
     def describe(self, name: str, rev: Optional[str] = None) -> List[EnrichmentInfo]:
-        enrichments = self.config.enrichments
+        enrichments = self.config.enrichments_
         res = []
         gto_enrichment = enrichments.pop("gto")
         gto_info = gto_enrichment.describe(self.scm, name, rev)
@@ -572,7 +579,7 @@ class GTOInfo(EnrichmentInfo):
         return self.artifact
 
     def get_human_readable(self) -> str:
-        return self.artifact.json()
+        return self.artifact.model_dump_json()
 
     def get_path(self):
         return self.artifact.path
