@@ -4,9 +4,8 @@ from importlib import import_module
 from typing import Dict, Optional, Type, Union
 
 import entrypoints
+from pydantic import BaseModel
 from scmrepo.git import Git
-
-from ._pydantic import BaseModel
 
 ENRICHMENT_ENTRYPOINT = "gto.enrichment"
 
@@ -29,7 +28,7 @@ class EnrichmentInfo(BaseModel, ABC):
         raise NotImplementedError
 
     def get_dict(self):
-        return self.get_object().dict()
+        return self.get_object().model_dump()
 
     @abstractmethod
     def get_human_readable(self) -> str:

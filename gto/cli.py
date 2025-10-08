@@ -810,7 +810,7 @@ def stages(
 def print_state(repo: str = option_repo):
     """Technical cmd: Print current registry state."""
     state = make_ready_to_serialize(
-        gto.api._get_state(repo).dict()  # pylint: disable=protected-access
+        gto.api._get_state(repo).model_dump()  # pylint: disable=protected-access
     )
     format_echo(state, "json")
 
@@ -833,7 +833,7 @@ def doctor(
             echo(f"{EMOJI_FAIL} Fail to parse config")
         echo("---------------------------------")
 
-    gto.api._get_state(repo).dict()  # pylint: disable=protected-access
+    gto.api._get_state(repo).model_dump()  # pylint: disable=protected-access
     with cli_echo():
         echo(f"{EMOJI_OK} No issues found")
 

@@ -23,9 +23,8 @@ dynamic = ["version"]
 dependencies = [
     "entrypoints",
     "funcy",
-    # pydantic.v1.parse_obj is broken in ==2.0.0:
-    # https://github.com/pydantic/pydantic/issues/6361
-    "pydantic>=1.9.0,<3,!=2.0.0",
+    "pydantic>=2",
+    "pydantic-settings>=2",
     "rich",
     "ruamel.yaml",
     "scmrepo>=3,<4",
@@ -49,7 +48,10 @@ tests = [
 ]
 dev = [
     "gto[tests]",
-    "mypy==1.17.1",
+    "mypy==1.17.1; python_version > '3.9'",
+    # mypy>=1.11.0 crashes when used with pydantic-settings on Python 3.9,
+    # see: https://github.com/python/mypy/issues/17535
+    "mypy<1.11.0; python_version <= '3.9'",
     "pylint==3.3.8",
     "types-PyYAML",
     "types-filelock",

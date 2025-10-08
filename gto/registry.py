@@ -4,6 +4,7 @@ from contextlib import contextmanager
 from typing import List, Optional, TypeVar, cast
 
 from funcy import distinct
+from pydantic import BaseModel, ConfigDict
 from scmrepo.git import Git
 
 from gto.base import (
@@ -36,8 +37,6 @@ from gto.tag import (
 from gto.ui import echo
 from gto.versions import SemVer
 
-from ._pydantic import BaseModel
-
 TBaseEvent = TypeVar("TBaseEvent", bound=BaseEvent)
 
 
@@ -49,9 +48,7 @@ class GitRegistry(BaseModel, RemoteRepoMixin):
     stage_manager: TagStageManager
     enrichment_manager: EnrichmentManager
     config: RegistryConfig
-
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     @classmethod
     @contextmanager
@@ -556,7 +553,7 @@ class GitRegistry(BaseModel, RemoteRepoMixin):
         return artifact.get_latest_version(registered_only=registered)
 
     def _get_allowed_stages(self):
-        return self.config.STAGES
+        return self.config.stages
 
     def _get_used_stages(self):
         return sorted(
