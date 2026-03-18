@@ -319,7 +319,7 @@ def _show_registry(
     """Show current registry state"""
 
     def format_hexsha(hexsha):
-        return hexsha[:7] if truncate_hexsha else hexsha
+        return hexsha[:7] if truncate_hexsha and is_hexsha(hexsha) else hexsha
 
     with GitRegistry.from_url(repo) as reg:
         stages = list(reg.get_stages())

@@ -6,10 +6,12 @@ import pytest
 import typer
 from packaging import version
 from pytest_test_utils import TmpDir
+from scmrepo.git import Git
 from typer.main import get_command_from_info
 
 from gto.cli import app
 from gto.exceptions import GTOException
+import gto as gto_lib
 from tests.conftest import Runner
 
 
@@ -233,6 +235,29 @@ EXPECTED_DESCRIBE_OUTPUT_2 = """{
     "description": "new description"
 }
 """
+
+
+def test_show_plain_global_does_not_truncate_wide_semver(
+    tmp_dir: TmpDir, scm: Git
+):
+    """Regression test: `gto show --plain` must not truncate wide semver strings.
+
+    The global (no artifact name) `--plain` table uses tabulate and previously
+    called format_hexsha without an is_hexsha() guard, truncating versions like
+    v0.100.0 to v0.100. (7 chars). Service-specific output was unaffected.
+    """
+    tmp_dir.gen("artifacts.yaml", "model:\n  type: model\n")
+    scm.add(["artifacts.yaml"])
+    scm.commit("Add artifact")
+
+    wide_version = "v0.100.0"
+    gto_lib.api.register(tmp_dir, "model", "HEAD", wide_version)
+
+    result = Runner().invoke(["show", "-r", str(tmp_dir), "--plain"])
+    assert result.exit_code == 0, (result.stdout, result.stderr, result.exception)
+    assert wide_version in result.stdout, (
+        f"Expected '{wide_version}' in global --plain output, got:\n{result.stdout}"
+    )
 
 
 def test_register(repo_with_commit: str):
