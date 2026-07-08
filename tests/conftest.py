@@ -6,10 +6,9 @@ from typing import Iterator, Tuple
 
 import pygit2
 import pytest
-from click.testing import Result
+from click.testing import CliRunner, Result
 from pytest_test_utils import TmpDir
 from scmrepo.git import Git
-from typer.testing import CliRunner
 
 import gto
 from gto.cli import app

@@ -5,11 +5,8 @@ from gettext import gettext
 from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
 import click
-import typer
 from click import Abort, ClickException, Command, Context, HelpFormatter
 from click.exceptions import Exit
-from typer import Argument, Option, Typer
-from typer.core import TyperCommand, TyperGroup
 
 import gto
 from gto.constants import (
@@ -47,6 +44,23 @@ class GtoFormatter(click.HelpFormatter):
         super().write_heading(bold(heading))
 
 
+class GtoArgument(click.Argument):
+    """click.Argument that carries a help text.
+
+    click doesn't support help for arguments, so we store it ourselves and
+    render an "Arguments" section in GtoCliMixin.format_options.
+    """
+
+    def __init__(self, *args, help: Optional[str] = None, **kwargs):
+        self.help = help
+        super().__init__(*args, **kwargs)
+
+
+def gto_argument(*param_decls: str, **attrs: Any):
+    attrs.setdefault("cls", GtoArgument)
+    return click.argument(*param_decls, **attrs)
+
+
 class GtoCliMixin(Command):
     def __init__(
         self,
@@ -61,9 +75,6 @@ class GtoCliMixin(Command):
         self.section = section
         self.aliases = aliases
 
-    # def collect_usage_pieces(self, ctx: Context) -> List[str]:
-    #     return [p.lower() for p in super().collect_usage_pieces(ctx)]
-
     def get_help(self, ctx: Context) -> str:
         """Formats the help into a string and returns it.
 
@@ -74,6 +85,17 @@ class GtoCliMixin(Command):
         )
         self.format_help(ctx, formatter)
         return formatter.getvalue().rstrip("\n")
+
+    def format_options(self, ctx: Context, formatter: HelpFormatter) -> None:
+        arguments = [
+            (param.metavar or (param.name or "").upper(), param.help or "")
+            for param in self.get_params(ctx)
+            if isinstance(param, GtoArgument)
+        ]
+        if arguments:
+            with formatter.section(gettext("Arguments")):
+                formatter.write_dl(arguments)
+        super().format_options(ctx, formatter)
 
     def format_epilog(self, ctx: Context, formatter: HelpFormatter) -> None:
         super().format_epilog(ctx, formatter)
@@ -94,7 +116,7 @@ def _extract_examples(
     return help_str[examples + len("Examples:") + 1 :], help_str[:examples]
 
 
-class GtoCommand(GtoCliMixin, TyperCommand):
+class GtoCommand(GtoCliMixin, Command):
     def __init__(
         self,
         name: Optional[str],
@@ -114,7 +136,7 @@ class GtoCommand(GtoCliMixin, TyperCommand):
         )
 
 
-class GtoGroup(GtoCliMixin, TyperGroup):
+class GtoGroup(GtoCliMixin, click.Group):
     order = [
         CommandGroups.querying,
         CommandGroups.modifying,
@@ -141,6 +163,10 @@ class GtoGroup(GtoCliMixin, TyperGroup):
             commands=commands,
             **attrs,
         )
+
+    def list_commands(self, ctx: Context) -> List[str]:
+        # keep the definition order instead of click's alphabetical sort
+        return list(self.commands)
 
     def format_commands(self, ctx: Context, formatter: HelpFormatter) -> None:
         commands = []
@@ -175,12 +201,6 @@ class GtoGroup(GtoCliMixin, TyperGroup):
                     with formatter.section(gettext(section)):
                         formatter.write_dl(sections[section])
 
-    # The typer overrides this with some trick dependent on environment,
-    # use click method for taking affect of Self.format_commands
-    def format_help(self, ctx: click.Context, formatter: click.HelpFormatter) -> None:
-        # pylint: disable=bad-super-call
-        super(TyperGroup, self).format_help(ctx, formatter)
-
     def get_command(self, ctx: Context, cmd_name: str) -> Optional[Command]:
         cmd = super().get_command(ctx, cmd_name)
         if cmd is not None:
@@ -196,47 +216,28 @@ class GtoGroup(GtoCliMixin, TyperGroup):
         return None
 
 
-def GTOGroupSection(section):
-    return partial(GtoGroup, section=section)
-
-
-app = Typer(
-    cls=GtoGroup,
-    context_settings={"help_option_names": ["-h", "--help"]},
-    add_completion=False,
-)
-
-# General Typer arguments and options
-arg_name = Argument(..., help="Artifact name")
-arg_version = Argument(..., help="Artifact version")
-arg_stage = Argument(..., help="Stage to assign")
-option_version = Option(None, "--version", help="Version to register")
-option_stage = Option(..., "--stage", help="Stage to assign")
-option_to_version = Option(
-    None, "--to-version", help="Version to use for stage assignment"
-)
-option_delete = Option(
-    False,
+# General click arguments and options
+arg_name = gto_argument("name", help="Artifact name")
+option_stage = click.option("--stage", required=True, help="Stage to assign")
+option_delete = click.option(
     "-d",
     "--delete",
     is_flag=True,
     help="Delete the git tag(s) instead of creating the new one",
 )
 
-# Typer options to control git-related operations
-option_rev = Option(None, "--rev", help="Repo revision to use", show_default=True)
-option_repo = Option(
-    ".",
+# click options to control git-related operations
+option_repo = click.option(
     "-r",
     "--repo",
+    default=".",
     help="Local or remote repository",
     show_default=True,
 )
-option_message = Option(
-    None, "--message", "-m", help="Message to annotate the Git tag with"
+option_message = click.option(
+    "--message", "-m", help="Message to annotate the Git tag with"
 )
-option_force = Option(
-    False,
+option_force = click.option(
     "--force",
     is_flag=True,
     help="Create the Git tag even if it already exists and is in effect",
@@ -244,163 +245,130 @@ option_force = Option(
 
 
 def callback_simple(  # pylint: disable=inconsistent-return-statements
-    ctx: typer.Context,
-    param: typer.CallbackParam,  # pylint: disable=unused-argument
+    ctx: Context,
+    param: click.Parameter,  # pylint: disable=unused-argument
     value: str,
 ):
     if ctx.resilient_parsing:
         return
     allowed_values = ["auto", "true", "false"]
     if value not in allowed_values:
-        raise typer.BadParameter(f"Only one of {allowed_values} is allowed")
+        raise click.BadParameter(f"Only one of {allowed_values} is allowed")
     return {"auto": None, "true": True, "false": False}[value]
 
 
-option_simple = Option(
-    "auto",
+option_simple = click.option(
     "--simple",
+    default="auto",
     help="Use simple notation, e.g. `rf#prod` instead of `rf#prod-5`"
     " [supported values: auto, true, false]",
     callback=callback_simple,
 )
 
 
-# Typer options to control and filter the output
+# click options to control and filter the output
 def callback_sort(  # pylint: disable=inconsistent-return-statements
-    ctx: typer.Context,
-    param: typer.CallbackParam,  # pylint: disable=unused-argument
+    ctx: Context,
+    param: click.Parameter,  # pylint: disable=unused-argument
     value: str,
 ):
     if ctx.resilient_parsing:
         return
     allowed_values = ["timestamp", "semver"]
     if value not in allowed_values:
-        raise typer.BadParameter(f"Only one of {allowed_values} is allowed")
+        raise click.BadParameter(f"Only one of {allowed_values} is allowed")
     return VersionSort.Timestamp if value == "timestamp" else VersionSort.SemVer
 
 
-option_all = Option(False, "--all", "-a", help="Return all versions sorted")
-option_registered_only = Option(
-    False,
+option_registered_only = click.option(
     "--ro",
     "--registered-only",
+    "registered_only",
     is_flag=True,
     help="Show only registered versions",
 )
-option_deprecated = Option(
-    False,
+option_deprecated = click.option(
     "-d",
     "--deprecated",
     is_flag=True,
     help="Include deprecated in output",
 )
-option_expected = Option(
-    False,
-    "-e",
-    "--expected",
-    is_flag=True,
-    help="Return exit code 1 if no result",
-    show_default=True,
-)
-option_sort = Option(
-    "timestamp",
+option_sort = click.option(
     "--sort",
+    default="timestamp",
     help="Order assignments by timestamp or semver",
     callback=callback_sort,
 )
-option_assignments_per_version = Option(
-    ASSIGNMENTS_PER_VERSION,
+option_assignments_per_version = click.option(
     "--av",
     "--assignments-per-version",
+    "assignments_per_version",
+    default=ASSIGNMENTS_PER_VERSION,
     help="Show N last stages for each version. -1 for all",
 )
-option_versions_per_stage = Option(
-    VERSIONS_PER_STAGE,
+option_versions_per_stage = click.option(
     "--vs",
     "--versions-per-stage",
+    "versions_per_stage",
+    default=VERSIONS_PER_STAGE,
     help="Show N last versions for each stage. -1 for all. Applied after 'assignments-per-version'",
 )
 
-# Typer options to format the output
-option_ascending = Option(
-    False,
+# click options to format the output
+option_ascending = click.option(
     "--ascending",
     "--asc",
+    "ascending",
+    is_flag=True,
     help="Show new first",
     show_default=True,
 )
-option_show_name = Option(False, "--name", is_flag=True, help="Show artifact name")
-option_show_version = Option(
-    False, "--version", is_flag=True, help="Output artifact version"
+option_show_name = click.option(
+    "--name", "show_name", is_flag=True, help="Show artifact name"
 )
-option_show_event = Option(False, "--event", is_flag=True, help="Show event")
-option_show_stage = Option(False, "--stage", is_flag=True, help="Show artifact stage")
-option_show_type = Option(
-    False, "--type", is_flag=True, help="Show type", show_default=True
+option_show_version = click.option(
+    "--version", "show_version", is_flag=True, help="Output artifact version"
 )
-option_show_path = Option(
-    False, "--path", is_flag=True, help="Show path", show_default=True
+option_show_event = click.option(
+    "--event", "show_event", is_flag=True, help="Show event"
 )
-option_show_ref = Option(
-    False, "--ref", is_flag=True, help="Show ref", show_default=True
+option_show_stage = click.option(
+    "--stage", "show_stage", is_flag=True, help="Show artifact stage"
 )
-option_show_description = Option(
-    False, "--description", is_flag=True, help="Show description", show_default=True
+option_show_ref = click.option(
+    "--ref", "show_ref", is_flag=True, help="Show ref", show_default=True
 )
-option_show_custom = Option(
-    False, "--custom", is_flag=True, help="Show custom metadata", show_default=True
-)
-option_json = Option(
-    False,
+option_json = click.option(
     "--json",
     is_flag=True,
     help="Print output in json format",
     show_default=True,
 )
-option_plain = Option(
-    False,
+option_plain = click.option(
     "--plain",
     is_flag=True,
     help="Print table in grep-able format",
     show_default=True,
 )
-option_table = Option(
-    False,
-    "--table",
-    is_flag=True,
-    help="Print output in table format",
-    show_default=True,
-)
-option_push_tag = Option(
-    False,
+option_push_tag = click.option(
     "--push",
     is_flag=True,
     help="Push created git tag to `origin` (ignored if `repo` option is a remote URL)",
 )
-option_commit = Option(
-    False,
-    "--commit",
-    is_flag=True,
-    help="Automatically commit changes due to this command (experimental)",
-)
-option_push_commit = Option(
-    False,
-    "--push",
-    is_flag=True,
-    help="Push created commit automatically (experimental) - will set commit=True",
-)
-option_branch = Option(
-    None, "-b", "--branch", help="Branch to commit to. Only for remote repos."
-)
 
 
-@app.callback(invoke_without_command=True, no_args_is_help=True)
-def gto_callback(
-    ctx: Context,
-    show_version: bool = Option(False, "--version", help="Show version and exit"),
-    verbose: bool = Option(False, "--verbose", "-v", help="Print debug messages"),
-    traceback: bool = Option(False, "--traceback", "--tb", hidden=True),
-):
+@click.group(
+    name="gto",
+    cls=GtoGroup,
+    invoke_without_command=True,
+    no_args_is_help=True,
+    context_settings={"help_option_names": ["-h", "--help"]},
+)
+@click.option("--version", "show_version", is_flag=True, help="Show version and exit")
+@click.option("--verbose", "-v", is_flag=True, help="Print debug messages")
+@click.option("--traceback", "--tb", "traceback", is_flag=True, hidden=True)
+@click.pass_context
+def app(ctx: Context, show_version: bool, verbose: bool, traceback: bool):
     """\b
     Git Tag Ops. Turn your Git repository into an Artifact Registry:
     * Registry: Track new artifacts and their versions for releases and significant
@@ -456,23 +424,18 @@ def gto_command(*args, section="other", aliases=None, parent=app, **kwargs):
                 if ctx.obj["traceback"]:
                     raise
                 with stderr_echo():
-                    echo(EMOJI_FAIL + color(str(e), col=typer.colors.RED))
-                raise typer.Exit(1) from e
+                    echo(EMOJI_FAIL + color(str(e), col="red"))
+                raise Exit(1) from e
             except Exception as e:  # pylint: disable=broad-except
                 error = str(type(e))
                 if ctx.obj["traceback"]:
                     raise
                 with stderr_echo():
-                    echo(
-                        (
-                            EMOJI_FAIL
-                            + color(f"Unexpected error: {str(e)}", col=typer.colors.RED)
-                        )
-                    )
+                    echo((EMOJI_FAIL + color(f"Unexpected error: {str(e)}", col="red")))
                     echo(
                         "Please report it here running with '--traceback' flag: <https://github.com/iterative/gto/issues>"
                     )
-                raise typer.Exit(1) from e
+                raise Exit(1) from e
             finally:
                 # TODO: analytics
                 error  # pylint: disable=pointless-statement  # noqa: B018
@@ -484,26 +447,29 @@ def gto_command(*args, section="other", aliases=None, parent=app, **kwargs):
 
 
 @gto_command(section=CommandGroups.modifying)
+@option_repo
+@arg_name
+@gto_argument("ref", default="HEAD", help="Git reference to use for registration")
+@click.option("--version", "--ver", help="Version name in SemVer format")
+@option_message
+@option_simple
+@option_force
+@click.option("--bump-major", is_flag=True, help="Bump major version")
+@click.option("--bump-minor", is_flag=True, help="Bump minor version")
+@click.option("--bump-patch", is_flag=True, help="Bump patch version")
+@option_push_tag
 def register(
-    repo: str = option_repo,
-    name: str = arg_name,
-    ref: str = Argument("HEAD", help="Git reference to use for registration"),
-    version: Optional[str] = Option(
-        None, "--version", "--ver", help="Version name in SemVer format"
-    ),
-    message: Optional[str] = option_message,
-    simple: str = option_simple,
-    force: bool = option_force,
-    bump_major: bool = Option(
-        False, "--bump-major", is_flag=True, help="Bump major version"
-    ),
-    bump_minor: bool = Option(
-        False, "--bump-minor", is_flag=True, help="Bump minor version"
-    ),
-    bump_patch: bool = Option(
-        False, "--bump-patch", is_flag=True, help="Bump patch version"
-    ),
-    push: bool = option_push_tag,
+    repo: str,
+    name: str,
+    ref: str,
+    version: Optional[str],
+    message: Optional[str],
+    simple: str,
+    force: bool,
+    bump_major: bool,
+    bump_minor: bool,
+    bump_patch: bool,
+    push: bool,
 ):
     """Create an artifact version to signify an important, published
     or released iteration.
@@ -525,27 +491,36 @@ def register(
 
 
 @gto_command(section=CommandGroups.modifying, aliases=["promote"])
+@option_repo
+@arg_name
+@gto_argument("ref", required=False, help="Git reference to use")
+@click.option(
+    "--version",
+    help="If you provide REF, this will be used to name new version",
+)
+@option_stage
+@option_message
+@option_simple
+@option_force
+@option_push_tag
+@click.option(
+    "--sr",
+    "--skip-registration",
+    "skip_registration",
+    is_flag=True,
+    help="Don't register a version at specified commit",
+)
 def assign(
-    repo: str = option_repo,
-    name: str = arg_name,
-    ref: Optional[str] = Argument(None, help="Git reference to use"),
-    version: Optional[str] = Option(
-        None,
-        "--version",
-        help="If you provide REF, this will be used to name new version",
-    ),
-    stage: str = option_stage,
-    message: Optional[str] = option_message,
-    simple: str = option_simple,
-    force: bool = option_force,
-    push: bool = option_push_tag,
-    skip_registration: bool = Option(
-        False,
-        "--sr",
-        "--skip-registration",
-        is_flag=True,
-        help="Don't register a version at specified commit",
-    ),
+    repo: str,
+    name: str,
+    ref: Optional[str],
+    version: Optional[str],
+    stage: str,
+    message: Optional[str],
+    simple: str,
+    force: bool,
+    push: bool,
+    skip_registration: bool,
 ):
     """Assign stage to specific artifact version."""
     if ref is not None:
@@ -574,19 +549,27 @@ def assign(
 
 
 @gto_command(section=CommandGroups.modifying)
+@option_repo
+@arg_name
+@gto_argument("version", required=False, help="Artifact version")
+@gto_argument("stage", required=False, help="Stage to unassign")
+@click.option("--ref", help="Git reference to use (for model deprecation)")
+@option_message
+@option_simple
+@option_force
+@option_delete
+@option_push_tag
 def deprecate(
-    repo: str = option_repo,
-    name: str = arg_name,
-    version: str = Argument(None, help="Artifact version"),
-    stage: str = Argument(None, help="Stage to unassign"),
-    ref: Optional[str] = Option(
-        None, "--ref", help="Git reference to use (for model deprecation)"
-    ),
-    message: Optional[str] = option_message,
-    simple: str = option_simple,
-    force: bool = option_force,
-    delete: bool = option_delete,
-    push: bool = option_push_tag,
+    repo: str,
+    name: str,
+    version: str,
+    stage: str,
+    ref: Optional[str],
+    message: Optional[str],
+    simple: str,
+    force: bool,
+    delete: bool,
+    push: bool,
 ):
     """Deprecate artifact, deregister a version, or unassign a stage."""
     if stage:
@@ -629,9 +612,11 @@ def deprecate(
 
 
 @gto_command(hidden=True)
+@arg_name
+@click.option("--key", help="Which key to return")
 def parse_tag(
-    name: str = arg_name,
-    key: Optional[str] = Option(None, "--key", help="Which key to return"),
+    name: str,
+    key: Optional[str],
 ):
     """Given git tag name created by this tool, parse it and return it's
     parts."""
@@ -642,18 +627,26 @@ def parse_tag(
 
 
 @gto_command(section=CommandGroups.querying)
+@option_repo
+@gto_argument("ref", help="Git reference to analyze")
+@option_json
+@option_show_name
+@option_show_version
+@option_show_event
+@option_show_stage
 def check_ref(
-    repo: str = option_repo,
-    ref: str = Argument(..., help="Git reference to analyze"),
-    json: bool = option_json,
-    name: bool = option_show_name,
-    version: bool = option_show_version,
-    event: bool = option_show_event,
-    stage: bool = option_show_stage,
+    repo: str,
+    ref: str,
+    json: bool,
+    show_name: bool,
+    show_version: bool,
+    show_event: bool,
+    show_stage: bool,
 ):
     """Find out the artifact version registered/assigned with ref."""
     assert (
-        sum(bool(i) for i in (json, event, name, version, stage)) <= 1
+        sum(bool(i) for i in (json, show_event, show_name, show_version, show_stage))
+        <= 1
     ), "Only one output formatting flags is allowed"
     result = gto.api.check_ref(repo, ref)
     if len(result) > 1:
@@ -665,35 +658,50 @@ def check_ref(
     found_event = result[0]
     if json:
         format_echo(found_event.dict_state(exclude={"priority", "addition"}), "json")
-    elif name:
+    elif show_name:
         format_echo(found_event.artifact, "line")
-    elif version:
+    elif show_version:
         if hasattr(found_event, "version"):
             format_echo(found_event.version, "line")
-    elif stage:
+    elif show_stage:
         if hasattr(found_event, "stage"):
             format_echo(found_event.stage, "line")
-    elif event:
+    elif show_event:
         format_echo(found_event.event, "line")
     else:
         echo(f"{EMOJI_OK} {found_event}")
 
 
 @gto_command(section=CommandGroups.querying)
+@option_repo
+@gto_argument(
+    "name", required=False, help="Artifact name to show. If empty, show registry"
+)
+@option_json
+@option_plain
+@option_show_name
+@option_show_version
+@option_show_stage
+@option_show_ref
+@option_registered_only
+@option_deprecated
+@option_assignments_per_version
+@option_versions_per_stage
+@option_sort
 def show(  # pylint: disable=too-many-locals
-    repo: str = option_repo,
-    name: str = Argument(None, help="Artifact name to show. If empty, show registry"),
-    json: bool = option_json,
-    plain: bool = option_plain,
-    show_name: bool = option_show_name,
-    show_version: bool = option_show_version,
-    show_stage: bool = option_show_stage,
-    show_ref: bool = option_show_ref,
-    registered_only: bool = option_registered_only,
-    deprecated: bool = option_deprecated,
-    assignments_per_version: int = option_assignments_per_version,
-    versions_per_stage: int = option_versions_per_stage,
-    sort: str = option_sort,
+    repo: str,
+    name: Optional[str],
+    json: bool,
+    plain: bool,
+    show_name: bool,
+    show_version: bool,
+    show_stage: bool,
+    show_ref: bool,
+    registered_only: bool,
+    deprecated: bool,
+    assignments_per_version: int,
+    versions_per_stage: int,
+    sort: str,
 ):
     """Show the registry state, highest version, or what's assigned in stage."""
     show_options = [show_name, show_version, show_stage, show_ref]
@@ -745,12 +753,17 @@ def show(  # pylint: disable=too-many-locals
 
 
 @gto_command(section=CommandGroups.querying)
+@option_repo
+@gto_argument("name", required=False, help="Artifact name to show. If empty, show all.")
+@option_json
+@option_plain
+@option_ascending
 def history(
-    repo: str = option_repo,
-    name: str = Argument(None, help="Artifact name to show. If empty, show all."),
-    json: bool = option_json,
-    plain: bool = option_plain,
-    ascending: bool = option_ascending,
+    repo: str,
+    name: Optional[str],
+    json: bool,
+    plain: bool,
+    ascending: bool,
 ):
     """Show a journal of registry operations."""
     assert sum(bool(i) for i in (json, plain)) <= 1, "Only one output format allowed"
@@ -780,23 +793,25 @@ def history(
 
 
 @gto_command(section=CommandGroups.querying)
+@option_repo
+@click.option(
+    "--allowed",
+    is_flag=True,
+    help="Show allowed stages from config",
+    show_default=True,
+)
+@click.option(
+    "--used",
+    is_flag=True,
+    help="Show stages that were ever used (from all git tags)",
+    show_default=True,
+)
+@option_json
 def stages(
-    repo: str = option_repo,
-    allowed: bool = Option(
-        False,
-        "--allowed",
-        is_flag=True,
-        help="Show allowed stages from config",
-        show_default=True,
-    ),
-    used: bool = Option(
-        False,
-        "--used",
-        is_flag=True,
-        help="Show stages that were ever used (from all git tags)",
-        show_default=True,
-    ),
-    json: bool = option_json,
+    repo: str,
+    allowed: bool,
+    used: bool,
+    json: bool,
 ):
     """Print list of stages used in the registry."""
     result = gto.api.get_stages(repo, allowed=allowed, used=used)
@@ -807,7 +822,8 @@ def stages(
 
 
 @gto_command(hidden=True)
-def print_state(repo: str = option_repo):
+@option_repo
+def print_state(repo: str):
     """Technical cmd: Print current registry state."""
     state = make_ready_to_serialize(
         gto.api._get_state(repo).model_dump()  # pylint: disable=protected-access
@@ -816,8 +832,9 @@ def print_state(repo: str = option_repo):
 
 
 @gto_command(section=CommandGroups.querying)
+@option_repo
 def doctor(
-    repo: str = option_repo,
+    repo: str,
 ):
     """Display GTO version and check the registry for problems."""
     with cli_echo():
@@ -839,4 +856,4 @@ def doctor(
 
 
 if __name__ == "__main__":
-    app()
+    app()  # pylint: disable=no-value-for-parameter

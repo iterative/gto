@@ -21,8 +21,9 @@ classifiers = [
 requires-python = ">=3.10"
 dynamic = ["version"]
 dependencies = [
-    # gto imports click directly, so declare it explicitly
-    "click>=8,<9",
+    # gto's CLI is built directly on click;
+    # >=8.2 for CliRunner without mix_stderr and kebab-case command naming
+    "click>=8.2,<9",
     "entrypoints",
     "funcy",
     "pydantic>=2",
@@ -32,10 +33,6 @@ dependencies = [
     "scmrepo>=3,<4",
     "semver>=2.13.0",
     "tabulate>=0.8.10",
-    # typer>=0.26 vendors click and is incompatible with gto's click-based
-    # CLI machinery (subclassing click.Command, @click.pass_context, etc.):
-    # the CLI crashes on startup. Migration tracked separately.
-    "typer>=0.4.1,<0.26",
 ]
 
 [project.urls]

@@ -1,7 +1,7 @@
 import pytest
+from click.testing import CliRunner
 from pytest_test_utils import TmpDir
 from scmrepo.git import Git
-from typer.testing import CliRunner
 
 from gto.api import assign, get_stages, register
 from gto.cli import app

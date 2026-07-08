@@ -3,10 +3,7 @@ from typing import Callable, Optional, Tuple
 from unittest import mock
 
 import pytest
-import typer
-from packaging import version
 from pytest_test_utils import TmpDir
-from typer.main import get_command_from_info
 
 from gto.cli import app
 from gto.exceptions import GTOException
@@ -51,25 +48,8 @@ def _check_failing_cmd(
 
 
 @pytest.fixture
-def app_cmd():
-    return app.registered_commands
-
-
-@pytest.fixture
-def app_cli_cmd(app_cmd):
-    if version.parse(typer.__version__) < version.parse("0.6.0"):
-        return (
-            get_command_from_info(c)  # pylint: disable=missing-kwoa
-            for c in app_cmd
-        )
-    return (
-        get_command_from_info(  # pylint: disable=unexpected-keyword-arg
-            c,
-            pretty_exceptions_short=False,
-            rich_markup_mode="rich",
-        )
-        for c in app_cmd
-    )
+def app_cli_cmd():
+    return list(app.commands.values())
 
 
 def test_commands_help(app_cli_cmd):
