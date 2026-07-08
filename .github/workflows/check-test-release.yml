@@ -26,10 +26,10 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+        python: ["3.10", "3.11", "3.12", "3.13", "3.14"]
 
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v7
       with:
         fetch-depth: 0
 
@@ -44,7 +44,7 @@ jobs:
     - run: pytest
 
     - name: "Upload coverage to Codecov"
-      uses: codecov/codecov-action@v4
+      uses: codecov/codecov-action@v7
       with:
         fail_ci_if_error: false
         token: ${{ secrets.CODECOV_TOKEN }}
@@ -59,12 +59,12 @@ jobs:
       id-token: write
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v7
       with:
         fetch-depth: 0
     - uses: actions/setup-python@v6
       with:
-        python-version: '3.13'
+        python-version: '3.14'
 
     - run: pip install build twine
     - run: python -m build
