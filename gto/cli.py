@@ -36,7 +36,6 @@ from gto.utils import format_echo, make_ready_to_serialize
 class CommandGroups:
     querying = "Read the registry"
     modifying = "Modify artifacts"
-    enriching = "Manage artifact enrichments"
 
 
 class GtoFormatter(click.HelpFormatter):
@@ -140,7 +139,6 @@ class GtoGroup(GtoCliMixin, click.Group):
     order = [
         CommandGroups.querying,
         CommandGroups.modifying,
-        CommandGroups.enriching,
         "other",
     ]
 
@@ -431,7 +429,7 @@ def gto_command(*args, section="other", aliases=None, parent=app, **kwargs):
                 if ctx.obj["traceback"]:
                     raise
                 with stderr_echo():
-                    echo((EMOJI_FAIL + color(f"Unexpected error: {str(e)}", col="red")))
+                    echo(EMOJI_FAIL + color(f"Unexpected error: {str(e)}", col="red"))
                     echo(
                         "Please report it here running with '--traceback' flag: <https://github.com/iterative/gto/issues>"
                     )
@@ -562,8 +560,8 @@ def assign(
 def deprecate(
     repo: str,
     name: str,
-    version: str,
-    stage: str,
+    version: Optional[str],
+    stage: Optional[str],
     ref: Optional[str],
     message: Optional[str],
     simple: str,
