@@ -364,7 +364,7 @@ def _show_registry(
                     d["version"],
                 ]
                 + [d["stage"][name] for name in stages],
-                strict=False,
+                strict=True,
             ),
         )
         for name, d in sorted(models_state.items())

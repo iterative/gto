@@ -431,7 +431,7 @@ def test_registry_state_tag_tag(tmp_dir: TmpDir):
         for appeared, expected in zip(
             iter_over(appeared_state["artifacts"][artifact]["versions"]),
             iter_over(expected_state["artifacts"][artifact]["versions"]),
-            strict=False,
+            strict=True,
         ):
             check_obj(appeared, expected, exclude["versions"])
 
@@ -439,7 +439,7 @@ def test_registry_state_tag_tag(tmp_dir: TmpDir):
                 for a, e in zip(
                     iter_over(appeared[key]),
                     iter_over(expected[key]),
-                    strict=False,
+                    strict=True,
                 ):
                     check_obj(a, e, exclude[key])
 
