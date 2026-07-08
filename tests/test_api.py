@@ -298,6 +298,7 @@ def test_check_ref_catch_the_bug(scm: Git):
     for assignment, tag in zip(
         [assignment1, assignment2, assignment3],
         [f"{NAME}#staging#1", f"{NAME}#prod#2", f"{NAME}#dev#3"],
+        strict=True,
     ):
         events = gto.api.check_ref(scm, tag)
         assert len(events) == 1, events

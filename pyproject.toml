@@ -12,15 +12,17 @@ keywords = ["git", "repo", "repository", "artifact", "registry", "developer-tool
 classifiers = [
     "Development Status :: 2 - Pre-Alpha",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
 ]
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 dynamic = ["version"]
 dependencies = [
+    # gto imports click directly, so declare it explicitly
+    "click>=8,<9",
     "entrypoints",
     "funcy",
     "pydantic>=2",
@@ -30,7 +32,10 @@ dependencies = [
     "scmrepo>=3,<4",
     "semver>=2.13.0",
     "tabulate>=0.8.10",
-    "typer>=0.4.1",
+    # typer>=0.26 vendors click and is incompatible with gto's click-based
+    # CLI machinery (subclassing click.Command, @click.pass_context, etc.):
+    # the CLI crashes on startup. Migration tracked separately.
+    "typer>=0.4.1,<0.26",
 ]
 
 [project.urls]
@@ -48,11 +53,8 @@ tests = [
 ]
 dev = [
     "gto[tests]",
-    "mypy==1.17.1; python_version > '3.9'",
-    # mypy>=1.11.0 crashes when used with pydantic-settings on Python 3.9,
-    # see: https://github.com/python/mypy/issues/17535
-    "mypy<1.11.0; python_version <= '3.9'",
-    "pylint==3.3.8",
+    "mypy==2.2.0",
+    "pylint==4.0.6",
     "types-PyYAML",
     "types-filelock",
     "types-freezegun",
