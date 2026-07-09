@@ -1,14 +1,14 @@
 # pylint: disable=unused-variable, redefined-outer-name
+from time import sleep
 from typing import Callable, Optional, Tuple
 from unittest import mock
 
+import click
 import pytest
-import typer
-from packaging import version
+from click.exceptions import Abort
 from pytest_test_utils import TmpDir
-from typer.main import get_command_from_info
 
-from gto.cli import app
+from gto.cli import GtoCommand, _extract_examples, app
 from gto.exceptions import GTOException
 from tests.conftest import Runner
 
@@ -51,25 +51,8 @@ def _check_failing_cmd(
 
 
 @pytest.fixture
-def app_cmd():
-    return app.registered_commands
-
-
-@pytest.fixture
-def app_cli_cmd(app_cmd):
-    if version.parse(typer.__version__) < version.parse("0.6.0"):
-        return (
-            get_command_from_info(c)  # pylint: disable=missing-kwoa
-            for c in app_cmd
-        )
-    return (
-        get_command_from_info(  # pylint: disable=unexpected-keyword-arg
-            c,
-            pretty_exceptions_short=False,
-            rich_markup_mode="rich",
-        )
-        for c in app_cmd
-    )
+def app_cli_cmd():
+    return list(app.commands.values())
 
 
 def test_commands_help(app_cli_cmd):
@@ -365,3 +348,177 @@ def test_stderr_exception():
     # patch gto show to throw exception.
     with mock.patch("gto.api.show", side_effect=Exception(EXCEPTION_MESSAGE)):
         _check_failing_cmd("show", [], EXCEPTION_MESSAGE, _check_output_contains)
+
+
+def test_version_flag():
+    result = Runner().invoke(["--version"])
+    assert result.exit_code == 0, (result.stdout, result.stderr)
+    assert "GTO Version" in result.stdout
+
+
+def test_verbose_flag():
+    result = Runner().invoke(["--verbose"])
+    assert result.exit_code == 0, (result.stdout, result.stderr)
+
+
+def test_subcommand_help_shows_arguments():
+    result = Runner().invoke(["register", "-h"])
+    assert result.exit_code == 0, (result.stdout, result.stderr)
+    assert "Arguments:" in result.stdout
+    assert "Artifact name" in result.stdout
+    assert "--bump-major" in result.stdout
+
+
+def test_extract_examples():
+    assert _extract_examples(None) == (None, None)
+    examples, help_ = _extract_examples("Do a thing.\n\nExamples:\n  gto show\n")
+    assert examples is not None and "gto show" in examples
+    assert help_ == "Do a thing.\n\n"
+
+
+def test_examples_rendered_in_help():
+    cmd = GtoCommand(
+        name="x",
+        help="Do a thing.\n\nExamples:\n  gto x\n",
+        callback=lambda: None,
+    )
+    help_text = cmd.get_help(click.Context(cmd, info_name="x"))
+    assert "Examples" in help_text
+    assert "gto x" in help_text
+
+
+def test_promote_alias(repo_with_commit: str):
+    _check_successful_cmd("register", ["-r", repo_with_commit, "m1"], None)
+    _check_successful_cmd(
+        "promote", ["-r", repo_with_commit, "m1", "--stage", "prod"], None
+    )
+
+
+def test_bad_simple_value(repo_with_commit: str):
+    _check_failing_cmd(
+        "register",
+        ["-r", repo_with_commit, "m1", "--simple", "bogus"],
+        "Only one of ['auto', 'true', 'false'] is allowed",
+        _check_output_contains,
+    )
+
+
+def test_bad_sort_value(empty_git_repo: str):
+    _check_failing_cmd(
+        "show",
+        ["-r", empty_git_repo, "--sort", "bogus"],
+        "Only one of ['timestamp', 'semver'] is allowed",
+        _check_output_contains,
+    )
+
+
+def test_traceback_flag_propagates_gto_exception():
+    with mock.patch("gto.api.show", side_effect=GTOException("boom")):
+        result = Runner().invoke(["--traceback", "show"])
+    assert result.exit_code == 1
+    assert isinstance(result.exception, GTOException)
+    assert "boom" not in result.stderr  # no pretty message, raw traceback instead
+
+
+def test_traceback_flag_propagates_unexpected_exception():
+    with mock.patch("gto.api.show", side_effect=ValueError("boom")):
+        result = Runner().invoke(["--tb", "show"])
+    assert result.exit_code == 1
+    assert isinstance(result.exception, ValueError)
+
+
+def test_click_exceptions_pass_through():
+    with mock.patch("gto.api.show", side_effect=Abort()):
+        result = Runner().invoke(["show"])
+    assert result.exit_code == 1
+    assert "Aborted" in result.output
+
+
+def test_assign_version_without_ref(repo_with_commit: str):
+    _check_successful_cmd("register", ["-r", repo_with_commit, "m2"], None)
+    _check_successful_cmd(
+        "assign",
+        ["-r", repo_with_commit, "m2", "--stage", "prod", "--version", "v0.0.1"],
+        None,
+    )
+    _check_successful_cmd(
+        "assign", ["-r", repo_with_commit, "m2", "--stage", "dev"], None
+    )
+
+
+def test_deprecate_unassign_and_artifact(repo_with_commit: str):
+    _check_successful_cmd("register", ["-r", repo_with_commit, "m3"], None)
+    _check_successful_cmd(
+        "assign", ["-r", repo_with_commit, "m3", "--stage", "prod"], None
+    )
+    sleep(1)
+    _check_successful_cmd(
+        "deprecate", ["-r", repo_with_commit, "m3", "v0.0.1", "prod"], None
+    )
+    sleep(1)
+    _check_successful_cmd("deprecate", ["-r", repo_with_commit, "m3"], None)
+
+
+def test_parse_tag_key():
+    _check_successful_cmd("parse-tag", ["m1@v0.0.1", "--key", "version"], '"v0.0.1"\n')
+
+
+def test_check_ref_json(repo_with_commit: str):
+    _check_successful_cmd("register", ["-r", repo_with_commit, "m4"], None)
+    _check_successful_cmd(
+        "check-ref",
+        ["-r", repo_with_commit, "m4@v0.0.1", "--json"],
+        '"artifact": "m4"',
+        _check_output_contains,
+    )
+
+
+def test_check_ref_multiple_events():
+    with mock.patch("gto.api.check_ref", return_value=[1, 2]):
+        _check_failing_cmd(
+            "check-ref",
+            ["-r", ".", "some-ref"],
+            "not supported",
+            _check_output_contains,
+        )
+
+
+def test_show_json_empty(empty_git_repo: str):
+    _check_successful_cmd("show", ["-r", empty_git_repo, "--json"], "{}\n")
+
+
+def test_show_ref_flag_not_applicable(repo_with_commit: str):
+    _check_successful_cmd("register", ["-r", repo_with_commit, "m5"], None)
+    _check_failing_cmd(
+        "show",
+        ["-r", repo_with_commit, "--ref"],
+        "Cannot apply --ref",
+        _check_output_contains,
+    )
+
+
+def test_history_json_empty(repo_with_commit: str):
+    _check_successful_cmd("history", ["-r", repo_with_commit, "--json"], "[]\n")
+
+
+def test_stages_json_empty(empty_git_repo: str):
+    _check_successful_cmd("stages", ["-r", empty_git_repo, "--json"], "[]\n")
+
+
+def test_print_state(repo_with_commit: str):
+    _check_successful_cmd(
+        "print-state", ["-r", repo_with_commit], '"artifacts"', _check_output_contains
+    )
+
+
+def test_doctor_wrong_config(tmp_dir: TmpDir, scm):  # pylint: disable=unused-argument
+    tmp_dir.gen(".gto", "WRONG_CONFIG")
+    _check_failing_cmd(
+        "doctor", ["-r", str(tmp_dir)], "Wrong config file", _check_output_contains
+    )
+
+
+def test_unknown_command():
+    result = Runner().invoke(["no-such-command"])
+    assert result.exit_code == 2
+    assert "No such command" in result.stderr
