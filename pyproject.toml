@@ -21,8 +21,6 @@ classifiers = [
 requires-python = ">=3.10"
 dynamic = ["version"]
 dependencies = [
-    # gto's CLI is built directly on click;
-    # >=8.2 for CliRunner without mix_stderr and kebab-case command naming
     "click>=8.2,<9",
     "entrypoints",
     "funcy",

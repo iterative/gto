@@ -441,7 +441,6 @@ def test_assign_version_without_ref(repo_with_commit: str):
         ["-r", repo_with_commit, "m2", "--stage", "prod", "--version", "v0.0.1"],
         None,
     )
-    # neither REF nor --version: assigns at HEAD
     _check_successful_cmd(
         "assign", ["-r", repo_with_commit, "m2", "--stage", "dev"], None
     )

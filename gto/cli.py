@@ -44,11 +44,7 @@ class GtoFormatter(click.HelpFormatter):
 
 
 class GtoArgument(click.Argument):
-    """click.Argument that carries a help text.
-
-    click doesn't support help for arguments, so we store it ourselves and
-    render an "Arguments" section in GtoCliMixin.format_options.
-    """
+    """click.Argument with a help text, shown in the "Arguments" help section."""
 
     def __init__(self, *args, help: Optional[str] = None, **kwargs):
         self.help = help
