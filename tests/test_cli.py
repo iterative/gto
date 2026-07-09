@@ -497,6 +497,11 @@ def test_show_ref_flag_not_applicable(repo_with_commit: str):
     )
 
 
+def test_show_line_flag_empty_result():
+    with mock.patch("gto.api.show", return_value=([], "keys")):
+        _check_successful_cmd("show", ["-r", ".", "m5#missing", "--version"], "")
+
+
 def test_history_json_empty(repo_with_commit: str):
     _check_successful_cmd("history", ["-r", repo_with_commit, "--json"], "[]\n")
 
