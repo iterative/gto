@@ -1,5 +1,6 @@
 import logging
 import os
+import shlex
 from contextlib import contextmanager
 from typing import List, Optional, TypeVar, cast
 
@@ -485,7 +486,8 @@ class GitRegistry(BaseModel, RemoteRepoMixin):
     @staticmethod
     def _echo_git_suggestion(tag, delete=False):
         echo("To push the changes upstream, run:")
-        echo(f"    git push{' --delete ' if delete else ' '}origin {tag}")
+        quoted_tag = shlex.quote(tag)
+        echo(f"    git push{' --delete ' if delete else ' '}origin {quoted_tag}")
 
     def _delete_tags(self, tags, stdout, push: bool):
         tags = list(tags)
