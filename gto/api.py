@@ -111,7 +111,7 @@ def assign(
     ref: Optional[str] = None,
     name_version: Optional[str] = None,
     message: Optional[str] = None,
-    simple: bool = False,
+    simple: Optional[bool] = False,
     force: bool = False,
     push: bool = False,
     skip_registration: bool = False,

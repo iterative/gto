@@ -458,7 +458,7 @@ def register(
     ref: str,
     version: Optional[str],
     message: Optional[str],
-    simple: str,
+    simple: Optional[bool],
     force: bool,
     bump_major: bool,
     bump_minor: bool,
@@ -474,7 +474,7 @@ def register(
         ref=ref or "HEAD",
         version=version,
         message=message,
-        simple=simple,  # type: ignore
+        simple=simple,
         force=force,
         bump_major=bump_major,
         bump_minor=bump_minor,
@@ -511,7 +511,7 @@ def assign(
     version: Optional[str],
     stage: str,
     message: Optional[str],
-    simple: str,
+    simple: Optional[bool],
     force: bool,
     push: bool,
     skip_registration: bool,
@@ -534,7 +534,7 @@ def assign(
         ref,
         name_version,
         message=message,
-        simple=simple,  # type: ignore
+        simple=simple,
         force=force,
         push=push,
         skip_registration=skip_registration,
@@ -560,7 +560,7 @@ def deprecate(
     stage: Optional[str],
     ref: Optional[str],
     message: Optional[str],
-    simple: str,
+    simple: Optional[bool],
     force: bool,
     delete: bool,
     push: bool,
@@ -573,7 +573,7 @@ def deprecate(
             version=version,
             stage=stage,
             message=message,
-            simple=simple,  # type: ignore
+            simple=simple,
             force=force,
             delete=delete,
             push=push,
@@ -585,7 +585,7 @@ def deprecate(
             name=name,
             version=version,
             message=message,
-            simple=simple,  # type: ignore
+            simple=simple,
             force=force,
             delete=delete,
             push=push,
@@ -597,7 +597,7 @@ def deprecate(
             name=name,
             ref=ref,
             message=message,
-            simple=simple,  # type: ignore
+            simple=simple,
             force=force,
             delete=delete,
             push=push,
@@ -695,7 +695,7 @@ def show(  # pylint: disable=too-many-locals
     deprecated: bool,
     assignments_per_version: int,
     versions_per_stage: int,
-    sort: str,
+    sort: VersionSort,
 ):
     """Show the registry state, highest version, or what's assigned in stage."""
     show_options = [show_name, show_version, show_stage, show_ref]
