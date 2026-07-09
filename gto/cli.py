@@ -732,6 +732,8 @@ def show(  # pylint: disable=too-many-locals
         arg = "stage" if show_stage else arg
         arg = "ref" if show_ref else arg
         if arg:
+            if not output[0]:
+                return
             if arg not in output[0][0]:
                 raise WrongArgs(f"Cannot apply --{arg}")
             format_echo(
