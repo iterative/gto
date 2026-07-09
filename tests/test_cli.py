@@ -502,6 +502,14 @@ def test_show_line_flag_empty_result():
         _check_successful_cmd("show", ["-r", ".", "m5#missing", "--version"], "")
 
 
+def test_show_line_flags_strip_value_newlines():
+    output = ([{"ref": "rf@v1.2.4\n", "version": "v1.2.4\r\n"}], "keys")
+    with mock.patch("gto.api.show", return_value=output):
+        _check_successful_cmd("show", ["-r", ".", "rf@latest", "--ref"], "rf@v1.2.4\n")
+    with mock.patch("gto.api.show", return_value=output):
+        _check_successful_cmd("show", ["-r", ".", "rf@latest", "--version"], "v1.2.4\n")
+
+
 def test_history_json_empty(repo_with_commit: str):
     _check_successful_cmd("history", ["-r", repo_with_commit, "--json"], "[]\n")
 
