@@ -64,7 +64,7 @@ jobs:
         fetch-depth: 0
     - uses: actions/setup-python@v6
       with:
-        python-version: '3.14'
+        python-version: '3.15'
 
     - run: pip install build twine
     - run: python -m build
